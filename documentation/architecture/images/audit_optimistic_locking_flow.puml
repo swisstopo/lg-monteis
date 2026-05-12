@@ -1,0 +1,38 @@
+@startuml
+autonumber
+skinparam DefaultFontName Arial
+skinparam sequenceMessageAlign center
+
+actor Client
+participant "REST API\n(Controller)" as API
+participant "Service Layer\n(Service + AOP)" as Service
+participant "Persistence\n(jOOQ)" as Repo
+database "Database" as DB
+participant "Audit\n(JaVers)" as JaVers
+
+== Erfolgsfall (Success) ==
+Client -> API: PUT /sensors/1\n(JSON inkl. Version 1)
+API -> Service: update(sensorDto)
+Service -> Repo: save(domainSensor)
+Repo -> DB: UPDATE sensors SET ..., version = 2\nWHERE id = 1 AND version = 1
+DB --> Repo: 1 row affected
+Repo --> Service: savedSensor (Version 2)
+Service --> API: success
+Service -> JaVers: AOP @AfterReturning:\ncommit(savedSensor)
+API --> Client: 200 OK
+
+== Fehlerfall (Optimistic Lock Failure) ==
+Client -> API: PUT /sensors/1\n(JSON inkl. Version 1)
+API -> Service: update(sensorDto)
+Service -> Repo: save(domainSensor)
+
+note over Repo, DB: Ein anderer Prozess hat die DB-Zeile\nzuvor bereits auf Version 2 aktualisiert!
+
+Repo -> DB: UPDATE sensors SET ..., version = 2\nWHERE id = 1 AND version = 1
+DB --> Repo: 0 rows affected
+Repo --> Service: DataChangedException
+note right of Service: Transaktion wird\nzurückgerollt (@Transactional)
+Service --> API: Exception geworfen
+note over Service, JaVers: AOP-Aspekt feuert NICHT.\nEs wird kein Audit-Eintrag erstellt!
+API --> Client: 409 Conflict (bzw. via @ExceptionHandler)
+@enduml

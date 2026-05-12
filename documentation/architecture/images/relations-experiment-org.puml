@@ -1,0 +1,78 @@
+@startuml
+skinparam style strictuml
+skinparam packageStyle rectangle
+
+package "Case A: Single Organisation (Per-Experiment)" as caseA {
+  rectangle "Organisation 1 " as orgA1
+  rectangle "Organisation 2 " as orgA2
+  rectangle "Organisation 3 " as orgA3
+  rectangle "Organisation 4 " as orgA4
+
+  rectangle "Experiment 1" as expA1
+  rectangle "Experiment 2" as expA1b
+  rectangle "Experiment 3" as expA2
+  rectangle "Experiment 4" as expA3
+  rectangle "Experiment 5" as expA4
+
+  ' Force left-to-right ordering for Organisations
+  orgA1 -[hidden]right-> orgA2
+  orgA2 -[hidden]right-> orgA3
+  orgA3 -[hidden]right-> orgA4
+
+  ' Force left-to-right ordering for Experiments
+  expA1 -[hidden]right-> expA1b
+  expA1b -[hidden]right-> expA2
+  expA2 -[hidden]right-> expA3
+  expA3 -[hidden]right-> expA4
+
+  ' Each experiment connects to exactly one organisation
+  expA1 -up-> orgA1
+  expA1b -up-> orgA1
+  expA2 -up-> orgA2
+  expA3 -up-> orgA3
+  expA4 -up-> orgA4
+}
+
+package "Case B: Shared Between Organisations" as caseB {
+  rectangle "Organisation 1" as orgB1
+  rectangle "Organisation 2" as orgB2
+  rectangle "Organisation 3" as orgB3
+  rectangle "Organisation 4" as orgB4
+
+  rectangle "Experiment A" as expB1
+  rectangle "Experiment B" as expB2
+  rectangle "Experiment C" as expB3
+  rectangle "Experiment D" as expB4
+  rectangle "Experiment E" as expB5
+
+  ' Force left-to-right ordering for Organisations
+  orgB1 -[hidden]right-> orgB2
+  orgB2 -[hidden]right-> orgB3
+  orgB3 -[hidden]right-> orgB4
+
+  ' Force left-to-right ordering for Experiments
+  expB1 -[hidden]right-> expB2
+  expB2 -[hidden]right-> expB3
+  expB3 -[hidden]right-> expB4
+  expB4 -[hidden]right-> expB5
+
+  ' Experiments are shared
+  expB1 -up-> orgB1
+  expB1 -up-> orgB2
+
+  expB2 -up-> orgB2
+
+  expB3 -up-> orgB3
+
+  expB4 -up-> orgB4
+
+  expB5 -up-> orgB4
+}
+
+' Force Case B to sit strictly below Case A by linking the bottom row of A to the top row of B
+expA1 -[hidden]down-> orgB1
+expA1b -[hidden]down-> orgB2
+expA2 -[hidden]down-> orgB3
+expA3 -[hidden]down-> orgB4
+
+@enduml

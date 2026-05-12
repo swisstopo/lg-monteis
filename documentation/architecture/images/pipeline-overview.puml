@@ -1,0 +1,106 @@
+@startuml
+!theme plain
+skinparam componentStyle uml2
+skinparam linetype ortho
+skinparam padding 15
+skinparam ranksep 60
+skinparam nodesep 60
+
+' ==========================================
+' Externe Systeme / Sources
+' ==========================================
+component "Core API\n[Spring Boot]" as CoreAPI
+queue "Kafka Broker\n[Raw DAS Topic]" as KafkaRaw
+queue "Kafka Broker\n[Reprocessing Topic]" as KafkaReprocess
+storage "AWS S3 Bucket\n[Manual Uploads]" as S3Man
+component "S3 Event Trigger" as S3Trigger
+
+' ==========================================
+' INGRESS LAYER
+' ==========================================
+package "A. Ingress Layer" {
+
+  component "1. DAS Source\nConnector" as ConnSol
+  component "1. Manual Upload\nIngestion Worker" as UploadWorker
+  component "1. Reprocessing\nConsumer" as ReprocessConsumer
+}
+
+' ==========================================
+' NORMALIZATION
+' ==========================================
+component "Normalizer\n(Parser → Canonical Format)" as Normalizer
+
+component "RohMessewert oder UpdateMesswert" as Canonical
+
+' ==========================================
+' PIPELINE WORKER
+' ==========================================
+package "B. Processing Pipeline" {
+
+  component "2. Metadata Handler" as Meta
+  component "3. SI-Unit Converter" as Converter
+  component "4. Validator &\nAlerting Handler" as Validator
+  component "5. DB Writer" as Writer
+  component "6. Aggregator\n(In-Memory)" as Aggregator
+
+  Meta -down-> Converter
+  Converter -down-> Validator
+  Validator -down-> Writer
+}
+
+' ==========================================
+' Sinks / Alerting
+' ==========================================
+queue "Kafka Broker\n[Alerts Topic]" as KafkaAlert
+database "TimeScaleDB" as TSDB
+storage "AWS S3 Bucket\n[Raw Archive]" as S3Raw
+
+' ==========================================
+' Layout Stabilization
+' ==========================================
+CoreAPI -[hidden]right- KafkaRaw
+KafkaRaw -[hidden]right- KafkaReprocess
+KafkaReprocess -[hidden]right- S3Man
+
+' ==========================================
+' DATA FLOW
+' ==========================================
+
+' Manual Upload
+CoreAPI -right-> S3Man
+S3Man -down-> S3Trigger
+S3Trigger -down-> UploadWorker
+
+' Metadata changes trigger reprocessing
+CoreAPI -down-> KafkaReprocess : "Metadata Change Event"
+
+' Live DAS ingestion
+KafkaRaw -down-> ConnSol
+
+' Reprocessing
+KafkaReprocess -down-> ReprocessConsumer
+
+' All ingress paths converge into normalizer
+ConnSol -down-> Normalizer
+UploadWorker -down-> Normalizer
+ReprocessConsumer -down-> Normalizer
+
+' Normalization
+Normalizer -down-> Canonical
+
+' Pipeline
+Canonical -down-> Meta
+Canonical -right-> Aggregator : "Ausser bei Updates"
+
+' Metadata lookup
+Meta <-up-> CoreAPI
+
+' Alerts
+Validator -left-> KafkaAlert
+
+' Persistence
+Writer -down-> TSDB : "Speichere normalisierte Werte"
+
+Aggregator -down-> S3Raw
+
+@enduml

@@ -1,0 +1,29 @@
+@startuml
+!theme plain
+autonumber
+skinparam maxMessageSize 150
+
+actor "Nutzer" as User
+participant "Angular Frontend" as UI
+participant "Core API (Backend)\n[REST Controller]" as Backend
+boundary "Fulcrum API\n(Umsystem)" as Fulcrum
+
+User -> UI : Öffnet Sensor-Details\n(fordert Logbuch-Einträge an)
+UI -> Backend : GET /sensors/123/logs
+activate Backend
+
+Backend -> Backend : Erstellt Fulcrum-Query
+
+Backend -> Fulcrum : GET /api/v2/query (via REST)
+activate Fulcrum
+Fulcrum --> Backend : Return JSON (Aktuelle Fulcrum-Daten)
+deactivate Fulcrum
+
+Backend -> Backend : Mapping & Formatierung der Daten
+Backend --> UI : Return sauberes MONTEIS-JSON
+deactivate Backend
+
+UI -> UI : Rendert Logbuch-Tabelle
+UI --> User : Ansicht mit Live-Daten aus Fulcrum
+
+@enduml

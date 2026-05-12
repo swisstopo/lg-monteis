@@ -1,0 +1,92 @@
+[[section-solution-strategy]]
+== Lösungsstrategie
+
+Dieses Kapitel fasst die grundlegenden Entwurfsentscheidungen und Lösungsansätze zusammen, die die Architektur von MONTEIS massgeblich prägen. Es beschreibt, mit welchen technologischen und strukturellen Konzepten die geforderten Qualitätsziele (insbesondere Skalierbarkeit, Performanz und Verfügbarkeit) erreicht werden.
+
+=== Erreichung der wichtigsten Qualitätsziele
+
+Die folgende Tabelle gibt einen Überblick (Executive Summary), mit welchen architektonischen Ansätzen und Taktiken die priorisierten Qualitätsziele erreicht werden. Detaillierte technische Beschreibungen folgen in den darauffolgenden Unterkapiteln.
+
+[cols="1,2,3,1" options="header"]
+|===
+| Qualitätsziel
+| Szenario
+| Lösungsansatz & Architekturentscheidung
+| Link zu Details
+
+| **Performanz & Skalierbarkeit** | Ein Wissenschaftler möchte eine 10-jährige Zeitreihe eines Drucksensors visualisieren. Das System darf nicht einfrieren und muss bei 30 gleichzeitigen Nutzern performant bleiben.
+| **Polyglot Persistence & Downsampling:** Hochfrequente Messwerte (Zielvolumen: 200 Mrd. Messungen) landen in einer spezialisierten TimeScaleDB, Metadaten in PostgreSQL. Für lange Zeitreihen wird systemseitig ein Downsampling angewendet, um die Payload für das Frontend zu reduzieren.
+| -> Kap. 5.4 & 6.8
+
+| **Verfügbarkeit & Robustheit** | Ein Datenerfassungssystem (DAS) sendet fehlerhafte oder extrem grosse Datenmengen. Dies darf andere Experimente oder die Web-App nicht beeinträchtigen.
+| **High Availability & Event-Streaming:** Bereitstellung im Kubernetes-Cluster (AWS) mit High-Availability-Images. Apache Kafka (Connect) dient als asynchroner Puffer. Jede DAS-Pipeline operiert strikt isoliert als eigener Pod/Connector, sodass Ausfälle gekapselt bleiben.
+| -> Kap. 5.3.2 & 6.1
+
+| **Sicherheit** | Zugriffe auf sensible Experimentdaten müssen strikt geregelt und vor unbefugtem Zugriff geschützt sein.
+| **Zentrales API-Gateway & RBAC via Keycloak:** Direkte Zugriffe auf Pipelines oder Datenbanken sind unterbunden; Frontend und Backend fungieren als Nadelöhr. Die Authentifizierung (eIAM) wird über Keycloak angebunden. Rollen (z. B. `read_exp_a`) werden als Claims im JWT an das Spring Boot Backend übergeben, welches die Berechtigungen durchsetzt.
+| -> Kap. 5.3.1 & 6.6
+
+| **Datenintegrität** | Historische Sensordaten und deren Umrechnungen müssen manipulationssicher und jederzeit nachvollziehbar gespeichert werden.
+| **Trennung von Roh- und Prozessdaten:** Sensordaten werden direkt und unverfälscht abgelegt. Die Normalisierung erfolgt ausschliesslich in der Pipeline. Ändert sich eine Berechnungsformel, müssen die Daten zwingend über die Pipeline aktualisiert werden. Rohdaten landen parallel in einem S3 Bucket, während das Schema der TimeScaleDB absichtlich schlank gehalten wird.
+| -> Kap. 5.3.2 & 6.2 & 6.9
+
+| **Interoperabilität** | Das System muss heterogene Daten aus Umsystemen (BIM, Fulcrum, Citavi) und diversen Sensoren verarbeiten.
+| **Spezialisierte Backend-Komponenten & Kafka Sinks:** Die Anbindung von Umsystemen erfolgt über dedizierte Spring Boot Komponenten. Die Heterogenität der DAS-Sensordaten wird durch das Kafka Connect Cluster abgefangen, welches vielfältige Formate entgegennehmen und standardisieren kann.
+| -> Kap. 5.3.2
+
+| **Offenheit & Transparenz** | Das System muss zukunftssicher und ohne Vendor-Lock-in durch Lizenzkosten betrieben werden können.
+| **100 % Open Source:** Alle eingesetzten Komponenten werden auf ihre Open-Source-Lizenz geprüft. Der Source Code wird zentral bei swisstopo auf GitHub geführt und gemanagt.
+| -> Kap. 4.3
+
+| **Nachvollziehbarkeit** | Uploads und Systemzustände müssen für Administratoren transparent und auditierbar sein.
+| **Statusbasierte Ablage:** Manuelle Uploads werden zunächst in einem isolierten `manual_uploads`-Ordner im S3-Bucket zwischengespeichert. Erst nach der expliziten Freigabe durch einen Administrator werden die Daten via Pipeline in die TimeScaleDB und den Cold Storage überführt.
+| -> Kap. 5.4 & 6.2
+
+| **Benutzerfreundlichkeit** | Nutzer benötigen individuelle Konfigurationsmöglichkeiten und eine intuitive Bedienung.
+| **User-Centric Design & Customizing:** UI-Designs und Workflows werden durch die Anwender validiert. Die Applikation erlaubt es jedem Nutzer, relevante Einstellungen (Alarme, Darstellungeinheiten aus einem definierten Set) individuell zu konfigurieren.
+| -> Kap. 5.2
+|===
+
+
+=== Fundamentale Architekturentscheidungen (Top-Level)
+
+MONTEIS folgt einer verteilten, Cloud-nativen **Microservices-orientierten Architektur**, die in drei logische und physische Schichten unterteilt ist:
+
+1. **Interface Layer:** Angular Web-Frontend.
+2. **Business Layer:** Spring Boot Backend und Daten-Pipelines (Kafka Connect).
+3. **Storage Layer:** TimeScaleDB, PostgreSQL, AWS S3 und S3 Glacier.
+
+**Entkopplung und Skalierung:**
+Die verschiedenen Schichten und Services werden als separate Pods in einem Kubernetes-Cluster bereitgestellt. Dies ermöglicht eine granulare und individuelle horizontale Skalierung (z. B. Skalierung des Backends bei hohen Zugriffszahlen oder Erhöhung der Pipeline-Pods bei grossen Daten-Uploads). Die Kommunikation zwischen den Layern erfolgt über REST-APIs, während Datenbanken über effizientes Connection Pooling angebunden werden.
+
+=== Technologie-Entscheidungen (Tech Stack)
+
+* **Frontend:** Die Web-Applikation wird mit **Angular** umgesetzt, ergänzt durch das *Carbon Design System*, *AG-Grid* und *Scion Workbench* für eine konsistente und moderne UI. Für die komplexe Darstellung der geologischen 3D-Modelle kommt **Giro3D** zum Einsatz.
+* **Backend & API:** Als zentrales Verarbeitungssystem dient eine **Java Spring Boot** Applikation. Jede Datenanfrage oder -eingabe die durch einen User ausgelöst wird, passiert dieses Backend. Einzig die Pipeline kann autonom agieren.
+* **Data Pipelines:** Die Ingestion der Sensordaten erfolgt über ein **Kafka Connect Cluster**, gefolgt von spezifischen Java- oder Python-Pods für die weitere Datenverarbeitung. Für Benachrichtigungen wird das AWS Alerting genutzt.
+* **Storage-Split:** Zur performanten Bewältigung der bis zu 50 TB an Daten kommen vier Speichersysteme zum Einsatz:
+** **TimeScaleDB:** Für das performante Speichern und Abfragen von Echtzeit-Messpunkten.
+** **PostgreSQL (mit PostGIS):** Für zugehörige Metadaten und die vollständig georeferenzierte Ablage der Systemhierarchien.
+** **AWS S3:** Für Dateien aus Umsystemen, manuelle Uploads und die temporäre (24h) Zwischenspeicherung von Rohdaten.
+** **AWS S3 Glacier Deep Archive:** Für die kosteneffiziente Langzeitarchivierung. Ein täglicher Batch-Job überführt Rohdaten aus dem regulären S3 dorthin.
+
+
+=== Integrations- und Schnittstellenstrategie
+
+**Isolierung der Pipelines:**
+Um zu verhindern, dass ein fehlerhafter Sensordaten-Feed das System beeinträchtigt, kann das Input-Topic falls nötig mittels Broker vor dem Kafka Connect Cluster in verschiedene Output-Topics (z. B. ein Topic pro Sensor) aufgeteilt werden. Jede DAS-Pipeline verfügt über einen eigenen Connector. Im Extremfall existiert pro Sensor ein eigener Pipeline-Pod. Dies reduziert die zu verarbeitende Datenmenge pro Pod massiv, garantiert höchste Performanz, isoliert Fehler und optimiert die Cloud-Kosten.
+
+**3D-Modellierung (IFC-Integration):**
+Anstatt eine aufwändige direkte API-Kopplung für 3D-Modelle zu bauen, stellt MONTEIS dem Administrator eine Upload-Funktion für IFC-Dateien (z. B. aus BIM Mont Terri) zur Verfügung. Diese Modelle werden im Frontend über Giro3D und *Three.js* nativ in Web-Workern des Browsers gerendert. Dies lagert die Rechenlast auf den Client aus und schützt die Performance der restlichen Web-App.
+
+=== Organisatorisches & DevOps
+
+**CI/CD & Deployment:**
+Der Entwicklungsprozess stützt sich auf moderne, hochautomatisierte DevOps-Infrastrukturen:
+
+* **Pipelines:** Bei jedem Commit wird Code-Formatting und automatisiertes Testing ausgeführt. Merge Requests durchlaufen zudem eine statische Codeanalyse (z. B. SonarQube).
+* **Deployment-Flow:** Vom `main`-Branch erfolgt ein vollautomatisches Deployment auf die `dev`-Umgebung. Getaggte Versionen werden auf `staging` für das Kunden-Review bereitgestellt. Nach Abnahme wird das getestete Image auf die `prod`-Umgebung propagiert.
+* **Security & Maintenance:** Mittels Weekly Builds und Rolling Updates wird das System aktuell gehalten. Container werden kontinuierlich via Trivy oder Dependency-Track gescannt. Für das vereinfachte Abhängigkeits-Management ist der Einsatz von *Renovate* im Repository vorgesehen.
+
+**Open Source Compliance:**
+Es wird prozessual (z. B. durch Lizenz-Scanning in der CI/CD-Pipeline) sichergestellt und dokumentiert, dass jede verwendete Komponente und Bibliothek unter einer anerkannten Open-Source-Lizenz steht.

@@ -1,0 +1,78 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-introduction-and-goals]]
+==	Einführung und Ziele
+Dieses Dokument beschreibt das Mont Terri Experiment Information System, kurz MONTEIS.
+Mit MONTEIS soll ein Zentrales System für das Mont Terri Konsortium von Grund auf neu gebaut werden,
+welches die Bedürfnisse der Forscher im Bereich der Geologie im Felslabor Mont Terri automatisiert.
+
+
+
+
+=== Aufgabenstellung
+
+MONTEIS (Mont Terri Experiment Information System) ist ein neues zentrales Informationssystem für das Mont Terri Felslabor. Es dient der strukturierten Erfassung, Verwaltung und Bereitstellung sämtlicher experimentbezogener Daten aus dem Felslaborumfeld.
+
+Die bestehende Systemlandschaft ist historisch gewachsen, heterogen und technisch fragmentiert. Sie erfüllt die heutigen Anforderungen an Datenvolumen, Datenvielfalt, Nachvollziehbarkeit und langfristige Verfügbarkeit aufgrund veralteter Architekturen nicht mehr ausreichend. Daher wurde im Rahmen einer Vorstudie festgestellt, dass eine komplette Neuentwicklung (Greenfield-Ansatz) eines zentralen Systems notwendig ist.
+
+Ziel der Aufgabenstellung ist die Bereitstellung einer zukunftsfähigen, offenen und modular erweiterbaren Plattform, welche die vollständige Digitalisierung und Integration aller relevanten Datenquellen des Mont Terri Felslabors ermöglicht. Dazu gehören insbesondere experimentbezogene Messdaten, geologische Modelle, Sensordaten sowie wissenschaftliche Dokumente.
+
+Die Dimensionen des Systems sind enorm: Bisher wurden ca. 50 Milliarden Messungen durchgeführt. Täglich kommen mehr als 2 Millionen neue Messungen hinzu. Über die geplante Lebenszeit des Systems wird ein Datenvolumen von mehr als 200 Milliarden Messungen (ca. 10 TB) erwartet.
+
+Das System soll den internationalen Partnern des Mont Terri Konsortiums einen einheitlichen, webbasierten Zugang zu diesen Informationen ermöglichen. Dabei spielt die permanente Datenverfügbarkeit und die georeferenzierte Strukturierung der Daten eine zentrale Rolle.
+
+Zwingende technologische Vorgabe: MONTEIS muss auf 100 % Open-Source-Technologien basieren. Zudem ist der Source-Code zwingend auf GitHub zu publizieren, um maximale Transparenz und eine unabhängige Weiterentwicklung sicherzustellen.
+
+=== Qualitätsziele
+
+Die Anforderungen an MONTEIS lassen sich in funktionale und nicht-funktionale Aspekte sowie übergeordnete Qualitätsziele gliedern. Der Schwerpunkt liegt auf dem Umgang mit grossen, heterogenen Datenmengen sowie der langfristigen Sicherstellung von Datenzugriff, Integrität und Systemstabilität.
+
+==== Zentrale funktionale Anforderungen (Überblick)
+Das System muss insbesondere folgende fachliche Fähigkeiten unterstützen:
+
+* Zentrale Verwaltung von experimentbezogenen Daten über den gesamten Lebenszyklus (teilweise >20 Jahre).
+* Erfassung und Integration heterogener Datenquellen (Sensoren, Zeitreihen, Dokumente, geologische Modelle).
+* Verwaltung von Experimenten, Messstellen und zugehörigen Metadaten.
+* Bereitstellung eines performanten webbasierten Zugriffs, inklusive interaktiver 3D-Ansichten und räumlicher Navigation.
+* Unterstützung der Suche (z. B. Region of Interest-Suche in 2D/3D, Volltext) und Wiederauffindbarkeit von Daten.
+* Automatisierter Import (via Daten-Pipelines) aus bestehenden Datenerfassungssystemen (DAS) wie Geomonitor über FTP oder Kafka.
+* Bereitstellung von Daten für die wissenschaftliche Auswertung über strukturierte Exportfunktionen.
+
+==== Übergeordnete Qualitätsziele (ISO 25010-orientiert)
+
+Die folgenden Qualitätsziele sind für MONTEIS besonders relevant und wurden mit messbaren Kriterien aus dem Pflichtenheft hinterlegt:
+
+[cols="1,2,4" options="header"]
+|===
+|Nr. | Qualitätsziel | Beschreibung & Messkriterien
+
+|1 | Sicherheit | Schutz sensibler Forschungsdaten durch rollenbasierte Zugriffskontrolle (RBAC) , sichere Authentifizierung via eIAM  und Einhaltung des IKT-Grundschutzes des Bundes.
+|2 | Datenintegrität | Sicherstellung der verlustfreien Speicherung (absolut kein Datenverlust). Jederzeitige Verfügbarkeit unprozessierter Originaldaten  und Speicherung standardmässig in SI-Einheiten.
+|3 | Verfügbarkeit | Gewährleistung eines hochverfügbaren Systems mit minimalen Ausfallzeiten (gefordert ist eine Downtime von < 2 %).
+|4 | Performanz | Effiziente interaktive Nutzung (z. B. durch Resampling-Funktionen beim Plotten langer Zeitreihen) , die gewährleistet ist, auch wenn bis zu 30 Benutzer gleichzeitig arbeiten.
+|5 | Skalierbarkeit | Fähigkeit zur performanten Verarbeitung eines Zielvolumens von über 200 Milliarden Messungen. Die Architektur muss so modular sein, dass Daten-Pipelines unabhängig operieren, ohne das System zu blockieren.
+|6 | Interoperabilität | Nahtlose Anbindung an Umsysteme (wie BIM, Fulcrum und Citavi) über Schnittstellen. Problemlose Verarbeitung der stark heterogenen Datenformate (TXT, CSV, LAS, PDF etc.).
+|7 | Offenheit & Transparenz | Konsequente Nutzung von 100 % Open-Source-Komponenten. Publikation des vollständigen Quellcodes auf GitHub.
+|8 | Nachvollziehbarkeit | Lückenlose Dokumentation von Systemoperationen. Sicherstellung der Verifizierbarkeit bei manuellen Daten-Uploads sowie Nutzung von Zeitstempeln.
+|9 | Benutzerfreundlichkeit | Intuitive Bedienung im Browser ohne zusätzliche Plugins. Selbstständige Konfigurierbarkeit von Alarmierungen und Dashboards durch die Nutzer.
+|===
+
+
+=== Stakeholder
+
+[cols="1,1,2" options="header"]
+|===
+|Rolle |Kontakt |Erwartungshaltung
+
+| Auftraggeberin / Betreiberin
+| swisstopo (Landesgeologie)
+| Wünscht eine Effizienzsteigerung, automatisierte Validierung, Ablösung veralteter Systeme zur Kostenersparnis und eine Vorreiterrolle durch innovative Open-Source-Technologien.
+
+| Projektpartner & Forscher
+| Mont Terri Konsortium (22 Partner, inkl. ENSI, ETH, nagra)
+| Benötigen einen performanten, automatisierten Zugang zu den Daten, einfache Wiederauffindbarkeit (z.B. über 3D-Viewer) und Exportmöglichkeiten für wissenschaftliche Auswertungen.
+
+| Administratoren
+| swisstopo-interne Mitarbeiter
+| Einfache Verwaltung von Benutzerkonten, Systemüberwachung via Cockpit-View, voll konfigurierbare Daten-Pipelines und Alerting-Funktionen.
+|===

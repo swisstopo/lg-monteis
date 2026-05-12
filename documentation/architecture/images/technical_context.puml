@@ -1,0 +1,31 @@
+@startuml
+!theme plain
+skinparam componentStyle uml2
+skinparam nodesep 60
+skinparam ranksep 80
+
+' Kernsystem im Zentrum
+component "MONTEIS\n" as MONTEIS #LightBlue
+
+' Akteure und Auth (Oben)
+actor "Nutzer\n(Web Browser)" as User
+component "eIAM / AGOV\n(Identity Provider)" as eIAM
+
+' Externe Systeme (Rundherum)
+component "BIM Mont Terri\n(Digitaler Zwilling)" as BIM
+component "Fulcrum\n(Cloud-Datenbank)" as Fulcrum
+database "DAS\n(Datenerfassung)" as DAS
+component "Citavi\n(Literaturverwaltung)" as Citavi
+
+' Beziehungen mit expliziten Richtungen (Stern-Layout) und Datenfluss-Infos
+User -down-> MONTEIS : " HTTPS\n (Datenabruf & Steuerung)"
+User -> eIAM : " Login / SSO"
+eIAM -down-> MONTEIS : " Token Validierung"
+
+BIM -right-> MONTEIS : " API\n (Liefert 3D-Tiles & Geometrie)"
+MONTEIS <-right-> Fulcrum : " REST-API / Webhooks\n (Bidirektionaler Daten-Sync)"
+
+DAS -up-> MONTEIS : " Apache Kafka / FTP\n (Pusht Sensordaten-Stream)"
+Citavi -up-> MONTEIS : " Periodischer Import\n (Liefert PDFs & RIS-Metadaten)"
+
+@enduml

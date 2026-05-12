@@ -1,0 +1,119 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-building-block-view]]
+== Bausteinsicht
+Dieses Kapitel beschreibt die statische Struktur des Systems MONTEIS. Die Bausteinsicht ist hierarchisch aufgebaut: Level 1 beschreibt die groben Architektur-Schichten (Gesamtsystem), Level 2 detailliert die inneren Komponenten und Zugriffslogiken dieser Schichten.
+
+=== Whitebox Gesamtsystem (Level 1)
+
+Das System folgt einer strikten 3-Schicht-Architektur. Die Kommunikation zwischen den Layern ist durch eindeutige Zuständigkeiten und gerichtete Datenflüsse geregelt.
+
+[plantuml, overview, format="svg"]
+....
+include::../images/overview.puml[]
+....
+
+==== Interface Layer (Frontend)
+Stellt die Benutzeroberfläche für Wissenschaftler und Administratoren bereit. Nimmt Benutzerinteraktionen entgegen, visualisiert 3D-Modelle und rendert hochfrequente Zeitreihendiagramme.
+
+==== Business Layer (Backend & Pipelines)
+Das logische Herzstück des Systems. Diese Schicht ist dreigeteilt:
+
+1. Ein synchrones **Spring Boot Backend** als zentrales API-Gateway und Metadaten-Verwalter.
+2. Ein asynchrones **Pipeline & Worker-Ökosystem** (Kafka-basiert) für die massenhafte Verarbeitung und Speicherung der Sensordaten.
+3. Ein **Alerting Service** für die individuelle Alarmierung mittels AWS SNS (Simple Notification Service).
+
+==== Storage Layer (Datenbanken & Cloud Storage)
+Nutzt den Ansatz der "Polyglot Persistence", um die massiven Datenmengen (Ziel: 200 Mrd. Messungen) performant und kosteneffizient abzulegen. Beinhaltet TimeScaleDB (Zeitreihen), PostgreSQL + PostGIS (Metadaten) sowie AWS S3 (Dateien und Rohdaten) und AWS S3 Glacier (Rohdaten).
+
+
+=== Whitebox Interface Layer (Level 2)
+// todo: muss vollständig überarbeitet werden, sobald die Architektur fürs Frontend geplant ist.
+_TODO: Draft da die Architektur noch nicht abschliessend gemacht ist_
+
+Obwohl die genaue Modulstruktur des Frontends noch in der Spezifikationsphase ist, basiert die Architektur der Web-Applikation auf **Angular** und dem *Carbon Design System*. Um die Komplexität der Darstellung zu managen, gliedert sich die UI logisch in folgende Hauptbereiche, die durch die *Scion Workbench* als Layout-Framework orchestriert werden:
+
+* **3D-Visualisierungs-Modul:** Nutzt *Giro3D*, um die Infrastruktur, Bohrlochgeometrien und Sensoren räumlich im Browser darzustellen, ohne die Performance der restlichen Applikation zu blockieren. Dies Wird erreicht mittels Worker vom Browser selber, damit können wir den Load des Rendering sauber auslagern auf das Client Device.
+* **Data-Grid & Dashboard-Modul:** Integriert *ag-Grid* für die hochperformante tabellarische Darstellung und das Plotten der gefilterten Sensor-Zeitreihen.
+* **Admin- & Konfigurations-Modul:** Schnittstelle für Administratoren zur Verwaltung von Experimenten, Freigabe von manuellen Uploads und Konfiguration von Alarmen.
+
+
+=== Whitebox Business Layer (Level 2)
+
+Der Business Layer besteht aus zwei stark entkoppelten Hauptsystemen: Dem Spring Boot Backend und den Kafka-basierten Daten-Pipelines.
+
+==== Core API (Spring Boot Backend)
+
+[plantuml, core-api, format="svg"]
+....
+include::../images/core-api.puml[]
+....
+// todo: wird noch angepasst
+Das Backend fungiert als Dreh- und Angelpunkt für jegliche synchrone Kommunikation. Es beinhaltet folgende logische Services:
+
+* **Security & Auth Filter:** Verarbeitet die vom externen Keycloak/eIAM empfangenen JWTs. Über den Spring `@Authenticated` Principal werden die in den Claims enthaltenen Rollen (z. B. `read_exp_a`) geparst und das RBAC (Role-Based Access Control) auf API-Ebene strikt durchgesetzt.
+* **Query & Downsampling Service:** Ein dedizierter Service, der Leseanfragen an die TimeScaleDB richtet und intelligente Downsampling-Algorithmen anwendet, um die abgerufene Datenmenge vor der Auslieferung an das Frontend zu reduzieren.
+* **IFC Upload & Processing Service:** Nimmt hochgeladene 3D-Geometrie-Modelle (IFC-Dateien) entgegen und bereitet diese für das Rendering (via Giro3D/Three.js) im Frontend vor.
+* **Umsystem-Connectoren:** * *Fulcrum-Client:* Konsumiert die API von Fulcrum für die bidirektionale Synchronisation.
+* *Frontend-API:* Stellt dem Angular-Client alle benötigten Endpunkte zur Verfügung.
+* *Pipeline-API:* Ein durch API-Keys gesicherter interner Endpunkt, über den die Pipeline-Worker Metadaten abrufen können.
+
+==== Data Pipelines & Alerting (Kafka & Worker)
+Der Ingestion-Prozess für Sensordaten ist asynchron und ereignisgesteuert aufgebaut. Die Verarbeitung innerhalb eines Pipeline-Worker-Pods folgt einem strikten Ablauf:
+
+1. **Format-Parser:** Eine neue Nachricht wird vom Kafka-Broker konsumiert und in ein Standard-Objekt (`SensorID`, `Timestamp`, `Value`) geparst. Genauere details zu dem Standardformat sind in Kapitel 8.
+2. **Metadata Handler:** Führt ein Cache-Lookup anhand der `SensorID` durch. Bei einem Cache-Miss wird das Spring Boot Backend via REST aufgerufen, um die aktuellen Metadaten zum Sensor zu laden.
+3. **SI-Unit Converter:** Rechnet den Rohwert anhand einer in den Metadaten hinterlegten Formel (*JsonLogic*) in die standardisierte SI-Einheit um.
+4. **Validator & Alerting Handler:** Prüft den umgerechneten Wert gegen definierte Upper-/Lower-Bounds. Bei einer Verletzung wird ein Event emittiert. *(Hinweis: Architektonische Trennung des Alertings: Grenzwertverletzungen wirft der Worker, System-Alarme wie fehlende Daten werden direkt auf dem Kafka-Topic via Grafana und Amazon SNS überwacht).*
+5. **DB-Writer:** Persistiert den finalen Datensatz in die TimeScaleDB, das Format wird in Kapitel 8 definiert.
+6. **Aggregator (Memory):** Der Originaldatensatz wird im Speicher gehalten. Alle *n* Minuten flusht der Worker die gesammelten Rohdaten direkt in einen AWS S3 Bucket.
+
+[plantuml, pipeline-overview, format="svg"]
+....
+include::../images/pipeline-overview.puml[]
+....
+
+==== Notification & Alerting Service (Dedizierter Pod)
+// todo: bestimmen des definitiven Techstacks.
+Um die Core API von ressourcenintensiven Hintergrundaufgaben zu entlasten und Probleme bei horizontaler Skalierung (z. B. doppelter E-Mail-Versand) zu vermeiden, wird das Alerting in einen isolierten Microservice ausgelagert.
+
+* **Zweck/Verantwortung:** Zuständig für das dynamische Routing und den Versand von Benachrichtigungen an die Endnutzer.
+* **Ablauf & Integration:**
+1. Als zentrale "Rule Engine" fungiert **Grafana**, welches Metriken (Prometheus) und Sensordaten (TimeScaleDB) aggregiert und überwacht.
+2. Bei Alarm-Auslösung sendet Grafana einen Webhook an diesen dedizierten Notification Service.
+3. Der Service fragt die User-Abonnements (Subscriptions) via REST API beim Backend an, welches die Spezifischen konfigurationen enthält.
+4. Anschliessend triggert er den physischen Versand der E-Mails oder SMS über **AWS SNS**.
+* **Skalierung:** Dieser Service läuft isoliert vom Rest des Systems und kann so konfiguriert werden (z. B. als Single-Replica), dass Race-Conditions beim Nachrichtenversand architektonisch ausgeschlossen sind.
+
+=== Whitebox Storage Layer & Zugriffslogik (Level 2)
+Um Datenintegrität und das Single-Point-of-Truth-Prinzip zu wahren, gelten für den Storage Layer strikte Zugriffsregeln ("Data Governance").
+
+**Architektonische Besonderheit (Single Connection Pool via FDW):** Obwohl Sensordaten (TimeScaleDB) und georeferenzierte Metadaten (PostgreSQL mit PostGIS) physisch in zwei getrennten Datenbanken liegen, nutzt das Spring Boot Backend zur Komplexitätsreduktion nur **einen einzigen Connection Pool**. Der Einstieg erfolgt über die Relationale Datenbank. Die TimeScaleDB wird transparent über einen **Foreign Data Wrapper (postgres_fdw)** für Leseoperationen eingebunden.
+
+Die Durchsetzung der Datenintegrität und strikter Zugriffsverbote erfolgt nicht im Applikationscode, sondern "Bulletproof" direkt auf Datenbankebene. Hierfür werden spezifische Datenbank-Rollen (DB-Roles) und restriktive Privilegien (Grants) konfiguriert.
+
+[cols="1,2,2" options="header"]
+|===
+| Datenbank / Storage | Schreib-Rechte (Write) | Lese-Rechte (Read)
+
+| **TimeScaleDB** (Zeitreihen)
+| **Pipeline-Worker:** Exklusives Schreibrecht für Sensordaten. +
+**Backend (nur Flyway):** Das Backend darf zur Laufzeit *keine* Daten schreiben. Schreibzugriffe des Backends sind streng limitiert auf DDL-Schema-Migrationen durch Flyway (unter Verwendung eines separaten Deployment-DB-Users).
+| **Spring Boot Backend (via FDW):** Das Backend greift zur Laufzeit nicht direkt auf die TimeScaleDB zu, sondern liest die Zeitreihen ausschliesslich durch den FDW-Tunnel von der PostgreSQL aus.
+
+| **PostgreSQL & PostGIS** (Metadaten & Georeferenzierung)
+| **Spring Boot Backend:** Einziger Writer für System- und Sensorkonfigurationen zur Laufzeit. +
+**Backend (nur Flyway):** DDL-Schema-Migrationen erfolgen über Flyway mit einem dedizierten Deployment-DB-User.
+| **Spring Boot Backend (direkt):** Liest Metadaten direkt und nutzt diese Datenbank als Startpunkt des FDW-Tunnels für Zeitreihen-Abfragen.
+
+| **AWS S3** (Rohdaten & Uploads)
+| **Pipeline-Worker:** Schreiben temporäre Sensor-Rohdaten im Batch. +
+**Spring Boot Backend:** Schreibt manuell hochgeladene Dateien in dedizierte Buckets. +
+**AWS Glue Jobs:** Löschen die gepufferten Rohdaten-Files nach der erfolgreichen Batch-Verarbeitung und Verschiebung.
+| **Spring Boot Backend:** Liest manuell hochgeladene Dateien, um diese nach Freigabe an die Pipeline zu übergeben. +
+**AWS Glue Jobs:** Lesen die Rohdaten für den täglichen Transfer in den Cold Storage.
+
+| **AWS S3 Glacier** (Cold Storage)
+| **AWS Glue Jobs:** Exklusives Schreibrecht zur langfristigen Archivierung.
+| **Administratoren:** Exklusiver Lesezugriff, rein für die Notfall-Wiederherstellung (Disaster Recovery) von Originaldaten.
+|===

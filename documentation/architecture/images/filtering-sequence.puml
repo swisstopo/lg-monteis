@@ -1,0 +1,28 @@
+@startuml
+!theme plain
+autonumber
+skinparam maxMessageSize 150
+
+actor "Nutzer" as User
+participant "Angular Frontend\n(Signals / LocalStorage)" as UI
+participant "Core API (Backend)" as Backend
+database "PostgreSQL\n(jOOQ)" as DB
+
+User -> UI : Setzt Filter (z.B. Typ=Pressure)
+UI -> Backend : POST /sensors/search (Filter Criteria)
+activate Backend
+
+Backend -> DB : Führt dynamische jOOQ Query aus (inkl. PostGIS Filter)
+DB --> Backend : Return gefilterte Sensor-IDs & Metadaten
+Backend --> UI : Return JSON Array
+deactivate Backend
+
+UI -> UI : Dispatch Event "FiltersUpdated"
+par UI Synchronisation
+    UI -> UI : ag-Grid: Tabelle neu aufbauen
+    UI -> UI : Giro3D: Nicht-treffende Sensoren ausblenden
+end
+
+UI --> User : Ansicht aktualisiert
+
+@enduml

@@ -1,0 +1,40 @@
+@startuml
+!theme plain
+skinparam componentStyle uml2
+left to right direction
+
+skinparam padding 15
+skinparam nodesep 60
+skinparam ranksep 60
+
+skinparam rectangle {
+    BackgroundColor #F8F9FA
+    BorderColor #343A40
+    RoundCorner 8
+    FontColor #000000
+}
+
+title MONTEIS - Divergent Data Paths & Storage Tiering
+
+queue "Kafka Topic\n(Raw Sensor Data)" as KafkaRaw
+
+package "Transformed Data Path" {
+    rectangle "Pipeline Pod\n(SI-Calc, Limits, Alerts)" as Worker
+    database "TimeScaleDB" as TSDB
+}
+
+package "Raw Data Archive (Storage Tiering)" {
+    rectangle "S3 Archiver\n(POC Aggregator / Kafka Connect)" as S3Writer
+    rectangle "AWS S3\n(Hot Storage)" as S3Hot
+    rectangle "AWS Glacier\n(Cold Storage)" as S3Cold
+}
+
+' Independent Consumers from the same source
+KafkaRaw --> Worker : " Consumer Group:\n etl-pipeline"
+Worker --> TSDB : " Insert (Transformed)"
+
+KafkaRaw --> S3Writer : " Consumer Group:\n s3-archive"
+S3Writer --> S3Hot : " Batch Flush (Raw Data)"
+S3Hot --> S3Cold : " AWS Glue Job (alle 24h)"
+
+@enduml

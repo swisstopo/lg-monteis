@@ -1,0 +1,33 @@
+@startuml
+!theme plain
+skinparam componentStyle uml2
+left to right direction
+
+' Abstände und sauberes Styling passend zur restlichen Doku
+skinparam padding 15
+skinparam nodesep 60
+skinparam ranksep 60
+
+' Leichtes Styling für die Boxen (angepasst an ein sauberes PDF-Layout)
+skinparam rectangle {
+    BackgroundColor #F8F9FA
+    BorderColor #343A40
+    RoundCorner 8
+    FontColor #000000
+}
+
+title MONTEIS - Cloud Storage
+
+' ==========================================
+' TIMELINE 2: S3 Archivierung (Datenintegrität & Backup)
+' ==========================================
+package "AWS Storage Retention (Original-Rohdaten Archivierung)" {
+    rectangle "Pipeline Worker\n[In-Memory Puffer]\n(z.B. 15 Minuten)" as S3Mem
+    rectangle "AWS S3 Hot Storage\n(Retention: 24 Stunden)" as S3Hot
+    rectangle "AWS S3 Glacier\n[Deep Archive]\n(Langzeit / >20 Jahre)" as S3Cold
+
+    S3Mem --> S3Hot : " Batch Flush"
+    S3Hot --> S3Cold : " AWS Glue Job\n (alle 24h)"
+}
+
+@enduml

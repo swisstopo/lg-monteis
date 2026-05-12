@@ -1,0 +1,39 @@
+@startuml
+!theme plain
+autonumber
+skinparam maxMessageSize 150
+
+actor "Wissenschaftler" as User
+participant "Angular Frontend" as UI
+control "Keycloak\n(Identity Broker)" as KC
+boundary "AGOV\n(IdP)" as AGOV
+participant "Core API (Backend)\n[Resource Server]" as Backend
+database "Datenbank\n(via jOOQ)" as DB
+
+== Login & Token Issuance ==
+User -> UI : Öffnet geschützten Bereich
+UI -> KC : Redirect Login (Auth Code Flow)
+KC -> AGOV : Delegiert Authentifizierung
+AGOV --> KC : Auth Success
+KC -> KC : Mappt User-Rollen in Token-Claims
+KC --> UI : Return JWT (Access Token inkl. Roles)
+
+== API Request mit Data Filtering ==
+User -> UI : Klickt auf Experiment-Dashboard
+UI -> Backend : GET /experiments/data\n(Header: Bearer JWT)
+activate Backend
+
+Backend -> Backend : Security Filter: JWT validieren\n(Signatur-Check via KC JWKS)
+Backend -> Backend : Claims parsen & in Security Context legen
+
+Backend -> DB : jOOQ Query ausführen\n(z.B. SELECT * WHERE exp_id IN [User-Roles])
+activate DB
+DB --> Backend : Return gefilterte Datensätze
+deactivate DB
+
+Backend --> UI : 200 OK (Autorisierte Daten)
+deactivate Backend
+
+UI --> User : Dashboard wird gerendert
+
+@enduml

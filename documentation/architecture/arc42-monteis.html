@@ -1,0 +1,2634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Asciidoctor 2.0.26">
+<title>MONTEIS - Architektur</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
+<style>
+/*! Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
+/* Uncomment the following line when using as a custom stylesheet */
+/* @import "https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700"; */
+html{font-family:sans-serif;-webkit-text-size-adjust:100%}
+a{background:none}
+a:focus{outline:thin dotted}
+a:active,a:hover{outline:0}
+h1{font-size:2em;margin:.67em 0}
+b,strong{font-weight:bold}
+abbr{font-size:.9em}
+abbr[title]{cursor:help;border-bottom:1px dotted #dddddf;text-decoration:none}
+dfn{font-style:italic}
+hr{height:0}
+mark{background:#ff0;color:#000}
+code,kbd,pre,samp{font-family:monospace;font-size:1em}
+pre{white-space:pre-wrap}
+q{quotes:"\201C" "\201D" "\2018" "\2019"}
+small{font-size:80%}
+sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}
+sup{top:-.5em}
+sub{bottom:-.25em}
+img{border:0}
+svg:not(:root){overflow:hidden}
+figure{margin:0}
+audio,video{display:inline-block}
+audio:not([controls]){display:none;height:0}
+fieldset{border:1px solid silver;margin:0 2px;padding:.35em .625em .75em}
+legend{border:0;padding:0}
+button,input,select,textarea{font-family:inherit;font-size:100%;margin:0}
+button,input{line-height:normal}
+button,select{text-transform:none}
+button,html input[type=button],input[type=reset],input[type=submit]{-webkit-appearance:button;cursor:pointer}
+button[disabled],html input[disabled]{cursor:default}
+input[type=checkbox],input[type=radio]{padding:0}
+button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0}
+textarea{overflow:auto;vertical-align:top}
+table{border-collapse:collapse;border-spacing:0}
+*,::before,::after{box-sizing:border-box}
+html,body{font-size:100%}
+body{background:#fff;color:rgba(0,0,0,.8);padding:0;margin:0;font-family:"Noto Serif","DejaVu Serif",serif;line-height:1;position:relative;cursor:auto;-moz-tab-size:4;-o-tab-size:4;tab-size:4;word-wrap:anywhere;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased}
+a:hover{cursor:pointer}
+img,object,embed{max-width:100%;height:auto}
+object,embed{height:100%}
+img{-ms-interpolation-mode:bicubic}
+.left{float:left!important}
+.right{float:right!important}
+.text-left{text-align:left!important}
+.text-right{text-align:right!important}
+.text-center{text-align:center!important}
+.text-justify{text-align:justify!important}
+.hide{display:none}
+img,object,svg{display:inline-block;vertical-align:middle}
+textarea{height:auto;min-height:50px}
+select{width:100%}
+.subheader,.admonitionblock td.content>.title,.audioblock>.title,.exampleblock>.title,.imageblock>.title,.listingblock>.title,.literalblock>.title,.stemblock>.title,.openblock>.title,.paragraph>.title,.quoteblock>.title,table.tableblock>.title,.verseblock>.title,.videoblock>.title,.dlist>.title,.olist>.title,.ulist>.title,.qlist>.title,.hdlist>.title{line-height:1.45;color:#7a2518;font-weight:400;margin-top:0;margin-bottom:.25em}
+div,dl,dt,dd,ul,ol,li,h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6,pre,form,p,blockquote,th,td{margin:0;padding:0}
+a{color:#2156a5;text-decoration:underline;line-height:inherit}
+a:hover,a:focus{color:#1d4b8f}
+a img{border:0}
+p{line-height:1.6;margin-bottom:1.25em;text-rendering:optimizeLegibility}
+p aside{font-size:.875em;line-height:1.35;font-style:italic}
+h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{font-family:"Open Sans","DejaVu Sans",sans-serif;font-weight:300;font-style:normal;color:#ba3925;text-rendering:optimizeLegibility;margin-top:1em;margin-bottom:.5em;line-height:1.0125em}
+h1 small,h2 small,h3 small,#toctitle small,.sidebarblock>.content>.title small,h4 small,h5 small,h6 small{font-size:60%;color:#e99b8f;line-height:0}
+h1{font-size:2.125em}
+h2{font-size:1.6875em}
+h3,#toctitle,.sidebarblock>.content>.title{font-size:1.375em}
+h4,h5{font-size:1.125em}
+h6{font-size:1em}
+hr{border:solid #dddddf;border-width:1px 0 0;clear:both;margin:1.25em 0 1.1875em}
+em,i{font-style:italic;line-height:inherit}
+strong,b{font-weight:bold;line-height:inherit}
+small{font-size:60%;line-height:inherit}
+code{font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;font-weight:400;color:rgba(0,0,0,.9)}
+ul,ol,dl{line-height:1.6;margin-bottom:1.25em;list-style-position:outside;font-family:inherit}
+ul,ol{margin-left:1.5em}
+ul li ul,ul li ol{margin-left:1.25em;margin-bottom:0}
+ul.circle{list-style-type:circle}
+ul.disc{list-style-type:disc}
+ul.square{list-style-type:square}
+ul.circle ul:not([class]),ul.disc ul:not([class]),ul.square ul:not([class]){list-style:inherit}
+ol li ul,ol li ol{margin-left:1.25em;margin-bottom:0}
+dl dt{margin-bottom:.3125em;font-weight:bold}
+dl dd{margin-bottom:1.25em}
+blockquote{margin:0 0 1.25em;padding:.5625em 1.25em 0 1.1875em;border-left:1px solid #ddd}
+blockquote,blockquote p{line-height:1.6;color:rgba(0,0,0,.85)}
+@media screen and (min-width:768px){h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{line-height:1.2}
+h1{font-size:2.75em}
+h2{font-size:2.3125em}
+h3,#toctitle,.sidebarblock>.content>.title{font-size:1.6875em}
+h4{font-size:1.4375em}}
+table{background:#fff;margin-bottom:1.25em;border:1px solid #dedede;word-wrap:normal}
+table thead,table tfoot{background:#f7f8f7}
+table thead tr th,table thead tr td,table tfoot tr th,table tfoot tr td{padding:.5em .625em .625em;font-size:inherit;color:rgba(0,0,0,.8);text-align:left}
+table tr th,table tr td{padding:.5625em .625em;font-size:inherit;color:rgba(0,0,0,.8)}
+table tr.even,table tr.alt{background:#f8f8f7}
+table thead tr th,table tfoot tr th,table tbody tr td,table tr td,table tfoot tr td{line-height:1.6}
+h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{line-height:1.2;word-spacing:-.05em}
+h1 strong,h2 strong,h3 strong,#toctitle strong,.sidebarblock>.content>.title strong,h4 strong,h5 strong,h6 strong{font-weight:400}
+.center{margin-left:auto;margin-right:auto}
+.stretch{width:100%}
+.clearfix::before,.clearfix::after,.float-group::before,.float-group::after{content:" ";display:table}
+.clearfix::after,.float-group::after{clear:both}
+:not(pre).nobreak{word-wrap:normal}
+:not(pre).nowrap{white-space:nowrap}
+:not(pre).pre-wrap{white-space:pre-wrap}
+:not(pre):not([class^=L])>code{font-size:.9375em;font-style:normal!important;letter-spacing:0;padding:.1em .5ex;word-spacing:-.15em;background:#f7f7f8;border-radius:4px;line-height:1.45;text-rendering:optimizeSpeed}
+pre{color:rgba(0,0,0,.9);font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;line-height:1.45;text-rendering:optimizeSpeed}
+pre code,pre pre{color:inherit;font-size:inherit;line-height:inherit}
+pre.nowrap,pre.nowrap pre{white-space:pre;word-wrap:normal}
+em em{font-style:normal}
+strong strong{font-weight:400}
+.keyseq{color:rgba(51,51,51,.8)}
+kbd{font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;display:inline-block;color:rgba(0,0,0,.8);font-size:.65em;line-height:1.45;background:#f7f7f7;border:1px solid #ccc;border-radius:3px;box-shadow:0 1px 0 rgba(0,0,0,.2),inset 0 0 0 .1em #fff;margin:0 .15em;padding:.2em .5em;vertical-align:middle;position:relative;top:-.1em;white-space:nowrap}
+.keyseq kbd:first-child{margin-left:0}
+.keyseq kbd:last-child{margin-right:0}
+.menuseq,.menuref{color:#000}
+.menuseq b:not(.caret),.menuref{font-weight:inherit}
+.menuseq{word-spacing:-.02em}
+.menuseq b.caret{font-size:1.25em;line-height:.8}
+.menuseq i.caret{font-weight:bold;text-align:center;width:.45em}
+b.button::before,b.button::after{position:relative;top:-1px;font-weight:400}
+b.button::before{content:"[";padding:0 3px 0 2px}
+b.button::after{content:"]";padding:0 2px 0 3px}
+p a>code:hover{color:rgba(0,0,0,.9)}
+#header,#content,#footnotes,#footer{width:100%;margin:0 auto;max-width:62.5em;*zoom:1;position:relative;padding-left:.9375em;padding-right:.9375em}
+#header::before,#header::after,#content::before,#content::after,#footnotes::before,#footnotes::after,#footer::before,#footer::after{content:" ";display:table}
+#header::after,#content::after,#footnotes::after,#footer::after{clear:both}
+#content{margin-top:1.25em}
+#content::before{content:none}
+#header>h1:first-child{color:rgba(0,0,0,.85);margin-top:2.25rem;margin-bottom:0}
+#header>h1:first-child+#toc{margin-top:8px;border-top:1px solid #dddddf}
+#header>h1:only-child{border-bottom:1px solid #dddddf;padding-bottom:8px}
+#header .details{border-bottom:1px solid #dddddf;line-height:1.45;padding-top:.25em;padding-bottom:.25em;padding-left:.25em;color:rgba(0,0,0,.6);display:flex;flex-flow:row wrap}
+#header .details span:first-child{margin-left:-.125em}
+#header .details span.email a{color:rgba(0,0,0,.85)}
+#header .details br{display:none}
+#header .details br+span::before{content:"\00a0\2013\00a0"}
+#header .details br+span.author::before{content:"\00a0\22c5\00a0";color:rgba(0,0,0,.85)}
+#header .details br+span#revremark::before{content:"\00a0|\00a0"}
+#header #revnumber{text-transform:capitalize}
+#header #revnumber::after{content:"\00a0"}
+#content>h1:first-child:not([class]){color:rgba(0,0,0,.85);border-bottom:1px solid #dddddf;padding-bottom:8px;margin-top:0;padding-top:1rem;margin-bottom:1.25rem}
+#toc{border-bottom:1px solid #e7e7e9;padding-bottom:.5em}
+#toc>ul{margin-left:.125em}
+#toc ul.sectlevel0>li>a{font-style:italic}
+#toc ul.sectlevel0 ul.sectlevel1{margin:.5em 0}
+#toc ul{font-family:"Open Sans","DejaVu Sans",sans-serif;list-style-type:none}
+#toc li{line-height:1.3334;margin-top:.3334em}
+#toc a{text-decoration:none}
+#toc a:active{text-decoration:underline}
+#toctitle{color:#7a2518;font-size:1.2em}
+@media screen and (min-width:768px){#toctitle{font-size:1.375em}
+body.toc2{padding-left:15em;padding-right:0}
+body.toc2 #header>h1:nth-last-child(2){border-bottom:1px solid #dddddf;padding-bottom:8px}
+#toc.toc2{margin-top:0!important;background:#f8f8f7;position:fixed;width:15em;left:0;top:0;border-right:1px solid #e7e7e9;border-top-width:0!important;border-bottom-width:0!important;z-index:1000;padding:1.25em 1em;height:100%;overflow:auto}
+#toc.toc2 #toctitle{margin-top:0;margin-bottom:.8rem;font-size:1.2em}
+#toc.toc2>ul{font-size:.9em;margin-bottom:0}
+#toc.toc2 ul ul{margin-left:0;padding-left:1em}
+#toc.toc2 ul.sectlevel0 ul.sectlevel1{padding-left:0;margin-top:.5em;margin-bottom:.5em}
+body.toc2.toc-right{padding-left:0;padding-right:15em}
+body.toc2.toc-right #toc.toc2{border-right-width:0;border-left:1px solid #e7e7e9;left:auto;right:0}}
+@media screen and (min-width:1280px){body.toc2{padding-left:20em;padding-right:0}
+#toc.toc2{width:20em}
+#toc.toc2 #toctitle{font-size:1.375em}
+#toc.toc2>ul{font-size:.95em}
+#toc.toc2 ul ul{padding-left:1.25em}
+body.toc2.toc-right{padding-left:0;padding-right:20em}}
+#content #toc{border:1px solid #e0e0dc;margin-bottom:1.25em;padding:1.25em;background:#f8f8f7;border-radius:4px}
+#content #toc>:first-child{margin-top:0}
+#content #toc>:last-child{margin-bottom:0}
+#footer{max-width:none;background:rgba(0,0,0,.8);padding:1.25em}
+#footer-text{color:hsla(0,0%,100%,.8);line-height:1.44}
+#content{margin-bottom:.625em}
+.sect1{padding-bottom:.625em}
+@media screen and (min-width:768px){#content{margin-bottom:1.25em}
+.sect1{padding-bottom:1.25em}}
+.sect1:last-child{padding-bottom:0}
+.sect1+.sect1{border-top:1px solid #e7e7e9}
+#content h1>a.anchor,h2>a.anchor,h3>a.anchor,#toctitle>a.anchor,.sidebarblock>.content>.title>a.anchor,h4>a.anchor,h5>a.anchor,h6>a.anchor{position:absolute;z-index:1001;width:1.5ex;margin-left:-1.5ex;display:block;text-decoration:none!important;visibility:hidden;text-align:center;font-weight:400}
+#content h1>a.anchor::before,h2>a.anchor::before,h3>a.anchor::before,#toctitle>a.anchor::before,.sidebarblock>.content>.title>a.anchor::before,h4>a.anchor::before,h5>a.anchor::before,h6>a.anchor::before{content:"\00A7";font-size:.85em;display:block;padding-top:.1em}
+#content h1:hover>a.anchor,#content h1>a.anchor:hover,h2:hover>a.anchor,h2>a.anchor:hover,h3:hover>a.anchor,#toctitle:hover>a.anchor,.sidebarblock>.content>.title:hover>a.anchor,h3>a.anchor:hover,#toctitle>a.anchor:hover,.sidebarblock>.content>.title>a.anchor:hover,h4:hover>a.anchor,h4>a.anchor:hover,h5:hover>a.anchor,h5>a.anchor:hover,h6:hover>a.anchor,h6>a.anchor:hover{visibility:visible}
+#content h1>a.link,h2>a.link,h3>a.link,#toctitle>a.link,.sidebarblock>.content>.title>a.link,h4>a.link,h5>a.link,h6>a.link{color:#ba3925;text-decoration:none}
+#content h1>a.link:hover,h2>a.link:hover,h3>a.link:hover,#toctitle>a.link:hover,.sidebarblock>.content>.title>a.link:hover,h4>a.link:hover,h5>a.link:hover,h6>a.link:hover{color:#a53221}
+details,.audioblock,.imageblock,.literalblock,.listingblock,.stemblock,.videoblock{margin-bottom:1.25em}
+details{margin-left:1.25rem}
+details>summary{cursor:pointer;display:block;position:relative;line-height:1.6;margin-bottom:.625rem;outline:none;-webkit-tap-highlight-color:transparent}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"";border:solid transparent;border-left:solid;border-width:.3em 0 .3em .5em;position:absolute;top:.5em;left:-1.25rem;transform:translateX(15%)}
+details[open]>summary::before{border:solid transparent;border-top:solid;border-width:.5em .3em 0;transform:translateY(15%)}
+details>summary::after{content:"";width:1.25rem;height:1em;position:absolute;top:.3em;left:-1.25rem}
+.admonitionblock td.content>.title,.audioblock>.title,.exampleblock>.title,.imageblock>.title,.listingblock>.title,.literalblock>.title,.stemblock>.title,.openblock>.title,.paragraph>.title,.quoteblock>.title,table.tableblock>.title,.verseblock>.title,.videoblock>.title,.dlist>.title,.olist>.title,.ulist>.title,.qlist>.title,.hdlist>.title{text-rendering:optimizeLegibility;text-align:left;font-family:"Noto Serif","DejaVu Serif",serif;font-size:1rem;font-style:italic}
+table.tableblock.fit-content>caption.title{white-space:nowrap;width:0}
+.paragraph.lead>p,#preamble>.sectionbody>[class=paragraph]:first-of-type p{font-size:1.21875em;line-height:1.6;color:rgba(0,0,0,.85)}
+.admonitionblock>table{border-collapse:separate;border:0;background:none;width:100%}
+.admonitionblock>table td.icon{text-align:center;width:80px}
+.admonitionblock>table td.icon img{max-width:none}
+.admonitionblock>table td.icon .title{font-weight:bold;font-family:"Open Sans","DejaVu Sans",sans-serif;text-transform:uppercase}
+.admonitionblock>table td.content{padding-left:1.125em;padding-right:1.25em;border-left:1px solid #dddddf;color:rgba(0,0,0,.6);word-wrap:anywhere}
+.admonitionblock>table td.content>:last-child>:last-child{margin-bottom:0}
+.exampleblock>.content{border:1px solid #e6e6e6;margin-bottom:1.25em;padding:1.25em;background:#fff;border-radius:4px}
+.sidebarblock{border:1px solid #dbdbd6;margin-bottom:1.25em;padding:1.25em;background:#f3f3f2;border-radius:4px}
+.sidebarblock>.content>.title{color:#7a2518;margin-top:0;text-align:center}
+.exampleblock>.content>:first-child,.sidebarblock>.content>:first-child{margin-top:0}
+.exampleblock>.content>:last-child,.exampleblock>.content>:last-child>:last-child,.exampleblock>.content .olist>ol>li:last-child>:last-child,.exampleblock>.content .ulist>ul>li:last-child>:last-child,.exampleblock>.content .qlist>ol>li:last-child>:last-child,.sidebarblock>.content>:last-child,.sidebarblock>.content>:last-child>:last-child,.sidebarblock>.content .olist>ol>li:last-child>:last-child,.sidebarblock>.content .ulist>ul>li:last-child>:last-child,.sidebarblock>.content .qlist>ol>li:last-child>:last-child{margin-bottom:0}
+.literalblock pre,.listingblock>.content>pre{border-radius:4px;overflow-x:auto;padding:1em;font-size:.8125em}
+@media screen and (min-width:768px){.literalblock pre,.listingblock>.content>pre{font-size:.90625em}}
+@media screen and (min-width:1280px){.literalblock pre,.listingblock>.content>pre{font-size:1em}}
+.literalblock pre,.listingblock>.content>pre:not(.highlight),.listingblock>.content>pre[class=highlight],.listingblock>.content>pre[class^="highlight "]{background:#f7f7f8}
+.literalblock.output pre{color:#f7f7f8;background:rgba(0,0,0,.9)}
+.listingblock>.content{position:relative}
+.listingblock pre>code{display:block}
+.listingblock code[data-lang]::before{display:none;content:attr(data-lang);position:absolute;font-size:.75em;top:.425rem;right:.5rem;line-height:1;text-transform:uppercase;color:inherit;opacity:.5}
+.listingblock:hover code[data-lang]::before{display:block}
+.listingblock.terminal pre .command::before{content:attr(data-prompt);padding-right:.5em;color:inherit;opacity:.5}
+.listingblock.terminal pre .command:not([data-prompt])::before{content:"$"}
+.listingblock pre.highlightjs{padding:0}
+.listingblock pre.highlightjs>code{padding:1em;border-radius:4px}
+.listingblock pre.prettyprint{border-width:0}
+.prettyprint{background:#f7f7f8}
+pre.prettyprint .linenums{line-height:1.45;margin-left:2em}
+pre.prettyprint li{background:none;list-style-type:inherit;padding-left:0}
+pre.prettyprint li code[data-lang]::before{opacity:1}
+pre.prettyprint li:not(:first-child) code[data-lang]::before{display:none}
+table.linenotable{border-collapse:separate;border:0;margin-bottom:0;background:none}
+table.linenotable td[class]{color:inherit;vertical-align:top;padding:0;line-height:inherit;white-space:normal}
+table.linenotable td.code{padding-left:.75em}
+table.linenotable td.linenos,pre.pygments .linenos{border-right:1px solid;opacity:.35;padding-right:.5em;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}
+pre.pygments span.linenos{display:inline-block;margin-right:.75em}
+.quoteblock{margin:0 1em 1.25em 1.5em;display:table}
+.quoteblock:not(.excerpt)>.title{margin-left:-1.5em;margin-bottom:.75em}
+.quoteblock blockquote,.quoteblock p{color:rgba(0,0,0,.85);font-size:1.15rem;line-height:1.75;word-spacing:.1em;letter-spacing:0;font-style:italic;text-align:justify}
+.quoteblock blockquote{margin:0;padding:0;border:0}
+.quoteblock blockquote::before{content:"\201c";float:left;font-size:2.75em;font-weight:bold;line-height:.6em;margin-left:-.6em;color:#7a2518;text-shadow:0 1px 2px rgba(0,0,0,.1)}
+.quoteblock blockquote>.paragraph:last-child p{margin-bottom:0}
+.quoteblock .attribution{margin-top:.75em;margin-right:.5ex;text-align:right}
+.verseblock{margin:0 1em 1.25em}
+.verseblock pre{font-family:"Open Sans","DejaVu Sans",sans-serif;font-size:1.15rem;color:rgba(0,0,0,.85);font-weight:300;text-rendering:optimizeLegibility}
+.verseblock pre strong{font-weight:400}
+.verseblock .attribution{margin-top:1.25rem;margin-left:.5ex}
+.quoteblock .attribution,.verseblock .attribution{font-size:.9375em;line-height:1.45;font-style:italic}
+.quoteblock .attribution br,.verseblock .attribution br{display:none}
+.quoteblock .attribution cite,.verseblock .attribution cite{display:block;letter-spacing:-.025em;color:rgba(0,0,0,.6)}
+.quoteblock.abstract blockquote::before,.quoteblock.excerpt blockquote::before,.quoteblock .quoteblock blockquote::before{display:none}
+.quoteblock.abstract blockquote,.quoteblock.abstract p,.quoteblock.excerpt blockquote,.quoteblock.excerpt p,.quoteblock .quoteblock blockquote,.quoteblock .quoteblock p{line-height:1.6;word-spacing:0}
+.quoteblock.abstract{margin:0 1em 1.25em;display:block}
+.quoteblock.abstract>.title{margin:0 0 .375em;font-size:1.15em;text-align:center}
+.quoteblock.excerpt>blockquote,.quoteblock .quoteblock{padding:0 0 .25em 1em;border-left:.25em solid #dddddf}
+.quoteblock.excerpt,.quoteblock .quoteblock{margin-left:0}
+.quoteblock.excerpt blockquote,.quoteblock.excerpt p,.quoteblock .quoteblock blockquote,.quoteblock .quoteblock p{color:inherit;font-size:1.0625rem}
+.quoteblock.excerpt .attribution,.quoteblock .quoteblock .attribution{color:inherit;font-size:.85rem;text-align:left;margin-right:0}
+p.tableblock:last-child{margin-bottom:0}
+td.tableblock>.content{margin-bottom:1.25em;word-wrap:anywhere}
+td.tableblock>.content>:last-child{margin-bottom:-1.25em}
+table.tableblock,th.tableblock,td.tableblock{border:0 solid #dedede}
+table.grid-all>*>tr>*{border-width:1px}
+table.grid-cols>*>tr>*{border-width:0 1px}
+table.grid-rows>*>tr>*{border-width:1px 0}
+table.frame-all{border-width:1px}
+table.frame-ends{border-width:1px 0}
+table.frame-sides{border-width:0 1px}
+table.frame-none>colgroup+*>:first-child>*,table.frame-sides>colgroup+*>:first-child>*{border-top-width:0}
+table.frame-none>:last-child>:last-child>*,table.frame-sides>:last-child>:last-child>*{border-bottom-width:0}
+table.frame-none>*>tr>:first-child,table.frame-ends>*>tr>:first-child{border-left-width:0}
+table.frame-none>*>tr>:last-child,table.frame-ends>*>tr>:last-child{border-right-width:0}
+table.stripes-all>*>tr,table.stripes-odd>*>tr:nth-of-type(odd),table.stripes-even>*>tr:nth-of-type(even),table.stripes-hover>*>tr:hover{background:#f8f8f7}
+th.halign-left,td.halign-left{text-align:left}
+th.halign-right,td.halign-right{text-align:right}
+th.halign-center,td.halign-center{text-align:center}
+th.valign-top,td.valign-top{vertical-align:top}
+th.valign-bottom,td.valign-bottom{vertical-align:bottom}
+th.valign-middle,td.valign-middle{vertical-align:middle}
+table thead th,table tfoot th{font-weight:bold}
+tbody tr th{background:#f7f8f7}
+tbody tr th,tbody tr th p,tfoot tr th,tfoot tr th p{color:rgba(0,0,0,.8);font-weight:bold}
+p.tableblock>code:only-child{background:none;padding:0}
+p.tableblock{font-size:1em}
+ol{margin-left:1.75em}
+ul li ol{margin-left:1.5em}
+dl dd{margin-left:1.125em}
+dl dd:last-child,dl dd:last-child>:last-child{margin-bottom:0}
+li p,ul dd,ol dd,.olist .olist,.ulist .ulist,.ulist .olist,.olist .ulist{margin-bottom:.625em}
+ul.checklist,ul.none,ol.none,ul.no-bullet,ol.no-bullet,ol.unnumbered,ul.unstyled,ol.unstyled{list-style-type:none}
+ul.no-bullet,ol.no-bullet,ol.unnumbered{margin-left:.625em}
+ul.unstyled,ol.unstyled{margin-left:0}
+li>p:empty:only-child::before{content:"";display:inline-block}
+ul.checklist>li>p:first-child{margin-left:-1em}
+ul.checklist>li>p:first-child>.fa-square-o:first-child,ul.checklist>li>p:first-child>.fa-check-square-o:first-child{width:1.25em;font-size:.8em;position:relative;bottom:.125em}
+ul.checklist>li>p:first-child>input[type=checkbox]:first-child{margin-right:.25em}
+ul.inline{display:flex;flex-flow:row wrap;list-style:none;margin:0 0 .625em -1.25em}
+ul.inline>li{margin-left:1.25em}
+.unstyled dl dt{font-weight:400;font-style:normal}
+ol.arabic{list-style-type:decimal}
+ol.decimal{list-style-type:decimal-leading-zero}
+ol.loweralpha{list-style-type:lower-alpha}
+ol.upperalpha{list-style-type:upper-alpha}
+ol.lowerroman{list-style-type:lower-roman}
+ol.upperroman{list-style-type:upper-roman}
+ol.lowergreek{list-style-type:lower-greek}
+.hdlist>table,.colist>table{border:0;background:none}
+.hdlist>table>tbody>tr,.colist>table>tbody>tr{background:none}
+td.hdlist1,td.hdlist2{vertical-align:top;padding:0 .625em}
+td.hdlist1{font-weight:bold;padding-bottom:1.25em}
+td.hdlist2{word-wrap:anywhere}
+.literalblock+.colist,.listingblock+.colist{margin-top:-.5em}
+.colist td:not([class]):first-child{padding:.4em .75em 0;line-height:1;vertical-align:top}
+.colist td:not([class]):first-child img{max-width:none}
+.colist td:not([class]):last-child{padding:.25em 0}
+.thumb,.th{line-height:0;display:inline-block;border:4px solid #fff;box-shadow:0 0 0 1px #ddd}
+.imageblock.left{margin:.25em .625em 1.25em 0}
+.imageblock.right{margin:.25em 0 1.25em .625em}
+.imageblock>.title{margin-bottom:0}
+.imageblock.thumb,.imageblock.th{border-width:6px}
+.imageblock.thumb>.title,.imageblock.th>.title{padding:0 .125em}
+.image.left,.image.right{margin-top:.25em;margin-bottom:.25em;display:inline-block;line-height:0}
+.image.left{margin-right:.625em}
+.image.right{margin-left:.625em}
+a.image{text-decoration:none;display:inline-block}
+a.image object{pointer-events:none}
+sup.footnote,sup.footnoteref{font-size:.875em;position:static;vertical-align:super}
+sup.footnote a,sup.footnoteref a{text-decoration:none}
+sup.footnote a:active,sup.footnoteref a:active,#footnotes .footnote a:first-of-type:active{text-decoration:underline}
+#footnotes{padding-top:.75em;padding-bottom:.75em;margin-bottom:.625em}
+#footnotes hr{width:20%;min-width:6.25em;margin:-.25em 0 .75em;border-width:1px 0 0}
+#footnotes .footnote{padding:0 .375em 0 .225em;line-height:1.3334;font-size:.875em;margin-left:1.2em;margin-bottom:.2em}
+#footnotes .footnote a:first-of-type{font-weight:bold;text-decoration:none;margin-left:-1.05em}
+#footnotes .footnote:last-of-type{margin-bottom:0}
+#content #footnotes{margin-top:-.625em;margin-bottom:0;padding:.75em 0}
+div.unbreakable{page-break-inside:avoid}
+.big{font-size:larger}
+.small{font-size:smaller}
+.underline{text-decoration:underline}
+.overline{text-decoration:overline}
+.line-through{text-decoration:line-through}
+.aqua{color:#00bfbf}
+.aqua-background{background:#00fafa}
+.black{color:#000}
+.black-background{background:#000}
+.blue{color:#0000bf}
+.blue-background{background:#0000fa}
+.fuchsia{color:#bf00bf}
+.fuchsia-background{background:#fa00fa}
+.gray{color:#606060}
+.gray-background{background:#7d7d7d}
+.green{color:#006000}
+.green-background{background:#007d00}
+.lime{color:#00bf00}
+.lime-background{background:#00fa00}
+.maroon{color:#600000}
+.maroon-background{background:#7d0000}
+.navy{color:#000060}
+.navy-background{background:#00007d}
+.olive{color:#606000}
+.olive-background{background:#7d7d00}
+.purple{color:#600060}
+.purple-background{background:#7d007d}
+.red{color:#bf0000}
+.red-background{background:#fa0000}
+.silver{color:#909090}
+.silver-background{background:#bcbcbc}
+.teal{color:#006060}
+.teal-background{background:#007d7d}
+.white{color:#bfbfbf}
+.white-background{background:#fafafa}
+.yellow{color:#bfbf00}
+.yellow-background{background:#fafa00}
+span.icon>.fa{cursor:default}
+a span.icon>.fa{cursor:inherit}
+.admonitionblock td.icon [class^="fa icon-"]{font-size:2.5em;text-shadow:1px 1px 2px rgba(0,0,0,.5);cursor:default}
+.admonitionblock td.icon .icon-note::before{content:"\f05a";color:#19407c}
+.admonitionblock td.icon .icon-tip::before{content:"\f0eb";text-shadow:1px 1px 2px rgba(155,155,0,.8);color:#111}
+.admonitionblock td.icon .icon-warning::before{content:"\f071";color:#bf6900}
+.admonitionblock td.icon .icon-caution::before{content:"\f06d";color:#bf3400}
+.admonitionblock td.icon .icon-important::before{content:"\f06a";color:#bf0000}
+.conum[data-value]{display:inline-block;color:#fff!important;background:rgba(0,0,0,.8);border-radius:50%;text-align:center;font-size:.75em;width:1.67em;height:1.67em;line-height:1.67em;font-family:"Open Sans","DejaVu Sans",sans-serif;font-style:normal;font-weight:bold}
+.conum[data-value] *{color:#fff!important}
+.conum[data-value]+b{display:none}
+.conum[data-value]::after{content:attr(data-value)}
+pre .conum[data-value]{position:relative;top:-.125em}
+b.conum *{color:inherit!important}
+.conum:not([data-value]):empty{display:none}
+dt,th.tableblock,td.content,div.footnote{text-rendering:optimizeLegibility}
+h1,h2,p,td.content,span.alt,summary{letter-spacing:-.01em}
+p strong,td.content strong,div.footnote strong{letter-spacing:-.005em}
+p,blockquote,dt,td.content,td.hdlist1,span.alt,summary{font-size:1.0625rem}
+p{margin-bottom:1.25rem}
+.sidebarblock p,.sidebarblock dt,.sidebarblock td.content,p.tableblock{font-size:1em}
+.exampleblock>.content{background:#fffef7;border-color:#e0e0dc;box-shadow:0 1px 4px #e0e0dc}
+.print-only{display:none!important}
+@page{margin:1.25cm .75cm}
+@media print{*{box-shadow:none!important;text-shadow:none!important}
+html{font-size:80%}
+a{color:inherit!important;text-decoration:underline!important}
+a.bare,a[href^="#"],a[href^="mailto:"]{text-decoration:none!important}
+a[href^="http:"]:not(.bare)::after,a[href^="https:"]:not(.bare)::after{content:"(" attr(href) ")";display:inline-block;font-size:.875em;padding-left:.25em}
+abbr[title]{border-bottom:1px dotted}
+abbr[title]::after{content:" (" attr(title) ")"}
+pre,blockquote,tr,img,object,svg{page-break-inside:avoid}
+thead{display:table-header-group}
+svg{max-width:100%}
+p,blockquote,dt,td.content{font-size:1em;orphans:3;widows:3}
+h2,h3,#toctitle,.sidebarblock>.content>.title{page-break-after:avoid}
+#header,#content,#footnotes,#footer{max-width:none}
+#toc,.sidebarblock,.exampleblock>.content{background:none!important}
+#toc{border-bottom:1px solid #dddddf!important;padding-bottom:0!important}
+body.book #header{text-align:center}
+body.book #header>h1:first-child{border:0!important;margin:2.5em 0 1em}
+body.book #header .details{border:0!important;display:block;padding:0!important}
+body.book #header .details span:first-child{margin-left:0!important}
+body.book #header .details br{display:block}
+body.book #header .details br+span::before{content:none!important}
+body.book #toc{border:0!important;text-align:left!important;padding:0!important;margin:0!important}
+body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-break-before:always}
+.listingblock code[data-lang]::before{display:block}
+#footer{padding:0 .9375em}
+.hide-on-print{display:none!important}
+.print-only{display:block!important}
+.hide-for-print{display:none!important}
+.show-for-print{display:inherit!important}}
+@media amzn-kf8,print{#header>h1:first-child{margin-top:1.25rem}
+.sect1{padding:0!important}
+.sect1+.sect1{border:0}
+#footer{background:none}
+#footer-text{color:rgba(0,0,0,.6);font-size:.9em}}
+@media amzn-kf8{#header,#content,#footnotes,#footer{padding:0}}
+</style>
+</head>
+<body class="article">
+<div id="header">
+<h1><span class="image"><img src="./images/arc42-logo.png" alt="arc42"></span> MONTEIS - Architektur</h1>
+<div class="details">
+<span id="revnumber">version 1.0.0-rc,</span>
+<span id="revdate">2026-05-12</span>
+<br><span id="revremark">Draft</span>
+</div>
+<div id="toc" class="toc">
+<div id="toctitle">Inhaltsverzeichnis</div>
+<ul class="sectlevel1">
+<li><a href="#section-introduction-and-goals">1. Einführung und Ziele</a>
+<ul class="sectlevel2">
+<li><a href="#_aufgabenstellung">1.1. Aufgabenstellung</a></li>
+<li><a href="#_qualitätsziele">1.2. Qualitätsziele</a></li>
+<li><a href="#_stakeholder">1.3. Stakeholder</a></li>
+</ul>
+</li>
+<li><a href="#section-architecture-constraints">2. Randbedingungen</a>
+<ul class="sectlevel2">
+<li><a href="#_technische_randbedingungen">2.1. Technische Randbedingungen</a></li>
+<li><a href="#_organisatorische_randbedingungen">2.2. Organisatorische Randbedingungen</a></li>
+<li><a href="#_konventionen_und_sicherheitsvorgaben">2.3. Konventionen und Sicherheitsvorgaben</a></li>
+</ul>
+</li>
+<li><a href="#section-context-and-scope">3. Kontextabgrenzung</a>
+<ul class="sectlevel2">
+<li><a href="#_fachlicher_kontext">3.1. Fachlicher Kontext</a></li>
+<li><a href="#_technischer_kontext">3.2. Technischer Kontext</a></li>
+<li><a href="#_mapping_fachliche_auf_technische_schnittstellen">3.3. Mapping fachliche auf technische Schnittstellen</a></li>
+</ul>
+</li>
+<li><a href="#section-solution-strategy">4. Lösungsstrategie</a>
+<ul class="sectlevel2">
+<li><a href="#_erreichung_der_wichtigsten_qualitätsziele">4.1. Erreichung der wichtigsten Qualitätsziele</a></li>
+<li><a href="#_fundamentale_architekturentscheidungen_top_level">4.2. Fundamentale Architekturentscheidungen (Top-Level)</a></li>
+<li><a href="#_technologie_entscheidungen_tech_stack">4.3. Technologie-Entscheidungen (Tech Stack)</a></li>
+<li><a href="#_integrations_und_schnittstellenstrategie">4.4. Integrations- und Schnittstellenstrategie</a></li>
+<li><a href="#_organisatorisches_devops">4.5. Organisatorisches &amp; DevOps</a></li>
+</ul>
+</li>
+<li><a href="#section-building-block-view">5. Bausteinsicht</a>
+<ul class="sectlevel2">
+<li><a href="#_whitebox_gesamtsystem_level_1">5.1. Whitebox Gesamtsystem (Level 1)</a></li>
+<li><a href="#_whitebox_interface_layer_level_2">5.2. Whitebox Interface Layer (Level 2)</a></li>
+<li><a href="#_whitebox_business_layer_level_2">5.3. Whitebox Business Layer (Level 2)</a></li>
+<li><a href="#_whitebox_storage_layer_zugriffslogik_level_2">5.4. Whitebox Storage Layer &amp; Zugriffslogik (Level 2)</a></li>
+</ul>
+</li>
+<li><a href="#section-runtime-view">6. Laufzeitsicht</a>
+<ul class="sectlevel2">
+<li><a href="#_szenario_1_daten_ingestion_grenzwert_alarm_pipeline_flow">6.1. Szenario 1: Daten-Ingestion &amp; Grenzwert-Alarm (Pipeline Flow)</a></li>
+<li><a href="#_szenario_2_manueller_upload_admin_freigabeprozess">6.2. Szenario 2: Manueller Upload &amp; Admin-Freigabeprozess</a></li>
+<li><a href="#_szenario_3_initialisierung_des_digitalen_zwillings_3d_view">6.3. Szenario 3: Initialisierung des Digitalen Zwillings (3D View)</a></li>
+<li><a href="#_szenario_4_räumliches_fachliches_filtern">6.4. Szenario 4: Räumliches &amp; Fachliches Filtern</a></li>
+<li><a href="#_szenario_5_visualisierung_langer_zeitreihen_fdw_downsampling">6.5. Szenario 5: Visualisierung langer Zeitreihen (FDW &amp; Downsampling)</a></li>
+<li><a href="#_szenario_6_sso_authentifizierung_role_based_data_filtering">6.6. Szenario 6: SSO, Authentifizierung &amp; Role-Based Data Filtering</a></li>
+<li><a href="#_szenario_7_on_demand_datenabruf_aus_umsystemen_fulcrum_integration">6.7. Szenario 7: On-Demand Datenabruf aus Umsystemen (Fulcrum Integration)</a></li>
+<li><a href="#_szenario_8_timescaledb_daten_lebenszyklus_downsampling_kompression">6.8. Szenario 8: TimeScaleDB Daten-Lebenszyklus (Downsampling &amp; Kompression)</a></li>
+<li><a href="#_datenkonsistenz_unabhängiges_routing_kafka_consumer_groups">6.9. Datenkonsistenz &amp; Unabhängiges Routing (Kafka Consumer Groups)</a></li>
+</ul>
+</li>
+<li><a href="#section-deployment-view">7. Verteilungssicht</a>
+<ul class="sectlevel2">
+<li><a href="#_infrastruktur_ebene_1_aws_cloud_resourcen">7.1. Infrastruktur Ebene 1: AWS Cloud Resourcen</a></li>
+</ul>
+</li>
+<li><a href="#section-concepts">8. Querschnittliche Konzepte</a>
+<ul class="sectlevel2">
+<li><a href="#_core_api_datenzugriff_sicherheit">8.1. Core-API Datenzugriff &amp; Sicherheit</a></li>
+<li><a href="#_core_api_optimistic_locking_und_versionierungauditierung">8.2. Core-API Optimistic Locking und Versionierung/Auditierung</a></li>
+<li><a href="#_core_api_validierung_validation_error_handling">8.3. Core-API Validierung (Validation &amp; Error Handling)</a></li>
+<li><a href="#_datenbankschemata">8.4. Datenbankschemata</a></li>
+<li><a href="#_api_schnittstellen_contracts">8.5. API-Schnittstellen (Contracts)</a></li>
+<li><a href="#_teststrategie">8.6. Teststrategie</a></li>
+<li><a href="#_entwickler_workflow_cicd_pipeline">8.7. Entwickler-Workflow &amp; CI/CD Pipeline</a></li>
+</ul>
+</li>
+<li><a href="#section-design-decisions">9. Architekturentscheidungen</a></li>
+<li><a href="#section-quality-scenarios">10. Qualitätsanforderungen</a>
+<ul class="sectlevel2">
+<li><a href="#_übersicht_der_qualitätsanforderungen">10.1. Übersicht der Qualitätsanforderungen</a></li>
+<li><a href="#_qualitätsszenarien">10.2. Qualitätsszenarien</a></li>
+</ul>
+</li>
+<li><a href="#section-technical-risks">11. Risiken und technische Schulden</a></li>
+<li><a href="#section-glossary">12. Glossar</a></li>
+</ul>
+</div>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p><strong>Über arc42</strong></p>
+</div>
+<div class="paragraph">
+<p>Diese Dokumentation basiert auf dem arc42-Template und wurde davon abgeleitet
+(© Dr. Peter Hruschka, Dr. Gernot Starke und Mitwirkende).</p>
+</div>
+<div class="paragraph">
+<p>Original-Template:
+<a href="https://arc42.org" class="bare">https://arc42.org</a></p>
+</div>
+<div class="paragraph">
+<p>Lizenz:
+Creative Commons Attribution-ShareAlike 4.0 International
+<a href="https://creativecommons.org/licenses/by-sa/4.0/" class="bare">https://creativecommons.org/licenses/by-sa/4.0/</a></p>
+</div>
+<div class="paragraph">
+<p>Es wurden Änderungen am originalen arc42-Template vorgenommen.</p>
+</div>
+<div class="paragraph">
+<p>Dieses angepasste Werk wird unter derselben
+Creative Commons Attribution-ShareAlike 4.0 International Lizenz bereitgestellt.</p>
+</div>
+<div class="paragraph">
+<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-05-12</p>
+</div>
+<hr>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-introduction-and-goals">1. Einführung und Ziele</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Dieses Dokument beschreibt das Mont Terri Experiment Information System, kurz MONTEIS.
+Mit MONTEIS soll ein Zentrales System für das Mont Terri Konsortium von Grund auf neu gebaut werden,
+welches die Bedürfnisse der Forscher im Bereich der Geologie im Felslabor Mont Terri automatisiert.</p>
+</div>
+<div class="sect2">
+<h3 id="_aufgabenstellung">1.1. Aufgabenstellung</h3>
+<div class="paragraph">
+<p>MONTEIS (Mont Terri Experiment Information System) ist ein neues zentrales Informationssystem für das Mont Terri Felslabor. Es dient der strukturierten Erfassung, Verwaltung und Bereitstellung sämtlicher experimentbezogener Daten aus dem Felslaborumfeld.</p>
+</div>
+<div class="paragraph">
+<p>Die bestehende Systemlandschaft ist historisch gewachsen, heterogen und technisch fragmentiert. Sie erfüllt die heutigen Anforderungen an Datenvolumen, Datenvielfalt, Nachvollziehbarkeit und langfristige Verfügbarkeit aufgrund veralteter Architekturen nicht mehr ausreichend. Daher wurde im Rahmen einer Vorstudie festgestellt, dass eine komplette Neuentwicklung (Greenfield-Ansatz) eines zentralen Systems notwendig ist.</p>
+</div>
+<div class="paragraph">
+<p>Ziel der Aufgabenstellung ist die Bereitstellung einer zukunftsfähigen, offenen und modular erweiterbaren Plattform, welche die vollständige Digitalisierung und Integration aller relevanten Datenquellen des Mont Terri Felslabors ermöglicht. Dazu gehören insbesondere experimentbezogene Messdaten, geologische Modelle, Sensordaten sowie wissenschaftliche Dokumente.</p>
+</div>
+<div class="paragraph">
+<p>Die Dimensionen des Systems sind enorm: Bisher wurden ca. 50 Milliarden Messungen durchgeführt. Täglich kommen mehr als 2 Millionen neue Messungen hinzu. Über die geplante Lebenszeit des Systems wird ein Datenvolumen von mehr als 200 Milliarden Messungen (ca. 10 TB) erwartet.</p>
+</div>
+<div class="paragraph">
+<p>Das System soll den internationalen Partnern des Mont Terri Konsortiums einen einheitlichen, webbasierten Zugang zu diesen Informationen ermöglichen. Dabei spielt die permanente Datenverfügbarkeit und die georeferenzierte Strukturierung der Daten eine zentrale Rolle.</p>
+</div>
+<div class="paragraph">
+<p>Zwingende technologische Vorgabe: MONTEIS muss auf 100 % Open-Source-Technologien basieren. Zudem ist der Source-Code zwingend auf GitHub zu publizieren, um maximale Transparenz und eine unabhängige Weiterentwicklung sicherzustellen.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_qualitätsziele">1.2. Qualitätsziele</h3>
+<div class="paragraph">
+<p>Die Anforderungen an MONTEIS lassen sich in funktionale und nicht-funktionale Aspekte sowie übergeordnete Qualitätsziele gliedern. Der Schwerpunkt liegt auf dem Umgang mit grossen, heterogenen Datenmengen sowie der langfristigen Sicherstellung von Datenzugriff, Integrität und Systemstabilität.</p>
+</div>
+<div class="sect3">
+<h4 id="_zentrale_funktionale_anforderungen_überblick">1.2.1. Zentrale funktionale Anforderungen (Überblick)</h4>
+<div class="paragraph">
+<p>Das System muss insbesondere folgende fachliche Fähigkeiten unterstützen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Zentrale Verwaltung von experimentbezogenen Daten über den gesamten Lebenszyklus (teilweise &gt;20 Jahre).</p>
+</li>
+<li>
+<p>Erfassung und Integration heterogener Datenquellen (Sensoren, Zeitreihen, Dokumente, geologische Modelle).</p>
+</li>
+<li>
+<p>Verwaltung von Experimenten, Messstellen und zugehörigen Metadaten.</p>
+</li>
+<li>
+<p>Bereitstellung eines performanten webbasierten Zugriffs, inklusive interaktiver 3D-Ansichten und räumlicher Navigation.</p>
+</li>
+<li>
+<p>Unterstützung der Suche (z. B. Region of Interest-Suche in 2D/3D, Volltext) und Wiederauffindbarkeit von Daten.</p>
+</li>
+<li>
+<p>Automatisierter Import (via Daten-Pipelines) aus bestehenden Datenerfassungssystemen (DAS) wie Geomonitor über FTP oder Kafka.</p>
+</li>
+<li>
+<p>Bereitstellung von Daten für die wissenschaftliche Auswertung über strukturierte Exportfunktionen.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_übergeordnete_qualitätsziele_iso_25010_orientiert">1.2.2. Übergeordnete Qualitätsziele (ISO 25010-orientiert)</h4>
+<div class="paragraph">
+<p>Die folgenden Qualitätsziele sind für MONTEIS besonders relevant und wurden mit messbaren Kriterien aus dem Pflichtenheft hinterlegt:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 28.5714%;">
+<col style="width: 57.1429%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Nr.</th>
+<th class="tableblock halign-left valign-top">Qualitätsziel</th>
+<th class="tableblock halign-left valign-top">Beschreibung &amp; Messkriterien</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sicherheit</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Schutz sensibler Forschungsdaten durch rollenbasierte Zugriffskontrolle (RBAC) , sichere Authentifizierung via eIAM  und Einhaltung des IKT-Grundschutzes des Bundes.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Datenintegrität</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sicherstellung der verlustfreien Speicherung (absolut kein Datenverlust). Jederzeitige Verfügbarkeit unprozessierter Originaldaten  und Speicherung standardmässig in SI-Einheiten.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Verfügbarkeit</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gewährleistung eines hochverfügbaren Systems mit minimalen Ausfallzeiten (gefordert ist eine Downtime von &lt; 2 %).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Performanz</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Effiziente interaktive Nutzung (z. B. durch Resampling-Funktionen beim Plotten langer Zeitreihen) , die gewährleistet ist, auch wenn bis zu 30 Benutzer gleichzeitig arbeiten.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skalierbarkeit</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Fähigkeit zur performanten Verarbeitung eines Zielvolumens von über 200 Milliarden Messungen. Die Architektur muss so modular sein, dass Daten-Pipelines unabhängig operieren, ohne das System zu blockieren.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Interoperabilität</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Nahtlose Anbindung an Umsysteme (wie BIM, Fulcrum und Citavi) über Schnittstellen. Problemlose Verarbeitung der stark heterogenen Datenformate (TXT, CSV, LAS, PDF etc.).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offenheit &amp; Transparenz</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Konsequente Nutzung von 100 % Open-Source-Komponenten. Publikation des vollständigen Quellcodes auf GitHub.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Nachvollziehbarkeit</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Lückenlose Dokumentation von Systemoperationen. Sicherstellung der Verifizierbarkeit bei manuellen Daten-Uploads sowie Nutzung von Zeitstempeln.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">9</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Benutzerfreundlichkeit</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Intuitive Bedienung im Browser ohne zusätzliche Plugins. Selbstständige Konfigurierbarkeit von Alarmierungen und Dashboards durch die Nutzer.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_stakeholder">1.3. Stakeholder</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Rolle</th>
+<th class="tableblock halign-left valign-top">Kontakt</th>
+<th class="tableblock halign-left valign-top">Erwartungshaltung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Auftraggeberin / Betreiberin</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">swisstopo (Landesgeologie)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Wünscht eine Effizienzsteigerung, automatisierte Validierung, Ablösung veralteter Systeme zur Kostenersparnis und eine Vorreiterrolle durch innovative Open-Source-Technologien.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Projektpartner &amp; Forscher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Mont Terri Konsortium (22 Partner, inkl. ENSI, ETH, nagra)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Benötigen einen performanten, automatisierten Zugang zu den Daten, einfache Wiederauffindbarkeit (z.B. über 3D-Viewer) und Exportmöglichkeiten für wissenschaftliche Auswertungen.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Administratoren</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">swisstopo-interne Mitarbeiter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Einfache Verwaltung von Benutzerkonten, Systemüberwachung via Cockpit-View, voll konfigurierbare Daten-Pipelines und Alerting-Funktionen.</p></td>
+</tr>
+</tbody>
+</table>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-architecture-constraints">2. Randbedingungen</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Dieser Abschnitt beschreibt die Vorgaben und Einschränkungen, die bei der Konzeption und Umsetzung von MONTEIS zwingend zu beachten sind. Sie schränken den Lösungsraum für Architekten und Entwickler bewusst ein, um die strategischen und rechtlichen Vorgaben des Bundes und des Mont Terri Konsortiums zu erfüllen.</p>
+</div>
+<div class="sect2">
+<h3 id="_technische_randbedingungen">2.1. Technische Randbedingungen</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Randbedingung</th>
+<th class="tableblock halign-left valign-top">Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">100 % Open Source</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Das System, inklusive aller eingebundenen Produkte von Drittanbietern, darf ausschliesslich auf Open-Source-Komponenten basieren. Es dürfen keine Lizenzgebühren für Softwarekomponenten anfallen.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cloud-Infrastruktur</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Die neuen Applikationen, Datenbanken und Pipelines müssen zwingend in einer Cloud-Infrastruktur betrieben werden (als Beispiele werden u.a. AWS-Cloud-Services, S3 Buckets, Kubernetes und Docker genannt).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Zentrales Identity Management</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Die Authentifizierung der Nutzer hat zwingend über eIAM (oder vergleichbare SSO-Provider wie AGOV) der Bundesverwaltung zu erfolgen.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Browser- und Plugin-Freiheit</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Die Web-App (Frontend) muss auf einer der gängigen Plattformen vollständig im Webbrowser funktionieren, ohne dass zusätzliche Plugins installiert werden müssen.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Einheiten und Standards</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sensormesswerte müssen systemintern zwingend in SI-Einheiten abgespeichert und dargestellt werden. Ursprüngliche Einheiten müssen jedoch bei Bedarf weiterhin verfügbar und abrufbar bleiben.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">System-Schnittstellen</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">MONTEIS muss zwingend über Schnittstellen (APIs/Pipelines) mit den bereits existierenden Systemen BIM Mont Terri (3D-Geometrien/Infrastruktur), Fulcrum (mobiles Logbuch/Proben) und Citavi (Publikationsdatenbank) interagieren können.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_organisatorische_randbedingungen">2.2. Organisatorische Randbedingungen</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Randbedingung</th>
+<th class="tableblock halign-left valign-top">Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Transparenz &amp; Quellcode</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gemäss Vorgaben der Bundesverwaltung (bzw. EMBAG) muss der gesamte Source-Code der Applikationen auf GitHub publiziert werden und anschliessend für die Öffentlichkeit frei zugänglich sein.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Agile Methodik &amp; Etappierung</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Die Entwicklung hat strikt nach agilen Software-Entwicklungsmethoden zu erfolgen. Zudem ist ein etappiertes Vorgehen vorgeschrieben: Zuerst wird ein MVP (Priorität 1) entwickelt, gefolgt von optionalen Erweiterungen (Priorität 2 und 3).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sprache</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Die Kommunikations-, Applikations-, Daten- und Dokumentationssprache ist zwingend Deutsch.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Präsenz vor Ort</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Zwar können die Arbeiten primär in den eigenen Räumlichkeiten des Anbieters erfolgen, jedoch wird erwartet, dass der Auftragnehmer regelmässig (voraussichtlich alle 4 Wochen) an Besprechungen in den Räumlichkeiten der Bedarfsstelle (St-Ursanne) teilnimmt.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_konventionen_und_sicherheitsvorgaben">2.3. Konventionen und Sicherheitsvorgaben</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Randbedingung</th>
+<th class="tableblock halign-left valign-top">Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">IKT-Grundschutz</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Das System muss den obligatorischen minimalen Sicherheitsanforderungen des Bundes bezüglich Informationssicherheit (IKT-Grundschutz) genügen.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Vollständige Dokumentation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Das System, die Pipelines und der Code müssen vollständig dokumentiert werden und die Dokumentation muss während der gesamten Auftragsdauer gepflegt und à jour gehalten werden. Änderungen im System müssen nachvollziehbar dokumentiert werden.</p></td>
+</tr>
+</tbody>
+</table>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-context-and-scope">3. Kontextabgrenzung</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Dieses Kapitel beschreibt das System in seiner Umgebung. Es grenzt MONTEIS von seinen externen Nachbarsystemen ab und definiert die Schnittstellen und den Datenfluss zu den angebundenen Akteuren und Systemen.</p>
+</div>
+<div class="sect2">
+<h3 id="_fachlicher_kontext">3.1. Fachlicher Kontext</h3>
+<div class="paragraph">
+<p>MONTEIS operiert nicht isoliert, sondern agiert als zentrales "Overarching System" (Informationsdrehscheibe) im Felslabor Mont Terri, das Daten aus verschiedenen spezialisierten Systemen bündelt.</p>
+</div>
+<div class="paragraph">
+<p><strong>Akteure:</strong></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Administrator (swisstopo):</strong> Hat weitreichende Konfigurationsrechte. Er legt neue Experimente und Sensoren an, konfiguriert die Daten-Pipelines, richtet das Alerting ein und muss manuell hochgeladene Daten verifizieren.</p>
+</li>
+<li>
+<p><strong>User (Wissenschaftler, PIs, Projektpartner):</strong> Greifen auf das System zu, um Daten über die 3D-Ansicht oder Filter zu suchen, lange Zeitreihen zu plotten, Exporte durchzuführen und Kommentare zu verfassen.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>Nachbarsysteme:</strong></p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 20%;">
+<col style="width: 60%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Nachbarsystem</th>
+<th class="tableblock halign-left valign-top">Typ</th>
+<th class="tableblock halign-left valign-top">Fachliche Beschreibung &amp; Informationsfluss</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">BIM Mont Terri</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3D-Geometrie &amp; Infrastruktur</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Fungiert als digitaler Zwilling des Felslabors (Infrastruktur, Assets und Bohrlochdatenbank). MONTEIS bezieht von hier die 3D-Strukturen und Bohrlochgeometrien, um diese im eigenen 3D-Viewer darzustellen und für die räumliche Suche nutzbar zu machen.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Fulcrum™</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Mobiles Logbuch / Vor-Ort-Erfassung</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cloud-Datenbank zur mobilen Erfassung von Ereignissen, Proben und Bohrlöchern direkt auf Tablets im Tunnel. Da Fulcrum das primäre Arbeits-Tool vor Ort bleibt, müssen Logbuch- und Assetdaten zwingend bidirektional mit MONTEIS abgeglichen werden.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Citavi</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Publikations- &amp; Berichtsdatenbank</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Verwaltet wissenschaftliche Berichte, technische Notizen und Zeitschriftenartikel. Die darin enthaltenen Dokumente (PDFs) und Metadaten (z. B. Autor, Schlagwörter) werden periodisch in MONTEIS überführt, um sie direkt mit den jeweiligen Experimenten zu verknüpfen.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">DAS (Data Acquisition Systems)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sensorik / Datenerfassung</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Lokale Erfassungssysteme (wie Geomonitor, Geoscope, Glötzl etc.), die Millionen von Sensordaten (z. B. Druck, Temperatur) aufzeichnen. Diese Messwerte fliessen kontinuierlich in MONTEIS ein.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="imageblock">
+<div class="content">
+<img src="./images/context.svg" alt="context" width="933" height="469">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_technischer_kontext">3.2. Technischer Kontext</h3>
+<div class="paragraph">
+<p>Die technische Anbindung der Nachbarsysteme an MONTEIS erfolgt über klar definierte, standardisierte Schnittstellen. In dieser Sicht wird MONTEIS als Blackbox betrachtet, die detaillierten API-Spezifikationen (REST-Contracts) werden in der separaten API-Dokumentation (z. B. via Swagger/OpenAPI) gepflegt.</p>
+</div>
+<div class="paragraph">
+<p>An den Systemgrenzen kommen folgende technische Integrationsmuster zum Einsatz:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Daten-Pipelines (Ingestion von DAS):</strong> Die Anbindung der lokalen Datenerfassungssysteme (DAS) erfolgt entweder über etablierte Dateitransfer-Protokolle (wie FTP) oder über moderne Event-Streaming-Technologien wie Apache Kafka, welches extrem geringe Latenzen (&lt;10ms) bei hoher Bandbreite für die Hochfrequenz-Sensordaten bietet.</p>
+</li>
+<li>
+<p><strong>Format-Handling an der Systemgrenze:</strong> Die eingehenden DAS-Schnittstellen müssen extrem heterogene Dateiformate (TXT, CSV, ASCII, XLS, JPG, TIF, LAS, LAZ, etc.) automatisiert entgegennehmen können.</p>
+</li>
+<li>
+<p><strong>REST-APIs &amp; Webhooks (BIM &amp; Fulcrum):</strong> Die Kommunikation mit den Umsystemen BIM und Fulcrum erfolgt über zustandslose REST-APIs, wobei strukturierte Daten im JSON-Format ausgetauscht werden. Für ereignisbasierte Updates (z. B. aus dem mobilen Logbuch Fulcrum) werden zusätzlich Webhooks eingesetzt.</p>
+</li>
+<li>
+<p><strong>Authentifizierungsschnittstelle (eIAM):</strong> Das System delegiert die Authentifizierung vollständig nach aussen. Das Login erfolgt über einen externen Call (z. B. via SAML oder OIDC) an das System <code>eIAM</code> oder <code>AGOV</code> der Bundesverwaltung.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>Monteis mit Umsysteme</strong></p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/tech_context.svg" alt="tech context" width="975" height="469">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_mapping_fachliche_auf_technische_schnittstellen">3.3. Mapping fachliche auf technische Schnittstellen</h3>
+<div class="paragraph">
+<p>Die folgende Tabelle stellt den Bezug zwischen den ausgetauschten fachlichen Informationen (siehe 3.1) und deren technischer Implementierung (siehe 3.2) her:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 37.5%;">
+<col style="width: 37.5%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Nachbarsystem</th>
+<th class="tableblock halign-left valign-top">Fachliche Schnittstelle (Das "Was")</th>
+<th class="tableblock halign-left valign-top">Technische Schnittstelle (Das "Wie")</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>DAS (Datenerfassung)</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kontinuierlicher Zufluss von rohen Sensormesswerten (z.B. Druck, Temperatur).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Daten-Stream via <strong>Apache Kafka</strong> (für Latenzen &lt;10ms) oder Dateitransfer via <strong>FTP</strong>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Fulcrum™</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Bidirektionaler Abgleich von mobilen Logbucheinträgen, Proben und Asset-Daten.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Zustandslose Kommunikation via <strong>REST-API</strong> (Format: JSON) sowie ereignisbasierte Updates über <strong>Webhooks</strong>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>BIM Mont Terri</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Bereitstellung der 3D-Infrastrukturgeometrien und Bohrlochdaten des Tunnelsystems.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Abfrage über eine <strong>API</strong> (z. B. für Cesium 3D-Tiles zur Visualisierung im Browser).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Citavi</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Bereitstellung von wissenschaftlichen Berichten (PDFs) und Publikations-Metadaten.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kein direkter API-Zugriff möglich; Umsetzung über <strong>manuellen oder periodischen Import</strong> von Austauschformaten (z. B. RIS und PDF-Dateien).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>eIAM / AGOV</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sichere Identifikation und Authentifizierung der Nutzer (Admins, Wissenschaftler).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Externer Aufruf des föderativen Identity Providers der Bundesverwaltung via <strong>SAML / OIDC</strong>.</p></td>
+</tr>
+</tbody>
+</table>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-solution-strategy">4. Lösungsstrategie</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Dieses Kapitel fasst die grundlegenden Entwurfsentscheidungen und Lösungsansätze zusammen, die die Architektur von MONTEIS massgeblich prägen. Es beschreibt, mit welchen technologischen und strukturellen Konzepten die geforderten Qualitätsziele (insbesondere Skalierbarkeit, Performanz und Verfügbarkeit) erreicht werden.</p>
+</div>
+<div class="sect2">
+<h3 id="_erreichung_der_wichtigsten_qualitätsziele">4.1. Erreichung der wichtigsten Qualitätsziele</h3>
+<div class="paragraph">
+<p>Die folgende Tabelle gibt einen Überblick (Executive Summary), mit welchen architektonischen Ansätzen und Taktiken die priorisierten Qualitätsziele erreicht werden. Detaillierte technische Beschreibungen folgen in den darauffolgenden Unterkapiteln.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 28.5714%;">
+<col style="width: 42.8571%;">
+<col style="width: 14.2858%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Qualitätsziel</th>
+<th class="tableblock halign-left valign-top">Szenario</th>
+<th class="tableblock halign-left valign-top">Lösungsansatz &amp; Architekturentscheidung</th>
+<th class="tableblock halign-left valign-top">Link zu Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Performanz &amp; Skalierbarkeit</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Ein Wissenschaftler möchte eine 10-jährige Zeitreihe eines Drucksensors visualisieren. Das System darf nicht einfrieren und muss bei 30 gleichzeitigen Nutzern performant bleiben.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Polyglot Persistence &amp; Downsampling:</strong> Hochfrequente Messwerte (Zielvolumen: 200 Mrd. Messungen) landen in einer spezialisierten TimeScaleDB, Metadaten in PostgreSQL. Für lange Zeitreihen wird systemseitig ein Downsampling angewendet, um die Payload für das Frontend zu reduzieren.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&#8594; Kap. 5.4 &amp; 6.8</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Verfügbarkeit &amp; Robustheit</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Ein Datenerfassungssystem (DAS) sendet fehlerhafte oder extrem grosse Datenmengen. Dies darf andere Experimente oder die Web-App nicht beeinträchtigen.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>High Availability &amp; Event-Streaming:</strong> Bereitstellung im Kubernetes-Cluster (AWS) mit High-Availability-Images. Apache Kafka (Connect) dient als asynchroner Puffer. Jede DAS-Pipeline operiert strikt isoliert als eigener Pod/Connector, sodass Ausfälle gekapselt bleiben.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&#8594; Kap. 5.3.2 &amp; 6.1</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Sicherheit</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Zugriffe auf sensible Experimentdaten müssen strikt geregelt und vor unbefugtem Zugriff geschützt sein.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Zentrales API-Gateway &amp; RBAC via Keycloak:</strong> Direkte Zugriffe auf Pipelines oder Datenbanken sind unterbunden; Frontend und Backend fungieren als Nadelöhr. Die Authentifizierung (eIAM) wird über Keycloak angebunden. Rollen (z. B. <code>read_exp_a</code>) werden als Claims im JWT an das Spring Boot Backend übergeben, welches die Berechtigungen durchsetzt.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&#8594; Kap. 5.3.1 &amp; 6.6</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Datenintegrität</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Historische Sensordaten und deren Umrechnungen müssen manipulationssicher und jederzeit nachvollziehbar gespeichert werden.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Trennung von Roh- und Prozessdaten:</strong> Sensordaten werden direkt und unverfälscht abgelegt. Die Normalisierung erfolgt ausschliesslich in der Pipeline. Ändert sich eine Berechnungsformel, müssen die Daten zwingend über die Pipeline aktualisiert werden. Rohdaten landen parallel in einem S3 Bucket, während das Schema der TimeScaleDB absichtlich schlank gehalten wird.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&#8594; Kap. 5.3.2 &amp; 6.2 &amp; 6.9</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Interoperabilität</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Das System muss heterogene Daten aus Umsystemen (BIM, Fulcrum, Citavi) und diversen Sensoren verarbeiten.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Spezialisierte Backend-Komponenten &amp; Kafka Sinks:</strong> Die Anbindung von Umsystemen erfolgt über dedizierte Spring Boot Komponenten. Die Heterogenität der DAS-Sensordaten wird durch das Kafka Connect Cluster abgefangen, welches vielfältige Formate entgegennehmen und standardisieren kann.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&#8594; Kap. 5.3.2</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Offenheit &amp; Transparenz</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Das System muss zukunftssicher und ohne Vendor-Lock-in durch Lizenzkosten betrieben werden können.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>100 % Open Source:</strong> Alle eingesetzten Komponenten werden auf ihre Open-Source-Lizenz geprüft. Der Source Code wird zentral bei swisstopo auf GitHub geführt und gemanagt.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&#8594; Kap. 4.3</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Nachvollziehbarkeit</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploads und Systemzustände müssen für Administratoren transparent und auditierbar sein.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Statusbasierte Ablage:</strong> Manuelle Uploads werden zunächst in einem isolierten <code>manual_uploads</code>-Ordner im S3-Bucket zwischengespeichert. Erst nach der expliziten Freigabe durch einen Administrator werden die Daten via Pipeline in die TimeScaleDB und den Cold Storage überführt.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&#8594; Kap. 5.4 &amp; 6.2</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Benutzerfreundlichkeit</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Nutzer benötigen individuelle Konfigurationsmöglichkeiten und eine intuitive Bedienung.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>User-Centric Design &amp; Customizing:</strong> UI-Designs und Workflows werden durch die Anwender validiert. Die Applikation erlaubt es jedem Nutzer, relevante Einstellungen (Alarme, Darstellungeinheiten aus einem definierten Set) individuell zu konfigurieren.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&#8594; Kap. 5.2</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_fundamentale_architekturentscheidungen_top_level">4.2. Fundamentale Architekturentscheidungen (Top-Level)</h3>
+<div class="paragraph">
+<p>MONTEIS folgt einer verteilten, Cloud-nativen <strong>Microservices-orientierten Architektur</strong>, die in drei logische und physische Schichten unterteilt ist:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Interface Layer:</strong> Angular Web-Frontend.</p>
+</li>
+<li>
+<p><strong>Business Layer:</strong> Spring Boot Backend und Daten-Pipelines (Kafka Connect).</p>
+</li>
+<li>
+<p><strong>Storage Layer:</strong> TimeScaleDB, PostgreSQL, AWS S3 und S3 Glacier.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p><strong>Entkopplung und Skalierung:</strong>
+Die verschiedenen Schichten und Services werden als separate Pods in einem Kubernetes-Cluster bereitgestellt. Dies ermöglicht eine granulare und individuelle horizontale Skalierung (z. B. Skalierung des Backends bei hohen Zugriffszahlen oder Erhöhung der Pipeline-Pods bei grossen Daten-Uploads). Die Kommunikation zwischen den Layern erfolgt über REST-APIs, während Datenbanken über effizientes Connection Pooling angebunden werden.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_technologie_entscheidungen_tech_stack">4.3. Technologie-Entscheidungen (Tech Stack)</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Frontend:</strong> Die Web-Applikation wird mit <strong>Angular</strong> umgesetzt, ergänzt durch das <strong>Carbon Design System</strong>, <strong>AG-Grid</strong> und <strong>Scion Workbench</strong> für eine konsistente und moderne UI. Für die komplexe Darstellung der geologischen 3D-Modelle kommt <strong>Giro3D</strong> zum Einsatz.</p>
+</li>
+<li>
+<p><strong>Backend &amp; API:</strong> Als zentrales Verarbeitungssystem dient eine <strong>Java Spring Boot</strong> Applikation. Jede Datenanfrage oder -eingabe die durch einen User ausgelöst wird, passiert dieses Backend. Einzig die Pipeline kann autonom agieren.</p>
+</li>
+<li>
+<p><strong>Data Pipelines:</strong> Die Ingestion der Sensordaten erfolgt über ein <strong>Kafka Connect Cluster</strong>, gefolgt von spezifischen Java- oder Python-Pods für die weitere Datenverarbeitung. Für Benachrichtigungen wird das AWS Alerting genutzt.</p>
+</li>
+<li>
+<p><strong>Storage-Split:</strong> Zur performanten Bewältigung der bis zu 50 TB an Daten kommen vier Speichersysteme zum Einsatz:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>TimeScaleDB:</strong> Für das performante Speichern und Abfragen von Echtzeit-Messpunkten.</p>
+</li>
+<li>
+<p><strong>PostgreSQL (mit PostGIS):</strong> Für zugehörige Metadaten und die vollständig georeferenzierte Ablage der Systemhierarchien.</p>
+</li>
+<li>
+<p><strong>AWS S3:</strong> Für Dateien aus Umsystemen, manuelle Uploads und die temporäre (24h) Zwischenspeicherung von Rohdaten.</p>
+</li>
+<li>
+<p><strong>AWS S3 Glacier Deep Archive:</strong> Für die kosteneffiziente Langzeitarchivierung. Ein täglicher Batch-Job überführt Rohdaten aus dem regulären S3 dorthin.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_integrations_und_schnittstellenstrategie">4.4. Integrations- und Schnittstellenstrategie</h3>
+<div class="paragraph">
+<p><strong>Isolierung der Pipelines:</strong>
+Um zu verhindern, dass ein fehlerhafter Sensordaten-Feed das System beeinträchtigt, kann das Input-Topic falls nötig mittels Broker vor dem Kafka Connect Cluster in verschiedene Output-Topics (z. B. ein Topic pro Sensor) aufgeteilt werden. Jede DAS-Pipeline verfügt über einen eigenen Connector. Im Extremfall existiert pro Sensor ein eigener Pipeline-Pod. Dies reduziert die zu verarbeitende Datenmenge pro Pod massiv, garantiert höchste Performanz, isoliert Fehler und optimiert die Cloud-Kosten.</p>
+</div>
+<div class="paragraph">
+<p><strong>3D-Modellierung (IFC-Integration):</strong>
+Anstatt eine aufwändige direkte API-Kopplung für 3D-Modelle zu bauen, stellt MONTEIS dem Administrator eine Upload-Funktion für IFC-Dateien (z. B. aus BIM Mont Terri) zur Verfügung. Diese Modelle werden im Frontend über Giro3D und <strong>Three.js</strong> nativ in Web-Workern des Browsers gerendert. Dies lagert die Rechenlast auf den Client aus und schützt die Performance der restlichen Web-App.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_organisatorisches_devops">4.5. Organisatorisches &amp; DevOps</h3>
+<div class="paragraph">
+<p><strong>CI/CD &amp; Deployment:</strong>
+Der Entwicklungsprozess stützt sich auf moderne, hochautomatisierte DevOps-Infrastrukturen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Pipelines:</strong> Bei jedem Commit wird Code-Formatting und automatisiertes Testing ausgeführt. Merge Requests durchlaufen zudem eine statische Codeanalyse (z. B. SonarQube).</p>
+</li>
+<li>
+<p><strong>Deployment-Flow:</strong> Vom <code>main</code>-Branch erfolgt ein vollautomatisches Deployment auf die <code>dev</code>-Umgebung. Getaggte Versionen werden auf <code>staging</code> für das Kunden-Review bereitgestellt. Nach Abnahme wird das getestete Image auf die <code>prod</code>-Umgebung propagiert.</p>
+</li>
+<li>
+<p><strong>Security &amp; Maintenance:</strong> Mittels Weekly Builds und Rolling Updates wird das System aktuell gehalten. Container werden kontinuierlich via Trivy oder Dependency-Track gescannt. Für das vereinfachte Abhängigkeits-Management ist der Einsatz von <strong>Renovate</strong> im Repository vorgesehen.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>Open Source Compliance:</strong>
+Es wird prozessual (z. B. durch Lizenz-Scanning in der CI/CD-Pipeline) sichergestellt und dokumentiert, dass jede verwendete Komponente und Bibliothek unter einer anerkannten Open-Source-Lizenz steht.</p>
+</div>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-building-block-view">5. Bausteinsicht</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Dieses Kapitel beschreibt die statische Struktur des Systems MONTEIS. Die Bausteinsicht ist hierarchisch aufgebaut: Level 1 beschreibt die groben Architektur-Schichten (Gesamtsystem), Level 2 detailliert die inneren Komponenten und Zugriffslogiken dieser Schichten.</p>
+</div>
+<div class="sect2">
+<h3 id="_whitebox_gesamtsystem_level_1">5.1. Whitebox Gesamtsystem (Level 1)</h3>
+<div class="paragraph">
+<p>Das System folgt einer strikten 3-Schicht-Architektur. Die Kommunikation zwischen den Layern ist durch eindeutige Zuständigkeiten und gerichtete Datenflüsse geregelt.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/overview.svg" alt="overview" width="2489" height="902">
+</div>
+</div>
+<div class="sect3">
+<h4 id="_interface_layer_frontend">5.1.1. Interface Layer (Frontend)</h4>
+<div class="paragraph">
+<p>Stellt die Benutzeroberfläche für Wissenschaftler und Administratoren bereit. Nimmt Benutzerinteraktionen entgegen, visualisiert 3D-Modelle und rendert hochfrequente Zeitreihendiagramme.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_business_layer_backend_pipelines">5.1.2. Business Layer (Backend &amp; Pipelines)</h4>
+<div class="paragraph">
+<p>Das logische Herzstück des Systems. Diese Schicht ist dreigeteilt:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Ein synchrones <strong>Spring Boot Backend</strong> als zentrales API-Gateway und Metadaten-Verwalter.</p>
+</li>
+<li>
+<p>Ein asynchrones <strong>Pipeline &amp; Worker-Ökosystem</strong> (Kafka-basiert) für die massenhafte Verarbeitung und Speicherung der Sensordaten.</p>
+</li>
+<li>
+<p>Ein <strong>Alerting Service</strong> für die individuelle Alarmierung mittels AWS SNS (Simple Notification Service).</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_storage_layer_datenbanken_cloud_storage">5.1.3. Storage Layer (Datenbanken &amp; Cloud Storage)</h4>
+<div class="paragraph">
+<p>Nutzt den Ansatz der "Polyglot Persistence", um die massiven Datenmengen (Ziel: 200 Mrd. Messungen) performant und kosteneffizient abzulegen. Beinhaltet TimeScaleDB (Zeitreihen), PostgreSQL + PostGIS (Metadaten) sowie AWS S3 (Dateien und Rohdaten) und AWS S3 Glacier (Rohdaten).</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_whitebox_interface_layer_level_2">5.2. Whitebox Interface Layer (Level 2)</h3>
+<div class="paragraph">
+<p><em>TODO: Draft da die Architektur noch nicht abschliessend gemacht ist</em></p>
+</div>
+<div class="paragraph">
+<p>Obwohl die genaue Modulstruktur des Frontends noch in der Spezifikationsphase ist, basiert die Architektur der Web-Applikation auf <strong>Angular</strong> und dem <strong>Carbon Design System</strong>. Um die Komplexität der Darstellung zu managen, gliedert sich die UI logisch in folgende Hauptbereiche, die durch die <strong>Scion Workbench</strong> als Layout-Framework orchestriert werden:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>3D-Visualisierungs-Modul:</strong> Nutzt <strong>Giro3D</strong>, um die Infrastruktur, Bohrlochgeometrien und Sensoren räumlich im Browser darzustellen, ohne die Performance der restlichen Applikation zu blockieren. Dies Wird erreicht mittels Worker vom Browser selber, damit können wir den Load des Rendering sauber auslagern auf das Client Device.</p>
+</li>
+<li>
+<p><strong>Data-Grid &amp; Dashboard-Modul:</strong> Integriert <strong>ag-Grid</strong> für die hochperformante tabellarische Darstellung und das Plotten der gefilterten Sensor-Zeitreihen.</p>
+</li>
+<li>
+<p><strong>Admin- &amp; Konfigurations-Modul:</strong> Schnittstelle für Administratoren zur Verwaltung von Experimenten, Freigabe von manuellen Uploads und Konfiguration von Alarmen.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_whitebox_business_layer_level_2">5.3. Whitebox Business Layer (Level 2)</h3>
+<div class="paragraph">
+<p>Der Business Layer besteht aus zwei stark entkoppelten Hauptsystemen: Dem Spring Boot Backend und den Kafka-basierten Daten-Pipelines.</p>
+</div>
+<div class="sect3">
+<h4 id="_core_api_spring_boot_backend">5.3.1. Core API (Spring Boot Backend)</h4>
+<div class="imageblock">
+<div class="content">
+<img src="./images/core-api.svg" alt="core api" width="960" height="1180">
+</div>
+</div>
+<div class="paragraph">
+<p>Das Backend fungiert als Dreh- und Angelpunkt für jegliche synchrone Kommunikation. Es beinhaltet folgende logische Services:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Security &amp; Auth Filter:</strong> Verarbeitet die vom externen Keycloak/eIAM empfangenen JWTs. Über den Spring <code>@Authenticated</code> Principal werden die in den Claims enthaltenen Rollen (z. B. <code>read_exp_a</code>) geparst und das RBAC (Role-Based Access Control) auf API-Ebene strikt durchgesetzt.</p>
+</li>
+<li>
+<p><strong>Query &amp; Downsampling Service:</strong> Ein dedizierter Service, der Leseanfragen an die TimeScaleDB richtet und intelligente Downsampling-Algorithmen anwendet, um die abgerufene Datenmenge vor der Auslieferung an das Frontend zu reduzieren.</p>
+</li>
+<li>
+<p><strong>IFC Upload &amp; Processing Service:</strong> Nimmt hochgeladene 3D-Geometrie-Modelle (IFC-Dateien) entgegen und bereitet diese für das Rendering (via Giro3D/Three.js) im Frontend vor.</p>
+</li>
+<li>
+<p><strong>Umsystem-Connectoren:</strong> * <strong>Fulcrum-Client:</strong> Konsumiert die API von Fulcrum für die bidirektionale Synchronisation.</p>
+</li>
+<li>
+<p><strong>Frontend-API:</strong> Stellt dem Angular-Client alle benötigten Endpunkte zur Verfügung.</p>
+</li>
+<li>
+<p><strong>Pipeline-API:</strong> Ein durch API-Keys gesicherter interner Endpunkt, über den die Pipeline-Worker Metadaten abrufen können.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_data_pipelines_alerting_kafka_worker">5.3.2. Data Pipelines &amp; Alerting (Kafka &amp; Worker)</h4>
+<div class="paragraph">
+<p>Der Ingestion-Prozess für Sensordaten ist asynchron und ereignisgesteuert aufgebaut. Die Verarbeitung innerhalb eines Pipeline-Worker-Pods folgt einem strikten Ablauf:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Format-Parser:</strong> Eine neue Nachricht wird vom Kafka-Broker konsumiert und in ein Standard-Objekt (<code>SensorID</code>, <code>Timestamp</code>, <code>Value</code>) geparst. Genauere details zu dem Standardformat sind in Kapitel 8.</p>
+</li>
+<li>
+<p><strong>Metadata Handler:</strong> Führt ein Cache-Lookup anhand der <code>SensorID</code> durch. Bei einem Cache-Miss wird das Spring Boot Backend via REST aufgerufen, um die aktuellen Metadaten zum Sensor zu laden.</p>
+</li>
+<li>
+<p><strong>SI-Unit Converter:</strong> Rechnet den Rohwert anhand einer in den Metadaten hinterlegten Formel (<strong>JsonLogic</strong>) in die standardisierte SI-Einheit um.</p>
+</li>
+<li>
+<p><strong>Validator &amp; Alerting Handler:</strong> Prüft den umgerechneten Wert gegen definierte Upper-/Lower-Bounds. Bei einer Verletzung wird ein Event emittiert. <strong>(Hinweis: Architektonische Trennung des Alertings: Grenzwertverletzungen wirft der Worker, System-Alarme wie fehlende Daten werden direkt auf dem Kafka-Topic via Grafana und Amazon SNS überwacht).</strong></p>
+</li>
+<li>
+<p><strong>DB-Writer:</strong> Persistiert den finalen Datensatz in die TimeScaleDB, das Format wird in Kapitel 8 definiert.</p>
+</li>
+<li>
+<p><strong>Aggregator (Memory):</strong> Der Originaldatensatz wird im Speicher gehalten. Alle <strong>n</strong> Minuten flusht der Worker die gesammelten Rohdaten direkt in einen AWS S3 Bucket.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/pipeline-overview.svg" alt="pipeline overview" width="1010" height="1603">
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_notification_alerting_service_dedizierter_pod">5.3.3. Notification &amp; Alerting Service (Dedizierter Pod)</h4>
+<div class="paragraph">
+<p>Um die Core API von ressourcenintensiven Hintergrundaufgaben zu entlasten und Probleme bei horizontaler Skalierung (z. B. doppelter E-Mail-Versand) zu vermeiden, wird das Alerting in einen isolierten Microservice ausgelagert.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Zweck/Verantwortung:</strong> Zuständig für das dynamische Routing und den Versand von Benachrichtigungen an die Endnutzer.</p>
+</li>
+<li>
+<p><strong>Ablauf &amp; Integration:</strong></p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Als zentrale "Rule Engine" fungiert <strong>Grafana</strong>, welches Metriken (Prometheus) und Sensordaten (TimeScaleDB) aggregiert und überwacht.</p>
+</li>
+<li>
+<p>Bei Alarm-Auslösung sendet Grafana einen Webhook an diesen dedizierten Notification Service.</p>
+</li>
+<li>
+<p>Der Service fragt die User-Abonnements (Subscriptions) via REST API beim Backend an, welches die Spezifischen konfigurationen enthält.</p>
+</li>
+<li>
+<p>Anschliessend triggert er den physischen Versand der E-Mails oder SMS über <strong>AWS SNS</strong>.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p><strong>Skalierung:</strong> Dieser Service läuft isoliert vom Rest des Systems und kann so konfiguriert werden (z. B. als Single-Replica), dass Race-Conditions beim Nachrichtenversand architektonisch ausgeschlossen sind.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_whitebox_storage_layer_zugriffslogik_level_2">5.4. Whitebox Storage Layer &amp; Zugriffslogik (Level 2)</h3>
+<div class="paragraph">
+<p>Um Datenintegrität und das Single-Point-of-Truth-Prinzip zu wahren, gelten für den Storage Layer strikte Zugriffsregeln ("Data Governance").</p>
+</div>
+<div class="paragraph">
+<p><strong>Architektonische Besonderheit (Single Connection Pool via FDW):</strong> Obwohl Sensordaten (TimeScaleDB) und georeferenzierte Metadaten (PostgreSQL mit PostGIS) physisch in zwei getrennten Datenbanken liegen, nutzt das Spring Boot Backend zur Komplexitätsreduktion nur <strong>einen einzigen Connection Pool</strong>. Der Einstieg erfolgt über die Relationale Datenbank. Die TimeScaleDB wird transparent über einen <strong>Foreign Data Wrapper (postgres_fdw)</strong> für Leseoperationen eingebunden.</p>
+</div>
+<div class="paragraph">
+<p>Die Durchsetzung der Datenintegrität und strikter Zugriffsverbote erfolgt nicht im Applikationscode, sondern "Bulletproof" direkt auf Datenbankebene. Hierfür werden spezifische Datenbank-Rollen (DB-Roles) und restriktive Privilegien (Grants) konfiguriert.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Datenbank / Storage</th>
+<th class="tableblock halign-left valign-top">Schreib-Rechte (Write)</th>
+<th class="tableblock halign-left valign-top">Lese-Rechte (Read)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>TimeScaleDB</strong> (Zeitreihen)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Pipeline-Worker:</strong> Exklusives Schreibrecht für Sensordaten.<br>
+<strong>Backend (nur Flyway):</strong> Das Backend darf zur Laufzeit <strong>keine</strong> Daten schreiben. Schreibzugriffe des Backends sind streng limitiert auf DDL-Schema-Migrationen durch Flyway (unter Verwendung eines separaten Deployment-DB-Users).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Spring Boot Backend (via FDW):</strong> Das Backend greift zur Laufzeit nicht direkt auf die TimeScaleDB zu, sondern liest die Zeitreihen ausschliesslich durch den FDW-Tunnel von der PostgreSQL aus.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>PostgreSQL &amp; PostGIS</strong> (Metadaten &amp; Georeferenzierung)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Spring Boot Backend:</strong> Einziger Writer für System- und Sensorkonfigurationen zur Laufzeit.<br>
+<strong>Backend (nur Flyway):</strong> DDL-Schema-Migrationen erfolgen über Flyway mit einem dedizierten Deployment-DB-User.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Spring Boot Backend (direkt):</strong> Liest Metadaten direkt und nutzt diese Datenbank als Startpunkt des FDW-Tunnels für Zeitreihen-Abfragen.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>AWS S3</strong> (Rohdaten &amp; Uploads)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Pipeline-Worker:</strong> Schreiben temporäre Sensor-Rohdaten im Batch.<br>
+<strong>Spring Boot Backend:</strong> Schreibt manuell hochgeladene Dateien in dedizierte Buckets.<br>
+<strong>AWS Glue Jobs:</strong> Löschen die gepufferten Rohdaten-Files nach der erfolgreichen Batch-Verarbeitung und Verschiebung.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Spring Boot Backend:</strong> Liest manuell hochgeladene Dateien, um diese nach Freigabe an die Pipeline zu übergeben.<br>
+<strong>AWS Glue Jobs:</strong> Lesen die Rohdaten für den täglichen Transfer in den Cold Storage.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>AWS S3 Glacier</strong> (Cold Storage)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>AWS Glue Jobs:</strong> Exklusives Schreibrecht zur langfristigen Archivierung.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Administratoren:</strong> Exklusiver Lesezugriff, rein für die Notfall-Wiederherstellung (Disaster Recovery) von Originaldaten.</p></td>
+</tr>
+</tbody>
+</table>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-runtime-view">6. Laufzeitsicht</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Dieses Kapitel visualisiert das dynamische Verhalten des Systems MONTEIS. Es zeigt das Zusammenspiel der in Kapitel 5 definierten Bausteine anhand der wichtigsten und architektonisch anspruchsvollsten Geschäftsprozesse. Die nachfolgenden Sequenzdiagramme dokumentieren den exakten Ablauf, die Reihenfolge der Aufrufe und die Zuständigkeiten der einzelnen Komponenten zur Laufzeit.</p>
+</div>
+<div class="sect2">
+<h3 id="_szenario_1_daten_ingestion_grenzwert_alarm_pipeline_flow">6.1. Szenario 1: Daten-Ingestion &amp; Grenzwert-Alarm (Pipeline Flow)</h3>
+<div class="paragraph">
+<p>Dieses Szenario beschreibt den Kernprozess der Datenerfassung: Ein Messwert trifft vom DAS im System ein, wird normalisiert und verletzt einen definierten Grenzwert.</p>
+</div>
+<div class="paragraph">
+<p><strong>Ablauf:</strong></p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Die Pipeline empfängt den Messwert und parst ihn in ein Standardformat.</p>
+</li>
+<li>
+<p>Der Worker ruft die Metadaten (inkl. Umrechnungsformeln und Limits) für diesen Sensor aus dem Backend/Cache ab.</p>
+</li>
+<li>
+<p>Der Messwert wird in die SI-Einheit umgerechnet.</p>
+</li>
+<li>
+<p>Der Validator stellt eine Grenzwertverletzung fest. Der Wert wird dennoch in die TimeScaleDB geschrieben, erhält aber ein entsprechendes Flag (<code>too_high</code>, <code>too_low</code>, <code>ok</code>), um im Frontend farblich markiert werden zu können.</p>
+</li>
+<li>
+<p>Die Pipeline emittiert einen Event (z. B. via Log-Metriken), der von Prometheus/Grafana erfasst wird.</p>
+</li>
+<li>
+<p>Grafana triggert via Webhook den Alerting Service, welcher die Templates und Abonnenten via Backend lädt und den Alarm via AWS SNS versendet.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/seq-ingestion-alert.svg" alt="seq ingestion alert" width="1067" height="762">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_szenario_2_manueller_upload_admin_freigabeprozess">6.2. Szenario 2: Manueller Upload &amp; Admin-Freigabeprozess</h3>
+<div class="paragraph">
+<p>Nicht alle Daten fliessen automatisch in das System. Historische Daten oder Zusatzmessungen werden von Wissenschaftlern per CSV hochgeladen. Um die Datenintegrität zu wahren, ist ein strikter Freigabeprozess vorgeschaltet.</p>
+</div>
+<div class="paragraph">
+<p><strong>Ablauf:</strong></p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Der Wissenschaftler lädt eine CSV-Datei im Frontend hoch.</p>
+</li>
+<li>
+<p>Das Backend speichert die Datei vorläufig in einem S3-Bucket und erstellt einen Datenbankeintrag (Status: <code>pending</code>).</p>
+</li>
+<li>
+<p>Der Admin wird im UI benachrichtigt, lädt die Datei zur Prüfung herunter und kann sie bei Bedarf korrigiert neu hochladen.</p>
+</li>
+<li>
+<p>Nach dem Klick auf "Akzeptieren" übergibt das Backend die Datei an den Manual Upload Connector der Pipeline.</p>
+</li>
+<li>
+<p>Das Originalfile wird für die spätere Archivierung (AWS Glue) versioniert auf S3 verschoben.</p>
+</li>
+<li>
+<p>Die Pipeline verarbeitet die Daten, als kämen sie von einem Live-Sensor.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/seq-manual-upload.svg" alt="seq manual upload" width="1151" height="811">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_szenario_3_initialisierung_des_digitalen_zwillings_3d_view">6.3. Szenario 3: Initialisierung des Digitalen Zwillings (3D View)</h3>
+<div class="paragraph">
+<p>Der Digitale Zwilling ist ein Kern-Feature für die räumliche Orientierung im Felslabor. Die Komplexität des 3D-Renderings wird dabei architektonisch auf die Clients (Browser) ausgelagert, um das Backend zu schonen.</p>
+</div>
+<div class="paragraph">
+<p><strong>Ablauf:</strong></p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Der Nutzer öffnet ein Experiment im Frontend.</p>
+</li>
+<li>
+<p>Das Backend liefert das zugehörige 3D-Modell (IFC-File).</p>
+</li>
+<li>
+<p>Das Frontend (<code>Giro3D</code>) lagert das ressourcenintensive Rendering an Web-Worker des Browsers aus.</p>
+</li>
+<li>
+<p>Das IFC-Modell enthält die IDs oder Koordinaten der Sensoren. Das Frontend iteriert über diese IDs und lädt die Metadaten asynchron aus der PostGIS-Datenbank (via Backend) nach, um Overlays und Tooltips bei "Hover"-Aktionen darzustellen.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/seq-digital-twin.svg" alt="seq digital twin" width="630" height="682">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_szenario_4_räumliches_fachliches_filtern">6.4. Szenario 4: Räumliches &amp; Fachliches Filtern</h3>
+<div class="paragraph">
+<p>Bei tausenden von Sensoren ist eine leistungsstarke Filterung essenziell. Die Filterkriterien wirken sich synchron auf die tabellarische Darstellung und den 3D-Viewer aus.</p>
+</div>
+<div class="paragraph">
+<p><strong>Ablauf:</strong></p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Der Nutzer definiert Filterkriterien (z. B. "Drucksensoren in Bohrloch X").</p>
+</li>
+<li>
+<p>Die Abfrage wird an das Backend gesendet, welches via <code>jOOQ</code> dynamische Queries auf der Datenbank ausführt.</p>
+</li>
+<li>
+<p>Die gefilterte Liste der Sensor-IDs wird an das Frontend retourniert.</p>
+</li>
+<li>
+<p>Das Frontend nutzt Angular Signals und  <code>localStorage</code>, um sowohl die Datentabelle (<code>ag-Grid</code>) als auch den Digitalen Zwilling (<code>Giro3D</code>) synchron zu aktualisieren – nicht relevante Sensoren werden im 3D-Raum ausgeblendet.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/seq-filtering.svg" alt="seq filtering" width="620" height="681">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_szenario_5_visualisierung_langer_zeitreihen_fdw_downsampling">6.5. Szenario 5: Visualisierung langer Zeitreihen (FDW &amp; Downsampling)</h3>
+<div class="paragraph">
+<p>Das Abfragen von Zeitreihen, die Jahre zurückreichen, ist hochgradig datenintensiv. Hier kommt die Performance der <code>TimeScaleDB</code> in Kombination mit <code>postgres_fdw</code> und Downsampling zum Tragen.</p>
+</div>
+<div class="paragraph">
+<p><strong>Ablauf:</strong></p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Der Nutzer wählt einen Sensor und einen grossen Zeitraum (z. B. 10 Jahre) für einen Plot (<code>Chart.js</code>) aus.</p>
+</li>
+<li>
+<p>Das Backend prüft die Zeitspanne und leitet einen Downsampling-Request an die TimeScaleDB weiter. (Vordefinierte Buckets, z.B. Zeitspanne &gt; 1 Jahr &#8594; Bucket=hourly)</p>
+</li>
+<li>
+<p>Die TimeScaleDB aggregiert die Messwerte nativ (z. B. via <code>time_bucket</code>) und joined via <code>FDW</code> transparent notwendige Metadaten (wie Einheiten) aus der PostgreSQL.</p>
+</li>
+<li>
+<p>Das Backend empfängt ein stark komprimiertes, aber visuell akkurates JSON-Array und liefert es an das Frontend aus.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/seq-downsampling.svg" alt="seq downsampling" width="880" height="709">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_szenario_6_sso_authentifizierung_role_based_data_filtering">6.6. Szenario 6: SSO, Authentifizierung &amp; Role-Based Data Filtering</h3>
+<div class="paragraph">
+<p>Die Sicherheit und rollenbasierte Zugriffskontrolle (RBAC) ist eine Anforderung der Priorität 1. MONTEIS nutzt einen eigenen <strong>Keycloak</strong> als zentralen Identity Access Management (IAM) Server, welcher <strong>AGOV</strong> als Identity Provider (IdP) integriert. Das Spring Boot Backend fungiert als klassischer <strong>Resource Server</strong>.</p>
+</div>
+<div class="paragraph">
+<p><strong>Ablauf:</strong></p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Der Nutzer öffnet die Web-App und wird vom Angular Frontend an den Keycloak weitergeleitet (OIDC Authorization Code Flow).</p>
+</li>
+<li>
+<p>Der Nutzer authentifiziert sich (z. B. via AGOV). Keycloak mappt die vom Admin konfigurierten Rollen und Berechtigungen auf den User.</p>
+</li>
+<li>
+<p>Keycloak stellt ein JWT (JSON Web Token) aus, in dessen Claims die spezifischen Rollen (z. B. <code>read_experiment_A</code>) verankert sind.</p>
+</li>
+<li>
+<p>Das Frontend sendet dieses JWT bei jedem REST-Call im <code>Authorization: Bearer</code> Header mit.</p>
+</li>
+<li>
+<p>Ein Security-Filter im Spring Boot Backend fängt den Request ab, verifiziert die Signatur des Tokens (via JWKS von Keycloak) und parst die Claims in den Security Context.</p>
+</li>
+<li>
+<p>Die Core API nutzt diese extrahierten Rollen direkt bei den jOOQ-Datenbankabfragen als Filterkriterium (z. B. in der <code>WHERE</code>-Klausel), sodass der Nutzer ausschliesslich Daten erhält, für die er berechtigt ist.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/seq-login-sso.svg" alt="seq login sso" width="966" height="988">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_szenario_7_on_demand_datenabruf_aus_umsystemen_fulcrum_integration">6.7. Szenario 7: On-Demand Datenabruf aus Umsystemen (Fulcrum Integration)</h3>
+<div class="paragraph">
+<p>MONTEIS kommuniziert eng mit Umsystemen wie Fulcrum (dem digitalen Logbuch des Felslabors). Anstatt alle Log- und Asset-Daten asynchron und redundant in die MONTEIS-Datenbank zu spiegeln, wendet die Architektur für diese Daten das <strong>On-Demand Fetching (Pull-Pattern)</strong> an.</p>
+</div>
+<div class="paragraph">
+<p>Das Spring Boot Backend fungiert hierbei als API-Gateway. Wenn externe Daten benötigt werden, werden diese "Just in Time" via REST abgerufen.</p>
+</div>
+<div class="paragraph">
+<p><strong>Ablauf:</strong></p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Der Nutzer öffnet in der Angular Web-App die Detailansicht eines Experiments oder Sensors und fordert die aktuellen Logbuch-Einträge an.</p>
+</li>
+<li>
+<p>Das Frontend sendet einen Request an die MONTEIS Core API.</p>
+</li>
+<li>
+<p>Der REST Controller im Spring Boot Backend fängt den Request ab und formuliert eine synchrone Abfrage (z.B. via Fulcrum Query API) an das Umsystem Fulcrum.</p>
+</li>
+<li>
+<p>Fulcrum retourniert die tagesaktuellen Log-Daten.</p>
+</li>
+<li>
+<p>Die Core API mappt/formatiert die Daten in das interne MONTEIS-Format und liefert sie an das Frontend aus.</p>
+</li>
+<li>
+<p>Der Nutzer sieht die absoluten Live-Daten aus Fulcrum, ohne dass diese physisch in der PostgreSQL von MONTEIS gespeichert werden mussten.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/seq-fulcrum-fetch.svg" alt="seq fulcrum fetch" width="643" height="620">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_szenario_8_timescaledb_daten_lebenszyklus_downsampling_kompression">6.8. Szenario 8: TimeScaleDB Daten-Lebenszyklus (Downsampling &amp; Kompression)</h3>
+<div class="paragraph">
+<p>Um die enorme Menge an Messwerten (Ziel: 200 Milliarden) performant abfragbar zu halten und gleichzeitig die Speicherkosten der Datenbank zu minimieren, durchlaufen die Zeitreihendaten in der TimeScaleDB einen streng definierten, automatisierten Lebenszyklus.</p>
+</div>
+<div class="paragraph">
+<p>Dieser Prozess nutzt die nativen TimeScaleDB-Features <strong>Continuous Aggregates</strong> (für das Downsampling) und <strong>Hypertable Compression</strong> (für die Reduktion des Speicher-Overheads).</p>
+</div>
+<div class="paragraph">
+<p><strong>Die Aggregations- und Retentions-Regeln im Detail:</strong></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Raw Data (Hypertable):</strong> Rohdaten werden primär für die Live-Ansicht (0 - 10 Tage) genutzt. Sie bleiben für 120 Tage unkomprimiert, um Nachlieferungen oder Updates von Messwerten problemlos zuzulassen. Nach 120 Tagen greift die native Kompression der TimeScaleDB (updates sind immer noch möglich aber weniger performant).</p>
+</li>
+<li>
+<p><strong>Continuous Aggregates (Downsampling):</strong> Die Rohdaten werden im Hintergrund in materialisierte Views (Buckets) aggregiert.</p>
+</li>
+<li>
+<p><strong>Rolling Windows (Retention Policies):</strong> Um ein unendliches Wachstum der fein granularen Views zu verhindern, werden alte Daten-Chunks in den Buckets automatisch gelöscht (Drop), sobald sie aus ihrem definierten Zeitfenster fallen.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>Definierte Buckets &amp; Zeitfenster:</strong></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>1-Minuten Bucket:</strong> Deckt die letzten 30 Tage ab. (Daten &gt; 30 Tage werden verworfen).</p>
+</li>
+<li>
+<p><strong>15-Minuten Bucket:</strong> Deckt den Zeitraum von Tag 20 bis Tag 60 ab. (Daten &gt; 60 Tage werden verworfen).</p>
+</li>
+<li>
+<p><strong>1-Stunden Bucket:</strong> Deckt den Zeitraum von Tag 50 bis 2 Jahre ab. (Daten &gt; 2 Jahre werden verworfen).</p>
+</li>
+<li>
+<p><strong>1-Tages Bucket:</strong> Deckt den Zeitraum ab 2 Jahren für die Langzeitspeicherung ab.</p>
+</li>
+</ul>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/timescale-retention.svg" alt="timescale retention" width="1367" height="481">
+</div>
+</div>
+<div class="paragraph">
+<p>Neben der Datenbank-Optimierung verlässt sich MONTEIS auf zeitgesteuerte Hintergrundprozesse (Cron/Batch-Jobs), um die Speicherkosten für unveränderte Originaldaten zu minimieren. Um die rohen Originaldaten physisch zu sichern (für Compliance, Backups oder spätere Reprozessierung), fliessen diese parallel zur TimeScaleDB in einen Cloud-Objektspeicher.</p>
+</div>
+<div class="paragraph">
+<p><strong>Ablauf der Archivierung:</strong></p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Pufferung im Hot Storage:</strong> Die Pipeline-Worker halten eine Kopie der Originaldatensätze kurzzeitig im Arbeitsspeicher und flushen diese regelmässig (z. B. alle 15 Minuten) als Batch-Files in einen regulären AWS S3 Bucket ("Hot Storage").</p>
+</li>
+<li>
+<p><strong>AWS S3 Glacier Archiving (Cold Storage):</strong>
+Mittels <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-transition-general-considerations.html">AWS S3 Lifecycle Rules</a> werden die verteilten, temporären Rohdaten-Files aus dem "Hot Storage" (AWS S3 Standard Tier) in den weitaus günstigeren "Cold Storage" (AWS S3 Glacier) für die langfristige Speicherung verschoben. Die Daten werden semi-strukturiert (z. B. pro Sensor und Tag) abgelegt.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p><em>Hinweis: Die Daten im Glacier dienen rein der Notfall-Wiederherstellung oder historischen Nachprüfungen und werden vom regulären Frontend nicht abgefragt.</em></p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/retention-timelines.svg" alt="retention timelines" width="1009" height="297">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_datenkonsistenz_unabhängiges_routing_kafka_consumer_groups">6.9. Datenkonsistenz &amp; Unabhängiges Routing (Kafka Consumer Groups)</h3>
+<div class="sect3">
+<h4 id="_die_anforderung_raw_vs_transformed">6.9.1. Die Anforderung (Raw vs. Transformed)</h4>
+<div class="paragraph">
+<p>Es muss immer gewährleistet sein, dass die Daten korrekt wiederhergestellt werden können und keine Daten verloren gehen. Aus diesem Grund stellen zwei unabhängige Flows sicher, dass die Original-Rohdaten in S3 verschoben und die transformierten und validierten Daten in die TimeScaleDB geschrieben werden.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_die_lösung_fan_out_am_raw_topic">6.9.2. Die Lösung: Fan-Out am Raw-Topic</h4>
+<div class="paragraph">
+<p>Da Kafka als persistentes Logbuch (Append-Only Log) agiert, können mehrere Abonnenten dieselbe Nachricht unabhängig voneinander lesen. Der Datenstrom wird direkt am Eingangs-Topic aufgespaltet:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Storage Archiver (Raw Data Path):</strong> Ein nativer Kafka Connect Sink (oder der POC Worker) lauscht auf den Raw-Topic mit einer eigenen Consumer Group (<code>s3-archive</code>). Er puffert die Rohdaten und schiebt sie periodisch in den <strong>AWS S3 (Hot Storage)</strong>. Von dort greifen automatisierte AWS Lifecycle Rules, die Daten nach einer definierten Zeit in den <strong>AWS Glacier (Cold Storage)</strong> zur Langzeitarchivierung verschieben.</p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Im POC-Stadium:</strong> Der Pipeline-Pod übernimmt diese Aufgabe vorübergehend mit. Eine separate asynchrone Routine im Pod puffert die Daten (<a href="#_pipeline_pod_stateful_polling_konzept">Pipeline Pod - Stateful Polling Konzept</a>), formatiert sie im Hive-Partitioning-Stil (<code>sensor_id/year/month</code>) und lädt sie periodisch nach S3 hoch.</p>
+</li>
+<li>
+<p><strong>Final Solution (Kafka Connect):</strong> Der S3-Upload-Code wird aus dem Pipeline-Pod entfernt. Stattdessen übernimmt ein nativer <strong>Confluent S3 Sink Connector</strong> diese Aufgabe. Da der POC die Datei- und Ordnerstrukturen von Kafka Connect exakt nachgeahmt hat, verläuft der Wechsel für nachgelagerte Systeme absolut transparent.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>Pipeline Pod (Transformed Data Path):</strong> Der Pipeline-Worker lauscht auf denselben Raw-Topic mit einer völlig unabhängigen Consumer Group (<code>etl-pipeline</code>). Er transformiert die Daten, prüft Grenzwerte, triggert Alerts und speichert das finale Resultat in die <strong>TimescaleDB</strong>.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p><strong>Fehlertoleranz durch getrennte Offsets:</strong> Kafka verwaltet den Fortschritt (Offset) für jede Consumer Group separat. Wenn der S3-Upload erfolgreich ist, die TimescaleDB jedoch offline geht, rückt nur das "Lesezeichen" der S3-Gruppe vor. Die Pipeline-Gruppe committet ihren Offset nicht. Nach Behebung des Datenbankausfalls wird der Pipeline-Pod gezwungen, die fehlgeschlagene Nachricht erneut zu verarbeiten. Es geht kein Wert verloren.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_architektur_übersicht">6.9.3. Architektur-Übersicht</h4>
+<div class="imageblock">
+<div class="content">
+<img src="./images/data_consistency.svg" alt="data consistency" width="1511" height="494">
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_pipeline_pod_stateful_polling_konzept">6.9.4. Pipeline Pod - Stateful Polling Konzept</h4>
+<div class="imageblock">
+<div class="content">
+<img src="./images/stateful_polling.svg" alt="stateful polling" width="735" height="798">
+</div>
+</div>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-deployment-view">7. Verteilungssicht</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_infrastruktur_ebene_1_aws_cloud_resourcen">7.1. Infrastruktur Ebene 1: AWS Cloud Resourcen</h3>
+<div class="paragraph">
+<p>Das nachfolgende Diagram zeigt die wichtigsten AWS Resourcen (Dienste) für das MVP auf. Die Resourcen sind logisch gruppiert in die drei Schichten: "Interface Layer", "Business Layer" und "Persistance Layer". Die Gruppierung "Global Services" dient der Verortung von global (= Layer-unabhängig) genutzten AWs Diensten. Zur besseren Einortung ist zusätzlich das Kubernetes Cluster, bereitgestellt durch AWS EKS, angedeutet, um den Dienst "Keycloak" als zentralen Access- und Identity-Dienst einzuordnen.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/deploy-aws-resources.drawio.svg" alt="deploy aws resources.drawio">
+</div>
+</div>
+<div class="sect3">
+<h4 id="_beschreibung_aws_cloud_resourcen">7.1.1. Beschreibung AWS Cloud Resourcen</h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 50.0002%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Layer</th>
+<th class="tableblock halign-left valign-top">Service</th>
+<th class="tableblock halign-left valign-top">Aufgabe</th>
+<th class="tableblock halign-left valign-top">Notiz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Global</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Route53</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Zentraler AWS DNS Service</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Global</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AWS ECR</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Container Registry für Build-Artefakte (z.B. Container Images)</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Interface</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AWS CloudFront</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Content-Delivery-Network (CDN) zur Bereitstellung Frontend</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Interface</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AWS S3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Hosting Frontend Artefakte</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Business</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AWS EKS</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Managed Kubernetes Cluster</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Business</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AWS Kafka</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Managed Kafka Cluster</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Business</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Keycloak</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Open-Source Identity Provider &amp; User-Management</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Business</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">VPC Endpoint</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sichere Netzwerk-Verbindung zwischen VPC und globalen AWS Services über privates AWS Netzwerk</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Für MVP empfehlenswert</p>
+<p class="tableblock">Vorteile: Nutzung AWS-internes Netzwerk (kein öffentliches Internet!) + Kostenreduktion Traffic (vs. NAT Gateway)
+Ref: <a href="https://pcg.io/insights/vpc-endpoints-explanation-and-cost-comparison/" class="bare">https://pcg.io/insights/vpc-endpoints-explanation-and-cost-comparison/</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Business / Persistence</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">VPC</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Virtual Private Cloud, dedizierter Netzwerkbereich für Compute und Storage Resourcen</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistence</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AWS RDS for PostgreSQL</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Managed Datenbank für Metadaten</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistence</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TimescaleDB</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Datenbank für Zeitreihen-Daten</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistence</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AWS S3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Object-Storage (hot &amp; cold)</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistence</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AWS OpenSearch</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Service für Indexierung und Volltext-Suche</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistence</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AWS PrivateLink</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sichere Netzwerk-Verbindung zwischen zwei VPCs über privates AWS Netzwerk</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Für MVP empfehlenswert</p>
+<p class="tableblock"><a href="https://docs.aws.amazon.com/whitepapers/latest/aws-vpc-connectivity-options/aws-privatelink.html" class="bare">https://docs.aws.amazon.com/whitepapers/latest/aws-vpc-connectivity-options/aws-privatelink.html</a>
+<a href="https://www.tigerdata.com/docs/deploy/tiger-cloud/tiger-cloud-aws/security/vpc" class="bare">https://www.tigerdata.com/docs/deploy/tiger-cloud/tiger-cloud-aws/security/vpc</a></p></td>
+</tr>
+</tbody>
+</table>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-concepts">8. Querschnittliche Konzepte</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_core_api_datenzugriff_sicherheit">8.1. Core-API Datenzugriff &amp; Sicherheit</h3>
+<div class="paragraph">
+<p>Das Ziel dieser Architektur ist es, den Business-Code (Service Layer) zu 100 % sauber von Berechtigungsprüfungen zu halten. Die Sicherheit wird stattdessen an den Rändern des Systems durchgesetzt.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Der Security Context (<code>ScopedValue</code>) &amp; Access Levels:</strong> Ein Spring-Filter fungiert als Trichter (Funnel). Er normalisiert die eingehende Authentifizierung – unabhängig davon, ob es sich um ein menschliches JWT oder einen Maschinen-API-Key (z.B. von der Data Pipeline) handelt – in einen systemweiten Zugriffslevel (<code>USER</code>, <code>ADMIN</code>, <code>DATA_PIPELINE</code>). Dieser Level sowie die für User extrahierten Entitäts-IDs (Lese- und Schreibrechte) werden in einem modernen, threadsicheren Java <code>ScopedValue</code> (dem Nachfolger von <code>ThreadLocal</code>) für die Dauer des Requests gespeichert.</p>
+</li>
+<li>
+<p><strong>Die "Master Security Lineage" View:</strong> Um komplexe Hierarchien und M:N-Beziehungen in der Datenbank abzubilden, ohne den Java-Code aufzublähen, wird eine zentrale SQL-View erstellt. Diese View mappt alle Entitäten flach auf ihre jeweiligen "Root-Rollen-IDs".</p>
+</li>
+<li>
+<p><strong>Der jOOQ <code>VisitListener</code> (Für Lese-/Änderungszugriffe):</strong> Dieser jOOQ-Interceptor fängt automatisch jedes <code>SELECT</code>, <code>UPDATE</code> und <code>DELETE</code> ab, bevor es zur Datenbank geschickt wird. Er liest den Zugriffslevel und die IDs aus dem <code>ScopedValue</code> und trifft situationsbedingte Routing-Entscheidungen: <code>ADMIN</code>-Anfragen passieren ungefiltert, <code>DATA_PIPELINE</code>-Anfragen werden hart auf spezifizierte Tabellen (wie Sensordaten) isoliert, und bei regulären <code>USER</code>-Anfragen hängt er transparent eine <code>WHERE</code>-Bedingung an das SQL an, die auf Basis der Master-View filtert. Der Entwickler schreibt im Service nur <code>fetch()</code>, aber die Datenbank führt automatisch das korrekt gefilterte SQL aus.</p>
+</li>
+<li>
+<p><strong>Der jOOQ <code>RecordListener</code> (Für INSERTs):</strong> Da <code>INSERT</code>-Statements keine <code>WHERE</code>-Klausel haben, greift hier ein zweiter Interceptor. Er prüft den Java-Payload direkt vor dem Speichern ab und wirft eine Exception, falls ein standard <code>USER</code> versucht, Daten für eine Entität anzulegen, für die er keine Schreibrechte besitzt.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_core_api_optimistic_locking_und_versionierungauditierung">8.2. Core-API Optimistic Locking und Versionierung/Auditierung</h3>
+<div class="sect3">
+<h4 id="_1_technischer_hintergrund_optimistic_locking">8.2.1. 1. Technischer Hintergrund: Optimistic Locking</h4>
+<div class="paragraph">
+<p>Im Gegensatz zum Pessimistic Locking (bei dem Datensätze explizit auf Datenbankebene über <code>SELECT &#8230;&#8203; FOR UPDATE</code> gesperrt werden), geht das Optimistic Locking davon aus, dass parallele Schreibzugriffe auf denselben Datensatz selten sind. Die Konflikterkennung wird bis zum eigentlichen Schreibvorgang verzögert.</p>
+</div>
+<div class="paragraph">
+<p>Der Mechanismus: Die Tabelle erhält eine zusätzliche Spalte (z.B. <code>VERSION</code> als Integer oder einen Zeitstempel).</p>
+</div>
+<div class="paragraph">
+<p>Der Lesezugriff: Beim Laden eines Datensatzes wird diese Version mitgelesen.</p>
+</div>
+<div class="paragraph">
+<p>Der Schreibzugriff: Beim Speichern wird ein <code>UPDATE</code> abgesetzt, das die alte Version in der <code>WHERE</code>-Klausel voraussetzt und die Version im <code>SET</code>-Block inkrementiert:
+<code>UPDATE tabelle SET daten = 'neu', version = 2 WHERE id = 123 AND version = 1;</code></p>
+</div>
+<div class="paragraph">
+<p>Die Prüfung: Die Datenbank meldet zurück, wie viele Zeilen aktualisiert wurden (Rows Affected). Ist dieser Wert 0, bedeutet dies, dass ein anderer Prozess den Datensatz in der Zwischenzeit modifiziert hat. In diesem Fall wirft der ORM oder Query-Builder (hier jOOQ) eine Exception (z.B. <code>DataChangedException</code>), was in der Regel zu einem Rollback der Datenbanktransaktion führt.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_2_architektur_und_trennung_der_zuständigkeiten">8.2.2. 2. Architektur und Trennung der Zuständigkeiten</h4>
+<div class="paragraph">
+<p>Die gewählte Schichtenarchitektur trennt das Concurrency Management (jOOQ) strikt vom Audit-Logging (JaVers).</p>
+</div>
+<div class="paragraph">
+<p>REST-Schicht (DTOs): Dient als Ein- und Ausgangspunkt. Das DTO transportiert die Nutzdaten inklusive der vom Client zuletzt gelesenen Version.</p>
+</div>
+<div class="paragraph">
+<p>Service-Schicht (Domain Models): Führt die reine Geschäftslogik aus. Diese Schicht arbeitet mit domänenspezifischen Java-Objekten. Ein Spring AOP-Aspekt (Aspektorientierte Programmierung) überwacht hier die Service-Methoden (z.B. getriggert durch @AfterReturning oder eine Custom Annotation).</p>
+</div>
+<div class="paragraph">
+<p>Persistenz-Schicht (jOOQ Records): Übernimmt das Mapping vom Domain Model auf den jOOQ UpdatableRecord. Durch den Aufruf von <code>record.store()</code> generiert jOOQ das notwendige SQL für das Optimistic Locking vollautomatisch und wertet die betroffenen Zeilen aus.</p>
+</div>
+<div class="paragraph">
+<p>Audit-Schicht (JaVers): Arbeitet vollkommen passiv. Der AOP-Aspekt greift sich das resultierende Domain Model nur dann, wenn die Methode der Business-Schicht erfolgreich und ohne Exceptions beendet wurde, und committet den Status-Diff in die JaVers-Tabellen.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_3_erfolgs_und_fehlerfall">8.2.3. 3. Erfolgs- und Fehlerfall</h4>
+<div class="paragraph">
+<p>Das folgende Diagramm veranschaulicht den Datenfluss und das Zusammenspiel der Komponenten, insbesondere warum fehlgeschlagene Updates nicht zu fehlerhaften Audit-Einträgen führen.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/audit_optimistic_locking_flow.svg" alt="audit optimistic locking flow" width="1146" height="990">
+</div>
+</div>
+<div class="paragraph">
+<p>Wenn bei der Versionierung etwas schief geht, erfolgt ein Rollback der Übergeordneten Transaktion, damit die gespeicherten Daten und die zugehörige Versionierung konsistent bleiben (Wenn etwas gespeichert wird, ist es in der Versionierung ersichtlich).</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_4_aspekt_für_die_versionierung">8.2.4. 4. Aspekt für die Versionierung</h4>
+<div class="paragraph">
+<p>Damit die Service-Schicht nur minimale Kenntnisse von der Versionierung haben muss, wird ein Spring AOP Aspekt verwendet. Methoden werden lediglich mit einer eigenen Annotation versehen (<code>@AuditChanges</code>), damit das betroffene Objekt vom Aspekt aufgegriffen und sauber in den Versionstabellen von JaVers abgelegt wird. Hier gilt zu beachten, dass <code>@AfterReturning</code> verwendet wird, damit beim Einfügen eines neuen Objekts dessen eindeutige ID bereits gesetzt wurde. Hier ist ein Beispiel, wie der Aspekt aussehen könnte:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-JAVA" data-lang="JAVA">import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Aspect;
+import org.javers.core.Javers;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+
+@Aspect
+@Component
+public class JaversAuditAspect {
+
+    private final Javers javers;
+
+    public JaversAuditAspect(Javers javers) {
+        this.javers = javers;
+    }
+
+    // Intercept any method annotated with @AuditChanges AFTER it returns successfully
+    @AfterReturning("@annotation(AuditChanges)")
+    public void auditMethodArguments(JoinPoint joinPoint) {
+
+        // 1. Get the current user from your JWT Security Context
+        String currentUser = "SYSTEM";
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
+        }
+
+        // 2. Loop through the method arguments and commit them
+        Object[] args = joinPoint.getArgs();
+        for (Object arg : args) {
+            // Optional: You might want to check if 'arg' is a specific interface
+            // like 'AuditableDto' so you don't accidentally audit simple Strings/Integers.
+            if (arg != null) {
+                javers.commit(currentUser, arg);
+            }
+        }
+    }
+}</code></pre>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_voraussetzung">Voraussetzung:</h5>
+<div class="ulist">
+<ul>
+<li>
+<p>Aspekt muss als Komponente und Aspekt annotiert sein</p>
+</li>
+<li>
+<p>Dependency muss im pom.xml definiert sein:</p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-XML" data-lang="XML">&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-aop&lt;/artifactId&gt;
+&lt;/dependency&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_core_api_validierung_validation_error_handling">8.3. Core-API Validierung (Validation &amp; Error Handling)</h3>
+<div class="paragraph">
+<p>Die Validierung ist in zwei Schichten unterteilt und wird über einen zentralen Mechanismus so verarbeitet, dass das Frontend (Angular) immer eine einheitliche, übersetzungsfertige Struktur erhält.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Syntaktische Validierung (Annotationen auf DTOs):</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Wo: Im Interface Layer (Controller-Eingang).</p>
+</li>
+<li>
+<p>Wie: Mit Jakarta-Annotationen (z.B. @Min(18), @NotBlank) direkt auf den Java DTOs. Als message wird kein Text, sondern der Translation-Key (z.B. user.age.out_of_range) hinterlegt.</p>
+</li>
+<li>
+<p>Zweck: Fängt formale Fehler sofort ab (400 Bad Request), bevor sie die Business-Logik erreichen.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Semantische Validierung (Business-Logik):</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Wo: Im Service Layer.</p>
+</li>
+<li>
+<p>Wie: Der Service prüft fachliche Regeln (z.B. "Darf dieser Sensor hier platziert werden?"). Schlägt dies fehl, wirft der Service eine eigene, massgeschneiderte Exception (z.B. <code>BusinessValidationException</code>), welche das betroffene Feld und den Message-Key enthält.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Der Magische <code>@RestControllerAdvice</code> (Zentraler Exception Handler):</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Dies ist das Herzstück. Er fängt sowohl die fehlgeschlagenen DTO-Annotationen als auch die Business-Exceptions ab.</p>
+</li>
+<li>
+<p>Er extrahiert <strong>dynamisch</strong> den Namen des fehlerhaften Feldes (z.B. <code>age</code>) und weist diesem den aktuellen Eingabewert des Users zu.</p>
+</li>
+<li>
+<p>Er liest per Reflection alle Parameter aus den Annotationen (z.B. das <code>min</code> Limit aus <code>@Min</code>) komplett ohne hartcodierte Strings aus.</p>
+</li>
+<li>
+<p>Er formt all das in einen standardisierten JSON-Payload um und sendet ihn ans Frontend.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>Das Resultat für das Frontend:</strong></p>
+</div>
+<div class="paragraph">
+<p>Egal ob eine DTO-Annotation fehlschlägt oder der Service eine Exception wirft, Angular erhält immer den gleichen Payload: Den Feldnamen, den Translation-Key und ein dynamisches Parameter-Objekt (z.B. <code>{ "age": 16, "min": 18 }</code>), welches direkt und dumm in die Frontend-Übersetzungs-Pipe geschleust werden kann.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Übersetzungsfile im Frontend:
+Im Angular Asset Folder werden die Übersetzungsfiles platziert. Sie enthalten dieselben Schlüssel, die das Backend verwendet (z.B. <code>user.age.out_of_range</code>).</p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-JSON" data-lang="JSON">{
+    "user.age.out_of_range": "Your current age is {{ age }}, but it must be at least {{ min }}.",
+    "validation.field.required": "This field cannot be empty."
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_datenbankschemata">8.4. Datenbankschemata</h3>
+<div class="paragraph">
+<p>Im Folgenden ist das aktuelle logische und physische Datenbankschema dokumentiert. Wie in Kapitel 5 beschrieben, verwenden wir als primären Einstiegspunkt eine PostgreSQL-Datenbank mit der PostGIS-Erweiterung für die Verwaltung der Metadaten und Geoinformationen.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/erd-relational.svg" alt="erd relational" width="2924" height="1680">
+</div>
+</div>
+<div class="sect3">
+<h4 id="_timescaledb_schema_zeitreihen_downsampling">8.4.1. TimeScaleDB Schema (Zeitreihen &amp; Downsampling)</h4>
+<div class="paragraph">
+<p>Das Schema der TimeScaleDB für die hochfrequenten Zeitreihendaten umfasst neben der Hypertable auch die Continuous Aggregates (Downsampling-Buckets) und die Retention-Policies für das Daten-Lebenszyklus-Management.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-sql" data-lang="sql">-- 1. Enum für Range-Status
+-- Bleibt speichereffizient (4 Bytes) und hochgradig komprimierbar
+CREATE TYPE range_category AS ENUM ('too_low', 'correct', 'too_high');
+
+-- 2. Base Table erstellen (Raw Data)
+-- Hinweis: sensor_id ist sensor_code in der Metadaten DB
+CREATE TABLE sensor_readings (
+    timestamp   TIMESTAMPTZ NOT NULL,
+    sensor_id   TEXT NOT NULL,
+    raw_value   DOUBLE PRECISION NOT NULL,
+    norm_value  DOUBLE PRECISION,
+    version     SMALLINT DEFAULT 1,
+    status      range_category,
+
+    -- Composite Primary Key: Erzwingt Eindeutigkeit pro Sensor &amp; Zeitstempel
+    PRIMARY KEY (timestamp, sensor_id)
+);
+
+-- 3. In eine Hypertable konvertieren (Partitionierung nach 'timestamp')
+SELECT create_hypertable('sensor_readings', 'timestamp');
+
+-- 4. Native Kompression für Originaldaten aktivieren (nach 120 Tagen)
+ALTER TABLE sensor_readings SET (
+    timescaledb.compress,
+    timescaledb.compress_segmentby = 'sensor_id'
+);
+SELECT add_compression_policy('sensor_readings', INTERVAL '120 days');
+
+
+-- ==========================================
+-- CONTINUOUS AGGREGATES (Downsampling Buckets)
+-- ==========================================
+
+-- Bucket 1: 1-Minuten-Aggregation
+CREATE MATERIALIZED VIEW sensor_readings_1m
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 minute', timestamp) AS bucket,
+       sensor_id,
+       AVG(norm_value) AS avg_value,
+       MAX(norm_value) AS max_value,
+       MIN(norm_value) AS min_value
+FROM sensor_readings
+GROUP BY bucket, sensor_id;
+
+-- Bucket 2: 15-Minuten-Aggregation
+CREATE MATERIALIZED VIEW sensor_readings_15m
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('15 minutes', timestamp) AS bucket,
+       sensor_id,
+       AVG(norm_value) AS avg_value
+FROM sensor_readings
+GROUP BY bucket, sensor_id;
+
+-- Bucket 3: 1-Stunden-Aggregation
+CREATE MATERIALIZED VIEW sensor_readings_1h
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 hour', timestamp) AS bucket,
+       sensor_id,
+       AVG(norm_value) AS avg_value
+FROM sensor_readings
+GROUP BY bucket, sensor_id;
+
+-- Bucket 4: 1-Tages-Aggregation (Langzeitarchiv)
+CREATE MATERIALIZED VIEW sensor_readings_1d
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 day', timestamp) AS bucket,
+       sensor_id,
+       AVG(norm_value) AS avg_value
+FROM sensor_readings
+GROUP BY bucket, sensor_id;
+
+
+-- ==========================================
+-- RETENTION POLICIES (Rolling Windows)
+-- ==========================================
+
+-- Alte Aggregationen verwerfen, sobald sie aus ihrem Zeitfenster fallen:
+SELECT add_retention_policy('sensor_readings_1m', INTERVAL '30 days');
+SELECT add_retention_policy('sensor_readings_15m', INTERVAL '60 days');
+SELECT add_retention_policy('sensor_readings_1h', INTERVAL '2 years');
+-- Anmerkung: Die 'sensor_readings_1d' View behält Daten dauerhaft.
+
+-- ==========================================
+-- REFRESH POLICIES (Background Jobs für Continuous Aggregates)
+-- ==========================================
+
+-- 1-Minuten-Bucket: Aktualisiert sich jede Minute im Hintergrund
+SELECT add_continuous_aggregate_policy('sensor_readings_1m',
+    start_offset =&gt; NULL,
+    end_offset   =&gt; INTERVAL '1 minute',
+    schedule_interval =&gt; INTERVAL '1 minute');
+
+-- 15-Minuten-Bucket: Aktualisiert sich alle 15 Minuten
+SELECT add_continuous_aggregate_policy('sensor_readings_15m',
+    start_offset =&gt; NULL,
+    end_offset   =&gt; INTERVAL '15 minutes',
+    schedule_interval =&gt; INTERVAL '15 minutes');
+
+-- 1-Stunden-Bucket: Aktualisiert sich stündlich
+SELECT add_continuous_aggregate_policy('sensor_readings_1h',
+    start_offset =&gt; NULL,
+    end_offset   =&gt; INTERVAL '1 hour',
+    schedule_interval =&gt; INTERVAL '1 hour');
+
+-- 1-Tages-Bucket: Aktualisiert sich einmal pro Tag (z.B. Nachts)
+SELECT add_continuous_aggregate_policy('sensor_readings_1d',
+    start_offset =&gt; NULL,
+    end_offset   =&gt; INTERVAL '1 day',
+    schedule_interval =&gt; INTERVAL '1 day');</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_api_schnittstellen_contracts">8.5. API-Schnittstellen (Contracts)</h3>
+<div class="paragraph">
+<p>Im folgenden Abschnitt sind die API-Endpoints als OpenAPI-Spezifikation (YAML) definiert. Diese Spezifikation dient während der aktiven Entwicklungsphase als fester Vertrag (Contract) zwischen dem Backend, dem Frontend und der Ingestion-Pipeline. Die YAML-Blöcke können direkt in Werkzeuge wie den Swagger Editor kopiert werden, um Mocks und Client-Code zu generieren.</p>
+</div>
+<div class="paragraph">
+<p><em>Hinweis: Nach Abschluss der Entwicklungsarbeiten wird dieser statische Block aus dem Architektur-Dokument entfernt und durch einen Link auf die live generierte, dynamische API-Dokumentation (z. B. via Swagger UI des Backends) ersetzt.</em></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">openapi: 3.0.3
+info:
+  title: Sensor Configuration API
+  version: 1.0.0
+  description: API to retrieve sensor calibration, formula (via JSONLogic), and boundary data.
+paths:
+  /sensors/config:
+    get:
+      summary: Retrieve sensor metadata
+      description: Fetches the JSONLogic formula, boundaries, and version information for a specific sensor.
+      operationId: getSensorConfig
+      parameters:
+        - name: sensorid
+          in: query
+          required: true
+          description: The unique identifier of the sensor.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response containing the sensor configuration.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensorConfig'
+        '400':
+          description: Bad Request - Missing or invalid sensorid.
+        '404':
+          description: Not Found - The specified sensorid does not exist.
+components:
+  schemas:
+    SensorConfig:
+      type: object
+      required:
+        - sensor_id
+        - formula
+        - upper_bound
+        - lower_bound
+        - version
+      properties:
+        sensor_id:
+          type: string
+          description: The unique identifier for the sensor.
+          example: "sensor-geo-8472"
+        formula:
+          type: object
+          description: Normalized representation of the conversion formula using JSONLogic.
+          additionalProperties: true
+          example:
+            "+":
+              - "sqrt":
+                  - "pow":
+                      - "*":
+                          - "var": "x"
+                          - 1.8
+                      - 2
+              - 32
+        upper_bound:
+          type: number
+          format: double
+          description: The maximum limit for this sensor used for alerting.
+          example: 150000.5
+        lower_bound:
+          type: number
+          format: double
+          description: The minimum limit for this sensor used for alerting.
+          example: -100.0
+        version:
+          type: integer
+          description: The version number of this specific configuration record.
+          example: 2</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_teststrategie">8.6. Teststrategie</h3>
+<div class="paragraph">
+<p>Um die Stabilität und Datenintegrität von MONTEIS zu gewährleisten, verfolgen wir eine schichtenbasierte Teststrategie. Der Fokus liegt darauf, die gesamte Funktionalität und das fachliche Verhalten der Applikation rigoros abzusichern, ohne durch fragile Layout-Tests unnötigen Wartungsaufwand zu erzeugen.</p>
+</div>
+<div class="paragraph">
+<p>Um eine konstant hohe Code-Qualität zu garantieren, wird systemübergreifend <strong>SonarQube</strong> eingesetzt. Eine Mindestabdeckung dient als Guardrail, wobei die Aussagekraft der Tests (fachliche Relevanz, Fehlererkennungsfähigkeit) höher gewichtet wird als die reine Prozentzahl.</p>
+</div>
+<div class="sect3">
+<h4 id="_frontend_testing">8.6.1. Frontend Testing</h4>
+<div class="paragraph">
+<p>Im Angular-Frontend liegt der Fokus auf der Überprüfung der isolierten UI-Logik (z. B. State-Management, Filter-Logik, Datenaufbereitung für Charts).</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Technologie:</strong> Wir verwenden das moderne, von Angular unterstützte <strong>Vitest</strong> für die Unit-Tests.</p>
+</li>
+<li>
+<p><strong>Fokus:</strong> Es wird ausschliesslich Logik getestet. Reine Darstellungsaspekte (Layout, CSS, Pixel-Perfektion) werden bewusst von Unit-Tests ausgeschlossen.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_backend_testing_spring_boot">8.6.2. Backend Testing (Spring Boot)</h4>
+<div class="paragraph">
+<p>Das Backend wird strikt in verschiedene Test-Ebenen unterteilt (Test-Pyramide), um schnelle Feedback-Zyklen und realitätsnahe Datenbanktests optimal zu kombinieren. Als Basis dient hierbei die native <strong>Spring Boot Test Suite</strong>.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Web-Schicht (Controller Tests):</strong> Für die REST-Schnittstellen verwenden wir das Spring Boot Slice-Testing (<code>@WebMvcTest</code>) in Kombination mit <code>MockMvc</code>. Dadurch testen wir das korrekte HTTP-Routing, Input-Validierungen, HTTP-Statuscodes und die JSON-Serialisierung/-Deserialisierung. Die zugrundeliegende Business-Logik (Services) wird auf dieser Ebene via <code>@MockBean</code> gemockt, um den Application Context klein und performant zu halten.</p>
+</li>
+<li>
+<p><strong>Business-Logik (Unit Tests):</strong> Die eigentliche Fachlogik (Services, Mapper und Configurations) wird isoliert über klassische Unit-Tests mit <strong>JUnit 5</strong> und <strong>Mockito</strong> getestet. Externe Systemgrenzen und die Datenbank (Persistenzschicht) werden auf dieser Ebene konsequent gemockt.</p>
+</li>
+<li>
+<p><strong>Persistenzschicht (Integration Tests):</strong> Die Persistenzschicht (jOOQ-Repositories) wird von den normalen Unit-Tests ausgeschlossen. Stattdessen nutzen wir <strong>Spring Boot Testcontainers</strong>, um die echten Datenbanken als isolierte Docker-Container hochzufahren.</p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Architektur-Fokus (FDW):</strong> Um den reibungslosen Datenabruf zu testen, fahren die Testcontainers sowohl eine PostgreSQL- als auch eine TimeScaleDB-Instanz hoch. Im Rahmen des Test-Setups wird der FDW-Tunnel zwischen den Containern initialisiert.</p>
+</li>
+<li>
+<p><strong>Testdaten-Management:</strong> Das Schema und die initialen Testdaten für die Container werden pro Test-Suite automatisiert über spezifische <strong>Flyway-Skripte</strong> aufgebaut.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_end_to_end_testing_e2e">8.6.3. End-to-End Testing (E2E)</h4>
+<div class="paragraph">
+<p>Um die isolierten Komponenten-Tests zu komplementieren und das Zusammenspiel des gesamten Systems (Frontend + Backend + Datenbank) zu validieren, setzen wir ebenenübergreifende E2E-Tests ein.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Technologie:</strong> <strong>Playwright</strong></p>
+</li>
+<li>
+<p><strong>Infrastruktur &amp; Setup:</strong> Um eine verlässliche und reproduzierbare Testumgebung für die E2E-Tests zu schaffen, implementieren wir ein dediziertes <strong>Spring Boot Testing-Profil</strong>. Startet man das Backend mit diesem Profil, fährt es automatisch die benötigten Testcontainers (PostgreSQL &amp; TimeScaleDB) hoch und befüllt sie via Flyway. Das Frontend kann anschliessend gegen dieses vollständig gekapselte Backend getestet werden.</p>
+</li>
+<li>
+<p><strong>Fokus:</strong> Getestet wird das Verhalten der Applikation anhand der wichtigsten User-Workflows (z. B. Sensor-Filterung, Sensor erstellen, Experiment erstellen, etc.). Auch hier steht das funktionale Verhalten im Vordergrund, nicht das Layout.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_entwickler_workflow_cicd_pipeline">8.7. Entwickler-Workflow &amp; CI/CD Pipeline</h3>
+<div class="paragraph">
+<p>Um eine konsistente Code-Qualität zu garantieren, den Review-Prozess zu verschlanken und die Server-Ressourcen effizient zu nutzen, wird der Code-Lebenszyklus von lokalen Git-Hooks bis hin zu automatisierten GitHub Actions strikt orchestriert.</p>
+</div>
+<div class="sect3">
+<h4 id="_lokaler_workflow_git_hooks">8.7.1. Lokaler Workflow (Git Hooks)</h4>
+<div class="paragraph">
+<p>Bevor Code in das Repository gepusht wird, greifen lokale Git-Hooks , um formelle Standards bereits auf dem Entwickler-Rechner zu erzwingen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Formatter Pre-Commit Hook:</strong> Dieser Hook formatiert geänderte Dateien automatisch und fügt sie dem Staging-Bereich (<code>git add</code>) wieder hinzu. Dadurch wird sichergestellt, dass der Commit exakt den sauber formatierten Stand enthält.</p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Frontend (<code>.ts</code> / <code>.html</code>):</strong> Formatierung und Linting via <strong>Prettier</strong> und <strong>ESLint</strong>.</p>
+</li>
+<li>
+<p><strong>Backend (<code>.java</code>):</strong> Formatierung via <strong>Spotless</strong> unter strikter Verwendung des <strong>Google Java Formats</strong>.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>Commit-Message Hook (<code>commit-msg</code>):</strong> Prüft die Commit-Nachricht vor dem Speichern auf das Einhalten der <strong>Conventional Commits</strong> (TBD).</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_continuous_integration_pull_request_workflows">8.7.2. Continuous Integration (Pull Request Workflows)</h4>
+<div class="paragraph">
+<p>Um die Ressourcen (und Kosten) der Pipeline zu schonen, werden ressourcenintensive CI-Jobs <strong>nicht bei jedem einzelnen Push</strong>, sondern ausschliesslich bei der Erstellung oder Aktualisierung von <strong>Pull Requests (PRs)</strong> ausgeführt.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Format Checker:</strong> Prüft den gesamten Codebestand, um sicherzustellen, dass keine unformatierten Dateien die lokalen Hooks umgangen haben (z. B. durch <code>git commit --no-verify</code>).</p>
+</li>
+<li>
+<p><strong>Full Test Suite:</strong> Führt die oben definierte Teststrategie (Unit, Controller, Integration via Testcontainers, E2E) vollständig aus.</p>
+</li>
+<li>
+<p><strong>Security Scanning (Trivy):</strong> Eine dedizierte GitHub Action nutzt <strong>Trivy</strong> für automatisierte Sicherheitsüberprüfungen. Dabei werden die Projekt-Abhängigkeiten, Dockerfiles und Container-Images auf bekannte Schwachstellen (CVEs) und Fehlkonfigurationen (IaC) gescannt. Gefundene kritische Sicherheitslücken (z. B. Severity "HIGH" oder "CRITICAL") blockieren den Pull Request.</p>
+</li>
+<li>
+<p><strong>SonarQube Quality Gate:</strong> Eine dedizierte GitHub Action (<code>sonar-scan</code>) analysiert den Code auf Bugs, Vulnerabilities und Code Smells. Anschliessend prüft die Action den Status des SonarQube Quality Gates. Ein Pull Request kann nur bei grünem Quality Gate gemerged werden.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_continuous_deployment_release_workflows">8.7.3. Continuous Deployment &amp; Release-Workflows</h4>
+<div class="paragraph">
+<p>Sobald Code-Änderungen in den <code>main-branch</code> integriert werden oder offizielle Versionen anstehen, übernehmen automatisierte GitHub Actions das Deployment. Das Setup folgt strikt dem Build-Once-Prinzip für Produktions-Releases und einem GitOps-Ansatz für die Infrastruktur.</p>
+</div>
+<div class="paragraph">
+<p>Es sind drei dedizierte Workflows definiert:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Workflow 1: Auto-Deploy auf DEV (Bleeding Edge)</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Trigger:</strong> Automatisch bei jedem Push oder Merge in den <code>main</code>-Branch.</p>
+</li>
+<li>
+<p><strong>Ablauf:</strong> Der Workflow baut sofort und kompromisslos ein neues Docker-Image aus dem aktuellen Stand des Codes und deployt dieses auf die <code>DEV</code>-Umgebung. Diese Stage spiegelt den aktuellsten Entwicklungsstand wider und muss nicht zwingend stabil sein.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>Workflow 2: Create Release (Deployment auf STAGING)</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Trigger:</strong> Manuell (GitHub Workflow Dispatch).</p>
+</li>
+<li>
+<p><strong>Ablauf:</strong></p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Der ausführende Nutzer wählt die Art des Releases (Major, Minor oder Patch basierend auf dem letzten existierenden Git-Tag).</p>
+</li>
+<li>
+<p>Der Workflow aktualisiert die Version im Code (z. B. via <code>mvn clean install -Drelease=vX.X.X</code> im Backend).</p>
+</li>
+<li>
+<p>Er erstellt den neuen Git-Tag sowie ein offizielles GitHub Release.</p>
+</li>
+<li>
+<p>Die Anwendung wird kompiliert und das neue Docker-Image wird gebaut.</p>
+</li>
+<li>
+<p>Das frisch gebaute Image wird gestartet und durchläuft sofort die komplette End-to-End (E2E) Test-Suite.</p>
+</li>
+<li>
+<p>Nur wenn die E2E-Tests erfolgreich sind, wird das Image in die Container Registry (Amazon ECR) gepusht und automatisch auf der <code>STAGING</code>-Umgebung deployt.</p>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>Workflow 3: Promote to PROD (GitOps)</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Trigger:</strong> Manuell (GitHub Workflow Dispatch).</p>
+</li>
+<li>
+<p><strong>Ablauf:</strong> Dieses Skript baut bewusst <strong>keine</strong> neuen Images, um ungetestete Seiteneffekte zu vermeiden.</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Der Nutzer wählt einen bereits existierenden Release-Tag aus dem Dropdown.</p>
+</li>
+<li>
+<p>Der Workflow sucht in der Amazon ECR nach dem exakt passenden, auf Staging bereits validierten Docker-Image.</p>
+</li>
+<li>
+<p>Der Workflow checkt das separate Produktions-Infrastruktur-Repository aus.</p>
+</li>
+<li>
+<p>Er aktualisiert dort lediglich den Image-Tag in der <code>kustomize.yaml</code> und committet die Änderung.</p>
+</li>
+<li>
+<p>Durch diesen Commit im Infra-Repo wird das eigentliche Kubernetes-Deployment auf <code>PROD</code> (GitOps-Ansatz) angestossen.</p>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-design-decisions">9. Architekturentscheidungen</h2>
+<div class="sectionbody">
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-quality-scenarios">10. Qualitätsanforderungen</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_übersicht_der_qualitätsanforderungen">10.1. Übersicht der Qualitätsanforderungen</h3>
+
+</div>
+<div class="sect2">
+<h3 id="_qualitätsszenarien">10.2. Qualitätsszenarien</h3>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-technical-risks">11. Risiken und technische Schulden</h2>
+<div class="sectionbody">
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="section-glossary">12. Glossar</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Begriff</th>
+<th class="tableblock halign-left valign-top">Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em><a href="https://www.jooq.org/">jOOQ</a></em></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>jOOQ generiert Java-Code auf Basis der Datenbank und ermöglicht es, über seine Fluent-API typsichere SQL-Abfragen zu erstellen.</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em><a href="https://javers.org/">JaVers</a></em></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>JaVers ist der Industriestandard für Datenversionierung und Objektvergleiche in modernen Java-Projekten.</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em><a href="https://github.com/SchweizerischeBundesbahnen/scion-workbench?tab=readme-ov-file">Scion-Workbench</a></em></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>Die Scion-Workbench ist ein Open Source verfügbares Layout Framework für nicht statische Angular Webapps.</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em><a href="https://www.ag-grid.com/">AG-Grid</a></em></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>AG-Grid ist eine Library für Angular, speziell geeignet für anspruchsvolle filterbare Tabellen.</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em><a href="https://carbondesignsystem.com/">Carbon Design</a></em></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>Das Carbon Design system ist eine von IBM entwickelte Opensource Design-Library, welche wir für das Umsetzen eines einheitlichen UI-Designs gemäs UX-Vorlagen verwenden.</em></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div id="footer">
+<div id="footer-text">
+Version 1.0.0-rc<br>
+Last updated 2026-05-12 11:48:53 UTC
+</div>
+</div>
+</body>
+</html>

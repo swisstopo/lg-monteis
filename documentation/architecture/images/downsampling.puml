@@ -1,0 +1,41 @@
+@startuml
+!theme plain
+skinparam componentStyle uml2
+left to right direction
+
+' Abstände und sauberes Styling
+skinparam padding 15
+skinparam nodesep 30
+skinparam ranksep 60
+
+skinparam rectangle {
+    BackgroundColor #F8F9FA
+    BorderColor #343A40
+    RoundCorner 8
+    FontColor #000000
+}
+
+title TimeScaleDB - Data Lifecycle, Downsampling & Retention
+
+package "TimeScaleDB (Hypertable & Continuous Aggregates)" {
+
+    ' Rohdaten & Kompression
+    rectangle "Raw Data (Hypertable)\n[0 - 120 Tage]\nOptimiert für Live-Ansicht (0 - 10d)\nErlaubt späte Updates" as TSRaw
+    rectangle "Compressed Raw Data\n[> 120 Tage]\nMassive Speicheroptimierung" as TSComp
+
+    TSRaw -right-> TSComp : " Native Compression\n (nach 120 Tagen)"
+
+    ' Aggregations-Buckets mit rollierenden Fenstern
+    rectangle "1-Min Bucket\n[0 - 30 Tage]\n<color:#D32F2F>Drop > 30d</color>" as TS1m
+    rectangle "15-Min Bucket\n[20 - 60 Tage]\n<color:#D32F2F>Drop > 60d</color>" as TS15m
+    rectangle "1-Std Bucket\n[50 Tage - 2 Jahre]\n<color:#D32F2F>Drop > 2 Jahre</color>" as TS1h
+    rectangle "1-Tag Bucket\n[Langzeit: > 2 Jahre]\n(Dauerhaftes Archiv)" as TS1d
+
+    ' Konzeptueller Downsampling-Fluss (Abnehmende Auflösung über Zeit)
+    TSRaw --> TS1m : " Continuous\n Aggregates"
+    TS1m --> TS15m
+    TS15m --> TS1h
+    TS1h --> TS1d
+}
+
+@enduml

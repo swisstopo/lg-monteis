@@ -1,0 +1,87 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-context-and-scope]]
+== Kontextabgrenzung
+
+
+Dieses Kapitel beschreibt das System in seiner Umgebung. Es grenzt MONTEIS von seinen externen Nachbarsystemen ab und definiert die Schnittstellen und den Datenfluss zu den angebundenen Akteuren und Systemen.
+
+
+=== Fachlicher Kontext
+
+MONTEIS operiert nicht isoliert, sondern agiert als zentrales "Overarching System" (Informationsdrehscheibe) im Felslabor Mont Terri, das Daten aus verschiedenen spezialisierten Systemen bündelt.
+
+**Akteure:**
+
+- **Administrator (swisstopo):** Hat weitreichende Konfigurationsrechte. Er legt neue Experimente und Sensoren an, konfiguriert die Daten-Pipelines, richtet das Alerting ein und muss manuell hochgeladene Daten verifizieren.
+- **User (Wissenschaftler, PIs, Projektpartner):** Greifen auf das System zu, um Daten über die 3D-Ansicht oder Filter zu suchen, lange Zeitreihen zu plotten, Exporte durchzuführen und Kommentare zu verfassen.
+
+**Nachbarsysteme:**
+
+[cols="1,1,3" options="header"]
+|===
+| Nachbarsystem | Typ | Fachliche Beschreibung & Informationsfluss
+
+| BIM Mont Terri
+| 3D-Geometrie & Infrastruktur
+| Fungiert als digitaler Zwilling des Felslabors (Infrastruktur, Assets und Bohrlochdatenbank). MONTEIS bezieht von hier die 3D-Strukturen und Bohrlochgeometrien, um diese im eigenen 3D-Viewer darzustellen und für die räumliche Suche nutzbar zu machen.
+
+| Fulcrum™
+| Mobiles Logbuch / Vor-Ort-Erfassung
+| Cloud-Datenbank zur mobilen Erfassung von Ereignissen, Proben und Bohrlöchern direkt auf Tablets im Tunnel. Da Fulcrum das primäre Arbeits-Tool vor Ort bleibt, müssen Logbuch- und Assetdaten zwingend bidirektional mit MONTEIS abgeglichen werden.
+
+| Citavi
+| Publikations- & Berichtsdatenbank
+| Verwaltet wissenschaftliche Berichte, technische Notizen und Zeitschriftenartikel. Die darin enthaltenen Dokumente (PDFs) und Metadaten (z. B. Autor, Schlagwörter) werden periodisch in MONTEIS überführt, um sie direkt mit den jeweiligen Experimenten zu verknüpfen.
+
+| DAS (Data Acquisition Systems)
+| Sensorik / Datenerfassung
+| Lokale Erfassungssysteme (wie Geomonitor, Geoscope, Glötzl etc.), die Millionen von Sensordaten (z. B. Druck, Temperatur) aufzeichnen. Diese Messwerte fliessen kontinuierlich in MONTEIS ein.
+|===
+
+[plantuml, context, format="svg"]
+....
+include::../images/context.puml[]
+....
+
+=== Technischer Kontext
+
+Die technische Anbindung der Nachbarsysteme an MONTEIS erfolgt über klar definierte, standardisierte Schnittstellen. In dieser Sicht wird MONTEIS als Blackbox betrachtet, die detaillierten API-Spezifikationen (REST-Contracts) werden in der separaten API-Dokumentation (z. B. via Swagger/OpenAPI) gepflegt.
+
+An den Systemgrenzen kommen folgende technische Integrationsmuster zum Einsatz:
+
+* **Daten-Pipelines (Ingestion von DAS):** Die Anbindung der lokalen Datenerfassungssysteme (DAS) erfolgt entweder über etablierte Dateitransfer-Protokolle (wie FTP) oder über moderne Event-Streaming-Technologien wie Apache Kafka, welches extrem geringe Latenzen (<10ms) bei hoher Bandbreite für die Hochfrequenz-Sensordaten bietet.
+* **Format-Handling an der Systemgrenze:** Die eingehenden DAS-Schnittstellen müssen extrem heterogene Dateiformate (TXT, CSV, ASCII, XLS, JPG, TIF, LAS, LAZ, etc.) automatisiert entgegennehmen können.
+* **REST-APIs & Webhooks (BIM & Fulcrum):** Die Kommunikation mit den Umsystemen BIM und Fulcrum erfolgt über zustandslose REST-APIs, wobei strukturierte Daten im JSON-Format ausgetauscht werden. Für ereignisbasierte Updates (z. B. aus dem mobilen Logbuch Fulcrum) werden zusätzlich Webhooks eingesetzt.
+* **Authentifizierungsschnittstelle (eIAM):** Das System delegiert die Authentifizierung vollständig nach aussen. Das Login erfolgt über einen externen Call (z. B. via SAML oder OIDC) an das System `eIAM` oder `AGOV` der Bundesverwaltung.
+
+**Monteis mit Umsysteme**
+[plantuml,tech_context, format="svg"]
+....
+include::../images/technical_context.puml[]
+....
+
+
+=== Mapping fachliche auf technische Schnittstellen
+
+Die folgende Tabelle stellt den Bezug zwischen den ausgetauschten fachlichen Informationen (siehe 3.1) und deren technischer Implementierung (siehe 3.2) her:
+
+[cols="2,3,3" options="header"]
+|===
+| Nachbarsystem | Fachliche Schnittstelle (Das "Was") | Technische Schnittstelle (Das "Wie")
+
+| **DAS (Datenerfassung)** | Kontinuierlicher Zufluss von rohen Sensormesswerten (z.B. Druck, Temperatur).
+| Daten-Stream via **Apache Kafka** (für Latenzen <10ms) oder Dateitransfer via **FTP**.
+
+| **Fulcrum™** | Bidirektionaler Abgleich von mobilen Logbucheinträgen, Proben und Asset-Daten.
+| Zustandslose Kommunikation via **REST-API** (Format: JSON) sowie ereignisbasierte Updates über **Webhooks**.
+
+| **BIM Mont Terri** | Bereitstellung der 3D-Infrastrukturgeometrien und Bohrlochdaten des Tunnelsystems.
+| Abfrage über eine **API** (z. B. für Cesium 3D-Tiles zur Visualisierung im Browser).
+
+| **Citavi** | Bereitstellung von wissenschaftlichen Berichten (PDFs) und Publikations-Metadaten.
+| Kein direkter API-Zugriff möglich; Umsetzung über **manuellen oder periodischen Import** von Austauschformaten (z. B. RIS und PDF-Dateien).
+
+| **eIAM / AGOV** | Sichere Identifikation und Authentifizierung der Nutzer (Admins, Wissenschaftler).
+| Externer Aufruf des föderativen Identity Providers der Bundesverwaltung via **SAML / OIDC**.
+|===

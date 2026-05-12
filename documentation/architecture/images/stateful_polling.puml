@@ -1,0 +1,37 @@
+@startuml
+!theme plain
+skinparam componentStyle uml2
+skinparam ActivityBackgroundColor #FFFFFF
+
+start
+:Start Kafka Consumer Loop;
+repeat
+  :consumer.poll(1 second);
+  :Extract Sensor Data;
+  :Append to In-Memory Map
+  ""Map<SensorId, List<Data>>"";
+
+  if (Time since last S3 flush > 15 mins \n OR Total Records > 100,000) then (yes)
+    :Iterate over Map;
+    note right
+      Create one file per Sensor ID:
+      s3://bucket/sensor=A/2026-05-11/14_15.json
+    end note
+    :Upload all files to S3;
+
+    if (All Uploads 200 OK?) then (yes)
+      :consumer.commitSync();
+      :Clear Memory Map;
+      :Reset Timer;
+    else (no)
+      :Throw Exception / Crash Pod;
+      note left
+        Offsets are NOT committed.
+        Pod restarts and re-reads
+        the exact same data.
+      end note
+    endif
+  else (no)
+  endif
+repeat while (Pod is running)
+@enduml

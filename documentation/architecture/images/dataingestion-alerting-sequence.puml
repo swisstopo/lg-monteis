@@ -1,0 +1,37 @@
+@startuml
+!theme plain
+autonumber
+skinparam maxMessageSize 150
+
+participant "Sensor (DAS)" as DAS
+participant "Pipeline Worker" as Worker
+participant "Core API (Backend)" as Backend
+database "TimeScaleDB" as TSDB
+control "Grafana / Prometheus" as Grafana
+participant "Alerting Service" as Alert
+boundary "AWS SNS" as SNS
+
+DAS -> Worker : Push Raw Data
+activate Worker
+
+Worker -> Worker : Parse in Standard-Format
+Worker -> Backend : Fetch Metadaten (Formel, Limits)
+Backend --> Worker : Return Metadaten
+
+Worker -> Worker : Konvertierung in SI-Einheit
+Worker -> Worker : Validator prüft Limits (Violation detected!)
+
+Worker -> TSDB : Insert Wert (inkl. Flag: "too_high")
+Worker -> Grafana : Emittiert Alert-Event / Metrik
+deactivate Worker
+
+Grafana -> Grafana : Rule Engine triggert Alarm
+Grafana -> Alert : Webhook (Alert Trigger)
+activate Alert
+
+Alert -> Backend : Fetch Alert-Template & User Subscriptions
+Backend --> Alert : Return Empfängerdaten
+Alert -> SNS : Trigger SMS / E-Mail Versand
+deactivate Alert
+
+@enduml

@@ -1,0 +1,24 @@
+@startuml
+skinparam packageStyle rectangle
+
+package "Case 1: One Organisation" as case1 {
+  actor "Scientist" as user1
+  rectangle "ETH" as org1A
+  rectangle "EPFL" as org1B
+
+  user1 --> org1A
+}
+
+package "Case 2: Multiple Organisations" as case2 {
+  actor "Scientist" as user2
+  rectangle "ETH " as org2A
+  rectangle "EPFL " as org2B
+
+  user2 --> org2A
+  user2 --> org2B
+}
+
+' Force the two cases to display side-by-side
+case1 -[hidden]right-> case2
+
+@enduml
