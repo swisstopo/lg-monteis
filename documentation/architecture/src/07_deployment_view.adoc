@@ -1,0 +1,101 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-deployment-view]]
+== Verteilungssicht
+
+
+
+
+
+=== Infrastruktur Ebene 1: AWS Cloud Resourcen
+
+Das nachfolgende Diagram zeigt die wichtigsten AWS Resourcen (Dienste) für das MVP auf. Die Resourcen sind logisch gruppiert in die drei Schichten: "Interface Layer", "Business Layer" und "Persistance Layer". Die Gruppierung "Global Services" dient der Verortung von global (= Layer-unabhängig) genutzten AWs Diensten. Zur besseren Einortung ist zusätzlich das Kubernetes Cluster, bereitgestellt durch AWS EKS, angedeutet, um den Dienst "Keycloak" als zentralen Access- und Identity-Dienst einzuordnen.
+
+image::deploy-aws-resources.drawio.svg[]
+
+==== Beschreibung AWS Cloud Resourcen
+
+[cols="1,1,1,3", options="header"]
+|===
+| Layer | Service | Aufgabe | Notiz
+
+| Global 
+| Route53 
+| Zentraler AWS DNS Service 
+|
+
+| Global 
+| AWS ECR 
+| Container Registry für Build-Artefakte (z.B. Container Images) 
+|
+
+| Interface 
+| AWS CloudFront 
+| Content-Delivery-Network (CDN) zur Bereitstellung Frontend 
+|
+
+| Interface 
+| AWS S3 
+| Hosting Frontend Artefakte 
+|
+
+| Business 
+| AWS EKS 
+| Managed Kubernetes Cluster 
+|
+
+| Business 
+| AWS Kafka 
+| Managed Kafka Cluster 
+| 
+
+| Business 
+| Keycloak 
+| Open-Source Identity Provider & User-Management 
+| 
+
+| Business 
+| VPC Endpoint 
+| Sichere Netzwerk-Verbindung zwischen VPC und globalen AWS Services über privates AWS Netzwerk 
+| 
+
+Für MVP empfehlenswert
+
+Vorteile: Nutzung AWS-internes Netzwerk (kein öffentliches Internet!) + Kostenreduktion Traffic (vs. NAT Gateway)
+Ref: https://pcg.io/insights/vpc-endpoints-explanation-and-cost-comparison/
+
+| Business / Persistence
+| VPC
+| Virtual Private Cloud, dedizierter Netzwerkbereich für Compute und Storage Resourcen  
+| 
+
+| Persistence 
+| AWS RDS for PostgreSQL 
+| Managed Datenbank für Metadaten 
+|
+
+| Persistence 
+| TimescaleDB 
+| Datenbank für Zeitreihen-Daten 
+| 
+
+| Persistence 
+| AWS S3 
+| Object-Storage (hot & cold) 
+|
+
+| Persistence 
+| AWS OpenSearch 
+| Service für Indexierung und Volltext-Suche 
+| 
+
+| Persistence 
+| AWS PrivateLink 
+| Sichere Netzwerk-Verbindung zwischen zwei VPCs über privates AWS Netzwerk 
+|
+
+Für MVP empfehlenswert
+
+https://docs.aws.amazon.com/whitepapers/latest/aws-vpc-connectivity-options/aws-privatelink.html
+https://www.tigerdata.com/docs/deploy/tiger-cloud/tiger-cloud-aws/security/vpc
+|===

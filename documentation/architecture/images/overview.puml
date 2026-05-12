@@ -1,0 +1,79 @@
+@startuml
+!theme plain
+skinparam componentStyle uml2
+skinparam linetype ortho
+
+' Deutlich mehr Platz für die rechtwinkligen Linien und Labels
+skinparam ranksep 130
+skinparam nodesep 120
+skinparam padding 15
+
+' --- Externe Akteure & Systeme ---
+actor "User / Admin" as User
+component "AGOV" as eIAM
+component "DAS / Kafka" as DAS
+component "BIM / Fulcrum / Citavi" as Umsysteme
+
+' ==========================================
+' MONTEIS WHITEBOX (Gesamtsystem)
+' ==========================================
+package "MONTEIS (Gesamtsystem)" {
+
+  package "Interface Layer" {
+    component "Web App (Frontend)\n[Angular]" as WebApp
+  }
+
+  package "Business Layer" {
+    component "Core API\n[z.B. Spring Boot]" as API
+    component "Data Pipelines\n[Normalisierung, Validierung]" as Pipeline
+    component "Alerting Service\n[Via Prometheus Amazon SNS]" as Alerting
+
+    ' Erzwingt, dass die API links und Pipeline/Alerting rechts bleiben
+    API -[hidden]right- Pipeline
+    Pipeline -[hidden]right- Alerting
+  }
+
+  package "Storage Layer" {
+    database "Relational DB\n[Metadaten & PostGIS]" as RelDB
+    database "Time-Series DB\n[Sensordaten]" as TSDB
+    database "Hot Storage\n[PDFs, Logs, Rohdaten(temporär), Manual Uploads]" as FileStorage
+    database "Cold Storage\n[Rohdaten]" as ColdStorage
+
+    ' Zwingt die Datenbanken auf Abstand nebeneinander
+    RelDB -[hidden]right- TSDB
+    TSDB -[hidden]right- FileStorage
+  }
+}
+
+' ==========================================
+' Beziehungen / Datenfluss
+' ==========================================
+
+User -down-> WebApp : " HTTPS"
+WebApp -up-> eIAM : " SSO Login"
+WebApp <-down-> API : " REST / JSON"
+
+API <-right-> Umsysteme : " REST API /\n Webhooks"
+Pipeline <-left- DAS : " Kafka, evt. FTP"
+
+Pipeline --> Alerting : " Triggert\n Alarme"
+API -left-> Pipeline : " Bezieht\n Metadaten"
+
+' --- Storage Layer Verbindungen (mit Zeilenumbrüchen gegen Überlappung) ---
+
+' API kommuniziert nun EXKLUSIV mit der TSDB für Sensor- und Metadaten
+API <-down-> RelDB : " Verwaltung Metadaten &\n Sensordaten abfragen"
+API <-down- FileStorage : " Dateien\n laden"
+
+Pipeline <-down-> TSDB : " Schreibt\n Sensordaten"
+FileStorage -right-> ColdStorage: " Batch Job 24h"
+FileStorage <-left-> Pipeline: " Einspielen Manual Uploads\n Ablage von Rohdaten (temporär)"
+
+' FDW Verbindung auf Datenbank-Ebene (TSDB greift auf RelDB zu)
+TSDB <-left-> RelDB : " FDW\n (Foreign Data Wrapper)"
+
+' (Auskommentiert, da überflüssig)
+'Pipeline -down-> RelDB : " Aktualisiert\n Status"
+'Pipeline -down-> FileStorage : " Speichert\n Rohdaten"
+
+@enduml

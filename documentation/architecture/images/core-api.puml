@@ -1,0 +1,62 @@
+@startuml
+!theme plain
+skinparam componentStyle uml2
+skinparam PackageBackgroundColor #FDFDFD
+skinparam ComponentBackgroundColor #FFFFFF
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam linetype ortho
+
+skinparam nodesep 100
+skinparam ranksep 100
+skinparam ArrowMessageAlignment center
+
+title Core API (Spring Boot Backend)
+
+actor "Clients\n(Angular Web App, Pipeline Worker, Alerting Service)" as Client
+
+package "Core API [Spring Boot]" {
+
+    component "Security & Auth Filter\n(JWT & API-Key)" as Security
+
+    package "1. API Layer" {
+        component "REST Controllers & APIs" as Controllers
+        artifact "DTOs\n(Data Transfer Objects)" as DTOs
+        Controllers .right.> DTOs : " Nutzt für I/O"
+    }
+
+    package "2. Service Layer" {
+        component "Logical Services\n(Core Logic, Downsampling)" as Services
+        artifact "Domain Models\n(Business Entities)" as Models
+        Services .right.> Models : " Verarbeitet"
+    }
+
+    package "3. Persistence Layer" {
+        component "jOOQ Repositories &\nExternal Connectors" as Repos
+        artifact "jOOQ Records\n(DB Representation)" as Records
+        Repos .right.> Records : " Liest/Schreibt"
+    }
+}
+
+package "Storage Layer" {
+    database "Relational DB\n(inkl. TSDB via FDW)" as Database
+    database "Hot Storage\n(AWS S3)" as FileStorage
+
+    Database -[hidden]right-> FileStorage
+}
+
+node "Externe Umsysteme" {
+    component "BIM / Fulcrum / Citavi" as Umsysteme
+}
+
+Client -down-> Security : " HTTPS Request"
+Security -down-> Controllers : " Validiere Zugriff"
+
+Controllers -down-> Services : " DTO -> Model"
+Services -down-> Repos : " Model -> Record"
+
+Repos -down---> Database : " SQL\n(Metadaten & Sensorik)"
+Repos -down---> FileStorage : " S3 API\n(IFC/Uploads)"
+
+Services -left-> Umsysteme : " REST / Webhooks"
+
+@enduml

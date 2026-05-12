@@ -1,0 +1,22 @@
+:homepage: https://arc42.org
+:keywords: software-architecture, documentation, template, arc42
+:numbered!:
+
+**Über arc42**
+
+Diese Dokumentation basiert auf dem arc42-Template und wurde davon abgeleitet
+(© Dr. Peter Hruschka, Dr. Gernot Starke und Mitwirkende).
+
+Original-Template:
+https://arc42.org
+
+Lizenz:
+Creative Commons Attribution-ShareAlike 4.0 International
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Es wurden Änderungen am originalen arc42-Template vorgenommen.
+
+Dieses angepasste Werk wird unter derselben
+Creative Commons Attribution-ShareAlike 4.0 International Lizenz bereitgestellt.
+
+Dokumentationsversion: {revnumber}. {revremark}, {revdate}

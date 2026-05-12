@@ -1,0 +1,40 @@
+@startuml
+!theme plain
+autonumber
+skinparam maxMessageSize 150
+
+actor "Wissenschaftler" as User
+actor "Admin" as Admin
+participant "Angular Frontend" as UI
+participant "Core API (Backend)" as Backend
+database "AWS S3" as S3
+participant "Manual Upload\nConnector" as Connector
+participant "Pipeline Worker" as Worker
+
+User -> UI : CSV Datei hochladen
+UI -> Backend : POST /upload
+activate Backend
+Backend -> S3 : Speichern (Status: pending)
+Backend -> Backend : DB-Eintrag (Link zu Experiment)
+Backend --> UI : Success
+deactivate Backend
+
+Admin -> UI : Prüft ausstehende Uploads
+UI -> Backend : GET /uploads/pending
+Backend --> UI : Datei-Liste
+Admin -> UI : Klick "Akzeptieren"
+UI -> Backend : POST /uploads/123/accept
+activate Backend
+
+Backend -> Connector : Push File in Connector-Topic/Ordner
+Backend -> S3 : Verschiebt & versioniert File (für Archivierung)
+Backend --> UI : Freigabe bestätigt
+deactivate Backend
+
+Connector -> Worker : Leitet Datensätze weiter
+activate Worker
+Worker -> Worker : Normalisierung & Validierung
+Worker -> TSDB : Speichert Werte
+deactivate Worker
+
+@enduml

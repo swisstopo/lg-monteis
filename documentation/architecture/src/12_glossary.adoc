@@ -1,0 +1,28 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-glossary]]
+== Glossar
+
+
+
+
+
+[cols="e,2e" options="header"]
+|===
+|Begriff |Definition
+
+|https://www.jooq.org/[jOOQ]
+|jOOQ generiert Java-Code auf Basis der Datenbank und ermöglicht es, über seine Fluent-API typsichere SQL-Abfragen zu erstellen.
+
+|https://javers.org/[JaVers]
+|JaVers ist der Industriestandard für Datenversionierung und Objektvergleiche in modernen Java-Projekten.
+
+|https://github.com/SchweizerischeBundesbahnen/scion-workbench?tab=readme-ov-file[Scion-Workbench]
+|Die Scion-Workbench ist ein Open Source verfügbares Layout Framework für nicht statische Angular Webapps.
+
+|https://www.ag-grid.com/[AG-Grid]
+|AG-Grid ist eine Library für Angular, speziell geeignet für anspruchsvolle filterbare Tabellen.
+
+|https://carbondesignsystem.com/[Carbon Design]
+|Das Carbon Design system ist eine von IBM entwickelte Opensource Design-Library, welche wir für das Umsetzen eines einheitlichen UI-Designs gemäs UX-Vorlagen verwenden.
+|===

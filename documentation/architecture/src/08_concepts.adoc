@@ -1,0 +1,434 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-concepts]]
+== Querschnittliche Konzepte
+
+=== Core-API Datenzugriff & Sicherheit
+Das Ziel dieser Architektur ist es, den Business-Code (Service Layer) zu 100 % sauber von Berechtigungsprüfungen zu halten. Die Sicherheit wird stattdessen an den Rändern des Systems durchgesetzt.
+
+- **Der Security Context (`ScopedValue`) & Access Levels:** Ein Spring-Filter fungiert als Trichter (Funnel). Er normalisiert die eingehende Authentifizierung – unabhängig davon, ob es sich um ein menschliches JWT oder einen Maschinen-API-Key (z.B. von der Data Pipeline) handelt – in einen systemweiten Zugriffslevel (`USER`, `ADMIN`, `DATA_PIPELINE`). Dieser Level sowie die für User extrahierten Entitäts-IDs (Lese- und Schreibrechte) werden in einem modernen, threadsicheren Java `ScopedValue` (dem Nachfolger von `ThreadLocal`) für die Dauer des Requests gespeichert.
+
+- **Die "Master Security Lineage" View:** Um komplexe Hierarchien und M:N-Beziehungen in der Datenbank abzubilden, ohne den Java-Code aufzublähen, wird eine zentrale SQL-View erstellt. Diese View mappt alle Entitäten flach auf ihre jeweiligen "Root-Rollen-IDs".
+
+- **Der jOOQ `VisitListener` (Für Lese-/Änderungszugriffe):** Dieser jOOQ-Interceptor fängt automatisch jedes `SELECT`, `UPDATE` und `DELETE` ab, bevor es zur Datenbank geschickt wird. Er liest den Zugriffslevel und die IDs aus dem `ScopedValue` und trifft situationsbedingte Routing-Entscheidungen: `ADMIN`-Anfragen passieren ungefiltert, `DATA_PIPELINE`-Anfragen werden hart auf spezifizierte Tabellen (wie Sensordaten) isoliert, und bei regulären `USER`-Anfragen hängt er transparent eine `WHERE`-Bedingung an das SQL an, die auf Basis der Master-View filtert. Der Entwickler schreibt im Service nur `fetch()`, aber die Datenbank führt automatisch das korrekt gefilterte SQL aus.
+
+- **Der jOOQ `RecordListener` (Für INSERTs):** Da `INSERT`-Statements keine `WHERE`-Klausel haben, greift hier ein zweiter Interceptor. Er prüft den Java-Payload direkt vor dem Speichern ab und wirft eine Exception, falls ein standard `USER` versucht, Daten für eine Entität anzulegen, für die er keine Schreibrechte besitzt.
+
+
+=== Core-API Optimistic Locking und Versionierung/Auditierung
+
+==== 1. Technischer Hintergrund: Optimistic Locking
+
+Im Gegensatz zum Pessimistic Locking (bei dem Datensätze explizit auf Datenbankebene über `SELECT ... FOR UPDATE` gesperrt werden), geht das Optimistic Locking davon aus, dass parallele Schreibzugriffe auf denselben Datensatz selten sind. Die Konflikterkennung wird bis zum eigentlichen Schreibvorgang verzögert.
+
+Der Mechanismus: Die Tabelle erhält eine zusätzliche Spalte (z.B. `VERSION` als Integer oder einen Zeitstempel).
+
+Der Lesezugriff: Beim Laden eines Datensatzes wird diese Version mitgelesen.
+
+Der Schreibzugriff: Beim Speichern wird ein `UPDATE` abgesetzt, das die alte Version in der `WHERE`-Klausel voraussetzt und die Version im `SET`-Block inkrementiert:
+`UPDATE tabelle SET daten = 'neu', version = 2 WHERE id = 123 AND version = 1;`
+
+Die Prüfung: Die Datenbank meldet zurück, wie viele Zeilen aktualisiert wurden (Rows Affected). Ist dieser Wert 0, bedeutet dies, dass ein anderer Prozess den Datensatz in der Zwischenzeit modifiziert hat. In diesem Fall wirft der ORM oder Query-Builder (hier jOOQ) eine Exception (z.B. `DataChangedException`), was in der Regel zu einem Rollback der Datenbanktransaktion führt.
+
+==== 2. Architektur und Trennung der Zuständigkeiten
+
+Die gewählte Schichtenarchitektur trennt das Concurrency Management (jOOQ) strikt vom Audit-Logging (JaVers).
+
+REST-Schicht (DTOs): Dient als Ein- und Ausgangspunkt. Das DTO transportiert die Nutzdaten inklusive der vom Client zuletzt gelesenen Version.
+
+Service-Schicht (Domain Models): Führt die reine Geschäftslogik aus. Diese Schicht arbeitet mit domänenspezifischen Java-Objekten. Ein Spring AOP-Aspekt (Aspektorientierte Programmierung) überwacht hier die Service-Methoden (z.B. getriggert durch @AfterReturning oder eine Custom Annotation).
+
+Persistenz-Schicht (jOOQ Records): Übernimmt das Mapping vom Domain Model auf den jOOQ UpdatableRecord. Durch den Aufruf von `record.store()` generiert jOOQ das notwendige SQL für das Optimistic Locking vollautomatisch und wertet die betroffenen Zeilen aus.
+
+Audit-Schicht (JaVers): Arbeitet vollkommen passiv. Der AOP-Aspekt greift sich das resultierende Domain Model nur dann, wenn die Methode der Business-Schicht erfolgreich und ohne Exceptions beendet wurde, und committet den Status-Diff in die JaVers-Tabellen.
+
+==== 3. Erfolgs- und Fehlerfall
+
+Das folgende Diagramm veranschaulicht den Datenfluss und das Zusammenspiel der Komponenten, insbesondere warum fehlgeschlagene Updates nicht zu fehlerhaften Audit-Einträgen führen.
+
+[plantuml, audit_optimistic_locking_flow, format="svg"]
+....
+include::../images/audit_optimistic_locking_flow.puml[]
+....
+
+Wenn bei der Versionierung etwas schief geht, erfolgt ein Rollback der Übergeordneten Transaktion, damit die gespeicherten Daten und die zugehörige Versionierung konsistent bleiben (Wenn etwas gespeichert wird, ist es in der Versionierung ersichtlich).
+
+==== 4. Aspekt für die Versionierung
+Damit die Service-Schicht nur minimale Kenntnisse von der Versionierung haben muss, wird ein Spring AOP Aspekt verwendet. Methoden werden lediglich mit einer eigenen Annotation versehen (`@AuditChanges`), damit das betroffene Objekt vom Aspekt aufgegriffen und sauber in den Versionstabellen von JaVers abgelegt wird. Hier gilt zu beachten, dass `@AfterReturning` verwendet wird, damit beim Einfügen eines neuen Objekts dessen eindeutige ID bereits gesetzt wurde. Hier ist ein Beispiel, wie der Aspekt aussehen könnte:
+
+``` JAVA
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Aspect;
+import org.javers.core.Javers;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+
+@Aspect
+@Component
+public class JaversAuditAspect {
+
+    private final Javers javers;
+
+    public JaversAuditAspect(Javers javers) {
+        this.javers = javers;
+    }
+
+    // Intercept any method annotated with @AuditChanges AFTER it returns successfully
+    @AfterReturning("@annotation(AuditChanges)")
+    public void auditMethodArguments(JoinPoint joinPoint) {
+
+        // 1. Get the current user from your JWT Security Context
+        String currentUser = "SYSTEM";
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
+        }
+
+        // 2. Loop through the method arguments and commit them
+        Object[] args = joinPoint.getArgs();
+        for (Object arg : args) {
+            // Optional: You might want to check if 'arg' is a specific interface
+            // like 'AuditableDto' so you don't accidentally audit simple Strings/Integers.
+            if (arg != null) {
+                javers.commit(currentUser, arg);
+            }
+        }
+    }
+}
+```
+
+===== Voraussetzung:
+* Aspekt muss als Komponente und Aspekt annotiert sein
+* Dependency muss im pom.xml definiert sein:
+``` XML
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-aop</artifactId>
+</dependency>
+```
+
+=== Core-API Validierung (Validation & Error Handling)
+Die Validierung ist in zwei Schichten unterteilt und wird über einen zentralen Mechanismus so verarbeitet, dass das Frontend (Angular) immer eine einheitliche, übersetzungsfertige Struktur erhält.
+
+* Syntaktische Validierung (Annotationen auf DTOs):
+** Wo: Im Interface Layer (Controller-Eingang).
+
+** Wie: Mit Jakarta-Annotationen (z.B. @Min(18), @NotBlank) direkt auf den Java DTOs. Als message wird kein Text, sondern der Translation-Key (z.B. user.age.out_of_range) hinterlegt.
+
+** Zweck: Fängt formale Fehler sofort ab (400 Bad Request), bevor sie die Business-Logik erreichen.
+
+* Semantische Validierung (Business-Logik):
+
+** Wo: Im Service Layer.
+
+** Wie: Der Service prüft fachliche Regeln (z.B. "Darf dieser Sensor hier platziert werden?"). Schlägt dies fehl, wirft der Service eine eigene, massgeschneiderte Exception (z.B. `BusinessValidationException`), welche das betroffene Feld und den Message-Key enthält.
+
+* Der Magische `@RestControllerAdvice` (Zentraler Exception Handler):
+
+** Dies ist das Herzstück. Er fängt sowohl die fehlgeschlagenen DTO-Annotationen als auch die Business-Exceptions ab.
+
+** Er extrahiert *dynamisch* den Namen des fehlerhaften Feldes (z.B. `age`) und weist diesem den aktuellen Eingabewert des Users zu.
+
+** Er liest per Reflection alle Parameter aus den Annotationen (z.B. das `min` Limit aus `@Min`) komplett ohne hartcodierte Strings aus.
+
+** Er formt all das in einen standardisierten JSON-Payload um und sendet ihn ans Frontend.
+
+*Das Resultat für das Frontend:*
+
+Egal ob eine DTO-Annotation fehlschlägt oder der Service eine Exception wirft, Angular erhält immer den gleichen Payload: Den Feldnamen, den Translation-Key und ein dynamisches Parameter-Objekt (z.B. `{ "age": 16, "min": 18 }`), welches direkt und dumm in die Frontend-Übersetzungs-Pipe geschleust werden kann.
+
+** Übersetzungsfile im Frontend:
+    Im Angular Asset Folder werden die Übersetzungsfiles platziert. Sie enthalten dieselben Schlüssel, die das Backend verwendet (z.B. `user.age.out_of_range`).
+
+```JSON
+{
+    "user.age.out_of_range": "Your current age is {{ age }}, but it must be at least {{ min }}.",
+    "validation.field.required": "This field cannot be empty."
+}
+```
+
+
+=== Datenbankschemata
+
+Im Folgenden ist das aktuelle logische und physische Datenbankschema dokumentiert. Wie in Kapitel 5 beschrieben, verwenden wir als primären Einstiegspunkt eine PostgreSQL-Datenbank mit der PostGIS-Erweiterung für die Verwaltung der Metadaten und Geoinformationen.
+
+[plantuml, erd-relational, format="svg"]
+....
+include::../images/erd-metadata.puml[]
+....
+
+==== TimeScaleDB Schema (Zeitreihen & Downsampling)
+
+Das Schema der TimeScaleDB für die hochfrequenten Zeitreihendaten umfasst neben der Hypertable auch die Continuous Aggregates (Downsampling-Buckets) und die Retention-Policies für das Daten-Lebenszyklus-Management.
+
+[source,sql]
+----
+-- 1. Enum für Range-Status
+-- Bleibt speichereffizient (4 Bytes) und hochgradig komprimierbar
+CREATE TYPE range_category AS ENUM ('too_low', 'correct', 'too_high');
+
+-- 2. Base Table erstellen (Raw Data)
+-- Hinweis: sensor_id ist sensor_code in der Metadaten DB
+CREATE TABLE sensor_readings (
+    timestamp   TIMESTAMPTZ NOT NULL,
+    sensor_id   TEXT NOT NULL,
+    raw_value   DOUBLE PRECISION NOT NULL,
+    norm_value  DOUBLE PRECISION,
+    version     SMALLINT DEFAULT 1,
+    status      range_category,
+
+    -- Composite Primary Key: Erzwingt Eindeutigkeit pro Sensor & Zeitstempel
+    PRIMARY KEY (timestamp, sensor_id)
+);
+
+-- 3. In eine Hypertable konvertieren (Partitionierung nach 'timestamp')
+SELECT create_hypertable('sensor_readings', 'timestamp');
+
+-- 4. Native Kompression für Originaldaten aktivieren (nach 120 Tagen)
+ALTER TABLE sensor_readings SET (
+    timescaledb.compress,
+    timescaledb.compress_segmentby = 'sensor_id'
+);
+SELECT add_compression_policy('sensor_readings', INTERVAL '120 days');
+
+
+-- ==========================================
+-- CONTINUOUS AGGREGATES (Downsampling Buckets)
+-- ==========================================
+
+-- Bucket 1: 1-Minuten-Aggregation
+CREATE MATERIALIZED VIEW sensor_readings_1m
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 minute', timestamp) AS bucket,
+       sensor_id,
+       AVG(norm_value) AS avg_value,
+       MAX(norm_value) AS max_value,
+       MIN(norm_value) AS min_value
+FROM sensor_readings
+GROUP BY bucket, sensor_id;
+
+-- Bucket 2: 15-Minuten-Aggregation
+CREATE MATERIALIZED VIEW sensor_readings_15m
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('15 minutes', timestamp) AS bucket,
+       sensor_id,
+       AVG(norm_value) AS avg_value
+FROM sensor_readings
+GROUP BY bucket, sensor_id;
+
+-- Bucket 3: 1-Stunden-Aggregation
+CREATE MATERIALIZED VIEW sensor_readings_1h
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 hour', timestamp) AS bucket,
+       sensor_id,
+       AVG(norm_value) AS avg_value
+FROM sensor_readings
+GROUP BY bucket, sensor_id;
+
+-- Bucket 4: 1-Tages-Aggregation (Langzeitarchiv)
+CREATE MATERIALIZED VIEW sensor_readings_1d
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 day', timestamp) AS bucket,
+       sensor_id,
+       AVG(norm_value) AS avg_value
+FROM sensor_readings
+GROUP BY bucket, sensor_id;
+
+
+-- ==========================================
+-- RETENTION POLICIES (Rolling Windows)
+-- ==========================================
+
+-- Alte Aggregationen verwerfen, sobald sie aus ihrem Zeitfenster fallen:
+SELECT add_retention_policy('sensor_readings_1m', INTERVAL '30 days');
+SELECT add_retention_policy('sensor_readings_15m', INTERVAL '60 days');
+SELECT add_retention_policy('sensor_readings_1h', INTERVAL '2 years');
+-- Anmerkung: Die 'sensor_readings_1d' View behält Daten dauerhaft.
+
+-- ==========================================
+-- REFRESH POLICIES (Background Jobs für Continuous Aggregates)
+-- ==========================================
+
+-- 1-Minuten-Bucket: Aktualisiert sich jede Minute im Hintergrund
+SELECT add_continuous_aggregate_policy('sensor_readings_1m',
+    start_offset => NULL,
+    end_offset   => INTERVAL '1 minute',
+    schedule_interval => INTERVAL '1 minute');
+
+-- 15-Minuten-Bucket: Aktualisiert sich alle 15 Minuten
+SELECT add_continuous_aggregate_policy('sensor_readings_15m',
+    start_offset => NULL,
+    end_offset   => INTERVAL '15 minutes',
+    schedule_interval => INTERVAL '15 minutes');
+
+-- 1-Stunden-Bucket: Aktualisiert sich stündlich
+SELECT add_continuous_aggregate_policy('sensor_readings_1h',
+    start_offset => NULL,
+    end_offset   => INTERVAL '1 hour',
+    schedule_interval => INTERVAL '1 hour');
+
+-- 1-Tages-Bucket: Aktualisiert sich einmal pro Tag (z.B. Nachts)
+SELECT add_continuous_aggregate_policy('sensor_readings_1d',
+    start_offset => NULL,
+    end_offset   => INTERVAL '1 day',
+    schedule_interval => INTERVAL '1 day');
+----
+
+
+=== API-Schnittstellen (Contracts)
+
+Im folgenden Abschnitt sind die API-Endpoints als OpenAPI-Spezifikation (YAML) definiert. Diese Spezifikation dient während der aktiven Entwicklungsphase als fester Vertrag (Contract) zwischen dem Backend, dem Frontend und der Ingestion-Pipeline. Die YAML-Blöcke können direkt in Werkzeuge wie den Swagger Editor kopiert werden, um Mocks und Client-Code zu generieren.
+
+_Hinweis: Nach Abschluss der Entwicklungsarbeiten wird dieser statische Block aus dem Architektur-Dokument entfernt und durch einen Link auf die live generierte, dynamische API-Dokumentation (z. B. via Swagger UI des Backends) ersetzt._
+
+[source,yaml]
+----
+openapi: 3.0.3
+info:
+  title: Sensor Configuration API
+  version: 1.0.0
+  description: API to retrieve sensor calibration, formula (via JSONLogic), and boundary data.
+paths:
+  /sensors/config:
+    get:
+      summary: Retrieve sensor metadata
+      description: Fetches the JSONLogic formula, boundaries, and version information for a specific sensor.
+      operationId: getSensorConfig
+      parameters:
+        - name: sensorid
+          in: query
+          required: true
+          description: The unique identifier of the sensor.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response containing the sensor configuration.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensorConfig'
+        '400':
+          description: Bad Request - Missing or invalid sensorid.
+        '404':
+          description: Not Found - The specified sensorid does not exist.
+components:
+  schemas:
+    SensorConfig:
+      type: object
+      required:
+        - sensor_id
+        - formula
+        - upper_bound
+        - lower_bound
+        - version
+      properties:
+        sensor_id:
+          type: string
+          description: The unique identifier for the sensor.
+          example: "sensor-geo-8472"
+        formula:
+          type: object
+          description: Normalized representation of the conversion formula using JSONLogic.
+          additionalProperties: true
+          example:
+            "+":
+              - "sqrt":
+                  - "pow":
+                      - "*":
+                          - "var": "x"
+                          - 1.8
+                      - 2
+              - 32
+        upper_bound:
+          type: number
+          format: double
+          description: The maximum limit for this sensor used for alerting.
+          example: 150000.5
+        lower_bound:
+          type: number
+          format: double
+          description: The minimum limit for this sensor used for alerting.
+          example: -100.0
+        version:
+          type: integer
+          description: The version number of this specific configuration record.
+          example: 2
+----
+
+=== Teststrategie
+
+Um die Stabilität und Datenintegrität von MONTEIS zu gewährleisten, verfolgen wir eine schichtenbasierte Teststrategie. Der Fokus liegt darauf, die gesamte Funktionalität und das fachliche Verhalten der Applikation rigoros abzusichern, ohne durch fragile Layout-Tests unnötigen Wartungsaufwand zu erzeugen.
+
+Um eine konstant hohe Code-Qualität zu garantieren, wird systemübergreifend **SonarQube** eingesetzt. Eine Mindestabdeckung dient als Guardrail, wobei die Aussagekraft der Tests (fachliche Relevanz, Fehlererkennungsfähigkeit) höher gewichtet wird als die reine Prozentzahl.
+
+==== Frontend Testing
+Im Angular-Frontend liegt der Fokus auf der Überprüfung der isolierten UI-Logik (z. B. State-Management, Filter-Logik, Datenaufbereitung für Charts).
+
+* **Technologie:** Wir verwenden das moderne, von Angular unterstützte **Vitest** für die Unit-Tests.
+* **Fokus:** Es wird ausschliesslich Logik getestet. Reine Darstellungsaspekte (Layout, CSS, Pixel-Perfektion) werden bewusst von Unit-Tests ausgeschlossen.
+
+==== Backend Testing (Spring Boot)
+Das Backend wird strikt in verschiedene Test-Ebenen unterteilt (Test-Pyramide), um schnelle Feedback-Zyklen und realitätsnahe Datenbanktests optimal zu kombinieren. Als Basis dient hierbei die native **Spring Boot Test Suite**.
+
+* **Web-Schicht (Controller Tests):** Für die REST-Schnittstellen verwenden wir das Spring Boot Slice-Testing (`@WebMvcTest`) in Kombination mit `MockMvc`. Dadurch testen wir das korrekte HTTP-Routing, Input-Validierungen, HTTP-Statuscodes und die JSON-Serialisierung/-Deserialisierung. Die zugrundeliegende Business-Logik (Services) wird auf dieser Ebene via `@MockBean` gemockt, um den Application Context klein und performant zu halten.
+* **Business-Logik (Unit Tests):** Die eigentliche Fachlogik (Services, Mapper und Configurations) wird isoliert über klassische Unit-Tests mit **JUnit 5** und **Mockito** getestet. Externe Systemgrenzen und die Datenbank (Persistenzschicht) werden auf dieser Ebene konsequent gemockt.
+* **Persistenzschicht (Integration Tests):** Die Persistenzschicht (jOOQ-Repositories) wird von den normalen Unit-Tests ausgeschlossen. Stattdessen nutzen wir **Spring Boot Testcontainers**, um die echten Datenbanken als isolierte Docker-Container hochzufahren.
+** **Architektur-Fokus (FDW):** Um den reibungslosen Datenabruf zu testen, fahren die Testcontainers sowohl eine PostgreSQL- als auch eine TimeScaleDB-Instanz hoch. Im Rahmen des Test-Setups wird der FDW-Tunnel zwischen den Containern initialisiert.
+** **Testdaten-Management:** Das Schema und die initialen Testdaten für die Container werden pro Test-Suite automatisiert über spezifische **Flyway-Skripte** aufgebaut.
+
+==== End-to-End Testing (E2E)
+Um die isolierten Komponenten-Tests zu komplementieren und das Zusammenspiel des gesamten Systems (Frontend + Backend + Datenbank) zu validieren, setzen wir ebenenübergreifende E2E-Tests ein.
+
+* **Technologie:** **Playwright**
+* **Infrastruktur & Setup:** Um eine verlässliche und reproduzierbare Testumgebung für die E2E-Tests zu schaffen, implementieren wir ein dediziertes **Spring Boot Testing-Profil**. Startet man das Backend mit diesem Profil, fährt es automatisch die benötigten Testcontainers (PostgreSQL & TimeScaleDB) hoch und befüllt sie via Flyway. Das Frontend kann anschliessend gegen dieses vollständig gekapselte Backend getestet werden.
+* **Fokus:** Getestet wird das Verhalten der Applikation anhand der wichtigsten User-Workflows (z. B. Sensor-Filterung, Sensor erstellen, Experiment erstellen, etc.). Auch hier steht das funktionale Verhalten im Vordergrund, nicht das Layout.
+
+=== Entwickler-Workflow & CI/CD Pipeline
+
+Um eine konsistente Code-Qualität zu garantieren, den Review-Prozess zu verschlanken und die Server-Ressourcen effizient zu nutzen, wird der Code-Lebenszyklus von lokalen Git-Hooks bis hin zu automatisierten GitHub Actions strikt orchestriert.
+
+==== Lokaler Workflow (Git Hooks)
+Bevor Code in das Repository gepusht wird, greifen lokale Git-Hooks , um formelle Standards bereits auf dem Entwickler-Rechner zu erzwingen:
+
+* **Formatter Pre-Commit Hook:** Dieser Hook formatiert geänderte Dateien automatisch und fügt sie dem Staging-Bereich (`git add`) wieder hinzu. Dadurch wird sichergestellt, dass der Commit exakt den sauber formatierten Stand enthält.
+** **Frontend (`.ts` / `.html`):** Formatierung und Linting via **Prettier** und **ESLint**.
+** **Backend (`.java`):** Formatierung via **Spotless** unter strikter Verwendung des **Google Java Formats**.
+* **Commit-Message Hook (`commit-msg`):** Prüft die Commit-Nachricht vor dem Speichern auf das Einhalten der **Conventional Commits** (TBD).
+
+==== Continuous Integration (Pull Request Workflows)
+Um die Ressourcen (und Kosten) der Pipeline zu schonen, werden ressourcenintensive CI-Jobs **nicht bei jedem einzelnen Push**, sondern ausschliesslich bei der Erstellung oder Aktualisierung von **Pull Requests (PRs)** ausgeführt.
+
+* **Format Checker:** Prüft den gesamten Codebestand, um sicherzustellen, dass keine unformatierten Dateien die lokalen Hooks umgangen haben (z. B. durch `git commit --no-verify`).
+* **Full Test Suite:** Führt die oben definierte Teststrategie (Unit, Controller, Integration via Testcontainers, E2E) vollständig aus.
+* **Security Scanning (Trivy):** Eine dedizierte GitHub Action nutzt **Trivy** für automatisierte Sicherheitsüberprüfungen. Dabei werden die Projekt-Abhängigkeiten, Dockerfiles und Container-Images auf bekannte Schwachstellen (CVEs) und Fehlkonfigurationen (IaC) gescannt. Gefundene kritische Sicherheitslücken (z. B. Severity "HIGH" oder "CRITICAL") blockieren den Pull Request.
+* **SonarQube Quality Gate:** Eine dedizierte GitHub Action (`sonar-scan`) analysiert den Code auf Bugs, Vulnerabilities und Code Smells. Anschliessend prüft die Action den Status des SonarQube Quality Gates. Ein Pull Request kann nur bei grünem Quality Gate gemerged werden.
+
+==== Continuous Deployment & Release-Workflows
+
+Sobald Code-Änderungen in den `main-branch` integriert werden oder offizielle Versionen anstehen, übernehmen automatisierte GitHub Actions das Deployment. Das Setup folgt strikt dem Build-Once-Prinzip für Produktions-Releases und einem GitOps-Ansatz für die Infrastruktur.
+
+Es sind drei dedizierte Workflows definiert:
+
+* **Workflow 1: Auto-Deploy auf DEV (Bleeding Edge)**
+** **Trigger:** Automatisch bei jedem Push oder Merge in den `main`-Branch.
+** **Ablauf:** Der Workflow baut sofort und kompromisslos ein neues Docker-Image aus dem aktuellen Stand des Codes und deployt dieses auf die `DEV`-Umgebung. Diese Stage spiegelt den aktuellsten Entwicklungsstand wider und muss nicht zwingend stabil sein.
+
+* **Workflow 2: Create Release (Deployment auf STAGING)**
+** **Trigger:** Manuell (GitHub Workflow Dispatch).
+** **Ablauf:**
+1. Der ausführende Nutzer wählt die Art des Releases (Major, Minor oder Patch basierend auf dem letzten existierenden Git-Tag).
+2. Der Workflow aktualisiert die Version im Code (z. B. via `mvn clean install -Drelease=vX.X.X` im Backend).
+3. Er erstellt den neuen Git-Tag sowie ein offizielles GitHub Release.
+4. Die Anwendung wird kompiliert und das neue Docker-Image wird gebaut.
+5. Das frisch gebaute Image wird gestartet und durchläuft sofort die komplette End-to-End (E2E) Test-Suite.
+6. Nur wenn die E2E-Tests erfolgreich sind, wird das Image in die Container Registry (Amazon ECR) gepusht und automatisch auf der `STAGING`-Umgebung deployt.
+
+* **Workflow 3: Promote to PROD (GitOps)**
+** **Trigger:** Manuell (GitHub Workflow Dispatch).
+** **Ablauf:** Dieses Skript baut bewusst *keine* neuen Images, um ungetestete Seiteneffekte zu vermeiden.
+1. Der Nutzer wählt einen bereits existierenden Release-Tag aus dem Dropdown.
+2. Der Workflow sucht in der Amazon ECR nach dem exakt passenden, auf Staging bereits validierten Docker-Image.
+3. Der Workflow checkt das separate Produktions-Infrastruktur-Repository aus.
+4. Er aktualisiert dort lediglich den Image-Tag in der `kustomize.yaml` und committet die Änderung.
+5. Durch diesen Commit im Infra-Repo wird das eigentliche Kubernetes-Deployment auf `PROD` (GitOps-Ansatz) angestossen.

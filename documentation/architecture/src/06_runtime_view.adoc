@@ -1,0 +1,197 @@
+[[section-runtime-view]]
+== Laufzeitsicht
+
+Dieses Kapitel visualisiert das dynamische Verhalten des Systems MONTEIS. Es zeigt das Zusammenspiel der in Kapitel 5 definierten Bausteine anhand der wichtigsten und architektonisch anspruchsvollsten Geschäftsprozesse. Die nachfolgenden Sequenzdiagramme dokumentieren den exakten Ablauf, die Reihenfolge der Aufrufe und die Zuständigkeiten der einzelnen Komponenten zur Laufzeit.
+
+=== Szenario 1: Daten-Ingestion & Grenzwert-Alarm (Pipeline Flow)
+
+Dieses Szenario beschreibt den Kernprozess der Datenerfassung: Ein Messwert trifft vom DAS im System ein, wird normalisiert und verletzt einen definierten Grenzwert.
+
+**Ablauf:**
+
+1. Die Pipeline empfängt den Messwert und parst ihn in ein Standardformat.
+2. Der Worker ruft die Metadaten (inkl. Umrechnungsformeln und Limits) für diesen Sensor aus dem Backend/Cache ab.
+3. Der Messwert wird in die SI-Einheit umgerechnet.
+4. Der Validator stellt eine Grenzwertverletzung fest. Der Wert wird dennoch in die TimeScaleDB geschrieben, erhält aber ein entsprechendes Flag (`too_high`, `too_low`, `ok`), um im Frontend farblich markiert werden zu können.
+5. Die Pipeline emittiert einen Event (z. B. via Log-Metriken), der von Prometheus/Grafana erfasst wird.
+6. Grafana triggert via Webhook den Alerting Service, welcher die Templates und Abonnenten via Backend lädt und den Alarm via AWS SNS versendet.
+
+[plantuml, seq-ingestion-alert, format="svg"]
+....
+include::../images/dataingestion-alerting-sequence.puml[]
+....
+
+
+=== Szenario 2: Manueller Upload & Admin-Freigabeprozess
+
+Nicht alle Daten fliessen automatisch in das System. Historische Daten oder Zusatzmessungen werden von Wissenschaftlern per CSV hochgeladen. Um die Datenintegrität zu wahren, ist ein strikter Freigabeprozess vorgeschaltet.
+
+**Ablauf:**
+
+1. Der Wissenschaftler lädt eine CSV-Datei im Frontend hoch.
+2. Das Backend speichert die Datei vorläufig in einem S3-Bucket und erstellt einen Datenbankeintrag (Status: `pending`).
+3. Der Admin wird im UI benachrichtigt, lädt die Datei zur Prüfung herunter und kann sie bei Bedarf korrigiert neu hochladen.
+4. Nach dem Klick auf "Akzeptieren" übergibt das Backend die Datei an den Manual Upload Connector der Pipeline.
+5. Das Originalfile wird für die spätere Archivierung (AWS Glue) versioniert auf S3 verschoben.
+6. Die Pipeline verarbeitet die Daten, als kämen sie von einem Live-Sensor.
+
+[plantuml, seq-manual-upload, format="svg"]
+....
+include::../images/manual-upload-sequence.puml[]
+....
+
+
+=== Szenario 3: Initialisierung des Digitalen Zwillings (3D View)
+
+Der Digitale Zwilling ist ein Kern-Feature für die räumliche Orientierung im Felslabor. Die Komplexität des 3D-Renderings wird dabei architektonisch auf die Clients (Browser) ausgelagert, um das Backend zu schonen.
+
+**Ablauf:**
+
+1. Der Nutzer öffnet ein Experiment im Frontend.
+2. Das Backend liefert das zugehörige 3D-Modell (IFC-File).
+3. Das Frontend (`Giro3D`) lagert das ressourcenintensive Rendering an Web-Worker des Browsers aus.
+4. Das IFC-Modell enthält die IDs oder Koordinaten der Sensoren. Das Frontend iteriert über diese IDs und lädt die Metadaten asynchron aus der PostGIS-Datenbank (via Backend) nach, um Overlays und Tooltips bei "Hover"-Aktionen darzustellen.
+
+[plantuml, seq-digital-twin, format="svg"]
+....
+include::../images/3d-view-sequence.puml[]
+....
+
+
+=== Szenario 4: Räumliches & Fachliches Filtern
+
+Bei tausenden von Sensoren ist eine leistungsstarke Filterung essenziell. Die Filterkriterien wirken sich synchron auf die tabellarische Darstellung und den 3D-Viewer aus.
+
+**Ablauf:**
+
+1. Der Nutzer definiert Filterkriterien (z. B. "Drucksensoren in Bohrloch X").
+2. Die Abfrage wird an das Backend gesendet, welches via `jOOQ` dynamische Queries auf der Datenbank ausführt.
+3. Die gefilterte Liste der Sensor-IDs wird an das Frontend retourniert.
+4. Das Frontend nutzt Angular Signals und  `localStorage`, um sowohl die Datentabelle (`ag-Grid`) als auch den Digitalen Zwilling (`Giro3D`) synchron zu aktualisieren – nicht relevante Sensoren werden im 3D-Raum ausgeblendet.
+
+[plantuml, seq-filtering, format="svg"]
+....
+include::../images/filtering-sequence.puml[]
+....
+
+
+=== Szenario 5: Visualisierung langer Zeitreihen (FDW & Downsampling)
+
+Das Abfragen von Zeitreihen, die Jahre zurückreichen, ist hochgradig datenintensiv. Hier kommt die Performance der `TimeScaleDB` in Kombination mit `postgres_fdw` und Downsampling zum Tragen.
+
+**Ablauf:**
+
+1. Der Nutzer wählt einen Sensor und einen grossen Zeitraum (z. B. 10 Jahre) für einen Plot (`Chart.js`) aus.
+2. Das Backend prüft die Zeitspanne und leitet einen Downsampling-Request an die TimeScaleDB weiter. (Vordefinierte Buckets, z.B. Zeitspanne > 1 Jahr -> Bucket=hourly)
+3. Die TimeScaleDB aggregiert die Messwerte nativ (z. B. via `time_bucket`) und joined via `FDW` transparent notwendige Metadaten (wie Einheiten) aus der PostgreSQL.
+4. Das Backend empfängt ein stark komprimiertes, aber visuell akkurates JSON-Array und liefert es an das Frontend aus.
+
+[plantuml, seq-downsampling, format="svg"]
+....
+include::../images/downsampling-sequence.puml[]
+....
+=== Szenario 6: SSO, Authentifizierung & Role-Based Data Filtering
+
+Die Sicherheit und rollenbasierte Zugriffskontrolle (RBAC) ist eine Anforderung der Priorität 1. MONTEIS nutzt einen eigenen **Keycloak** als zentralen Identity Access Management (IAM) Server, welcher **AGOV** als Identity Provider (IdP) integriert. Das Spring Boot Backend fungiert als klassischer *Resource Server*.
+
+**Ablauf:**
+
+1. Der Nutzer öffnet die Web-App und wird vom Angular Frontend an den Keycloak weitergeleitet (OIDC Authorization Code Flow).
+2. Der Nutzer authentifiziert sich (z. B. via AGOV). Keycloak mappt die vom Admin konfigurierten Rollen und Berechtigungen auf den User.
+3. Keycloak stellt ein JWT (JSON Web Token) aus, in dessen Claims die spezifischen Rollen (z. B. `read_experiment_A`) verankert sind.
+4. Das Frontend sendet dieses JWT bei jedem REST-Call im `Authorization: Bearer` Header mit.
+5. Ein Security-Filter im Spring Boot Backend fängt den Request ab, verifiziert die Signatur des Tokens (via JWKS von Keycloak) und parst die Claims in den Security Context.
+6. Die Core API nutzt diese extrahierten Rollen direkt bei den jOOQ-Datenbankabfragen als Filterkriterium (z. B. in der `WHERE`-Klausel), sodass der Nutzer ausschliesslich Daten erhält, für die er berechtigt ist.
+
+[plantuml, seq-login-sso, format="svg"]
+....
+include::../images/iam-sequence.puml[]
+....
+
+=== Szenario 7: On-Demand Datenabruf aus Umsystemen (Fulcrum Integration)
+
+MONTEIS kommuniziert eng mit Umsystemen wie Fulcrum (dem digitalen Logbuch des Felslabors). Anstatt alle Log- und Asset-Daten asynchron und redundant in die MONTEIS-Datenbank zu spiegeln, wendet die Architektur für diese Daten das **On-Demand Fetching (Pull-Pattern)** an.
+
+Das Spring Boot Backend fungiert hierbei als API-Gateway. Wenn externe Daten benötigt werden, werden diese "Just in Time" via REST abgerufen.
+
+**Ablauf:**
+
+1. Der Nutzer öffnet in der Angular Web-App die Detailansicht eines Experiments oder Sensors und fordert die aktuellen Logbuch-Einträge an.
+2. Das Frontend sendet einen Request an die MONTEIS Core API.
+3. Der REST Controller im Spring Boot Backend fängt den Request ab und formuliert eine synchrone Abfrage (z.B. via Fulcrum Query API) an das Umsystem Fulcrum.
+4. Fulcrum retourniert die tagesaktuellen Log-Daten.
+5. Die Core API mappt/formatiert die Daten in das interne MONTEIS-Format und liefert sie an das Frontend aus.
+6. Der Nutzer sieht die absoluten Live-Daten aus Fulcrum, ohne dass diese physisch in der PostgreSQL von MONTEIS gespeichert werden mussten.
+
+[plantuml, seq-fulcrum-fetch, format="svg"]
+....
+include::../images/fulcrum-sequence.puml[]
+....
+
+=== Szenario 8: TimeScaleDB Daten-Lebenszyklus (Downsampling & Kompression)
+Um die enorme Menge an Messwerten (Ziel: 200 Milliarden) performant abfragbar zu halten und gleichzeitig die Speicherkosten der Datenbank zu minimieren, durchlaufen die Zeitreihendaten in der TimeScaleDB einen streng definierten, automatisierten Lebenszyklus.
+
+Dieser Prozess nutzt die nativen TimeScaleDB-Features **Continuous Aggregates** (für das Downsampling) und **Hypertable Compression** (für die Reduktion des Speicher-Overheads).
+
+**Die Aggregations- und Retentions-Regeln im Detail:**
+
+* **Raw Data (Hypertable):** Rohdaten werden primär für die Live-Ansicht (0 - 10 Tage) genutzt. Sie bleiben für 120 Tage unkomprimiert, um Nachlieferungen oder Updates von Messwerten problemlos zuzulassen. Nach 120 Tagen greift die native Kompression der TimeScaleDB (updates sind immer noch möglich aber weniger performant).
+* **Continuous Aggregates (Downsampling):** Die Rohdaten werden im Hintergrund in materialisierte Views (Buckets) aggregiert.
+* **Rolling Windows (Retention Policies):** Um ein unendliches Wachstum der fein granularen Views zu verhindern, werden alte Daten-Chunks in den Buckets automatisch gelöscht (Drop), sobald sie aus ihrem definierten Zeitfenster fallen.
+
+**Definierte Buckets & Zeitfenster:**
+
+* **1-Minuten Bucket:** Deckt die letzten 30 Tage ab. (Daten > 30 Tage werden verworfen).
+* **15-Minuten Bucket:** Deckt den Zeitraum von Tag 20 bis Tag 60 ab. (Daten > 60 Tage werden verworfen).
+* **1-Stunden Bucket:** Deckt den Zeitraum von Tag 50 bis 2 Jahre ab. (Daten > 2 Jahre werden verworfen).
+* **1-Tages Bucket:** Deckt den Zeitraum ab 2 Jahren für die Langzeitspeicherung ab.
+
+[plantuml, timescale-retention, format="svg"]
+....
+include::../images/downsampling.puml[]
+....
+
+Neben der Datenbank-Optimierung verlässt sich MONTEIS auf zeitgesteuerte Hintergrundprozesse (Cron/Batch-Jobs), um die Speicherkosten für unveränderte Originaldaten zu minimieren. Um die rohen Originaldaten physisch zu sichern (für Compliance, Backups oder spätere Reprozessierung), fliessen diese parallel zur TimeScaleDB in einen Cloud-Objektspeicher.
+
+**Ablauf der Archivierung:**
+
+1. **Pufferung im Hot Storage:** Die Pipeline-Worker halten eine Kopie der Originaldatensätze kurzzeitig im Arbeitsspeicher und flushen diese regelmässig (z. B. alle 15 Minuten) als Batch-Files in einen regulären AWS S3 Bucket ("Hot Storage").
+2. **AWS S3 Glacier Archiving (Cold Storage):** 
+Mittels https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-transition-general-considerations.html[AWS S3 Lifecycle Rules] werden die verteilten, temporären Rohdaten-Files aus dem "Hot Storage" (AWS S3 Standard Tier) in den weitaus günstigeren "Cold Storage" (AWS S3 Glacier) für die langfristige Speicherung verschoben. Die Daten werden semi-strukturiert (z. B. pro Sensor und Tag) abgelegt.
+
+_Hinweis: Die Daten im Glacier dienen rein der Notfall-Wiederherstellung oder historischen Nachprüfungen und werden vom regulären Frontend nicht abgefragt._
+[plantuml, retention-timelines, format="svg"]
+....
+include::../images/retention-timelines.puml[]
+....
+
+=== Datenkonsistenz & Unabhängiges Routing (Kafka Consumer Groups)
+
+==== Die Anforderung (Raw vs. Transformed)
+Es muss immer gewährleistet sein, dass die Daten korrekt wiederhergestellt werden können und keine Daten verloren gehen. Aus diesem Grund stellen zwei unabhängige Flows sicher, dass die Original-Rohdaten in S3 verschoben und die transformierten und validierten Daten in die TimeScaleDB geschrieben werden.
+
+==== Die Lösung: Fan-Out am Raw-Topic
+Da Kafka als persistentes Logbuch (Append-Only Log) agiert, können mehrere Abonnenten dieselbe Nachricht unabhängig voneinander lesen. Der Datenstrom wird direkt am Eingangs-Topic aufgespaltet:
+
+1. **Storage Archiver (Raw Data Path):** Ein nativer Kafka Connect Sink (oder der POC Worker) lauscht auf den Raw-Topic mit einer eigenen Consumer Group (`s3-archive`). Er puffert die Rohdaten und schiebt sie periodisch in den **AWS S3 (Hot Storage)**. Von dort greifen automatisierte AWS Lifecycle Rules, die Daten nach einer definierten Zeit in den **AWS Glacier (Cold Storage)** zur Langzeitarchivierung verschieben.
+
+* **Im POC-Stadium:** Der Pipeline-Pod übernimmt diese Aufgabe vorübergehend mit. Eine separate asynchrone Routine im Pod puffert die Daten (<<Pipeline Pod - Stateful Polling Konzept>>), formatiert sie im Hive-Partitioning-Stil (`sensor_id/year/month`) und lädt sie periodisch nach S3 hoch.
+* **Final Solution (Kafka Connect):** Der S3-Upload-Code wird aus dem Pipeline-Pod entfernt. Stattdessen übernimmt ein nativer **Confluent S3 Sink Connector** diese Aufgabe. Da der POC die Datei- und Ordnerstrukturen von Kafka Connect exakt nachgeahmt hat, verläuft der Wechsel für nachgelagerte Systeme absolut transparent.
+
+2. **Pipeline Pod (Transformed Data Path):** Der Pipeline-Worker lauscht auf denselben Raw-Topic mit einer völlig unabhängigen Consumer Group (`etl-pipeline`). Er transformiert die Daten, prüft Grenzwerte, triggert Alerts und speichert das finale Resultat in die **TimescaleDB**.
+
+**Fehlertoleranz durch getrennte Offsets:** Kafka verwaltet den Fortschritt (Offset) für jede Consumer Group separat. Wenn der S3-Upload erfolgreich ist, die TimescaleDB jedoch offline geht, rückt nur das "Lesezeichen" der S3-Gruppe vor. Die Pipeline-Gruppe committet ihren Offset nicht. Nach Behebung des Datenbankausfalls wird der Pipeline-Pod gezwungen, die fehlgeschlagene Nachricht erneut zu verarbeiten. Es geht kein Wert verloren.
+
+==== Architektur-Übersicht
+
+[plantuml, data_consistency, format=svg]
+----
+include::../images/data_consistency.puml[]
+----
+
+
+==== Pipeline Pod - Stateful Polling Konzept
+[plantuml, stateful_polling, format=svg]
+----
+include::../images/stateful_polling.puml[]
+----

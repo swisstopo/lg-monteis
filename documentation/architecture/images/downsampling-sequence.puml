@@ -1,0 +1,32 @@
+@startuml
+!theme plain
+autonumber
+skinparam maxMessageSize 150
+
+actor "Nutzer" as User
+participant "Angular Frontend\n(Chart.js)" as UI
+participant "Core API (Backend)" as Backend
+database "TimeScaleDB" as TSDB
+database "PostgreSQL" as PostGIS
+
+User -> UI : Klick "Plot 10 Jahre"
+UI -> Backend : GET /sensor/123/series?range=10y
+activate Backend
+
+Backend -> Backend : Zeitspanne prüfen -> Downsampling notwendig
+Backend -> TSDB : jOOQ Query (mit time_bucket / Aggregation)
+activate TSDB
+
+TSDB -> PostGIS : FDW: Fetch Metadaten (Einheit/Formel)
+PostGIS --> TSDB : Return Data
+TSDB -> TSDB : Nativ Millionen Messwerte auf tausende Punkte verdichten
+TSDB --> Backend : Return aggregiertes Resultset
+deactivate TSDB
+
+Backend --> UI : Komprimiertes JSON (Payload optimiert)
+deactivate Backend
+
+UI -> UI : Chart.js rendert Plot
+UI --> User : Graph wird angezeigt
+
+@enduml

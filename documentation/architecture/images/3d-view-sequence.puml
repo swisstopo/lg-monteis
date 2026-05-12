@@ -1,0 +1,27 @@
+@startuml
+!theme plain
+autonumber
+skinparam maxMessageSize 150
+
+actor "Nutzer" as User
+participant "Angular Frontend\n(Giro3D & WebWorker)" as UI
+participant "Core API (Backend)" as Backend
+database "PostgreSQL\n(PostGIS)" as DB
+
+User -> UI : Öffnet Experiment 3D-View
+UI -> Backend : GET /experiment/123/model
+Backend --> UI : Return IFC-File (inkl. Sensor-IDs)
+
+UI -> UI : WebWorker parst und rendert IFC-Geometrie
+
+loop Für jeden referenzierten Sensor
+    UI -> Backend : GET /sensor/{id}/metadata
+    Backend -> DB : Fetch Details (Typ, Name, Status)
+    DB --> Backend : Result
+    Backend --> UI : Return Metadata
+    UI -> UI : Verknüpft Metadaten mit 3D-Objekt (Hover-Overlays)
+end
+
+UI --> User : 3D-Ansicht interaktiv nutzbar
+
+@enduml

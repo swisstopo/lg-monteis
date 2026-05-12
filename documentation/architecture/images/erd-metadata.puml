@@ -1,0 +1,275 @@
+@startuml
+!theme plain
+hide circle
+skinparam linetype ortho
+
+' Massiv mehr Platz erzwingen, um Überlappungen zu verhindern
+skinparam nodesep 100
+skinparam ranksep 150
+
+' Styling für die normalen PostgreSQL Tabellen
+skinparam entity {
+    BackgroundColor #F8F9FA
+    BorderColor #343A40
+}
+
+' ==========================================
+' LEGENDE (wird elegant in die Ecke gerendert)
+' ==========================================
+legend top left
+  |= Icon / Symbol |= Bedeutung |
+  | <color:#D32F2F><&key></color> | Primary Key (PK) |
+  | <color:#1976D2><&link-intact></color> | Foreign Key (FK) |
+  | <color:#F57C00><&star></color> | Unique Constraint |
+  | (Kreis) | Not Null (Mandatory / Zwingend) |
+  | (Quadrat) | Nullable (Optional) |
+endlegend
+
+title MONTEIS - Entity-Relationship Diagram
+
+' ==========================================
+' GLOBALE AUDIT-SPALTEN (Als Floating Note)
+' ==========================================
+note as AuditNote
+  **Globale Audit-Spalten (Base Entity)**
+  //Diese Spalten sind implizit in JEDER Tabelle//
+  //vorhanden und werden hier zur Übersichtlichkeit//
+  //nicht einzeln eingezeichnet://
+  ----
+  * created_at : TIMESTAMP
+  * <color:#1976D2><&link-intact></color> created_by : BIGINT
+  * updated_at : TIMESTAMP
+  * <color:#1976D2><&link-intact></color> updated_by : BIGINT
+  * deleted_at : TIMESTAMP
+  * <color:#1976D2><&link-intact></color> deleted_by : BIGINT
+  * version : INTEGER
+end note
+
+
+' ==========================================
+' ENTITIES: Organisation & Users
+' ==========================================
+entity "Organisations" as org {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * name : VARCHAR(255)
+  - description : VARCHAR(4096)
+  --
+  sequence org_id
+}
+
+entity "Users" as users {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * name : VARCHAR(255)
+  * <color:#F57C00><&star></color> email : VARCHAR(255)
+  - <color:#F57C00><&star></color> handy_number : VARCHAR(50)
+  --
+  sequence users_id
+}
+
+entity "Experiments" as exp {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * name : VARCHAR(255)
+  - description : VARCHAR(4096)
+  * <color:#F57C00><&star></color> exp_code : VARCHAR(255)
+  --
+  sequence exp_id
+}
+
+entity "Alerts" as alerts {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * template_email : VARCHAR(4096)
+  * template_sms : VARCHAR(2048)
+  * type : VARCHAR(50)
+  --
+  sequence alert_id
+}
+
+' ==========================================
+' EXPLICIT JOIN TABLES
+' ==========================================
+entity "organisation_user" as j_org_user {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * <color:#1976D2><&link-intact></color> org_id : BIGINT
+  * <color:#1976D2><&link-intact></color> user_id : BIGINT
+  --
+  sequence org_user_id
+}
+
+entity "experiment_organisation" as j_exp_org {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * <color:#1976D2><&link-intact></color> exp_id : BIGINT
+  * <color:#1976D2><&link-intact></color> org_id : BIGINT
+  --
+  sequence exp_org_id
+}
+
+entity "user_experiment" as j_user_exp {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * <color:#1976D2><&link-intact></color> user_id : BIGINT
+  * <color:#1976D2><&link-intact></color> exp_id : BIGINT
+  --
+  sequence user_exp_id
+}
+
+entity "sensor_experiment" as j_sensor_exp {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * <color:#1976D2><&link-intact></color> sensor_id : BIGINT
+  * <color:#1976D2><&link-intact></color> exp_id : BIGINT
+  --
+  sequence sensor_exp_id
+}
+
+entity "alert_sensor" as j_alert_sensor {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * <color:#1976D2><&link-intact></color> alert_id : BIGINT
+  * <color:#1976D2><&link-intact></color> sensor_id : BIGINT
+  --
+  sequence alert_sensor_id
+}
+
+entity "user_alert" as j_user_alert {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * <color:#1976D2><&link-intact></color> user_id : BIGINT
+  * <color:#1976D2><&link-intact></color> alert_id : BIGINT
+  * method : VARCHAR(50)
+  --
+  sequence user_alert_id
+}
+
+' ==========================================
+' ENTITIES: Infrastructure & Spatial
+' ==========================================
+entity "Tunnels" as tunnels {
+  * <color:#D32F2F><&key></color> id : BIGINT
+}
+
+entity "Shafts" as shafts {
+  * <color:#D32F2F><&key></color> id : BIGINT
+}
+
+entity "Boreholes" as boreholes {
+  * <color:#D32F2F><&key></color> id : BIGINT
+}
+
+entity "Sensors" as sensors {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  --
+  * <color:#F57C00><&star></color> sensor_code : VARCHAR(255)
+  * unit : VARCHAR(96)
+  * formula : JSONB
+  * upper_limit : DECIMAL
+  * lower_limit : DECIMAL
+  * <color:#1976D2><&link-intact></color> sensor_type_id : BIGINT
+  * sending_frequency_sec : INTEGER
+  * sensor_model : VARCHAR(255)
+  * sensor_housing : VARCHAR(255)
+  * installed_at : DATE
+  * active : BOOLEAN
+  * <color:#1976D2><&link-intact></color> point_coords_id : BIGINT
+  - <color:#1976D2><&link-intact></color> borehole_id (TODO) : BIGINT
+  - comment : VARCHAR(4096)
+  --
+  sequence sensor_id
+}
+
+entity "Virtual_sensors" as virtual_sensors {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  - TODO (nicht im MVP)
+}
+
+entity "Sensor_Type" as sensor_type {
+  * <color:#D32F2F><&key></color> id : BIGINT
+  * description : VARCHAR(255)
+  - comment : VARCHAR(255)
+  --
+  sequence sensor_type_id
+}
+
+entity "Point_Coordinates" as point_coords {
+  * <color:#D32F2F><&key></color> id : BIGINT
+}
+
+entity "Hole_Coordinates" as hole_coords {
+  * <color:#D32F2F><&key></color> id : BIGINT
+}
+
+' ==========================================
+' STANDALONE TABLES
+' ==========================================
+entity "Flyway_Schemahistory" as flyway {
+  * <color:#D32F2F><&key></color> id : BIGINT
+}
+
+entity "IFC_Uploads" as ifc {
+  * <color:#D32F2F><&key></color> id : BIGINT
+}
+
+entity "Data_Uploads" as data_up {
+  * <color:#D32F2F><&key></color> id : BIGINT
+}
+
+' ==========================================
+' TIMESCALEDB (Getrenntes System)
+' ==========================================
+package "TimeScaleDB" <<Database>> {
+    entity "Sensor_Data" as ts_data #E3F2FD {
+      * <color:#D32F2F><&key></color> id : BIGINT
+      * sensor_code : BIGINT
+    }
+}
+
+' ==========================================
+' BEZIEHUNGEN (Entzerrt mit verlängerten Linien und Richtungen)
+' ==========================================
+
+' --- Infrastruktur Hierarchie (Top-Down forciert) ---
+tunnels "1 " -down- " m" shafts
+shafts "1 " -down- " m" boreholes
+boreholes "1 " -down- " m" sensors
+
+' --- 1:1 Beziehungen (Seitwärts forciert) ---
+tunnels "1 " -right- " 1" hole_coords
+shafts "1 " -right- " 1" hole_coords
+boreholes "1 " -right- " 1" hole_coords
+sensors "1 " -right- " 1" point_coords
+
+' --- Sensoren & Typen ---
+sensor_type "1 " -down- " m" sensors
+sensor_type "1 " -down- " m" virtual_sensors
+
+' --- Join Tables (Lange Linien zur Entzerrung) ---
+org "1 " --- " m" j_org_user
+users "1 " --- " m" j_org_user
+
+exp "1 " --- " m" j_exp_org
+org "1 " --- " m" j_exp_org
+
+users "1 " --- " m" j_user_exp
+exp "1 " --- " m" j_user_exp
+
+sensors "1 " --- " m" j_sensor_exp
+exp "1 " --- " m" j_sensor_exp
+
+alerts "1 " --- " m" j_alert_sensor
+sensors "1 " --- " m" j_alert_sensor
+
+users "1 " --- " m" j_user_alert
+alerts "1 " --- " m" j_user_alert
+
+' --- FDW Verbindung ---
+sensors "1 " .down. " m" ts_data : " FDW Tunnel"
+
+AuditNote -[hidden]down-> sensors
+AuditNote -[hidden]right-> sensors
+
+@enduml

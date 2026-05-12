@@ -1,0 +1,66 @@
+ifndef::imagesdir[:imagesdir: ../images]
+
+[[section-architecture-constraints]]
+== Randbedingungen
+Dieser Abschnitt beschreibt die Vorgaben und Einschränkungen, die bei der Konzeption und Umsetzung von MONTEIS zwingend zu beachten sind. Sie schränken den Lösungsraum für Architekten und Entwickler bewusst ein, um die strategischen und rechtlichen Vorgaben des Bundes und des Mont Terri Konsortiums zu erfüllen.
+
+=== Technische Randbedingungen
+
+[cols="1,3" options="header"]
+|===
+| Randbedingung | Beschreibung
+
+| 100 % Open Source
+| Das System, inklusive aller eingebundenen Produkte von Drittanbietern, darf ausschliesslich auf Open-Source-Komponenten basieren. Es dürfen keine Lizenzgebühren für Softwarekomponenten anfallen.
+
+| Cloud-Infrastruktur
+| Die neuen Applikationen, Datenbanken und Pipelines müssen zwingend in einer Cloud-Infrastruktur betrieben werden (als Beispiele werden u.a. AWS-Cloud-Services, S3 Buckets, Kubernetes und Docker genannt).
+
+| Zentrales Identity Management
+| Die Authentifizierung der Nutzer hat zwingend über eIAM (oder vergleichbare SSO-Provider wie AGOV) der Bundesverwaltung zu erfolgen.
+
+| Browser- und Plugin-Freiheit
+| Die Web-App (Frontend) muss auf einer der gängigen Plattformen vollständig im Webbrowser funktionieren, ohne dass zusätzliche Plugins installiert werden müssen.
+
+| Einheiten und Standards
+| Sensormesswerte müssen systemintern zwingend in SI-Einheiten abgespeichert und dargestellt werden. Ursprüngliche Einheiten müssen jedoch bei Bedarf weiterhin verfügbar und abrufbar bleiben.
+
+| System-Schnittstellen
+| MONTEIS muss zwingend über Schnittstellen (APIs/Pipelines) mit den bereits existierenden Systemen BIM Mont Terri (3D-Geometrien/Infrastruktur), Fulcrum (mobiles Logbuch/Proben) und Citavi (Publikationsdatenbank) interagieren können.
+|===
+
+=== Organisatorische Randbedingungen
+
+[cols="1,3" options="header"]
+|===
+| Randbedingung | Beschreibung
+
+| Transparenz & Quellcode
+| Gemäss Vorgaben der Bundesverwaltung (bzw. EMBAG) muss der gesamte Source-Code der Applikationen auf GitHub publiziert werden und anschliessend für die Öffentlichkeit frei zugänglich sein.
+
+| Agile Methodik & Etappierung
+| Die Entwicklung hat strikt nach agilen Software-Entwicklungsmethoden zu erfolgen. Zudem ist ein etappiertes Vorgehen vorgeschrieben: Zuerst wird ein MVP (Priorität 1) entwickelt, gefolgt von optionalen Erweiterungen (Priorität 2 und 3).
+
+| Sprache
+| Die Kommunikations-, Applikations-, Daten- und Dokumentationssprache ist zwingend Deutsch.
+
+| Präsenz vor Ort
+| Zwar können die Arbeiten primär in den eigenen Räumlichkeiten des Anbieters erfolgen, jedoch wird erwartet, dass der Auftragnehmer regelmässig (voraussichtlich alle 4 Wochen) an Besprechungen in den Räumlichkeiten der Bedarfsstelle (St-Ursanne) teilnimmt.
+|===
+
+=== Konventionen und Sicherheitsvorgaben
+
+[cols="1,3" options="header"]
+|===
+| Randbedingung | Beschreibung
+
+| IKT-Grundschutz
+| Das System muss den obligatorischen minimalen Sicherheitsanforderungen des Bundes bezüglich Informationssicherheit (IKT-Grundschutz) genügen.
+
+| Vollständige Dokumentation
+| Das System, die Pipelines und der Code müssen vollständig dokumentiert werden und die Dokumentation muss während der gesamten Auftragsdauer gepflegt und à jour gehalten werden. Änderungen im System müssen nachvollziehbar dokumentiert werden.
+|===
+
+
+
+

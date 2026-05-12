@@ -1,0 +1,30 @@
+@startuml
+!theme plain
+skinparam componentStyle uml2
+skinparam nodesep 60
+skinparam ranksep 80
+
+' Kernsystem im Zentrum
+component "MONTEIS\n" as MONTEIS #LightBlue
+
+' Akteure (Oben)
+actor "User\n(Wissenschaftler, Partner)" as User
+actor "Admin\n(swisstopo)" as Admin
+
+' Fachliche Umsysteme (Rundherum)
+component "BIM Mont Terri\n(Digitaler Zwilling)" as BIM
+component "Fulcrum™\n(Mobiles Logbuch)" as Fulcrum
+database "DAS\n(Datenerfassung)" as DAS
+component "Citavi\n(Literaturverwaltung)" as Citavi
+
+' Fachlicher Informationsfluss mit Richtungen
+User -down-> MONTEIS : " Suchabfragen, Visualisierung\n & Datenexporte"
+Admin -down-> MONTEIS : " Konfiguration, Monitoring\n & Datenverifizierung"
+
+BIM -right-> MONTEIS : " Liefert 3D-Geometrien &\n Infrastrukturmodelle"
+MONTEIS <-right-> Fulcrum : " Bidirektionaler Abgleich von\n Proben- & Logbuchdaten"
+
+DAS -up-> MONTEIS : " Liefert kontinuierliche\n Sensormesswerte"
+Citavi -up-> MONTEIS : " Liefert wissenschaftliche Berichte\n & Publikations-Metadaten"
+
+@enduml
