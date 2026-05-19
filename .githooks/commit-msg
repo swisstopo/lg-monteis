@@ -1,31 +1,5 @@
 #!/usr/bin/env bash
 
-#MSG_FILE="$1"
-#
-## Extract current branch name
-#BRANCH=$(git rev-parse --abbrev-ref HEAD)
-#
-## Check if branch starts with ticket nr, otherwise reject commit here!
-#if [[ "$BRANCH" =~ ^([Mm][Oo][Nn]-[0-9]+) ]]; then
-#    BRANCH_TICKET=$(echo "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')
-#else
-#    echo "[ERROR]: Got $BRANCH which does not start with ticket number e.g. mon-123"
-#    exit 1
-#fi
-#
-#FIRST_LINE=$(head -n 1 "$MSG_FILE")
-#
-## Check if commit-msg starts with correct ticket nr otherwise reject!
-#if [[ "$FIRST_LINE" =~ ^$BRANCH_TICKET:(.*)$ ]]; then
-#    exit 0
-#fi
-#
-#echo "[ERROR]: Commit message must start with \"$BRANCH_TICKET: \" but got \"$FIRST_LINE\""
-#exit 1
-
-
-
-# Git passes the path to the commit message file as the first argument ($1)
 COMMIT_MSG_FILE=$1
 COMMIT_MSG=$(head -n 1 "$COMMIT_MSG_FILE") # We only check the first line (the headline)
 
