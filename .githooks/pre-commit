@@ -1,0 +1,36 @@
+#!/bin/bash
+
+echo "[INFO]: Running pre-commit formatting..."
+PROJECT_DIR=$(git rev-parse --show-toplevel)
+
+# Get a list of all currently staged files
+# ACM -> Added, Copied, Modified (excludes deletions!)
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$STAGED_FILES" ]; then
+  exit 0
+fi
+
+# ==========================================
+# 1. Handle Backend/Core
+# ==========================================
+
+# Filter for files that should be formatted by spotless i.e. files that reside in the core package
+CORE_FILES=$(echo "$STAGED_FILES" | grep '^core/' || true)
+
+if [ -n "$CORE_FILES" ]; then
+  echo "[INFO]: Formatting core files with Spotless..."
+
+  # Prepend absolute project dir to every file path in order to use mvn spotless:apply -SpotlessFiles which internally uses strict regex matching
+  SPOTLESS_FILES=$(echo "$CORE_FILES" | sed "s|^|$PROJECT_DIR/|" | paste -sd "," -)
+
+  if ! mvn -f "$PROJECT_DIR"/core/pom.xml spotless:apply -DspotlessFiles="$SPOTLESS_FILES" -q; then
+    echo "[ERROR]: Spotless formatting failed! Please apply \"mvn spotless:apply\""
+    exit 1
+  fi
+
+  # Only stage the formatted files!
+  echo "$CORE_FILES" | xargs git add
+fi
+
+echo "[SUCCESS]: Pre-commit formatting complete."
