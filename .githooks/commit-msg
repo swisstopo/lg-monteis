@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(head -n 1 "$COMMIT_MSG_FILE") # We only check the first line (the headline)
+
+# The Regex: type(TICKET-ID): description
+REGEX="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)\([M][O][N]-[0-9]+\): .+"
+
+if [[ ! "$COMMIT_MSG" =~ $REGEX ]]; then
+  echo ""
+  echo "[ERROR]: INVALID COMMIT MESSAGE FORMAT"
+  echo "----------------------------------------------------------------------"
+  echo "Your commit message must follow Conventional Commits with a ticket ID."
+  echo ""
+  echo "Valid Example: feat(MON-123): add the new login system"
+  echo "Your Message:  $COMMIT_MSG"
+  echo ""
+  echo "Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+  echo "----------------------------------------------------------------------"
+  echo ""
+  exit 1
+fi
