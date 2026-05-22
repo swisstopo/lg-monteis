@@ -6,6 +6,7 @@ on:
 
 jobs:
   core:
+    name: Format Core API
     runs-on: ubuntu-24.04
     defaults:
       run:
