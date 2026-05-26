@@ -1,97 +1,150 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.6</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.0.6</version>
+    <!-- lookup parent from repository -->
+    <relativePath/>
+  </parent>
 
-	<groupId>ch.swisstopo.monteis</groupId>
-	<artifactId>core</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+  <groupId>ch.swisstopo.monteis</groupId>
+  <artifactId>core</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
 
-	<properties>
-		<java.version>25</java.version>
-	</properties>
+  <properties>
+    <java.version>25</java.version>
+  </properties>
 
-	<dependencies>
-<!--    TODO: MON-40 -->
-<!--		<dependency>-->
-<!--			<groupId>org.springframework.boot</groupId>-->
-<!--			<artifactId>spring-boot-starter-flyway</artifactId>-->
-<!--		</dependency>-->
-<!--    TODO: MON-39 -->
-<!--		<dependency>-->
-<!--			<groupId>org.springframework.boot</groupId>-->
-<!--			<artifactId>spring-boot-starter-jooq</artifactId>-->
-<!--		</dependency>-->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>3.0.2</version>
-		</dependency>
+  <dependencies>
+    <!--    TODO: MON-40 -->
+    <!--		<dependency>-->
+    <!--			<groupId>org.springframework.boot</groupId>-->
+    <!--			<artifactId>spring-boot-starter-flyway</artifactId>-->
+    <!--		</dependency>-->
+    <!--    TODO: MON-39 -->
+    <!--		<dependency>-->
+    <!--			<groupId>org.springframework.boot</groupId>-->
+    <!--			<artifactId>spring-boot-starter-jooq</artifactId>-->
+    <!--		</dependency>-->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>3.0.2</version>
+    </dependency>
 
-<!--    Development Only -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-devtools</artifactId>
-			<scope>runtime</scope>
-			<optional>true</optional>
-		</dependency>
+    <!--    Development Only -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-devtools</artifactId>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
 
-<!--    Testing -->
-<!--    TODO: MON-40 -->
-<!--		<dependency>-->
-<!--			<groupId>org.springframework.boot</groupId>-->
-<!--			<artifactId>spring-boot-starter-flyway-test</artifactId>-->
-<!--			<scope>test</scope>-->
-<!--		</dependency>-->
-<!--    TODO: MON-39 -->
-<!--		<dependency>-->
-<!--			<groupId>org.springframework.boot</groupId>-->
-<!--			<artifactId>spring-boot-starter-jooq-test</artifactId>-->
-<!--			<scope>test</scope>-->
-<!--		</dependency>-->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-testcontainers</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.testcontainers</groupId>
-			<artifactId>testcontainers-junit-jupiter</artifactId>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
+    <!--    Testing -->
+    <!--    TODO: MON-40 -->
+    <!--		<dependency>-->
+    <!--			<groupId>org.springframework.boot</groupId>-->
+    <!--			<artifactId>spring-boot-starter-flyway-test</artifactId>-->
+    <!--			<scope>test</scope>-->
+    <!--		</dependency>-->
+    <!--    TODO: MON-39 -->
+    <!--		<dependency>-->
+    <!--			<groupId>org.springframework.boot</groupId>-->
+    <!--			<artifactId>spring-boot-starter-jooq-test</artifactId>-->
+    <!--			<scope>test</scope>-->
+    <!--		</dependency>-->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
-	</build>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>3.4.0</version>
+        <configuration>
+          <formats>
+            <format>
+              <includes>
+                <include>.gitattributes</include>
+                <include>.gitignore</include>
+              </includes>
+              <trimTrailingWhitespace/>
+              <endWithNewline/>
+              <indent>
+                <tabs>true</tabs>
+                <spacesPerTab>4</spacesPerTab>
+              </indent>
+            </format>
+          </formats>
+          <java>
+            <includes>
+              <include>src/main/java/**/*.java</include>
+              <include>src/test/java/**/*.java</include>
+            </includes>
+            <googleJavaFormat>
+              <reflowLongStrings>true</reflowLongStrings>
+              <formatJavadoc>false</formatJavadoc>
+            </googleJavaFormat>
+            <removeUnusedImports/>
+          </java>
+          <sql>
+            <includes>
+              <include>src/main/resources/**/*.sql</include>
+            </includes>
+          </sql>
+          <pom>
+            <includes>
+              <include>pom.xml</include>
+            </includes>
+
+            <sortPom>
+              <encoding>UTF-8</encoding>
+              <keepBlankLines>true</keepBlankLines>
+            </sortPom>
+          </pom>
+          <markdown>
+            <includes>
+              <include>**/*.md</include>
+            </includes>
+            <flexmark/>
+          </markdown>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>
