@@ -33,4 +33,27 @@ if [ -n "$CORE_FILES" ]; then
   echo "$CORE_FILES" | xargs git add
 fi
 
+# ==========================================
+# 2. Handle Pipeline (Python)
+# ==========================================
+
+# Filter for Python files in the pipeline directory
+PIPELINE_PY_FILES=$(echo "$STAGED_FILES" | grep '^pipeline/.*\.py$' || true)
+
+if [ -n "$PIPELINE_PY_FILES" ]; then
+  echo "[INFO]: Formatting and linting pipeline Python files with black, isort, and flake8..."
+
+  # Format with isort
+  echo "$PIPELINE_PY_FILES" | xargs isort || { echo "[ERROR]: isort failed!"; exit 1; }
+
+  # Format with black
+  echo "$PIPELINE_PY_FILES" | xargs black || { echo "[ERROR]: black failed!"; exit 1; }
+
+  # Lint with flake8 (does not modify files, just checks)
+  echo "$PIPELINE_PY_FILES" | xargs flake8 || { echo "[ERROR]: flake8 failed! Please fix lint errors."; exit 1; }
+
+  # Re-stage the formatted files
+  echo "$PIPELINE_PY_FILES" | xargs git add
+fi
+
 echo "[SUCCESS]: Pre-commit formatting complete."
