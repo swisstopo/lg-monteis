@@ -29,7 +29,7 @@ public class DatabaseMigrationRunner {
     Map<String, String> placeholders =
         Map.of(
             "fdw_ts_host", fdw.fdwTsHost(),
-            "fdw_ts_port", fdw.fdwTsPort(),
+            "fdw_ts_port", fdw.fdwTsPort().toString(),
             "fdw_ts_dbname", fdw.fdwTsDbname(),
             "fdw_ts_user", fdw.fdwTsUser(),
             "fdw_ts_password", fdw.fdwTsPassword(),

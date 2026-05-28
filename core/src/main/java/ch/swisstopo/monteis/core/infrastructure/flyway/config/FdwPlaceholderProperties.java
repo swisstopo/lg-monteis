@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.migration.meta.placeholders")
 public record FdwPlaceholderProperties(
     String fdwTsHost,
-    String fdwTsPort,
+    Integer fdwTsPort,
     String fdwTsDbname,
     String fdwTsUser,
     String fdwTsPassword,
