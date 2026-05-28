@@ -1,0 +1,28 @@
+services:
+  metadata_db:
+    container_name: monteis-meta-db
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pwd
+      POSTGRES_DB: monteis-meta
+    ports:
+      - "5432:5432"
+    profiles: ['', core, db]
+    volumes:
+      - ./dataset-meta:/docker-entrypoint-initdb.d
+
+  time_series_db:
+    container_name: timescale-db
+    image: timescale/timescaledb:latest-pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pwd
+      POSTGRES_DB: monteis-tsdb
+    ports:
+      - "5433:5432"
+    profiles: ['', core, db]
+    volumes:
+      - ./dataset-tsdb:/docker-entrypoint-initdb.d

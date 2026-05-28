@@ -15,19 +15,34 @@
 
   <properties>
     <java.version>25</java.version>
+
+    <testcontainers.postgres.version>1.21.4</testcontainers.postgres.version>
+    <springdoc.version>3.0.2</springdoc.version>
+    <spotless.version>3.4.0</spotless.version>
+    <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
+
+    <jooq.codegen.skip>false</jooq.codegen.skip>
   </properties>
 
   <dependencies>
-    <!--    TODO: MON-40 -->
-    <!--		<dependency>-->
-    <!--			<groupId>org.springframework.boot</groupId>-->
-    <!--			<artifactId>spring-boot-starter-flyway</artifactId>-->
-    <!--		</dependency>-->
-    <!--    TODO: MON-39 -->
-    <!--		<dependency>-->
-    <!--			<groupId>org.springframework.boot</groupId>-->
-    <!--			<artifactId>spring-boot-starter-jooq</artifactId>-->
-    <!--		</dependency>-->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jooq</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
@@ -39,7 +54,7 @@
     <dependency>
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-      <version>3.0.2</version>
+      <version>${springdoc.version}</version>
     </dependency>
 
     <!--    Development Only -->
@@ -51,18 +66,16 @@
     </dependency>
 
     <!--    Testing -->
-    <!--    TODO: MON-40 -->
-    <!--		<dependency>-->
-    <!--			<groupId>org.springframework.boot</groupId>-->
-    <!--			<artifactId>spring-boot-starter-flyway-test</artifactId>-->
-    <!--			<scope>test</scope>-->
-    <!--		</dependency>-->
-    <!--    TODO: MON-39 -->
-    <!--		<dependency>-->
-    <!--			<groupId>org.springframework.boot</groupId>-->
-    <!--			<artifactId>spring-boot-starter-jooq-test</artifactId>-->
-    <!--			<scope>test</scope>-->
-    <!--		</dependency>-->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jooq-test</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security-test</artifactId>
@@ -83,6 +96,12 @@
       <artifactId>testcontainers-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${testcontainers.postgres.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -94,7 +113,7 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>3.4.0</version>
+        <version>${spotless.version}</version>
         <configuration>
           <formats>
             <format>
@@ -143,6 +162,148 @@
             <flexmark/>
           </markdown>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>groovy-maven-plugin</artifactId>
+        <version>${groovy-maven-plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${testcontainers.postgres.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>start-testcontainers</id>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <source>import org.testcontainers.containers.PostgreSQLContainer
+                import org.testcontainers.utility.DockerImageName
+                import org.testcontainers.utility.MountableFile
+
+                if ("${jooq.codegen.skip}" == "true") {
+                  println "[INFO] Skipping Testcontainers setup for jOOQ."
+                } else {
+                  println "[INFO] Spinning up TimescaleDB and MetaDB on shared network..."
+
+                  def network = org.testcontainers.containers.Network.SHARED
+
+                  def tsDb = new PostgreSQLContainer(DockerImageName.parse("timescale/timescaledb:latest-pg18").asCompatibleSubstituteFor("postgres"))
+                    .withNetwork(network)
+                    .withNetworkAliases("time_series_db")
+                    .withDatabaseName("monteis-tsdb")
+                    .withUsername("user")
+                    .withPassword("pwd")
+                    .withCopyFileToContainer(MountableFile.forHostPath("${project.basedir}/../docker/dataset-ts/init_tsdb.sql"), "/docker-entrypoint-initdb.d/init_tsdb.sql")
+                  tsDb.start()
+
+                  def metaDb = new PostgreSQLContainer(DockerImageName.parse("postgres:18-alpine"))
+                    .withNetwork(network)
+                    .withDatabaseName("monteis-meta-db")
+                    .withUsername("user")
+                    .withPassword("pwd")
+                    .withCopyFileToContainer(MountableFile.forHostPath("${project.basedir}/../docker/dataset-meta/init_meta.sql"), "/docker-entrypoint-initdb.d/init_meta.sql")
+                    .dependsOn(tsDb)
+                  metaDb.start()
+
+                  project.properties.setProperty('codegen.ts.url', tsDb.getJdbcUrl())
+                  project.properties.setProperty('codegen.meta.url', metaDb.getJdbcUrl())
+                }</source>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <!-- Cares only for migration of the TimeScaleDB -->
+            <id>flyway-migrate-timescale</id>
+            <goals>
+              <goal>migrate</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <skip>${jooq.codegen.skip}</skip>
+              <!--suppress UnresolvedMavenProperty -->
+              <url>${codegen.ts.url}</url>
+              <user>user</user>
+              <password>pwd</password>
+              <locations>
+                <location>filesystem:src/main/resources/db/migration/timeseries</location>
+              </locations>
+            </configuration>
+          </execution>
+
+          <execution>
+            <!-- Cares only for migration of the Metadata PostgreSQL DB -->
+            <id>flyway-migrate-meta</id>
+            <goals>
+              <goal>migrate</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <skip>${jooq.codegen.skip}</skip>
+              <!--suppress UnresolvedMavenProperty -->
+              <url>${codegen.meta.url}</url>
+              <user>user</user>
+              <password>pwd</password>
+              <locations>
+                <location>filesystem:src/main/resources/db/migration/meta</location>
+              </locations>
+              <placeholders>
+                <fdw_ts_host>time_series_db</fdw_ts_host>
+                <fdw_ts_port>5432</fdw_ts_port>
+                <fdw_ts_dbname>monteis-tsdb</fdw_ts_dbname>
+                <fdw_ts_user>ts_flyway</fdw_ts_user>
+                <fdw_ts_password>pwd_ts_flyway</fdw_ts_password>
+                <fdw_app_user>core_app</fdw_app_user>
+              </placeholders>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jooq</groupId>
+        <artifactId>jooq-codegen-maven</artifactId>
+        <executions>
+          <execution>
+            <id>generate-jooq</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <skip>${jooq.codegen.skip}</skip>
+              <jdbc>
+                <!-- Only connect to metadata DB for JOOQ -->
+                <!--suppress UnresolvedMavenProperty -->
+                <url>${codegen.meta.url}</url>
+                <user>user</user>
+                <password>pwd</password>
+              </jdbc>
+              <generator>
+                <database>
+                  <name>org.jooq.meta.postgres.PostgresDatabase</name>
+                  <inputSchema>public</inputSchema>
+                  <excludes>flyway_schema_history</excludes>
+                </database>
+                <target>
+                  <packageName>ch.swisstopo.monteis.core.jooq.generated</packageName>
+                  <directory>target/generated-sources/jooq</directory>
+                </target>
+              </generator>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
