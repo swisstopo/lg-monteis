@@ -1,0 +1,35 @@
+/* You can add global styles to this file, and also import other style files */
+@use '@scion/workbench' with (
+  $themes:(
+    light:(
+      color-scheme: light,
+      --sci-workbench-tab-height: 2.5rem,
+      --sci-workbench-tab-font-size: 0.8rem,
+    ),
+    dark: (
+      color-scheme: dark,
+      --sci-workbench-tab-height: 2.5rem,
+      --sci-workbench-tab-font-size: 0.8rem,
+)
+  )
+);
+@use '@carbon/styles/scss/config' with (
+	// Use flexbox for grid - stick to CSS Grid or Flexbox
+	// CSS Grid has become the default grid system in v11
+	$use-flexbox-grid: true,
+	// Update path of fonts to exclude tilde, required for vite (Angular 16+)
+	$font-path: '@ibm/plex'
+);
+
+@use '@carbon/styles';
+
+html {
+  @include styles.theme(styles.$white);
+  font-size: 14px; // TODO: check if global config override of carbon design is possible here
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded');
+
+
+
+

@@ -1,0 +1,22 @@
+<div class="metrics-panel">
+  <h2 class="panel-heading">AG Grid - Database Records</h2>
+
+  @if (demoService.metricsResource.isLoading()) {
+    <div class="loading-container">
+      <cds-loading type="inline"></cds-loading>
+      <p class="loading-text">Streaming logs from database...</p>
+    </div>
+  }
+  @else if (demoService.metricsResource.error()) {
+    <p class="error-text">Failed to connect to the backend server.</p>
+  }
+  @else {
+    <ag-grid-angular
+      class="custom-grid"
+      [theme]="theme"
+      [rowData]="demoService.metricsResource.value() ?? []"
+      [columnDefs]="columnDefs"
+      [gridOptions]="gridOptions">
+    </ag-grid-angular>
+  }
+</div>

@@ -1,0 +1,9 @@
+.side-panel-container {
+  padding: var(--cds-spacing-04, 1rem);
+}
+
+cds-button.navigation-button {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+}
