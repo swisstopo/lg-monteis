@@ -1,0 +1,9 @@
+<ag-grid-angular
+  class="app-table"
+  [theme]="theme"
+  [rowData]="rows()"
+  [columnDefs]="columnDefs()"
+  [defaultColDef]="defaultColDef"
+  (rowClicked)="onRowClicked($event)"
+  [gridOptions]="gridOptions"
+></ag-grid-angular>

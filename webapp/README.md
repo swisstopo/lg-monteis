@@ -61,58 +61,35 @@ For more information on using the Angular CLI, including detailed command refere
 ## Project structure
 ```
 src/
-  app/
-    core/
-      models/                       <-- Contains business/API models used throughout the app (e.g., User.ts)
-      i18n/                         <-- Core services for things like language detection
-
-    layout/
-      main-layout/                  <-- The main wrapper shell (contains sidebar, header, and the <router-outlet>)
-        main-layout.component.ts
-        main-layout.component.html
-        main-layout.component.scss
-      auth-layout/                  <-- A minimal shell used only for login/register screens
-        auth-layout.component.ts
-        auth-layout.component.html
-        auth-layout.component.scss
-      header/                       <-- Structural UI pieces used specifically to build the layouts
-        header.component.ts
-        header.component.html
-        header.component.scss
-
-    shared/
-      validators/                   <-- Validators that can be reused anywhere (e.g., strong-password.validator.ts)
-      components/
-        dropdown/
-          dropdown.component.ts     <-- The actual component logic
-          dropdown.component.html   <-- The template
-          dropdown.component.scss   <-- The styles
-        data-table/
-          data-table.component.ts
-          data-table.component.html
-          data-table.component.scss
-      types/
-        dropdown-option.type.ts     <-- Just the TypeScript interface for the dropdown component
-        table-column.type.ts        <-- Just the TypeScript interface for the data-table component
-      pipes/
-        format-date.pipe.ts         <-- Reusable data transformation pipes
-
-    features/
-      auth/
-        auth.routes.ts              <-- Local router linking paths to auth components
-        login-form/                 <-- First component of the feature
-          login-form.component.ts
-          login-form.component.scss
-          login-form.component.html
-          login-form.component.spec.ts
-        reset-password/             <-- Second component of the feature
-          reset-password.component.ts
-          ...
-        models/                     <-- Models only used internally by the Auth feature (e.g., LoginPayload.ts)
-        validators/                 <-- Validators only used within this feature
-      
-      dashboard/                    <-- Another fully isolated feature 
-        dashboard.routes.ts
-        dashboard-view/
-          ...
+├── app/                            <-- Angular bootstrap (app.config.ts)
+│
+├── config/                         <-- Application composition and framework integration
+│   ├── routes.config.ts
+│   ├── workbench.config.ts
+│   └── icon-provider.ts
+│
+├── core/                           <-- Application-wide infrastructure and generated artifacts
+│   ├── api/                        <-- OpenAPI generated clients
+│   ├── models/                     <-- Shared business/API models
+│   ├── interceptors/               <-- HTTP interceptors
+│   └── auth/                       <-- Authentication infrastructure
+│
+├── features/                       <-- Business features and pages
+│   └── demo/
+│       ├── demo.routes.ts
+│       ├── overview/
+│       ├── metrics-menu/
+│       ├── cds-table/
+│       └── ag-grid-record/
+│
+├── ui/                             <-- Reusable UI building blocks and wrappers
+│   ├── table/                      <-- AG Grid wrapper
+│   ├── route-button/               <-- Workbench navigation button
+│   ├── icon/                       <-- Carbon icon component and registry
+│   └── ...
+│
+└── shared/                         <-- Generic utilities and cross-cutting helpers
+    ├── utils/
+    ├── constants/
+    └── types/
 ```
