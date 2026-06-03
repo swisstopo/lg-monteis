@@ -1,10 +1,10 @@
 <div class="metrics-panel">
   <h2 class="panel-heading">CDS - Database Records</h2>
 
-  @if (demoService.metricsResource.isLoading()) {
+  @if (metricsResource.isLoading()) {
     <p class="loading-text">Fetching data from Spring Boot...</p>
   }
-  @else if (demoService.metricsResource.error()) {
+  @else if (metricsResource.error()) {
     <p class="error-text">Failed to connect to the backend.</p>
   }
   @else {
@@ -17,7 +17,7 @@
       </cds-table-head>
 
       <cds-table-body>
-        @for (metric of demoService.metricsResource.value(); track metric.timestamp) {
+        @for (metric of metricsResource.value(); track metric.timestamp) {
           <cds-table-row>
             <cds-table-cell class="col-timestamp">{{ metric.timestamp | date:'medium' }}</cds-table-cell>
             <cds-table-cell class="col-value"><span class="metric-badge">{{ metric.val }}</span></cds-table-cell>

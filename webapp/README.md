@@ -93,3 +93,10 @@ src/
     ├── constants/
     └── types/
 ```
+
+## Code Generation
+This Project uses code generation for generating API services and DTOs. In order for the project to work you need to execute the code generation. This can be done by executing the following.
+
+```shell
+pnpm generate-api
+```

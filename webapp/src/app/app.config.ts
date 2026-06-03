@@ -7,6 +7,8 @@ import {provideRouter, withComponentInputBinding} from '@angular/router';
 import {provideAnimations} from '@angular/platform-browser/animations';
 import { workbenchConfig } from './config/workbench.config';
 import { APP_ROUTES } from './config/routes.config';
+import { provideHttpClient } from '@angular/common/http';
+import {BASE_PATH} from './core/generated/variables';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -15,5 +17,7 @@ export const appConfig: ApplicationConfig = {
     workbenchConfig,
     provideRouter(APP_ROUTES, withComponentInputBinding()),
     provideAnimations(), // temporary: required until SCION Workbench drops the deprecated Angular animations dependency.
+    provideHttpClient(),
+    { provide: BASE_PATH, useValue: '' },
   ],
 };

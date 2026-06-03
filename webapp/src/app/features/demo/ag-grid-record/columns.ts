@@ -1,5 +1,5 @@
 import { TableColumn } from '../../../ui/table/table.types';
-import { ReadSimpleMetric } from '../../../core/models/read-simple-metric';
+import { ReadSimpleMetric } from '../../../core/generated/model/readSimpleMetric';
 import { DatePipe } from '@angular/common';
 
 export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetric>[] {

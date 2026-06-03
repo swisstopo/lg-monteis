@@ -28,3 +28,12 @@ mvn spotless:apply
 ```
 
 or use the provided run configuration. To validate the format use `check` instead of `apply`.
+
+### API Contract
+
+We enforce the API contract by generating it from the controllers using OpenAPI. In order for the Webapp to work together with the Core package you need to generate a `openapi.json` file. For doing this execute the command below.
+
+```shell
+mvn verify -Dopenapi.codegen.skip=false
+```
+

@@ -1,16 +1,16 @@
 <cds-tile class="metric-card">
   <p class="card-label">Total Database Records</p>
 
-  @if (demoService.metricsResource.isLoading()) {
+  @if (metricsResource.isLoading()) {
     <div class="loading-state">
       <cds-loading type="inline"></cds-loading>
       <span>Syncing...</span>
     </div>
-  } @else if (demoService.metricsResource.error()) {
+  } @else if (metricsResource.error()) {
     <p class="error-state">Offline</p>
   } @else {
     <h1 class="card-value">
-      {{ demoService.metricsResource.value()?.length ?? 0 }}
+      {{ metricsResource.value()?.length ?? 0 }}
     </h1>
   }
 </cds-tile>

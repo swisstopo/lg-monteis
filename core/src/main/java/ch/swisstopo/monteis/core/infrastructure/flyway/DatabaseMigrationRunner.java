@@ -9,8 +9,10 @@ import jakarta.annotation.PostConstruct;
 import java.util.Map;
 import org.flywaydb.core.Flyway;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 @Configuration
+@Profile("!openapi")
 public class DatabaseMigrationRunner {
 
   private final FdwPlaceholderProperties fdw;

@@ -20,6 +20,8 @@ allowBuilds:
   '@ibm/plex-sans-thai': false
   '@ibm/plex-sans-thai-looped': false
   '@ibm/plex-serif': false
+  '@nestjs/core': false
+  '@openapitools/openapi-generator-cli': false
   '@parcel/watcher': false
   carbon-components-angular: false
   esbuild: false
