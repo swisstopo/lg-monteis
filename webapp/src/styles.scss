@@ -1,14 +1,46 @@
 @use '@scion/workbench' with (
   $themes: (
-    light: (
+      light: (
       color-scheme: light,
-      --sci-workbench-tab-height: 2.5rem,
-      --sci-workbench-tab-font-size: 0.8rem,
+      --sci-color-gray-50:  var(--mat-sys-surface-container-lowest),
+      --sci-color-gray-75:  var(--mat-sys-surface-container-low),
+      --sci-color-gray-100: var(--mat-sys-surface-container),
+      --sci-color-gray-200: var(--mat-sys-surface-container-high),
+      --sci-color-gray-300: var(--mat-sys-surface-container-highest),
+      --sci-color-gray-400: var(--mat-sys-outline-variant),
+      --sci-color-gray-500: var(--mat-sys-outline),
+      --sci-color-gray-600: var(--mat-sys-on-surface-variant),
+      --sci-color-gray-700: var(--mat-sys-on-surface),
+      --sci-color-gray-800: var(--mat-sys-on-surface),
+      --sci-color-gray-900: var(--mat-sys-on-surface),
+
+      --sci-color-accent:   var(--mat-sys-primary),
+
+      --sci-workbench-activity-item-border-radius: 16px,
+      --sci-workbench-activity-bar-padding: 0.75rem 0.5rem,
+      --sci-workbench-activity-item-padding: 6px 10px,
+      --sci-workbench-activity-item-gap: 0.75rem,
     ),
     dark: (
       color-scheme: dark,
-      --sci-workbench-tab-height: 2.5rem,
-      --sci-workbench-tab-font-size: 0.8rem,
+      --sci-color-gray-50:  var(--mat-sys-surface-container-lowest),
+      --sci-color-gray-75:  var(--mat-sys-surface-container-low),
+      --sci-color-gray-100: var(--mat-sys-surface-container),
+      --sci-color-gray-200: var(--mat-sys-surface-container-high),
+      --sci-color-gray-300: var(--mat-sys-surface-container-highest),
+      --sci-color-gray-400: var(--mat-sys-outline-variant),
+      --sci-color-gray-500: var(--mat-sys-outline),
+      --sci-color-gray-600: var(--mat-sys-on-surface-variant),
+      --sci-color-gray-700: var(--mat-sys-on-surface),
+      --sci-color-gray-800: var(--mat-sys-on-surface),
+      --sci-color-gray-900: var(--mat-sys-on-surface),
+
+      --sci-color-accent:   var(--mat-sys-primary),
+      --sci-workbench-activity-item-border-radius: 16px,
+      --sci-workbench-tab-height: 3.5rem,
+      --sci-workbench-activity-bar-padding: 0.75rem 0.5rem,
+      --sci-workbench-activity-item-padding: 6px 10px,
+      --sci-workbench-activity-item-gap: 0.75rem,
     ),
   )
 );

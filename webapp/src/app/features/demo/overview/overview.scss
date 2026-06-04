@@ -20,7 +20,6 @@
   color: var(--mat-sys-on-surface-variant);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-weight: 500;
 }
 
 .card-value {
@@ -38,11 +37,9 @@
 .loading-state {
   gap: 0.5rem;
   color: var(--mat-sys-on-surface-variant);
-  font-size: 0.875rem;
 }
 
 .error-state {
   color: var(--mat-sys-error);
-  font-weight: 500;
   margin: 0;
 }
