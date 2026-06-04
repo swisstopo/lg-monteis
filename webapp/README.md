@@ -79,7 +79,6 @@ src/
 │       ├── demo.routes.ts
 │       ├── overview/
 │       ├── metrics-menu/
-│       ├── cds-table/
 │       └── ag-grid-record/
 │
 ├── ui/                             <-- Reusable UI building blocks and wrappers

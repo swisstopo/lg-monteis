@@ -31,7 +31,7 @@ Nutzt den Ansatz der "Polyglot Persistence", um die massiven Datenmengen (Ziel: 
 // todo: muss vollständig überarbeitet werden, sobald die Architektur fürs Frontend geplant ist.
 _TODO: Draft da die Architektur noch nicht abschliessend gemacht ist_
 
-Obwohl die genaue Modulstruktur des Frontends noch in der Spezifikationsphase ist, basiert die Architektur der Web-Applikation auf **Angular** und dem *Carbon Design System*. Um die Komplexität der Darstellung zu managen, gliedert sich die UI logisch in folgende Hauptbereiche, die durch die *Scion Workbench* als Layout-Framework orchestriert werden:
+Obwohl die genaue Modulstruktur des Frontends noch in der Spezifikationsphase ist, basiert die Architektur der Web-Applikation auf **Angular** und dem *Angular Material Design System*. Um die Komplexität der Darstellung zu managen, gliedert sich die UI logisch in folgende Hauptbereiche, die durch die *Scion Workbench* als Layout-Framework orchestriert werden:
 
 * **3D-Visualisierungs-Modul:** Nutzt *Giro3D*, um die Infrastruktur, Bohrlochgeometrien und Sensoren räumlich im Browser darzustellen, ohne die Performance der restlichen Applikation zu blockieren. Dies Wird erreicht mittels Worker vom Browser selber, damit können wir den Load des Rendering sauber auslagern auf das Client Device.
 * **Data-Grid & Dashboard-Modul:** Integriert *ag-Grid* für die hochperformante tabellarische Darstellung und das Plotten der gefilterten Sensor-Zeitreihen.

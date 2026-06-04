@@ -61,7 +61,7 @@ Die verschiedenen Schichten und Services werden als separate Pods in einem Kuber
 
 === Technologie-Entscheidungen (Tech Stack)
 
-* **Frontend:** Die Web-Applikation wird mit **Angular** umgesetzt, ergänzt durch das *Carbon Design System*, *AG-Grid* und *Scion Workbench* für eine konsistente und moderne UI. Für die komplexe Darstellung der geologischen 3D-Modelle kommt **Giro3D** zum Einsatz.
+* **Frontend:** Die Web-Applikation wird mit **Angular** umgesetzt, ergänzt durch *Angular Material*, *AG-Grid* und *Scion Workbench* für eine konsistente und moderne UI. Für die komplexe Darstellung der geologischen 3D-Modelle kommt **Giro3D** zum Einsatz.
 * **Backend & API:** Als zentrales Verarbeitungssystem dient eine **Java Spring Boot** Applikation. Jede Datenanfrage oder -eingabe die durch einen User ausgelöst wird, passiert dieses Backend. Einzig die Pipeline kann autonom agieren.
 * **Data Pipelines:** Die Ingestion der Sensordaten erfolgt über ein **Kafka Connect Cluster**, gefolgt von spezifischen Java- oder Python-Pods für die weitere Datenverarbeitung. Für Benachrichtigungen wird das AWS Alerting genutzt.
 * **Storage-Split:** Zur performanten Bewältigung der bis zu 50 TB an Daten kommen vier Speichersysteme zum Einsatz:

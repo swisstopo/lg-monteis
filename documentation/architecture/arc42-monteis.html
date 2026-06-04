@@ -439,7 +439,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h1><span class="image"><img src="./images/arc42-logo.png" alt="arc42"></span> MONTEIS - Architektur</h1>
 <div class="details">
 <span id="revnumber">version 1.0.0-rc,</span>
-<span id="revdate">2026-05-12</span>
+<span id="revdate">2026-05-19</span>
 <br><span id="revremark">Draft</span>
 </div>
 <div id="toc" class="toc">
@@ -551,7 +551,7 @@ Creative Commons Attribution-ShareAlike 4.0 International
 Creative Commons Attribution-ShareAlike 4.0 International Lizenz bereitgestellt.</p>
 </div>
 <div class="paragraph">
-<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-05-12</p>
+<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-05-19</p>
 </div>
 <hr>
 <div style="page-break-after: always;"></div>
@@ -1093,7 +1093,7 @@ Die verschiedenen Schichten und Services werden als separate Pods in einem Kuber
 <div class="ulist">
 <ul>
 <li>
-<p><strong>Frontend:</strong> Die Web-Applikation wird mit <strong>Angular</strong> umgesetzt, ergänzt durch das <strong>Carbon Design System</strong>, <strong>AG-Grid</strong> und <strong>Scion Workbench</strong> für eine konsistente und moderne UI. Für die komplexe Darstellung der geologischen 3D-Modelle kommt <strong>Giro3D</strong> zum Einsatz.</p>
+<p><strong>Frontend:</strong> Die Web-Applikation wird mit <strong>Angular</strong> umgesetzt, ergänzt durch <strong>Angular Material</strong>, <strong>AG-Grid</strong> und <strong>Scion Workbench</strong> für eine konsistente und moderne UI. Für die komplexe Darstellung der geologischen 3D-Modelle kommt <strong>Giro3D</strong> zum Einsatz.</p>
 </li>
 <li>
 <p><strong>Backend &amp; API:</strong> Als zentrales Verarbeitungssystem dient eine <strong>Java Spring Boot</strong> Applikation. Jede Datenanfrage oder -eingabe die durch einen User ausgelöst wird, passiert dieses Backend. Einzig die Pipeline kann autonom agieren.</p>
@@ -1215,7 +1215,7 @@ Es wird prozessual (z. B. durch Lizenz-Scanning in der CI/CD-Pipeline) sicherges
 <p><em>TODO: Draft da die Architektur noch nicht abschliessend gemacht ist</em></p>
 </div>
 <div class="paragraph">
-<p>Obwohl die genaue Modulstruktur des Frontends noch in der Spezifikationsphase ist, basiert die Architektur der Web-Applikation auf <strong>Angular</strong> und dem <strong>Carbon Design System</strong>. Um die Komplexität der Darstellung zu managen, gliedert sich die UI logisch in folgende Hauptbereiche, die durch die <strong>Scion Workbench</strong> als Layout-Framework orchestriert werden:</p>
+<p>Obwohl die genaue Modulstruktur des Frontends noch in der Spezifikationsphase ist, basiert die Architektur der Web-Applikation auf <strong>Angular</strong> und dem <strong>Angular Material Design System</strong>. Um die Komplexität der Darstellung zu managen, gliedert sich die UI logisch in folgende Hauptbereiche, die durch die <strong>Scion Workbench</strong> als Layout-Framework orchestriert werden:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -2615,10 +2615,6 @@ components:
 <td class="tableblock halign-left valign-top"><p class="tableblock"><em><a href="https://www.ag-grid.com/">AG-Grid</a></em></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><em>AG-Grid ist eine Library für Angular, speziell geeignet für anspruchsvolle filterbare Tabellen.</em></p></td>
 </tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><em><a href="https://carbondesignsystem.com/">Carbon Design</a></em></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><em>Das Carbon Design system ist eine von IBM entwickelte Opensource Design-Library, welche wir für das Umsetzen eines einheitlichen UI-Designs gemäs UX-Vorlagen verwenden.</em></p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -2627,7 +2623,7 @@ components:
 <div id="footer">
 <div id="footer-text">
 Version 1.0.0-rc<br>
-Last updated 2026-05-12 11:48:53 UTC
+Last updated 2026-05-19 09:48:44 UTC
 </div>
 </div>
 </body>
