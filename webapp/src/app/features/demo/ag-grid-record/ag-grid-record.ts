@@ -1,5 +1,4 @@
-import {Component, effect, inject} from '@angular/core';
-import {WorkbenchView} from '@scion/workbench';
+import {Component, inject} from '@angular/core';
 import {DatePipe} from '@angular/common';
 import Table from '../../../ui/table/table';
 import { createColumns } from './columns';
@@ -23,13 +22,6 @@ export default class AgGridRecord {
   });
 
   protected wrappedCols = createColumns(this.datePipe);
-  constructor(view: WorkbenchView) {
-    // SCION Workbench: Dynamically update the tab title whenever the data changes
-    effect(() => {
-      const count = this.metricsResource.value()?.length ?? 0;
-      view.title = `AG-Grid (${count})`;
-    });
-  }
 
   onWrappedRow(row: ReadSimpleMetric) {
     console.log(row);

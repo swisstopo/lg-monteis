@@ -1,5 +1,4 @@
-import {Component, effect, inject} from '@angular/core';
-import {WorkbenchView} from '@scion/workbench';
+import {Component, inject} from '@angular/core';
 import {DatePipe} from '@angular/common';
 import { DemoControllerService } from '../../../core/generated';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -16,11 +15,4 @@ export default class AgMatTable {
     stream: () => this.demoService.getMetrics(100),
   });
   protected displayedColumns = ['timestamp', 'val'];
-  constructor(view: WorkbenchView) {
-    // SCION Workbench: Dynamically update the tab title whenever the data changes
-    effect(() => {
-      const count = this.metricsResource.value()?.length ?? 0;
-      view.title = `AG-Material-Table (${count})`;
-    });
-  }
 }

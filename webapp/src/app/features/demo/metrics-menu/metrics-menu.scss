@@ -1,5 +1,19 @@
-.side-panel-container {
+.submenu-header {
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  h3 {
+    margin: 0;
+    font-weight: 500;
+    font-size: 1.15rem;
+    letter-spacing: 0.15px;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.panel-links {
   display: flex;
   flex-direction: column;
-  margin: 0.5rem;
+  gap: 8px;
 }

@@ -1,0 +1,119 @@
+.sidebar {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--mat-sys-background);
+  color: var(--mat-sys-on-background);
+}
+
+.rail-divider {
+  width: 32px;
+  height: 1px;
+  background-color: var(--mat-sys-outline-variant);
+
+  margin: 4px 0 12px 0;
+
+  align-self: center;
+}
+
+.nav-rail {
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 24px;
+  gap: 16px;
+  background-color: var(--mat-sys-surface-container-low);
+  border-right: 1px solid var(--mat-sys-outline-variant);
+  z-index: 2;
+}
+
+.rail-btn {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--mat-sys-on-surface-variant);
+  outline: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  mat-icon {
+    font-family: 'Material Symbols Rounded', sans-serif;
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.icon-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 32px;
+  border-radius: 16px;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+.rail-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  transition: color 0.15s ease-in-out;
+  text-align: center;
+}
+
+
+.rail-btn:hover {
+  color: var(--mat-sys-on-surface);
+
+  .icon-pill {
+    background-color: var(--mat-sys-hover-state-layer);
+  }
+}
+
+
+.rail-btn:focus-visible {
+  .icon-pill {
+    outline: 2px solid var(--mat-sys-primary);
+  }
+}
+
+.rail-btn.is-active {
+  color: var(--mat-sys-on-surface);
+
+  .icon-pill {
+    background-color: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+
+  .rail-label {
+    color: var(--mat-sys-primary);
+    font-weight: 600;
+  }
+}
+
+
+.shell-container {
+  flex: 1;
+  background: transparent;
+}
+
+.submenu-sidenav {
+  width: 280px;
+  padding: 24px 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-right: 1px solid var(--mat-sys-outline-variant);
+}
+
+.content {
+  padding: 24px;
+  background-color: var(--mat-sys-background);
+}

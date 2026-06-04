@@ -1,5 +1,4 @@
-import {Component, effect, inject} from '@angular/core';
-import {WorkbenchView} from '@scion/workbench';
+import {Component, inject} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {MatCheckbox} from '@angular/material/checkbox';
 import {MatError, MatFormField, MatInput, MatLabel} from '@angular/material/input';
@@ -70,12 +69,5 @@ export default class Dialog {
 
     const payload = this.form.getRawValue();
     console.log('Successfully Submitted Payload:', payload);
-  }
-
-  constructor(view: WorkbenchView) {
-    // SCION Workbench: Dynamically update the tab title whenever the data changes
-    effect(() => {
-      view.title = `Form preview`;
-    });
   }
 }

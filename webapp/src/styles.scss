@@ -1,21 +1,6 @@
-@use '@scion/workbench' with (
-  $themes: (
-    light: (
-      color-scheme: light,
-      --sci-workbench-tab-height: 2.5rem,
-      --sci-workbench-tab-font-size: 0.8rem,
-    ),
-    dark: (
-      color-scheme: dark,
-      --sci-workbench-tab-height: 2.5rem,
-      --sci-workbench-tab-font-size: 0.8rem,
-    ),
-  )
-);
-
 @use '@angular/material' as mat;
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded');
-
+@include mat.core();
 html {
   height: 100%;
   @include mat.theme(

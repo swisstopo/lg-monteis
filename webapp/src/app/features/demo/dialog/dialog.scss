@@ -8,6 +8,20 @@
   box-sizing: border-box;
 }
 
+.metrics-panel {
+  width: 100%;
+  max-width: 900px;
+
+  .panel-heading {
+    font-size: var(--mat-sys-title-large-size, 1.375rem);
+    font-weight: var(--mat-sys-title-large-weight, 500);
+
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--mat-sys-outline-variant, #cac4d0);
+  }
+}
+
 .form-stack {
   display: flex;
   flex-direction: column;

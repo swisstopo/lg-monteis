@@ -1,14 +1,18 @@
 import { Routes } from '@angular/router';
 import { DEMO_ROUTES } from '../features/demo/demo.routes';
+import { SideNav } from '../layout/side-nav/side-nav';
 
 export const APP_ROUTES: Routes = [
   {
     path: '',
-    pathMatch: 'full',
-    redirectTo: 'overview',
+    component: SideNav,
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'overview',
+      },
+      ...DEMO_ROUTES,
+    ],
   },
-  {
-    path: '',
-    children: DEMO_ROUTES,
-  }
-]
+];

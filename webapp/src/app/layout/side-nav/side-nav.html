@@ -1,0 +1,51 @@
+<div class="sidebar">
+
+  <nav class="nav-rail">
+    <button class="rail-btn"
+            routerLink="/"
+            routerLinkActive="is-active"
+            [routerLinkActiveOptions]="{exact: true}"
+            (click)="goHome()">
+      <div class="icon-pill">
+        <mat-icon>home</mat-icon>
+      </div>
+      <span class="rail-label">Home</span>
+    </button>
+    <div class="rail-divider"></div>
+
+    <button class="rail-btn"
+            (click)="toggleMenu('demo')"
+            [class.is-active]="activeMenu() === 'demo' && drawer.opened">
+      <div class="icon-pill">
+        <mat-icon>data_exploration</mat-icon>
+      </div>
+      <span class="rail-label">Demo</span>
+    </button>
+
+    <button class="rail-btn"
+            (click)="toggleMenu('settings')"
+            [class.is-active]="activeMenu() === 'settings' && drawer.opened">
+      <div class="icon-pill">
+        <mat-icon>settings</mat-icon>
+      </div>
+      <span class="rail-label">Settings</span>
+    </button>
+
+  </nav>
+
+  <mat-sidenav-container class="shell-container">
+    <mat-sidenav #drawer mode="side" class="submenu-sidenav">
+      @if (activeMenu() === 'demo') {
+        <app-metrics-menu />
+      }
+      @if (activeMenu() === 'settings') {
+        <div class="placeholder">Settings Panel Content Here</div>
+      }
+    </mat-sidenav>
+
+    <mat-sidenav-content class="content">
+      <router-outlet />
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+
+</div>
