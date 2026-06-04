@@ -1,15 +1,20 @@
-import { Component, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
-import '@carbon/web-components/es/components/tile/index.js';
-import '@carbon/web-components/es/components/loading/index.js';
-import { DemoControllerService } from '../../../core/generated/api/demoController.service';
-import { rxResource, toSignal } from '@angular/core/rxjs-interop';
+import { Component, inject } from '@angular/core';
+import { DemoControllerService } from '../../../core/generated';
+import { rxResource } from '@angular/core/rxjs-interop';
+import {MatCard, MatCardContent, MatCardHeader, MatCardSubtitle} from '@angular/material/card';
+import {MatProgressSpinner} from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-overview',
-  imports: [],
+  imports: [
+    MatCard,
+    MatCardHeader,
+    MatCardSubtitle,
+    MatCardContent,
+    MatProgressSpinner
+  ],
   templateUrl: './overview.html',
   styleUrl: './overview.scss',
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class Overview {
   protected demoService = inject(DemoControllerService);

@@ -1,17 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Icon } from './icon';
+import AgMatTable from './ag-mat-table';
 
-describe('Icon', () => {
-  let component: Icon;
-  let fixture: ComponentFixture<Icon>;
+describe('AgMatTable', () => {
+  let component: AgMatTable;
+  let fixture: ComponentFixture<AgMatTable>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Icon],
+      imports: [AgMatTable],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(Icon);
+    fixture = TestBed.createComponent(AgMatTable);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

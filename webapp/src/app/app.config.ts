@@ -8,7 +8,7 @@ import {provideAnimations} from '@angular/platform-browser/animations';
 import { workbenchConfig } from './config/workbench.config';
 import { APP_ROUTES } from './config/routes.config';
 import { provideHttpClient } from '@angular/common/http';
-import {BASE_PATH} from './core/generated/variables';
+import {BASE_PATH} from './core/generated';
 
 export const appConfig: ApplicationConfig = {
   providers: [

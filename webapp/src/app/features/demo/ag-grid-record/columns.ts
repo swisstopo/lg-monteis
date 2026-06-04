@@ -16,7 +16,6 @@ export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetric>
     {
       field: 'val',
       header: 'Value',
-      type: 'number',
       sortable: true,
       filter: true,
       flex: 1,

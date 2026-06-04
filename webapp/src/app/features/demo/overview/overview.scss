@@ -1,6 +1,6 @@
 :host {
   display: grid;
-  place-content: center center;
+  place-content: center;
   padding: 2em;
   height: 100%;
   box-sizing: border-box;
@@ -9,45 +9,40 @@
 .metric-card {
   min-width: 260px;
   text-align: center;
-  padding: var(--cds-spacing-06, 1.5rem);
+}
 
-  border: 1px solid var(--cds-border-subtle, #e0e0e0);
+.metric-header {
+  justify-content: center;
+  margin-bottom: 0.5rem;
 }
 
 .card-label {
-  font-size: var(--cds-type-label-01-font-size, 0.75rem);
-  font-weight: var(--cds-type-label-01-font-weight, 400);
-  color: var(--cds-text-secondary, #525252);
+  color: var(--mat-sys-on-surface-variant);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-top: 0;
-  margin-bottom: var(--cds-spacing-04, 1rem);
+  font-weight: 500;
 }
 
 .card-value {
-  font-size: var(--cds-type-heading-06-font-size, 2.5rem);
-  font-weight: var(--cds-type-heading-06-font-weight, 300); /* Clean, modern light weight */
-  color: var(--cds-text-primary, #161616);
   margin: 0;
+  color: var(--mat-sys-on-surface);
+}
+
+.state-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 3.5rem;
 }
 
 .loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--cds-spacing-03, 0.5rem);
-  color: var(--cds-text-secondary, #525252);
-  font-size: var(--cds-type-body-short-01-font-size, 0.875rem);
-
-  height: 2.5rem;
+  gap: 0.5rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
 }
 
 .error-state {
-  color: var(--cds-text-error, #da1e28);
-  font-weight: 600;
+  color: var(--mat-sys-error);
+  font-weight: 500;
   margin: 0;
-  height: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }

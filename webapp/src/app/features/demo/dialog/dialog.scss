@@ -1,0 +1,44 @@
+:host {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  padding: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 900px;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.group-label {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--mat-sys-on-surface);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.radio-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-hint {
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 0.75rem;
+}

@@ -85,7 +85,6 @@ src/
 ├── ui/                             <-- Reusable UI building blocks and wrappers
 │   ├── table/                      <-- AG Grid wrapper
 │   ├── route-button/               <-- Workbench navigation button
-│   ├── icon/                       <-- Carbon icon component and registry
 │   └── ...
 │
 └── shared/                         <-- Generic utilities and cross-cutting helpers

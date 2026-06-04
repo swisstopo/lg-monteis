@@ -1,18 +1,15 @@
-import { Component, CUSTOM_ELEMENTS_SCHEMA, input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { WorkbenchRouterLinkDirective } from '@scion/workbench';
-import '@carbon/web-components/es/components/button/index.js';
-import '@carbon/web-components/es/components/icon/index.js';
-import { Icon } from '../../../shared/icon/icon';
-import { IconName } from '../../../shared/icon/icon.registry';
+import {MatButton} from '@angular/material/button';
+import {MatIcon} from '@angular/material/icon';
 
 @Component({
   selector: 'app-route-button',
-  imports: [WorkbenchRouterLinkDirective, Icon],
+  imports: [WorkbenchRouterLinkDirective, MatButton, MatIcon],
   templateUrl: './route-button.html',
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export class RouteButton {
   route = input.required<string[]>();
-  icon = input<IconName | null>(null);
+  icon = input<string | null>(null);
   label = input.required<string>();
 }

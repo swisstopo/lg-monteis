@@ -1,6 +1,8 @@
-<cds-button [wbRouterLink]="route()" kind="ghost" size="sm" class="navigation-button">
+<a mat-button [wbRouterLink]="route()" class="navigation-button">
+
   @if (icon() !== null) {
-    <app-icon [icon]="icon()!" slot="icon"></app-icon>
+    <mat-icon iconPositionEnd [fontIcon]="icon()!"></mat-icon >
   }
+
   {{ label() }}
-</cds-button>
+</a>

@@ -1,17 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import CdsTable from './cds-table';
+import Dialog from './dialog';
 
-describe('CdsTable', () => {
-  let component: CdsTable;
-  let fixture: ComponentFixture<CdsTable>;
+describe('Dialog', () => {
+  let component: Dialog;
+  let fixture: ComponentFixture<Dialog>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CdsTable],
+      imports: [Dialog],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(CdsTable);
+    fixture = TestBed.createComponent(Dialog);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

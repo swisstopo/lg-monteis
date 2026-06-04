@@ -1,12 +1,11 @@
-import {Component, CUSTOM_ELEMENTS_SCHEMA, effect, inject} from '@angular/core';
+import {Component, effect, inject} from '@angular/core';
 import {WorkbenchView} from '@scion/workbench';
 import {DatePipe} from '@angular/common';
-import '@carbon/web-components/es/components/loading/index.js';
 import Table from '../../../ui/table/table';
 import { createColumns } from './columns';
-import { ReadSimpleMetric } from '../../../core/generated/model/readSimpleMetric';
+import { ReadSimpleMetric } from '../../../core/generated';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { DemoControllerService } from '../../../core/generated/api/demoController.service';
+import { DemoControllerService } from '../../../core/generated';
 
 @Component({
   selector: 'app-ag-grid-record',
@@ -14,7 +13,6 @@ import { DemoControllerService } from '../../../core/generated/api/demoControlle
   providers: [DatePipe],
   templateUrl: './ag-grid-record.html',
   styleUrl: './ag-grid-record.scss',
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class AgGridRecord {
   private datePipe = inject(DatePipe);

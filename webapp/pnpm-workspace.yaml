@@ -1,16 +1,4 @@
 allowBuilds:
-  '@carbon/colors': false
-  '@carbon/feature-flags': false
-  '@carbon/grid': false
-  '@carbon/icon-helpers': false
-  '@carbon/icons': false
-  '@carbon/layout': false
-  '@carbon/motion': false
-  '@carbon/styles': false
-  '@carbon/themes': false
-  '@carbon/type': false
-  '@carbon/utilities': false
-  '@carbon/web-components': false
   '@ibm/plex': false
   '@ibm/plex-mono': false
   '@ibm/plex-sans': false
@@ -23,7 +11,6 @@ allowBuilds:
   '@nestjs/core': false
   '@openapitools/openapi-generator-cli': false
   '@parcel/watcher': false
-  carbon-components-angular: false
   esbuild: false
   lmdb: false
   msgpackr-extract: false

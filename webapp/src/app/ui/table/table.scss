@@ -1,3 +1,4 @@
 .app-table {
-  --ag-font-size: 1rem;
+  --ag-font-size: var(--mat-sys-title-small-size);
+  --ag-font: var(--mat-sys-body-small-font);
 }
