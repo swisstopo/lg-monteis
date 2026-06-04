@@ -22,4 +22,10 @@ ifndef::imagesdir[:imagesdir: ../images]
 
 |https://www.ag-grid.com/[AG-Grid]
 |AG-Grid ist eine Library für Angular, speziell geeignet für anspruchsvolle filterbare Tabellen.
+
+|https://github.com/anchore/syft[Syft]
+|CLI Tool zur Generierung der Software Bill of Materials (SBOM) im SPDX-JSON-Format.
+
+|https://github.com/anchore/grant[Grant]
+|CLI Tool zur Prüfung der eingesetzten Lizenzen aller Dependencies gegen eine .grant.yml-Richtlinie.
 |===
