@@ -86,10 +86,9 @@ body {
   @include mat.button-overrides(
     (
       filled-container-shape: 0px,
-      /* Targets <button mat-flat-button> */ outlined-container-shape: 0px,
-      /* Targets <button mat-stroked-button> */ text-container-shape: 0px,
-      /* Targets <button mat-button> */ protected-container-shape: 0px,
-      /* Targets <button mat-raised-button> */
+      outlined-container-shape: 0px,
+      text-container-shape: 0px,
+      protected-container-shape: 0px,
     )
   );
 }
