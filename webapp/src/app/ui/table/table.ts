@@ -1,6 +1,6 @@
-import { Component, computed, input, output } from '@angular/core';
+import {afterNextRender, Component, computed, DestroyRef, inject, input, output, signal} from '@angular/core';
 import { TableColumn } from './table.types';
-import { ColDef, GridOptions, themeBalham } from 'ag-grid-community';
+import {ColDef, colorSchemeDark, colorSchemeDarkBlue, GridOptions, themeBalham} from 'ag-grid-community';
 import { AgGridAngular } from 'ag-grid-angular';
 
 @Component({

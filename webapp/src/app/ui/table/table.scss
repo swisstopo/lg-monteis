@@ -1,4 +1,23 @@
 .app-table {
   --ag-font-size: var(--mat-sys-title-medium-size);
   --ag-font: var(--mat-sys-body-medium-font);
+  --ag-row-height: 48px;
+  --ag-header-height: 48px;
+
+  --ag-background-color: var(--mat-sys-surface);
+  --ag-foreground-color: var(--mat-sys-on-surface);
+
+  --ag-border-color: var(--mat-sys-outline-variant);
+  --ag-row-border-color: var(--mat-sys-outline-variant);
+  --ag-header-column-separator-color: var(--mat-sys-outline-variant);
+
+  --ag-header-background-color: var(--mat-sys-surface-container-low);
+  --ag-header-foreground-color: var(--mat-sys-on-surface);
+
+  --ag-row-hover-color: var(--mat-sys-surface-container-highest);
+
+  --ag-selected-row-background-color: var(--mat-sys-primary-container);
+
+  --ag-active-color: var(--mat-sys-primary);
+  --ag-checkbox-checked-color: var(--mat-sys-primary);
 }
