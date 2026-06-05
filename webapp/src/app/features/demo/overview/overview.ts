@@ -1,18 +1,12 @@
 import { Component, inject } from '@angular/core';
-import { DemoControllerService } from '../../../core/generated';
 import { rxResource } from '@angular/core/rxjs-interop';
-import {MatCard, MatCardContent, MatCardHeader, MatCardSubtitle} from '@angular/material/card';
-import {MatProgressSpinner} from '@angular/material/progress-spinner';
+import { MatCard, MatCardContent, MatCardHeader, MatCardSubtitle } from '@angular/material/card';
+import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { DemoControllerService } from '../../../core/generated';
 
 @Component({
   selector: 'app-overview',
-  imports: [
-    MatCard,
-    MatCardHeader,
-    MatCardSubtitle,
-    MatCardContent,
-    MatProgressSpinner
-  ],
+  imports: [MatCard, MatCardHeader, MatCardSubtitle, MatCardContent, MatProgressSpinner],
   templateUrl: './overview.html',
   styleUrl: './overview.scss',
 })

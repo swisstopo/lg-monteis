@@ -1,9 +1,9 @@
-import {Component, effect, inject} from '@angular/core';
-import {WorkbenchView} from '@scion/workbench';
-import {DatePipe} from '@angular/common';
-import { DemoControllerService } from '../../../core/generated';
+import { DatePipe } from '@angular/common';
+import { Component, effect, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { MatTableModule} from '@angular/material/table';
+import { MatTableModule } from '@angular/material/table';
+import { WorkbenchView } from '@scion/workbench';
+import { DemoControllerService } from '../../../core/generated';
 @Component({
   selector: 'app-ag-mat-table',
   imports: [DatePipe, MatTableModule],

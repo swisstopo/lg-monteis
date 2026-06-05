@@ -1,7 +1,7 @@
-import {afterNextRender, Component, computed, DestroyRef, inject, input, output, signal} from '@angular/core';
-import { TableColumn } from './table.types';
-import {ColDef, colorSchemeDark, colorSchemeDarkBlue, GridOptions, themeBalham} from 'ag-grid-community';
+import { Component, computed, input, output } from '@angular/core';
 import { AgGridAngular } from 'ag-grid-angular';
+import { ColDef, GridOptions, themeBalham } from 'ag-grid-community';
+import { TableColumn } from './table.types';
 
 @Component({
   selector: 'app-table',

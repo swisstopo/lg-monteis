@@ -1,12 +1,12 @@
-import {Component, effect, inject} from '@angular/core';
-import {WorkbenchView} from '@scion/workbench';
-import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
-import {MatCheckbox} from '@angular/material/checkbox';
-import {MatError, MatFormField, MatInput, MatLabel} from '@angular/material/input';
-import {MatIcon} from '@angular/material/icon';
-import {MatRadioButton, MatRadioGroup} from '@angular/material/radio';
-import {MatOption, MatSelect} from '@angular/material/select';
-import {MatButton} from '@angular/material/button';
+import { Component, effect, inject } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatButton } from '@angular/material/button';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatIcon } from '@angular/material/icon';
+import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
+import { MatRadioButton, MatRadioGroup } from '@angular/material/radio';
+import { MatOption, MatSelect } from '@angular/material/select';
+import { WorkbenchView } from '@scion/workbench';
 
 @Component({
   selector: 'app-dialog',
@@ -22,7 +22,7 @@ import {MatButton} from '@angular/material/button';
     MatSelect,
     MatOption,
     MatError,
-    MatButton
+    MatButton,
   ],
   templateUrl: './dialog.html',
   styleUrl: './dialog.scss',
@@ -45,12 +45,12 @@ export default class Dialog {
     selectOption: [''],
     textInput: [''],
 
-    password: ['', [
-      Validators.required,
-      Validators.pattern('^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{6,}$')
-    ]],
+    password: [
+      '',
+      [Validators.required, Validators.pattern('^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{6,}$')],
+    ],
 
-    textArea: ['']
+    textArea: [''],
   });
 
   onFileSelected(event: Event) {

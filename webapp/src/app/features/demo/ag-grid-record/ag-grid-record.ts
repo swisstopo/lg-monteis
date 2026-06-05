@@ -1,11 +1,10 @@
-import {Component, effect, inject} from '@angular/core';
-import {WorkbenchView} from '@scion/workbench';
-import {DatePipe} from '@angular/common';
+import { DatePipe } from '@angular/common';
+import { Component, effect, inject } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { WorkbenchView } from '@scion/workbench';
+import { DemoControllerService, ReadSimpleMetric } from '../../../core/generated';
 import Table from '../../../ui/table/table';
 import { createColumns } from './columns';
-import { ReadSimpleMetric } from '../../../core/generated';
-import { rxResource } from '@angular/core/rxjs-interop';
-import { DemoControllerService } from '../../../core/generated';
 
 @Component({
   selector: 'app-ag-grid-record',

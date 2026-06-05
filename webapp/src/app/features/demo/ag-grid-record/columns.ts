@@ -1,6 +1,6 @@
-import { TableColumn } from '../../../ui/table/table.types';
-import { ReadSimpleMetric } from '../../../core/generated/model/readSimpleMetric';
 import { DatePipe } from '@angular/common';
+import { ReadSimpleMetric } from '../../../core/generated/model/readSimpleMetric';
+import { TableColumn } from '../../../ui/table/table.types';
 
 export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetric>[] {
   return [

@@ -10,5 +10,5 @@ export const APP_ROUTES: Routes = [
   {
     path: '',
     children: DEMO_ROUTES,
-  }
-]
+  },
+];

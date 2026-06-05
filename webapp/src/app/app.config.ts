@@ -1,14 +1,14 @@
+import { provideHttpClient } from '@angular/common/http';
 import {
   ApplicationConfig,
   provideBrowserGlobalErrorListeners,
-  provideZonelessChangeDetection
+  provideZonelessChangeDetection,
 } from '@angular/core';
-import {provideRouter, withComponentInputBinding} from '@angular/router';
-import {provideAnimations} from '@angular/platform-browser/animations';
-import { workbenchConfig } from './config/workbench.config';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { APP_ROUTES } from './config/routes.config';
-import { provideHttpClient } from '@angular/common/http';
-import {BASE_PATH} from './core/generated';
+import { workbenchConfig } from './config/workbench.config';
+import { BASE_PATH } from './core/generated';
 
 export const appConfig: ApplicationConfig = {
   providers: [

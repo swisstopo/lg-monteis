@@ -1,9 +1,9 @@
 @use '@scion/workbench' with (
   $themes: (
-      light: (
+    light: (
       color-scheme: light,
-      --sci-color-gray-50:  var(--mat-sys-surface-container-lowest),
-      --sci-color-gray-75:  var(--mat-sys-surface-container-low),
+      --sci-color-gray-50: var(--mat-sys-surface-container-lowest),
+      --sci-color-gray-75: var(--mat-sys-surface-container-low),
       --sci-color-gray-100: var(--mat-sys-surface-container),
       --sci-color-gray-200: var(--mat-sys-surface-container-high),
       --sci-color-gray-300: var(--mat-sys-surface-container-highest),
@@ -13,9 +13,7 @@
       --sci-color-gray-700: var(--mat-sys-on-surface),
       --sci-color-gray-800: var(--mat-sys-on-surface),
       --sci-color-gray-900: var(--mat-sys-on-surface),
-
-      --sci-color-accent:   var(--mat-sys-primary),
-
+      --sci-color-accent: var(--mat-sys-primary),
       --sci-workbench-activity-item-border-radius: 16px,
       --sci-workbench-activity-bar-padding: 0.75rem 0.5rem,
       --sci-workbench-activity-item-padding: 6px 10px,
@@ -23,8 +21,8 @@
     ),
     dark: (
       color-scheme: dark,
-      --sci-color-gray-50:  var(--mat-sys-surface-container-lowest),
-      --sci-color-gray-75:  var(--mat-sys-surface-container-low),
+      --sci-color-gray-50: var(--mat-sys-surface-container-lowest),
+      --sci-color-gray-75: var(--mat-sys-surface-container-low),
       --sci-color-gray-100: var(--mat-sys-surface-container),
       --sci-color-gray-200: var(--mat-sys-surface-container-high),
       --sci-color-gray-300: var(--mat-sys-surface-container-highest),
@@ -34,8 +32,7 @@
       --sci-color-gray-700: var(--mat-sys-on-surface),
       --sci-color-gray-800: var(--mat-sys-on-surface),
       --sci-color-gray-900: var(--mat-sys-on-surface),
-
-      --sci-color-accent:   var(--mat-sys-primary),
+      --sci-color-accent: var(--mat-sys-primary),
       --sci-workbench-activity-item-border-radius: 16px,
       --sci-workbench-tab-height: 3.5rem,
       --sci-workbench-activity-bar-padding: 0.75rem 0.5rem,
@@ -86,14 +83,17 @@ body {
   --mat-sys-corner-small: 0px;
   --mat-sys-corner-extra-small: 0px;
 
-  @include mat.button-overrides((
-    filled-container-shape: 0px,    /* Targets <button mat-flat-button> */
-    outlined-container-shape: 0px,  /* Targets <button mat-stroked-button> */
-    text-container-shape: 0px,      /* Targets <button mat-button> */
-    protected-container-shape: 0px,  /* Targets <button mat-raised-button> */
-  ));
+  @include mat.button-overrides(
+    (
+      filled-container-shape: 0px,
+      /* Targets <button mat-flat-button> */ outlined-container-shape: 0px,
+      /* Targets <button mat-stroked-button> */ text-container-shape: 0px,
+      /* Targets <button mat-button> */ protected-container-shape: 0px,
+      /* Targets <button mat-raised-button> */
+    )
+  );
 }
 
-.navigation-button{
+.navigation-button {
   --mat-button-text-with-icon-horizontal-padding: 12px;
 }

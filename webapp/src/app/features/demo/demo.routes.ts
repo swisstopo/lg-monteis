@@ -20,5 +20,5 @@ export const DEMO_ROUTES: Routes = [
   {
     path: 'dialog',
     loadComponent: () => import('./dialog/dialog'),
-  }
+  },
 ];
