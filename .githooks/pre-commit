@@ -33,4 +33,34 @@ if [ -n "$CORE_FILES" ]; then
   echo "$CORE_FILES" | xargs git add
 fi
 
+# ==========================================
+# 2. Handle Frontend/Webapp (Prettier)
+# ==========================================
+
+# Filter for files inside the webapp package
+WEBAPP_FILES=$(echo "$STAGED_FILES" | grep '^webapp/' || true)
+
+if [ -n "$WEBAPP_FILES" ]; then
+  echo "[INFO]: Formatting webapp files with Prettier..."
+
+  # Navigate into the webapp directory so npx uses the local node_modules
+  cd "$PROJECT_DIR/webapp" || exit 1
+
+  # Strip the 'webapp/' prefix so Prettier can resolve the files locally
+  PRETTIER_FILES=$(echo "$WEBAPP_FILES" | sed "s|^webapp/||")
+
+  # Run Prettier via npx.
+  # --ignore-unknown ensures it skips files it doesn't understand (like .png or .ico).
+  if ! echo "$PRETTIER_FILES" | xargs pnpm exec prettier --write --ignore-unknown; then
+    echo "[ERROR]: Prettier formatting failed! Please check your syntax."
+    exit 1
+  fi
+
+  # Navigate back to the project root
+  cd "$PROJECT_DIR" || exit 1
+
+  # Stage the formatted files!
+  echo "$WEBAPP_FILES" | xargs git add
+fi
+
 echo "[SUCCESS]: Pre-commit formatting complete."
