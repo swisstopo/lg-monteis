@@ -64,7 +64,7 @@ body {
   // Default the application to a light color theme. This can be changed to
   // `dark` to enable the dark color theme, or to `light dark` to defer to the
   // user's system settings.
-  color-scheme: light;
+  color-scheme: dark;
 
   // Set a default background, font and text colors for the application using
   // Angular Material's system-level CSS variables. Learn more about these
@@ -83,6 +83,12 @@ body {
   --mat-sys-corner-medium: 0px;
   --mat-sys-corner-small: 0px;
   --mat-sys-corner-extra-small: 0px;
+
+  @include mat.form-field-overrides(
+    (
+      filled-container-color: var(--mat-sys-surface-container-high),
+    )
+  );
 
   @include mat.button-overrides(
     (
