@@ -22,7 +22,4 @@ ifndef::imagesdir[:imagesdir: ../images]
 
 |https://www.ag-grid.com/[AG-Grid]
 |AG-Grid ist eine Library für Angular, speziell geeignet für anspruchsvolle filterbare Tabellen.
-
-|https://carbondesignsystem.com/[Carbon Design]
-|Das Carbon Design system ist eine von IBM entwickelte Opensource Design-Library, welche wir für das Umsetzen eines einheitlichen UI-Designs gemäs UX-Vorlagen verwenden.
 |===

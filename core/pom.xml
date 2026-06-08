@@ -18,10 +18,12 @@
 
     <testcontainers.postgres.version>1.21.4</testcontainers.postgres.version>
     <springdoc.version>3.0.2</springdoc.version>
+    <springdoc-plugin.version>1.5</springdoc-plugin.version>
     <spotless.version>3.4.0</spotless.version>
     <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
+    <openapi.codegen.skip>true</openapi.codegen.skip>
   </properties>
 
   <dependencies>
@@ -63,6 +65,11 @@
       <artifactId>spring-boot-devtools</artifactId>
       <scope>runtime</scope>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>runtime</scope>
     </dependency>
 
     <!--    Testing -->
@@ -109,6 +116,36 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>pre-integration-test</id>
+            <goals>
+              <goal>start</goal>
+            </goals>
+            <configuration>
+              <skip>${openapi.codegen.skip}</skip>
+              <profiles>
+                <profile>openapi</profile>
+              </profiles>
+              <arguments>
+                <argument>--server.port=9090</argument>
+                <argument>--spring.datasource.url=jdbc:h2:mem:openapi_db;DB_CLOSE_DELAY=-1</argument>
+                <argument>--spring.datasource.driver-class-name=org.h2.Driver</argument>
+                <argument>--spring.datasource.username=sa</argument>
+                <argument>--spring.datasource.password=</argument>
+
+                <argument>--spring.jooq.sql-dialect=H2</argument>
+                <argument>--spring.flyway.enabled=false</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>post-integration-test</id>
+            <goals>
+              <goal>stop</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
@@ -305,7 +342,25 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-maven-plugin</artifactId>
+        <version>${springdoc-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>integration-test</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <skip>${openapi.codegen.skip}</skip>
+              <apiDocsUrl>http://localhost:9090/v3/api-docs</apiDocsUrl>
+              <outputFileName>openapi.json</outputFileName>
+              <outputDir>${project.build.directory}/openapi</outputDir>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
-
 </project>

@@ -1,0 +1,20 @@
+<mat-card appearance="outlined" class="metric-card">
+  <mat-card-header class="metric-header">
+    <mat-card-subtitle class="card-label">Total Database Records</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content class="metric-content">
+    @if (metricsResource.isLoading()) {
+      <div class="state-container loading-state">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span>Syncing...</span>
+      </div>
+    } @else if (metricsResource.error()) {
+      <div class="state-container error-state">Offline</div>
+    } @else {
+      <h3 class="mat-display-small card-value">
+        {{ metricsResource.value()?.length ?? 0 }}
+      </h3>
+    }
+  </mat-card-content>
+</mat-card>

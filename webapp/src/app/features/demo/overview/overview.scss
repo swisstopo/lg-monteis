@@ -1,0 +1,45 @@
+:host {
+  display: grid;
+  place-content: center;
+  padding: 2em;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.metric-card {
+  min-width: 260px;
+  text-align: center;
+}
+
+.metric-header {
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.card-label {
+  color: var(--mat-sys-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-value {
+  margin: 0;
+  color: var(--mat-sys-on-surface);
+}
+
+.state-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 3.5rem;
+}
+
+.loading-state {
+  gap: 0.5rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.error-state {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

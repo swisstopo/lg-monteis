@@ -1,0 +1,105 @@
+@use '@scion/workbench' with (
+  $themes: (
+    light: (
+      color-scheme: light,
+      --sci-color-gray-50: var(--mat-sys-surface-container-lowest),
+      --sci-color-gray-75: var(--mat-sys-surface-container-low),
+      --sci-color-gray-100: var(--mat-sys-surface-container),
+      --sci-color-gray-200: var(--mat-sys-surface-container-high),
+      --sci-color-gray-300: var(--mat-sys-surface-container-highest),
+      --sci-color-gray-400: var(--mat-sys-outline-variant),
+      --sci-color-gray-500: var(--mat-sys-outline),
+      --sci-color-gray-600: var(--mat-sys-on-surface-variant),
+      --sci-color-gray-700: var(--mat-sys-on-surface),
+      --sci-color-gray-800: var(--mat-sys-on-surface),
+      --sci-color-gray-900: var(--mat-sys-on-surface),
+      --sci-color-accent: var(--mat-sys-primary),
+      --sci-workbench-activity-item-border-radius: 16px,
+      --sci-workbench-activity-bar-padding: 0.75rem 0.5rem,
+      --sci-workbench-activity-item-padding: 6px 10px,
+      --sci-workbench-activity-item-gap: 0.75rem,
+    ),
+    dark: (
+      color-scheme: dark,
+      --sci-color-gray-50: var(--mat-sys-surface-container-lowest),
+      --sci-color-gray-75: var(--mat-sys-surface-container-low),
+      --sci-color-gray-100: var(--mat-sys-surface-container),
+      --sci-color-gray-200: var(--mat-sys-surface-container-high),
+      --sci-color-gray-300: var(--mat-sys-surface-container-highest),
+      --sci-color-gray-400: var(--mat-sys-outline-variant),
+      --sci-color-gray-500: var(--mat-sys-outline),
+      --sci-color-gray-600: var(--mat-sys-on-surface-variant),
+      --sci-color-gray-700: var(--mat-sys-on-surface),
+      --sci-color-gray-800: var(--mat-sys-on-surface),
+      --sci-color-gray-900: var(--mat-sys-on-surface),
+      --sci-color-accent: var(--mat-sys-primary),
+      --sci-workbench-activity-item-border-radius: 16px,
+      --sci-workbench-tab-height: 3.5rem,
+      --sci-workbench-activity-bar-padding: 0.75rem 0.5rem,
+      --sci-workbench-activity-item-padding: 6px 10px,
+      --sci-workbench-activity-item-gap: 0.75rem,
+    ),
+  )
+);
+
+@use '@angular/material' as mat;
+@use 'theme-colors' as theme;
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded');
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: theme.$primary-palette,
+        tertiary: theme.$tertiary-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+body {
+  // Default the application to a light color theme. This can be changed to
+  // `dark` to enable the dark color theme, or to `light dark` to defer to the
+  // user's system settings.
+  color-scheme: dark;
+
+  // Set a default background, font and text colors for the application using
+  // Angular Material's system-level CSS variables. Learn more about these
+  // variables at https://material.angular.dev/guide/system-variables
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+
+  // Reset the user agent margin.
+  margin: 0;
+  height: 100%;
+}
+:root {
+  --mat-sys-corner-large: 0px;
+  --mat-sys-corner-extra-large: 0px;
+  --mat-sys-corner-medium: 0px;
+  --mat-sys-corner-small: 0px;
+  --mat-sys-corner-extra-small: 0px;
+
+  @include mat.form-field-overrides(
+    (
+      filled-container-color: var(--mat-sys-surface-container-high),
+    )
+  );
+
+  @include mat.button-overrides(
+    (
+      filled-container-shape: 0px,
+      outlined-container-shape: 0px,
+      text-container-shape: 0px,
+      protected-container-shape: 0px,
+    )
+  );
+}
+
+.navigation-button {
+  --mat-button-text-with-icon-horizontal-padding: 12px;
+}

@@ -1,0 +1,94 @@
+<div class="metrics-panel">
+  <h2 class="panel-heading">Material - Demo Dialog</h2>
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-stack">
+    <section class="checkbox-group">
+      <h3 class="group-label">Checkbox heading</h3>
+      <mat-checkbox formControlName="checkbox1">Checkbox label (Checked)</mat-checkbox>
+      <mat-checkbox formControlName="checkbox2">Checkbox label</mat-checkbox>
+      <mat-checkbox formControlName="checkbox3">Checkbox label (Disabled)</mat-checkbox>
+    </section>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Number Input</mat-label>
+      <input matInput type="number" formControlName="numberInput" min="0" max="100" step="10" />
+    </mat-form-field>
+
+    <section class="file-group">
+      <h3 class="group-label">File Uploader</h3>
+      <p class="file-hint">Max file size is 500 MB. Only .jpg files are supported.</p>
+
+      <input
+        type="file"
+        hidden
+        #fileInput
+        accept="image/jpeg"
+        multiple
+        (change)="onFileSelected($event)"
+      />
+
+      <button mat-stroked-button color="primary" type="button" (click)="fileInput.click()">
+        <mat-icon>upload_file</mat-icon> Add file
+      </button>
+
+      @if (form.controls.files.value.length > 0) {
+        <p class="file-hint">Selected: {{ form.controls.files.value.length }} file(s)</p>
+      }
+    </section>
+
+    <section class="radio-group">
+      <h3 class="group-label">Radio Button heading</h3>
+      <mat-radio-group formControlName="radioSelection" class="radio-stack">
+        <mat-radio-button value="standard">Standard Radio Button</mat-radio-button>
+        <mat-radio-button value="default-selected">Default Selected Radio Button</mat-radio-button>
+        <mat-radio-button value="blue">Blue Radio Button</mat-radio-button>
+        <mat-radio-button value="disabled" disabled>Disabled Radio Button</mat-radio-button>
+      </mat-radio-group>
+    </section>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Search</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput type="search" placeholder="Search" formControlName="search" />
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Select</mat-label>
+      <mat-select formControlName="selectOption" placeholder="Choose an Option">
+        <mat-option value="option-1">Option 1</mat-option>
+        <mat-option value="option-2">Option 2</mat-option>
+        <mat-option value="option-3">Option 3</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Text Input Label</mat-label>
+      <input matInput type="text" placeholder="Placeholder text" formControlName="textInput" />
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Password</mat-label>
+      <input matInput type="password" formControlName="password" required />
+
+      @if (form.controls.password.hasError('pattern')) {
+        <mat-error>
+          Password must be at least 6 characters, contain 1 uppercase, 1 lowercase, and 1 number.
+        </mat-error>
+      }
+      @if (form.controls.password.hasError('required')) {
+        <mat-error>Password is required.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Text Area label</mat-label>
+      <textarea
+        matInput
+        rows="4"
+        placeholder="Placeholder text"
+        formControlName="textArea"
+      ></textarea>
+    </mat-form-field>
+
+    <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">Submit</button>
+  </form>
+</div>

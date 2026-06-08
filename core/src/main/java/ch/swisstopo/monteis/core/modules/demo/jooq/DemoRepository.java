@@ -2,7 +2,7 @@ package ch.swisstopo.monteis.core.modules.demo.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.tables.RawSimpleMetrics.RAW_SIMPLE_METRICS;
 
-import ch.swisstopo.monteis.core.jooq.generated.tables.records.RawSimpleMetricsRecord;
+import ch.swisstopo.monteis.core.modules.demo.web.dto.ReadSimpleMetric;
 import java.util.List;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
@@ -16,10 +16,11 @@ public class DemoRepository {
     this.dsl = dsl;
   }
 
-  public List<RawSimpleMetricsRecord> fetchRecentMetrics(int limit) {
+  public List<ReadSimpleMetric> fetchRecentMetrics(int limit) {
     return dsl.selectFrom(RAW_SIMPLE_METRICS)
         .orderBy(RAW_SIMPLE_METRICS.TIME.desc())
         .limit(limit)
-        .fetch();
+        .fetch()
+        .map(r -> new ReadSimpleMetric(r.getTime(), r.getValue()));
   }
 }
