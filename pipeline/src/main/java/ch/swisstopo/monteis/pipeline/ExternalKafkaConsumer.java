@@ -9,17 +9,17 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ExternalKafkaConsumer {
-    Logger logger = LoggerFactory.getLogger(ExternalKafkaConsumer.class);
+  Logger logger = LoggerFactory.getLogger(ExternalKafkaConsumer.class);
 
-    @KafkaListener(topics = "solexperts_to_swisstopo")
-    public void listen(ConsumerRecord<String, String> consumerRecord, Acknowledgment acknowledgment) {
+  @KafkaListener(topics = "solexperts_to_swisstopo")
+  public void listen(ConsumerRecord<String, String> consumerRecord, Acknowledgment acknowledgment) {
 
-        try {
-            logger.info("Received message: " + consumerRecord.value());
+    try {
+      logger.info("Received message: " + consumerRecord.value());
 
-            //acknowledgment.acknowledge();
-        } catch (Exception e) {
-            logger.error("Processing failed", e);
-        }
+      // acknowledgment.acknowledge();
+    } catch (Exception e) {
+      logger.error("Processing failed", e);
     }
+  }
 }

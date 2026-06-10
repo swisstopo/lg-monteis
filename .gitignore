@@ -1,5 +1,18 @@
 # =========================
-# JetBrains
+# Maven & Java (Backend)
+# =========================
+target/
+.mvn/wrapper/maven-wrapper.jar
+HELP.md
+
+# Exceptions (if you have source folders named target/build)
+!**/src/main/**/target/
+!**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# =========================
+# JetBrains / IntelliJ IDEA
 # =========================
 .idea/
 *.iml
@@ -7,41 +20,61 @@
 *.iws
 
 # =========================
+# Eclipse / STS
+# =========================
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+*.launch
+
+# =========================
 # VS Code
 # =========================
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
 .history/
 
 # =========================
-# Vim / Neovim
+# Other Editors (NetBeans, Sublime, Cloud9)
+# =========================
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+build/
+*.sublime-workspace
+.c9/
+
+# =========================
+# Vim / Neovim / Emacs
 # =========================
 *.swp
 *.swo
 *~
 Session.vim
-
-# =========================
-# Emacs
-# =========================
 *#
 .#*
 
 # =========================
-# OS files
+# OS / System files
 # =========================
 .DS_Store
 .AppleDouble
 .LSOverride
 Thumbs.db
 Desktop.ini
-
-# =========================
-# Linux temp files
-# =========================
 .directory
 
 # =========================
-# Logs / temp
+# Global Logs / Temp
 # =========================
 *.log
 *.tmp

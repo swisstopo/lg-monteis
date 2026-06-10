@@ -12,25 +12,26 @@ if [ -z "$STAGED_FILES" ]; then
 fi
 
 # ==========================================
-# 1. Handle Backend/Core
+# 1. Handle Backend (Core & Pipeline)
 # ==========================================
 
-# Filter for files that should be formatted by spotless i.e. files that reside in the core package
-CORE_FILES=$(echo "$STAGED_FILES" | grep '^core/' || true)
+# Filter for files that should be formatted by spotless (core, pipeline, and root configuration files)
+BACKEND_FILES=$(echo "$STAGED_FILES" | grep -E '^(core/|pipeline/|pom\.xml|\.gitignore|\.gitattributes)' || true)
 
-if [ -n "$CORE_FILES" ]; then
-  echo "[INFO]: Formatting core files with Spotless..."
+if [ -n "$BACKEND_FILES" ]; then
+  echo "[INFO]: Formatting backend files with Spotless..."
 
-  # Prepend absolute project dir to every file path in order to use mvn spotless:apply -SpotlessFiles which internally uses strict regex matching
-  SPOTLESS_FILES=$(echo "$CORE_FILES" | sed "s|^|$PROJECT_DIR/|" | paste -sd "," -)
+  # Prepend absolute project dir to every file path in order to use mvn spotless:apply -SpotlessFiles
+  SPOTLESS_FILES=$(echo "$BACKEND_FILES" | sed "s|^|$PROJECT_DIR/|" | paste -sd "," -)
 
-  if ! mvn -f "$PROJECT_DIR"/core/pom.xml spotless:apply -DspotlessFiles="$SPOTLESS_FILES" -q; then
-    echo "[ERROR]: Spotless formatting failed! Please apply \"mvn spotless:apply\""
+  # Run Spotless from the root POM so it applies to the parent and all child modules
+  if ! mvn -f "$PROJECT_DIR"/pom.xml spotless:apply -DspotlessFiles="$SPOTLESS_FILES" -q; then
+    echo "[ERROR]: Spotless formatting failed! Please apply \"mvn spotless:apply\" manually."
     exit 1
   fi
 
   # Only stage the formatted files!
-  echo "$CORE_FILES" | xargs git add
+  echo "$BACKEND_FILES" | xargs git add
 fi
 
 # ==========================================
