@@ -1,0 +1,37 @@
+{
+  "name": "external-solexperts-ingest",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.mirror.MirrorSourceConnector",
+    "tasks.max": "6",
+
+    "source.cluster.alias": "external-solexperts",
+    "target.cluster.alias": "local-msk",
+
+    "source.cluster.bootstrap.servers": "pkc-7xoy1.eu-central-1.aws.confluent.cloud:9092",
+    "target.cluster.bootstrap.servers": "kafka:29092",
+
+    "source.cluster.group.id": "swisstopo_0",
+
+    "topics": "solexperts_to_swisstopo",
+
+    "replication.policy.class": "org.apache.kafka.connect.mirror.IdentityReplicationPolicy",
+    "sync.topic.configs.enabled": "false",
+    "sync.topic.acls.enabled": "false",
+
+    "key.converter": "org.apache.kafka.connect.converters.ByteArrayConverter",
+    "value.converter": "org.apache.kafka.connect.converters.ByteArrayConverter",
+
+    "source.cluster.security.protocol": "SASL_SSL",
+    "source.cluster.sasl.mechanism": "PLAIN",
+    "source.cluster.ssl.endpoint.identification.algorithm": "https",
+    "source.cluster.sasl.jaas.config": "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${env::SOLEXPERTS_KAFKA_USERNAME}\" password=\"${env::SOLEXPERTS_KAFKA_PASSWORD}\";",
+
+    "offset-syncs.topic.location": "target",
+    "offset-syncs.topic.replication.factor": "1",
+
+    "transforms": "RenameTopic",
+    "transforms.RenameTopic.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.RenameTopic.regex": "solexperts_to_swisstopo",
+    "transforms.RenameTopic.replacement": "internal-raw-solexperts"
+  }
+}

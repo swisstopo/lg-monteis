@@ -9,7 +9,7 @@ services:
       POSTGRES_DB: monteis-meta
     ports:
       - "5432:5432"
-    profiles: ['', core, db]
+    profiles: [ '', core, db ]
     volumes:
       - ./dataset-meta:/docker-entrypoint-initdb.d
 
@@ -23,6 +23,97 @@ services:
       POSTGRES_DB: monteis-tsdb
     ports:
       - "5433:5432"
-    profiles: ['', core, db]
+    profiles: [ '', core, db ]
     volumes:
       - ./dataset-tsdb:/docker-entrypoint-initdb.d
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: local-msk-broker
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft specific configuration
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      CLUSTER_ID: 'local-msk-dev-cluster-123'
+
+      # Automatically create topics when a producer writes to them
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+
+      # Default partitions for newly created topics
+      KAFKA_NUM_PARTITIONS: 3
+
+      # How long to retain data (e.g., 7 days in milliseconds)
+      KAFKA_LOG_RETENTION_MS: 15766388736
+
+      # Listener configuration (Internal Docker network vs Localhost)
+      KAFKA_LISTENERS: 'CONTROLLER://kafka:29093,PLAINTEXT://kafka:29092,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+      # Single-node local development settings
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  connect:
+    image: confluentinc/cp-kafka-connect-base:7.6.1
+    container_name: local-msk-connect
+    ports:
+      - "8083:8083"
+    depends_on:
+      - kafka
+    environment:
+      # Connect to the internal Docker network listener (kafka:29092)
+      CONNECT_BOOTSTRAP_SERVERS: 'kafka:29092'
+      CONNECT_REST_PORT: 8083
+      CONNECT_REST_ADVERTISED_HOST_NAME: 'connect'
+
+      CONNECT_CONFIG_PROVIDERS: 'env'
+      CONNECT_CONFIG_PROVIDERS_ENV_CLASS: 'org.apache.kafka.common.config.provider.EnvVarConfigProvider'
+
+      # 2. Pass the secrets from your .env file into the Connect container
+      SOLEXPERTS_KAFKA_USERNAME: ${SOLEXPERTS_KAFKA_USERNAME}
+      SOLEXPERTS_KAFKA_PASSWORD: ${SOLEXPERTS_KAFKA_PASSWORD}
+
+      # Connect cluster settings
+      CONNECT_GROUP_ID: 'local-msk-connect-group'
+      CONNECT_CONFIG_STORAGE_TOPIC: 'docker-connect-configs'
+      CONNECT_OFFSET_STORAGE_TOPIC: 'docker-connect-offsets'
+      CONNECT_STATUS_STORAGE_TOPIC: 'docker-connect-status'
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+
+      # Default serializers (Change to Avro/Protobuf if using a Schema Registry)
+      CONNECT_KEY_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_VALUE_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: 'false'
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: 'false'
+
+  connect-init:
+    image: curlimages/curl:8.7.1
+    container_name: local-msk-connect-init
+    depends_on:
+      - connect
+    volumes:
+      # Mount the file directly to its final destination
+      - ./connect/mm2-config.json:/tmp/mm2-config.json
+    command: |
+      sh -c "
+        echo '⏳ Waiting for Kafka Connect REST API to be ready...'
+        while ! curl -s http://connect:8083/ > /dev/null; do
+          echo 'Waiting 5 more seconds...'
+          sleep 5
+        done
+      
+        echo '✅ Kafka Connect is up! Registering MirrorMaker 2 connector...'
+        curl -X POST -H 'Content-Type: application/json' -d @/tmp/mm2-config.json http://connect:8083/connectors
+      
+        echo '\n🎉 Connector registered successfully!'
+      "
