@@ -1,0 +1,66 @@
+@startuml
+!theme plain
+skinparam componentStyle uml2
+skinparam linetype ortho
+skinparam padding 10
+skinparam ranksep 70
+skinparam nodesep 60
+
+cloud "External Partner (SolExperts)" {
+  queue "External Kafka\n[solexperts_to_swisstopo]" as ExtTopic
+}
+
+package "Ingress Layer (Kafka Connect)" {
+  component "MirrorMaker 2\n(tasks.max=6)" as MM2
+}
+
+package "Local Kafka Cluster" {
+  queue "Raw Topic\n[internal-raw-solexperts]" as RawTopic
+  queue "Normalized Topic\n[internal-normalized]" as NormTopic
+  queue "Compacted Topic\n[internal-sensor-config]" as SensorConfigTopic
+}
+
+package "Spring Boot Applications" {
+
+  node "Core Pod" {
+    component "Core API" as CoreAPI
+  }
+
+  node "Pipeline Pod" {
+    component "Adapter (Normalizer)\nSolExpertsRawSensorDataNormalizationService" as Adapter
+    component "Cache Hydrator\nSensorConfigCacheHydrator" as Hydrator
+    component "Processor\nSensorDataListener" as Processor
+    component "Transformation Orchestrator\n(Shared Logic)" as Orchestrator
+    component "Reprocessor\nSensorConfigReprocessingListener" as Reprocessor
+  }
+
+}
+
+database "TimeScaleDB" as TSDB
+
+' --- DECREASED DISTANCE AT THE TOP ---
+' Changed from ---down---> to -down->
+ExtTopic --down-> MM2 : SASL_SSL / PLAIN
+MM2 --down-> RawTopic : 1:1 Mirroring (RegexRouter)
+
+' --- MIDDLE SECTION (Maintained spacing) ---
+CoreAPI ---down---> SensorConfigTopic : "Publish Sensor Config\n(Key=SensorID)"
+
+RawTopic ---down---> Adapter : "Poll Raw Data"
+Adapter ---down---> NormTopic : "Produce Canonical JSON"
+
+SensorConfigTopic .left.> Hydrator : "Broadcast to all Pods\n(UUID Group ID)"
+Hydrator ..down..> Processor : "Updates SensorConfigCache"
+
+NormTopic ---down---> Processor : "Batch Consume\n(Manual Ack)"
+Processor -right-> Orchestrator
+
+SensorConfigTopic ---down---> Reprocessor : "Consume Sensor Config Updates\n(reprocessing-group)"
+Reprocessor -left-> Orchestrator
+
+' --- DECREASED DISTANCE AT THE BOTTOM ---
+' Changed from ---down---> to -down->
+Processor --down-> TSDB : "jOOQ Batch INSERT / UPDATE"
+Reprocessor --down-> TSDB : "jOOQ Bulk UPDATE"
+
+@enduml

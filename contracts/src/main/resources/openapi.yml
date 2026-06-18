@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: Sensor Configuration API
+  version: 1.0.0
+  description: API to retrieve sensor calibration, formula (via JSONLogic), and boundary data.
+paths:
+  /sensors/config:
+    get:
+      summary: Retrieve sensor metadata
+      description: Fetches the JSONLogic formula, boundaries, and version information for a specific sensor.
+      operationId: getSensorConfig
+      parameters:
+        - name: sensorid
+          in: query
+          required: true
+          description: The unique identifier of the sensor.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response containing the sensor configuration.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensorConfig'
+        '400':
+          description: Bad Request - Missing or invalid sensorid.
+        '404':
+          description: Not Found - The specified sensorid does not exist.
+components:
+  schemas:
+    SensorConfig:
+      type: object
+      required:
+        - sensor_id
+        - formula
+        - upper_bound
+        - lower_bound
+        - version
+      properties:
+        sensor_id:
+          type: string
+          description: The unique identifier for the sensor.
+          example: "sensor-geo-8472"
+        formula:
+          type: object
+          description: Normalized representation of the conversion formula using JSONLogic.
+          additionalProperties: true
+          example:
+            "+":
+              - "sqrt":
+                  - "pow":
+                      - "*":
+                          - "var": "x"
+                          - 1.8
+                      - 2
+              - 32
+        upper_bound:
+          type: number
+          format: double
+          description: The maximum limit for this sensor used for alerting.
+          example: 150000.5
+        lower_bound:
+          type: number
+          format: double
+          description: The minimum limit for this sensor used for alerting.
+          example: -100.0
+        version:
+          type: integer
+          format: int16
+          description: The version number of this specific configuration record.
+          example: 2

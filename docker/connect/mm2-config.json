@@ -15,8 +15,10 @@
     "topics": "solexperts_to_swisstopo",
 
     "replication.policy.class": "org.apache.kafka.connect.mirror.IdentityReplicationPolicy",
-    "sync.topic.configs.enabled": "false",
+
     "sync.topic.acls.enabled": "false",
+    "sync.topic.configs.enabled": "false",
+    "refresh.topics.enabled": "false",
 
     "key.converter": "org.apache.kafka.connect.converters.ByteArrayConverter",
     "value.converter": "org.apache.kafka.connect.converters.ByteArrayConverter",

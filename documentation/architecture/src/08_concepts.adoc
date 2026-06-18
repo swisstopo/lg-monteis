@@ -147,6 +147,128 @@ Egal ob eine DTO-Annotation fehlschlägt oder der Service eine Exception wirft, 
 }
 ```
 
+= Architektur- und Skalierungskonzept: Data Pipeline
+:toc:
+:toc-title: Inhaltsverzeichnis
+:icons: font
+
+== 1. Architekturübersicht
+
+Das folgende Diagramm veranschaulicht den Datenfluss vom externen Partner bis zur TimeScaleDB. Es zeigt die physische Gruppierung in einen "Core Pod" und einen "Pipeline Pod" und verdeutlicht die Entkopplung von Ingress (Adapter), Verarbeitung (Processor), Cache-Befüllung und Reprocessing.
+
+[plantuml, pipeline-services, format="svg"]
+....
+include::../images/pipeline-services.puml[]
+....
+
+== 2. Übersicht der Kafka Topics
+
+Die Architektur nutzt eine strikte Trennung der Topics, um die Verarbeitung zu entkoppeln und das Reprocessing zu ermöglichen.
+
+[cols="1,1,2", options="header"]
+|===
+| Topic Name | Typ / Ort | Beschreibung
+| `solexperts_to_swisstopo` | Extern | Das Quell-Topic des Partners. Besitzt **6 Partitionen**.
+| `internal-raw-solexperts` | Lokal | 1:1 Spiegelung des externen Topics durch MirrorMaker 2 (mit SMT RegexRouter). Dient als lokaler Puffer.
+| `internal-normalized` | Lokal | Enthält die abgeflachten, aufbereiteten Daten im kanonischen Format, produziert vom Adapter.
+| `internal-sensor-config` | Lokal (Compacted) | Wird von der Core API befüllt (`cleanup.policy=compact`). Dient als Source-of-Truth für den In-Memory-Cache der Worker (`SensorConfigCache`) und als Trigger für das Reprocessing.
+|===
+
+== 3. Skalierungsstrategien (High Throughput)
+
+Da das externe Quell-Topic 6 Partitionen besitzt, ist die gesamte Pipeline auf maximale Parallelität über genau diese 6 Partitionen ausgelegt.
+
+* **Kafka Connect (Ingestion):** Der MirrorSourceConnector ist mit `"tasks.max": "6"` konfiguriert. Kafka Connect baut exakt 6 parallele Threads auf, um das externe Topic ohne Bottlenecks abzusaugen.
+* **Ingress Adapter (`SolExpertsRawSensorDataNormalizationService`):** Übernimmt das Entpacken der herstellerspezifischen Payloads. Nutzt `@KafkaListener(concurrency = "6")`, um die Last optimal auf die Partitionen zu verteilen.
+* **Datenbank-Schicht (TimeScaleDB):** Um die Datenbank bei hohen Datenraten nicht zu überlasten, konsumiert der Processor (`SensorDataListener`) im **Batch-Modus** (`spring.kafka.listener.type=batch`, `max-poll-records=200`). Das Schreiben erfolgt über hochoptimierte jOOQ Batch-Inserts (`ctx.batchInsert()`).
+
+== 4. Datenintegrität & Zero-Data-Loss Architektur
+
+Das Monteis-Pipeline-System verarbeitet Sensordaten über zwei primäre Datenströme: Den **Process-Flow** für Echtzeitdaten und den **Reprocess-Flow** für historische Datenkorrekturen. Ein zentrales Element dieser Architektur ist das Zusammenspiel aus manuellen Kafka-Acknowledgments, idempotenten Datenbank-Operationen und gezieltem Poison-Pill-Handling.
+
+=== 4.1. Gemeinsame Basis: Orchestrator & Kafka-Offsets
+
+Beide Flows stützen sich auf gemeinsame Komponenten und eine strikte Kafka-Konfiguration, die garantiert, dass keine Nachricht im Nirvana verschwindet.
+
+* **Shared Transformation Orchestrator:** Um mathematische Abweichungen zu verhindern, teilen sich der Ingestion-Flow und der Backfill-Flow exakt dieselbe Logik. Dies garantiert, dass Standardisierung und Validierungs-Flags systemweit identisch berechnet werden.
+* **Cache Broadcast Pattern:** Damit jeder Pipeline-Pod einen synchronen Metadaten-Cache besitzt, generiert der `SensorConfigCacheHydrator` beim Start eine zufällige UUID als Consumer Group (`cache-hydrator-#{UUID}`). Dadurch wird jedes Metadaten-Update an *jeden* laufenden Pod gebroadcastet.
+* **Deaktiviertes Auto-Commit (`enable-auto-commit: false`):** Spring Boot darf Kafka-Offsets niemals im Hintergrund bestätigen. Das System verlässt sich ausschliesslich auf manuelle Bestätigungen (`ack-mode: manual`).
+* **Das Guarded Acknowledgment Pattern (At-Least-Once):** In allen Listenern wird der Kafka-Offset erst explizit committet (`ack.acknowledge()`), **nachdem** die Daten sicher in die nächste Schicht oder die TimeScaleDB persistiert wurden. Fällt ein Pod aus, pausiert Kafka und liefert das Event nach dem Neustart erneut aus.
+
+=== 4.2. Echtzeit-Verarbeitung (Process-Flow)
+
+Dieser Flow verarbeitet neue, normalisierte Sensordaten, standardisiert sie und speichert sie in der TimeScaleDB.
+
+* **Kafka Batching:** Der Konsum erfolgt in Batches, um den Durchsatz zu maximieren.
+* **Idempotente UPSERTs:** Der `ProcessService` nutzt jOOQs `ON CONFLICT (timestamp, sensor_id) DO UPDATE`. Wenn Kafka einen Batch nach einem Absturz erneut sendet, überschreibt die Datenbank die Zeilen einfach mit exakt denselben, korrekten Daten. Es entstehen keine Duplikate.
+* **Poison Pill Handling (Batch-Rettung):** Wenn ein einzelner Datensatz innerhalb eines 200er-Batches fehlerhaft ist (z. B. unlesbarer Timestamp), fängt der `ProcessService` die `TransformationException` lokal ab, loggt den fehlerhaften Rohwert und überspringt ihn (`return null`). Die verbleibenden 199 validen Datensätze werden erfolgreich in der DB gespeichert, anstatt den gesamten Batch in eine Dead Letter Queue (DLQ) zu leiten.
+
+=== 4.3. Historische Daten-Reprozessierung (Reprocess-Flow)
+
+Dieser Flow wird durch ein Sensor-Config-Update (`SensorConfig`) ausgelöst und muss potenziell Hunderttausende von Datensätzen aktualisieren, ohne den Speicher zu sprengen oder andere Prozesse zu blockieren. Die Logik ist in eine spezifische Orchestrator-und-Chunk-Architektur unterteilt.
+
+* **High-Performance Guard:** Der `ReprocessService` führt zuerst eine `EXISTS`-Abfrage aus. Gibt es keine alten Versionen, wird der Prozess in Millisekunden beendet.
+* **Die AOP-Proxy-Falle & Transaktionsgrenzen:** Wenn im Spring Framework eine Methode mit der `@Transactional`-Annotation aus derselben Klasse heraus aufgerufen wird, wird der Proxy umgangen. Daher ist die Logik strikt aufgeteilt: Der **`ReprocessService`** steuert die Schleife (ohne Transaktion), während der extern aufgerufene **`ReprocessChunkService`** jeden einzelnen Chunk in einer isolierten Datenbanktransaktion ausführt.
+* **Iteratives Chunking (Speichersicherheit):** Eine `do-while`-Schleife ruft den Chunk-Service auf. Um JVM-OOM-Fehler zu vermeiden, erzwingt die jOOQ-Abfrage ein konfigurierbares `LIMIT` (z.B. 1000, gesteuert via `application.properties`). Die Schleife wiederholt sich, bis die Fetch-Size `0` erreicht.
+* **Poison Pill Handling (Die Endlosschleifen-Falle):** Tritt bei einem historischen Datensatz ein Fehler auf (z. B. Division durch Null), darf dieser *nicht* einfach übersprungen werden. Andernfalls würde die SQL-Abfrage ihn im nächsten Schleifendurchlauf erneut laden, was zu einer Endlosschleife führt.
++
+**Die Loop-Breaker Lösung:** Die Exception wird abgefangen, die `version` des fehlerhaften Datensatzes wird explizit hochgezählt und der `norm_value` wird auf `null` gesetzt. Dadurch wird die Endlosschleife gebrochen:
+
+[source,java]
+----
+} catch (TransformationException ex) {
+    log.error("POISON PILL REPROCESSING: Math failed for historical record of sensor {}. " +
+              "Raw Value: [{}]. Bumping version to bypass infinite loop. Reason: {}",
+              reading.getSensorId(), reading.getRawValue(), ex.getMessage(), ex);
+
+    // 1. Version erzwingen zu inkrementieren, damit die DB-Abfrage den Datensatz beim nächsten Schleifendurchlauf ignoriert
+    reading.setVersion(sensorConfig.getVersion().shortValue());
+
+    // 2. norm_value auf null setzen, um sicherzustellen, dass nachgelagerte Systeme keine falsch berechneten Daten anzeigen
+    reading.setNormValue(null);
+
+    return reading;
+}
+----
+
+== 5. Integration neuer externer Datenquellen
+
+Die Architektur verwendet das **Adapter-Pattern** (`AbstractNormalizationAdapter`), um neue Datenquellen nahtlos als "Plug-and-Play"-Komponenten zu integrieren. Die Kern-Pipeline (alles ab dem `internal-normalized` Topic) bleibt von der Herkunft der Daten vollständig entkoppelt.
+
+Wenn ein neues externes System angebunden werden soll (z. B. Sensordaten im CSV-Format auf einem FTP-Server), ist der folgende standardisierte Prozess durchzuführen:
+
+=== 5.1. Ingress Layer konfigurieren (Kafka Connect)
+Um die Architektur strikt ereignisgesteuert (event-driven) zu halten, sollte die Spring Boot Applikation externe Systeme nicht selbst aktiv pollen.
+
+* Konfiguration eines **Kafka Connect Source Connectors** (z. B. SFTP Plugin oder SpoolDir/FilePulse).
+* Der Connector pollt die externe Quelle und schreibt diese Rohdaten in ein neues, dediziertes Raw-Topic (z. B. `internal-raw-ftp-sensors`).
+
+=== 5.2. Raw Data Model definieren
+Analog zur `RawSolExpertsSensorData`-Klasse muss ein spezifisches Java-Record für die Payload der neuen Datenquelle erstellt werden (z. B. `RawFtpCsvSensorData`).
+
+=== 5.3. Normalization Adapter implementieren
+Dies ist die eigentliche Übersetzungslogik innerhalb der Java-Applikation.
+
+* Erstellen eines neuen Spring `@Service`, der die abstrakte Klasse `AbstractNormalizationAdapter` erweitert.
+* Hinzufügen eines `@KafkaListener`, der auf das neu erstellte Topic lauscht.
+* Innerhalb des Listeners die Rohdaten in das Standardformat (`NormalizedSensorData`) umwandeln.
+* **Wichtig - Guarded Acknowledgment:** Um Datenverlust zu vermeiden, muss das Acknowledgment-Pattern exakt repliziert werden:
+1. Aufruf von `publishNormalizedData(sensorId, canonicalPayload)`.
+2. Das resultierende `CompletableFuture` erfassen und auf Bestätigung warten (`CompletableFuture.allOf(...).join()`).
+3. **Erst nach erfolgreicher Bestätigung** darf der Offset des Raw-Topics via `ack.acknowledge()` committet werden.
+
+=== Alternative: Zero-Code Ingestion via Kafka Connect SMTs
+
+Für einfache, flache Datenformate (wie standardisierte CSV-Dateien via FTP) wird ein **Zero-Code-Ansatz** bevorzugt:
+
+* **Single Message Transforms (SMTs):** Der Kafka Connect Source Connector führt einfache Transformationen (wie Spaltenumbenennungen oder Datentyp-Casts) direkt "on-the-fly" durch.
+* **Direktes Routing:** Der Connector überspringt das Raw-Topic und schreibt die standardisierten Payloads direkt in das `internal-normalized` Topic.
+* **Vorteile:** Keine zusätzliche Java-Codebasis, keine Unit-Tests und eine reduzierte Infrastruktur-Komplexität.
+
+Der Java-basierte `AbstractNormalizationAdapter` bleibt somit ausschliesslich für Datenquellen reserviert, die komplexe Restrukturierungen oder bedingte Logik erfordern.
+
+
+
 
 === Datenbankschemata
 
@@ -169,7 +291,7 @@ CREATE TYPE range_category AS ENUM ('too_low', 'correct', 'too_high');
 
 -- 2. Base Table erstellen (Raw Data)
 -- Hinweis: sensor_id ist sensor_code in der Metadaten DB
-CREATE TABLE sensor_readings (
+CREATE TABLE sensor_reading (
     timestamp   TIMESTAMPTZ NOT NULL,
     sensor_id   TEXT NOT NULL,
     raw_value   DOUBLE PRECISION NOT NULL,
@@ -182,14 +304,14 @@ CREATE TABLE sensor_readings (
 );
 
 -- 3. In eine Hypertable konvertieren (Partitionierung nach 'timestamp')
-SELECT create_hypertable('sensor_readings', 'timestamp');
+SELECT create_hypertable('sensor_reading', 'timestamp');
 
 -- 4. Native Kompression für Originaldaten aktivieren (nach 120 Tagen)
-ALTER TABLE sensor_readings SET (
+ALTER TABLE sensor_reading SET (
     timescaledb.compress,
     timescaledb.compress_segmentby = 'sensor_id'
 );
-SELECT add_compression_policy('sensor_readings', INTERVAL '120 days');
+SELECT add_compression_policy('sensor_reading', INTERVAL '120 days');
 
 
 -- ==========================================
@@ -197,41 +319,41 @@ SELECT add_compression_policy('sensor_readings', INTERVAL '120 days');
 -- ==========================================
 
 -- Bucket 1: 1-Minuten-Aggregation
-CREATE MATERIALIZED VIEW sensor_readings_1m
+CREATE MATERIALIZED VIEW sensor_reading_1m
 WITH (timescaledb.continuous) AS
 SELECT time_bucket('1 minute', timestamp) AS bucket,
        sensor_id,
        AVG(norm_value) AS avg_value,
        MAX(norm_value) AS max_value,
        MIN(norm_value) AS min_value
-FROM sensor_readings
+FROM sensor_reading
 GROUP BY bucket, sensor_id;
 
 -- Bucket 2: 15-Minuten-Aggregation
-CREATE MATERIALIZED VIEW sensor_readings_15m
+CREATE MATERIALIZED VIEW sensor_reading_15m
 WITH (timescaledb.continuous) AS
 SELECT time_bucket('15 minutes', timestamp) AS bucket,
        sensor_id,
        AVG(norm_value) AS avg_value
-FROM sensor_readings
+FROM sensor_reading
 GROUP BY bucket, sensor_id;
 
 -- Bucket 3: 1-Stunden-Aggregation
-CREATE MATERIALIZED VIEW sensor_readings_1h
+CREATE MATERIALIZED VIEW sensor_reading_1h
 WITH (timescaledb.continuous) AS
 SELECT time_bucket('1 hour', timestamp) AS bucket,
        sensor_id,
        AVG(norm_value) AS avg_value
-FROM sensor_readings
+FROM sensor_reading
 GROUP BY bucket, sensor_id;
 
 -- Bucket 4: 1-Tages-Aggregation (Langzeitarchiv)
-CREATE MATERIALIZED VIEW sensor_readings_1d
+CREATE MATERIALIZED VIEW sensor_reading_1d
 WITH (timescaledb.continuous) AS
 SELECT time_bucket('1 day', timestamp) AS bucket,
        sensor_id,
        AVG(norm_value) AS avg_value
-FROM sensor_readings
+FROM sensor_reading
 GROUP BY bucket, sensor_id;
 
 
@@ -240,35 +362,35 @@ GROUP BY bucket, sensor_id;
 -- ==========================================
 
 -- Alte Aggregationen verwerfen, sobald sie aus ihrem Zeitfenster fallen:
-SELECT add_retention_policy('sensor_readings_1m', INTERVAL '30 days');
-SELECT add_retention_policy('sensor_readings_15m', INTERVAL '60 days');
-SELECT add_retention_policy('sensor_readings_1h', INTERVAL '2 years');
--- Anmerkung: Die 'sensor_readings_1d' View behält Daten dauerhaft.
+SELECT add_retention_policy('sensor_reading_1m', INTERVAL '30 days');
+SELECT add_retention_policy('sensor_reading_15m', INTERVAL '60 days');
+SELECT add_retention_policy('sensor_reading_1h', INTERVAL '2 years');
+-- Anmerkung: Die 'sensor_reading_1d' View behält Daten dauerhaft.
 
 -- ==========================================
 -- REFRESH POLICIES (Background Jobs für Continuous Aggregates)
 -- ==========================================
 
 -- 1-Minuten-Bucket: Aktualisiert sich jede Minute im Hintergrund
-SELECT add_continuous_aggregate_policy('sensor_readings_1m',
+SELECT add_continuous_aggregate_policy('sensor_reading_1m',
     start_offset => NULL,
     end_offset   => INTERVAL '1 minute',
     schedule_interval => INTERVAL '1 minute');
 
 -- 15-Minuten-Bucket: Aktualisiert sich alle 15 Minuten
-SELECT add_continuous_aggregate_policy('sensor_readings_15m',
+SELECT add_continuous_aggregate_policy('sensor_reading_15m',
     start_offset => NULL,
     end_offset   => INTERVAL '15 minutes',
     schedule_interval => INTERVAL '15 minutes');
 
 -- 1-Stunden-Bucket: Aktualisiert sich stündlich
-SELECT add_continuous_aggregate_policy('sensor_readings_1h',
+SELECT add_continuous_aggregate_policy('sensor_reading_1h',
     start_offset => NULL,
     end_offset   => INTERVAL '1 hour',
     schedule_interval => INTERVAL '1 hour');
 
 -- 1-Tages-Bucket: Aktualisiert sich einmal pro Tag (z.B. Nachts)
-SELECT add_continuous_aggregate_policy('sensor_readings_1d',
+SELECT add_continuous_aggregate_policy('sensor_reading_1d',
     start_offset => NULL,
     end_offset   => INTERVAL '1 day',
     schedule_interval => INTERVAL '1 day');

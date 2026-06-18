@@ -3,6 +3,9 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 CREATE USER ts_flyway WITH ENCRYPTED PASSWORD 'pwd_ts_flyway';
 CREATE SCHEMA IF NOT EXISTS public;
 
+CREATE USER pipeline_app WITH ENCRYPTED PASSWORD 'pwd_pipeline_app';
+GRANT USAGE ON SCHEMA public TO pipeline_app;
+
 GRANT CREATE ON SCHEMA public TO ts_flyway;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ts_flyway;
 GRANT USAGE, CREATE ON SCHEMA public TO ts_flyway;
