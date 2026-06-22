@@ -1,0 +1,87 @@
+# Grant License Compliance Configuration
+# Complete configuration file with all available options
+# See: https://github.com/anchore/grant
+
+format: table # Output format: "table" or "json" (default: "table")
+quiet: false # Suppress all non-essential output (default: false)
+verbose: false # Enable verbose output (default: false)
+
+# List of allowed license patterns (supports glob matching)
+# Default behavior: DENY all licenses except those explicitly permitted
+allow:
+  - Apache-2.0
+  - Apache-License--Version-2.0
+  - -Apache-License-2.0--link--http---www.apache.org-licenses-LICENSE-2.0.html-
+  - -Apache-2.0--link--https---www.apache.org-licenses-LICENSE-2.0.txt-
+  - Apache-License-2.0
+  - The-Apache-Software-License--Version-2.0
+  - The-Apache-License--Version-2.0
+  - ISC
+  - BSD-2-Clause
+  - BSD-2-Clause-License
+  - BSD-3-Clause
+  - BSD-style
+  - 0BSD
+  - https---opensource.org-licenses-BSD-2-Clause-description-BSD-2-Clause-License
+  - The--New--BSD-License
+  - The-BSD-License
+  - BlueOak-1.0.0
+  - EPL-2.0
+  - EDL-1.0
+  - EPL-1.0
+  - EPL-1.0 AND LicenseRef-MPL-2.0
+  - LicenseRef-MPL-2.0
+  - OFL-1.1
+  - CC0-1.0
+  - MIT
+  - MIT-License
+  - The-MIT-License
+  - MIT-0
+  - https---opensource.org-license-mit
+  - CC-BY-3.0
+  - CC-BY-4.0
+  - https---www.eclipse.org-legal-epl-v20.html--https---www.gnu.org-licenses-old-licenses-lgpl-2.1.html
+  - https---www.eclipse.org-legal-epl-2.0--https---www.gnu.org-software-classpath-license.html
+  - Eclipse-Distribution-License*
+  - Eclipse-Public-License---v-1.0 AND LicenseRef-GNU-Lesser-General-Public-License
+  - http---www.jooq.org-inc-LICENSE.txt
+  - https---h2database.com-html-license.html
+  - https---repository.jboss.org-licenses-apache-2.0.txt
+
+# List of package patterns to ignore from license checking
+# Supports glob patterns for flexible matching
+ignore-packages: [
+  "core",
+  "pipeline",
+  "webapp",
+
+  # Ignore CI infrastructure and build tools
+  "pnpm/*",
+  "actions/*",
+  "amannn/*",
+  "coverallsapp/*",
+  "fastify/workflows/*",
+  "mavenEcjBootstrapAgent",
+  "gradle-wrapper",
+
+  # --- 3. Ignore Managed Test/Dev Tools (Safely MIT/Apache-2.0) ---
+  "testcontainers-*",
+
+  # --- 4. Ignore Messy Metadata (Safely BSD/EPL/Apache) ---
+  "spring-kafka",
+  "spring-boot-starter-kafka*",
+  "postgresql"
+]
+
+# Policy enforcement options
+require-license: true # When true, deny packages with no detected licenses
+require-known-license: false # When true, deny non-SPDX / unparsable licenses
+
+# ============================================================================
+# COMMAND-SPECIFIC OPTIONS
+# ============================================================================
+disable-file-search: false # Disable filesystem license file search
+summary: false # Show only summary information for check command
+# Show only packages without licenses (default: false)
+only-unlicensed: false # maps to grant check --unlicensed || grant list --unlicensed
+

@@ -1,0 +1,87 @@
+name: License Governance
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  enforce-licenses:
+    name: Enforce Open Source Licenses
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      # --- 1. Check Cache First ---
+      - name: Cache Generated SBOM
+        id: sbom-cache
+        uses: actions/cache@v5
+        with:
+          path: sbom.spdx.json
+          key: ${{ runner.os }}-sbom-${{ hashFiles('**/pom.xml', '**/pnpm-lock.yaml') }}
+
+      # --- 2. Backend Setup (Skips on cache hit) ---
+      - name: Set up JDK ${{ vars.JAVA_VERSION }}
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRIBUTION }}
+          server-id: github
+          settings-path: ${{ github.workspace }}
+          cache: maven
+          cache-dependency-path: core/pom.xml
+
+      - name: Resolve Maven Dependencies
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        working-directory: core
+        run: mvn dependency:resolve
+
+      # --- 3. Frontend Setup (Skips on cache hit) ---
+      - name: Install pnpm
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: webapp/package.json
+
+      - name: Set up Node.js
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ vars.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: webapp/pnpm-lock.yaml
+
+      - name: Install Frontend Dependencies
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        working-directory: webapp
+        run: pnpm install --frozen-lockfile
+
+      # --- 4. Generate SBOM (Skips on cache hit) ---
+      - name: Install Syft
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sudo sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        env:
+          SYFT_JAVASCRIPT_SEARCH_REMOTE_LICENSES: "true"
+          SYFT_JAVA_USE_NETWORK: "true"
+        run: |
+          syft . -o spdx-json=sbom.spdx.json --source-name ch.swisstopo.monteis
+
+      # --- 5. Always Run Policy Enforcement ---
+      - name: Install Anchore Grant
+        run: curl -sSfL https://get.anchore.io/grant | sudo sh -s -- -b /usr/local/bin
+
+      - name: Upload SBOM Artifact
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sbom-artifact
+          path: sbom.spdx.json
+          retention-days: 5
+          archive: false
+
+      - name: Enforce License Policy
+        run: grant check sbom.spdx.json

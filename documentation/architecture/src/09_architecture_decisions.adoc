@@ -5,4 +5,34 @@ ifndef::imagesdir[:imagesdir: ../images]
 
 
 
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
 
+| Titel
+| ADR: Einsatz von Anchore Syft und Grant für Open-Source-Lizenzkonformität
+
+| Datum
+| 08.06.2026
+
+| Status
+| entschieden
+
+| Kontext & Problem
+| Vermeidung von riskanten Open-Source-Lizenzen (z.B. Copyleft wie GPL-3.0) in Node.js- und Java-Projekten. Benötigt wird eine automatisierte, tiefgehende Prüfung innerhalb der CI/CD-Pipeline vor dem Merge.
+
+| Entscheidung
+| Einsatz von Anchore Syft zur Generierung der Software Bill of Materials (SBOM) im SPDX-JSON-Format und Anchore Grant zur lokalen Prüfung gegen eine .grant.yml-Richtlinie.
+
+| Begründung
+| Performance durch Entkopplung: Syft führt tiefe Netzwerkscans durch (Ergebnis wird gecached), Grant prüft das lokale SBOM in Millisekunden.
+
+Tiefe Auflösung: Native Unterstützung für die Auflösung von Maven-Parent-POMs und externen npm-Registries.
+
+SaaS-frei & Sicher: Die Prüfung läuft komplett lokal im GitHub Actions Runner ab. Keine Übertragung von Code oder Daten an Drittanbieter.
+
+Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Repository gespeichert.
+
+| Konsequenzen
+| Schnelle CI-Pipelines und sofortiges Blockieren bei Lizenzverstößen. Erfordert als Trade-off die manuelle Pflege einer ignore-packages-Liste für fehlerhafte Lizenz-Strings oder interne CI-Tools.
+|===
