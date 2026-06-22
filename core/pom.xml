@@ -1,27 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.0.6</version>
-    <!-- lookup parent from repository -->
-    <relativePath/>
+    <groupId>ch.swisstopo.monteis</groupId>
+    <artifactId>parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <groupId>ch.swisstopo.monteis</groupId>
   <artifactId>core</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
 
   <properties>
-    <java.version>25</java.version>
-
-    <testcontainers.postgres.version>1.21.4</testcontainers.postgres.version>
-    <springdoc.version>3.0.2</springdoc.version>
-    <springdoc-plugin.version>1.5</springdoc-plugin.version>
-    <spotless.version>3.4.0</spotless.version>
-    <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
-
     <jooq.codegen.skip>false</jooq.codegen.skip>
     <openapi.codegen.skip>true</openapi.codegen.skip>
   </properties>
@@ -56,7 +46,6 @@
     <dependency>
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-      <version>${springdoc.version}</version>
     </dependency>
 
     <!--    Development Only -->
@@ -106,7 +95,6 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
-      <version>${testcontainers.postgres.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -133,7 +121,6 @@
                 <argument>--spring.datasource.driver-class-name=org.h2.Driver</argument>
                 <argument>--spring.datasource.username=sa</argument>
                 <argument>--spring.datasource.password=</argument>
-
                 <argument>--spring.jooq.sql-dialect=H2</argument>
                 <argument>--spring.flyway.enabled=false</argument>
               </arguments>
@@ -147,70 +134,15 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>${spotless.version}</version>
-        <configuration>
-          <formats>
-            <format>
-              <includes>
-                <include>.gitattributes</include>
-                <include>.gitignore</include>
-              </includes>
-              <trimTrailingWhitespace/>
-              <endWithNewline/>
-              <indent>
-                <tabs>true</tabs>
-                <spacesPerTab>4</spacesPerTab>
-              </indent>
-            </format>
-          </formats>
-          <java>
-            <includes>
-              <include>src/main/java/**/*.java</include>
-              <include>src/test/java/**/*.java</include>
-            </includes>
-            <googleJavaFormat>
-              <reflowLongStrings>true</reflowLongStrings>
-              <formatJavadoc>false</formatJavadoc>
-            </googleJavaFormat>
-            <removeUnusedImports/>
-          </java>
-          <sql>
-            <includes>
-              <include>src/main/resources/**/*.sql</include>
-            </includes>
-          </sql>
-          <pom>
-            <includes>
-              <include>pom.xml</include>
-            </includes>
-
-            <sortPom>
-              <encoding>UTF-8</encoding>
-              <keepBlankLines>true</keepBlankLines>
-            </sortPom>
-          </pom>
-          <markdown>
-            <includes>
-              <include>**/*.md</include>
-            </includes>
-            <flexmark/>
-          </markdown>
-        </configuration>
       </plugin>
+
       <plugin>
         <groupId>org.codehaus.gmaven</groupId>
         <artifactId>groovy-maven-plugin</artifactId>
-        <version>${groovy-maven-plugin.version}</version>
-        <dependencies>
-          <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>${testcontainers.postgres.version}</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>start-testcontainers</id>
@@ -220,37 +152,37 @@
             <phase>generate-sources</phase>
             <configuration>
               <source>import org.testcontainers.containers.PostgreSQLContainer
-                import org.testcontainers.utility.DockerImageName
-                import org.testcontainers.utility.MountableFile
+                            import org.testcontainers.utility.DockerImageName
+                            import org.testcontainers.utility.MountableFile
 
-                if ("${jooq.codegen.skip}" == "true") {
-                  println "[INFO] Skipping Testcontainers setup for jOOQ."
-                } else {
-                  println "[INFO] Spinning up TimescaleDB and MetaDB on shared network..."
+                            if ("${jooq.codegen.skip}" == "true") {
+                                println "[INFO] Skipping Testcontainers setup for jOOQ."
+                            } else {
+                                println "[INFO] Spinning up TimescaleDB and MetaDB on shared network..."
 
-                  def network = org.testcontainers.containers.Network.SHARED
+                                def network = org.testcontainers.containers.Network.SHARED
 
-                  def tsDb = new PostgreSQLContainer(DockerImageName.parse("timescale/timescaledb:latest-pg18").asCompatibleSubstituteFor("postgres"))
-                    .withNetwork(network)
-                    .withNetworkAliases("time_series_db")
-                    .withDatabaseName("monteis-tsdb")
-                    .withUsername("user")
-                    .withPassword("pwd")
-                    .withCopyFileToContainer(MountableFile.forHostPath("${project.basedir}/../docker/dataset-ts/init_tsdb.sql"), "/docker-entrypoint-initdb.d/init_tsdb.sql")
-                  tsDb.start()
+                                def tsDb = new PostgreSQLContainer(DockerImageName.parse("timescale/timescaledb:latest-pg18").asCompatibleSubstituteFor("postgres"))
+                                        .withNetwork(network)
+                                        .withNetworkAliases("time_series_db")
+                                        .withDatabaseName("monteis-tsdb")
+                                        .withUsername("user")
+                                        .withPassword("pwd")
+                                        .withCopyFileToContainer(MountableFile.forHostPath("${project.basedir}/../docker/dataset-tsdb/init_tsdb.sql"), "/docker-entrypoint-initdb.d/init_tsdb.sql")
+                                tsDb.start()
 
-                  def metaDb = new PostgreSQLContainer(DockerImageName.parse("postgres:18-alpine"))
-                    .withNetwork(network)
-                    .withDatabaseName("monteis-meta-db")
-                    .withUsername("user")
-                    .withPassword("pwd")
-                    .withCopyFileToContainer(MountableFile.forHostPath("${project.basedir}/../docker/dataset-meta/init_meta.sql"), "/docker-entrypoint-initdb.d/init_meta.sql")
-                    .dependsOn(tsDb)
-                  metaDb.start()
+                                def metaDb = new PostgreSQLContainer(DockerImageName.parse("postgres:18-alpine"))
+                                        .withNetwork(network)
+                                        .withDatabaseName("monteis-meta-db")
+                                        .withUsername("user")
+                                        .withPassword("pwd")
+                                        .withCopyFileToContainer(MountableFile.forHostPath("${project.basedir}/../docker/dataset-meta/init_meta.sql"), "/docker-entrypoint-initdb.d/init_meta.sql")
+                                        .dependsOn(tsDb)
+                                metaDb.start()
 
-                  project.properties.setProperty('codegen.ts.url', tsDb.getJdbcUrl())
-                  project.properties.setProperty('codegen.meta.url', metaDb.getJdbcUrl())
-                }</source>
+                                project.properties.setProperty('codegen.ts.url', tsDb.getJdbcUrl())
+                                project.properties.setProperty('codegen.meta.url', metaDb.getJdbcUrl())
+                            }</source>
             </configuration>
           </execution>
         </executions>
@@ -278,7 +210,6 @@
               </locations>
             </configuration>
           </execution>
-
           <execution>
             <!-- Cares only for migration of the Metadata PostgreSQL DB -->
             <id>flyway-migrate-meta</id>
@@ -342,10 +273,10 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <groupId>org.springdoc</groupId>
         <artifactId>springdoc-openapi-maven-plugin</artifactId>
-        <version>${springdoc-plugin.version}</version>
         <executions>
           <execution>
             <id>integration-test</id>

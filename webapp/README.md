@@ -59,6 +59,7 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
 
 ## Project structure
+
 ```
 src/
 ├── app/                            <-- Angular bootstrap (app.config.ts)
@@ -93,6 +94,7 @@ src/
 ```
 
 ## Code Generation
+
 This Project uses code generation for generating API services and DTOs. In order for the project to work you need to execute the code generation. This can be done by executing the following.
 
 ```shell

@@ -5,12 +5,9 @@ on:
     types: [opened, edited, synchronize, reopened]
 
 jobs:
-  core:
-    name: Format Core API
+  backend:
+    name: Format Backend (Core & Pipeline)
     runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: core
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -23,7 +20,8 @@ jobs:
           server-id: github
           settings-path: ${{ github.workspace }}
           cache: maven
-          cache-dependency-path: core/pom.xml
+          # Cache based on the parent pom now
+          cache-dependency-path: pom.xml
 
       - name: Format backend
         run: mvn spotless:check
