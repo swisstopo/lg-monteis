@@ -233,7 +233,7 @@ Dieser Flow wird durch ein Sensor-Config-Update (`SensorConfig`) ausgelöst und 
 
 == 5. Integration neuer externer Datenquellen
 
-Die Architektur verwendet das **Adapter-Pattern** (`AbstractNormalizationAdapter`), um neue Datenquellen nahtlos als "Plug-and-Play"-Komponenten zu integrieren. Die Kern-Pipeline (alles ab dem `internal-normalized` Topic) bleibt von der Herkunft der Daten vollständig entkoppelt.
+Die Architektur verwendet das **Adapter-Pattern**, um neue Datenquellen nahtlos als eigenständige "Plug-and-Play"-Komponenten zu integrieren. Um eine maximale Entkopplung und Testbarkeit zu gewährleisten, setzt die Pipeline konsequent auf **Komposition statt Vererbung** (Composition over Inheritance). Die Kern-Pipeline (alles ab dem `internal-normalized` Topic) bleibt von der Herkunft und dem ursprünglichen Format der Daten vollständig isoliert.
 
 Wenn ein neues externes System angebunden werden soll (z. B. Sensordaten im CSV-Format auf einem FTP-Server), ist der folgende standardisierte Prozess durchzuführen:
 
@@ -246,16 +246,18 @@ Um die Architektur strikt ereignisgesteuert (event-driven) zu halten, sollte die
 === 5.2. Raw Data Model definieren
 Analog zur `RawSolExpertsSensorData`-Klasse muss ein spezifisches Java-Record für die Payload der neuen Datenquelle erstellt werden (z. B. `RawFtpCsvSensorData`).
 
-=== 5.3. Normalization Adapter implementieren
-Dies ist die eigentliche Übersetzungslogik innerhalb der Java-Applikation.
+=== 5.3. Normalization Service implementieren
+Die eigentliche Übersetzungslogik wird als dedizierter, isolierter Service innerhalb der Java-Applikation umgesetzt.
 
-* Erstellen eines neuen Spring `@Service`, der die abstrakte Klasse `AbstractNormalizationAdapter` erweitert.
-* Hinzufügen eines `@KafkaListener`, der auf das neu erstellte Topic lauscht.
-* Innerhalb des Listeners die Rohdaten in das Standardformat (`NormalizedSensorData`) umwandeln.
-* **Wichtig - Guarded Acknowledgment:** Um Datenverlust zu vermeiden, muss das Acknowledgment-Pattern exakt repliziert werden:
-1. Aufruf von `publishNormalizedData(sensorId, canonicalPayload)`.
-2. Das resultierende `CompletableFuture` erfassen und auf Bestätigung warten (`CompletableFuture.allOf(...).join()`).
-3. **Erst nach erfolgreicher Bestätigung** darf der Offset des Raw-Topics via `ack.acknowledge()` committet werden.
+* **Service-Erstellung:** Erstellen eines neuen Spring `@Service` (z. B. `RawFtpCsvSensorDataNormalizationService`).
+* **Komposition:** Injizieren des zentralen `NormalizedSensorDataPublisher` via Konstruktor-Injection.
+* **Event-Ingestion:** Hinzufügen eines `@KafkaListener`, der auf das neu erstellte Raw-Topic lauscht.
+* **Transformation:** Innerhalb der Listener-Methode die herstellerspezifischen Rohdaten parsen und in das kanonische Standardformat (`NormalizedSensorData`) umwandeln.
+* **Wichtig - Guarded Acknowledgment:** Um Datenverlust (At-Least-Once Delivery) bei Fehlern oder Pod-Crashes garantiert auszuschliessen, muss das Acknowledgment-Pattern exakt wie folgt implementiert werden:
+1. Für jeden extrahierten Sensorwert die Methode `publisher.publish(sensorId, canonicalPayload)` aufrufen.
+2. Die resultierenden asynchronen `CompletableFuture`-Objekte in einer Liste sammeln.
+3. Mittels `CompletableFuture.allOf(...).join()` blockierend darauf warten, dass der Kafka-Broker den Erhalt *aller* Nachrichten bestätigt hat.
+4. **Erst nach erfolgreicher Bestätigung aller Futures** darf der Offset des ursprünglichen Raw-Topics via `ack.acknowledge()` committet werden.
 
 === Alternative: Zero-Code Ingestion via Kafka Connect SMTs
 
@@ -265,7 +267,7 @@ Für einfache, flache Datenformate (wie standardisierte CSV-Dateien via FTP) wir
 * **Direktes Routing:** Der Connector überspringt das Raw-Topic und schreibt die standardisierten Payloads direkt in das `internal-normalized` Topic.
 * **Vorteile:** Keine zusätzliche Java-Codebasis, keine Unit-Tests und eine reduzierte Infrastruktur-Komplexität.
 
-Der Java-basierte `AbstractNormalizationAdapter` bleibt somit ausschliesslich für Datenquellen reserviert, die komplexe Restrukturierungen oder bedingte Logik erfordern.
+Die Implementierung eines dedizierten Java-basierten Normalisierungsservices bleibt somit ausschliesslich für Datenquellen reserviert, die komplexe Restrukturierungen, dynamisches Key-Mapping (z. B. Auflösen von verschachtelten Key-Value-Maps) oder bedingte Logik erfordern.
 
 
 

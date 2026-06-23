@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.pipeline.ingress.external.solexperts;
 
-import ch.swisstopo.monteis.pipeline.ingress.external.AbstractNormalizationAdapter;
 import ch.swisstopo.monteis.pipeline.ingress.internal.NormalizedSensorData;
+import ch.swisstopo.monteis.pipeline.ingress.internal.NormalizedSensorDataPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -14,8 +14,14 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Service
-public class SolExpertsRawSensorDataNormalizationService extends AbstractNormalizationAdapter {
-    private static final Logger log = LoggerFactory.getLogger(SolExpertsRawSensorDataNormalizationService.class);
+public class RawSolExpertsSensorDataNormalizationService {
+    private static final Logger log = LoggerFactory.getLogger(RawSolExpertsSensorDataNormalizationService.class);
+
+    private final NormalizedSensorDataPublisher publisher;
+
+    public RawSolExpertsSensorDataNormalizationService(NormalizedSensorDataPublisher publisher) {
+        this.publisher = publisher;
+    }
 
     @KafkaListener(
             topics = "${app.kafka.topics.raw-solexperts}",
@@ -43,7 +49,7 @@ public class SolExpertsRawSensorDataNormalizationService extends AbstractNormali
                 );
 
                 // Send the data and capture the Future
-                sendFutures.add(publishNormalizedData(newDeviceName, canonicalPayload));
+                sendFutures.add(publisher.publish(newDeviceName, canonicalPayload));
             }
 
             // WAIT for all messages to be safely persisted in the internal-normalized topic
