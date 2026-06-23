@@ -34,14 +34,14 @@ public class SensorReadingRepository {
                 Tables.SENSOR_READING.STATUS
         );
 
-        for (SensorReadingRecord record : dbRecords) {
+        for (SensorReadingRecord sensorReadingRecord : dbRecords) {
             insertQuery = insertQuery.values(
-                    record.getTimestamp(),
-                    record.getSensorId(),
-                    record.getRawValue(),
-                    record.getNormValue(),
-                    record.getVersion(),
-                    record.getStatus()
+                    sensorReadingRecord.getTimestamp(),
+                    sensorReadingRecord.getSensorId(),
+                    sensorReadingRecord.getRawValue(),
+                    sensorReadingRecord.getNormValue(),
+                    sensorReadingRecord.getVersion(),
+                    sensorReadingRecord.getStatus()
             );
         }
 

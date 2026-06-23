@@ -17,13 +17,13 @@ public class AlertPublisher {
 
     public AlertPublisher(
             KafkaTemplate<String, SensorBoundBreachedEvent> kafkaTemplate,
-            @Value("${pipeline.kafka.topics.alerts:sensor-alerts-v1}") String alertTopic) {
+            @Value("${pipeline.kafka.topics.alerts:sensor-alerts}") String alertTopic) {
         this.kafkaTemplate = kafkaTemplate;
         this.alertTopic = alertTopic;
     }
 
     /**
-     * Listens for the internal Spring Event and publishes it to the sensor-alerts-v1 topic.
+     * Listens for the internal Spring Event and publishes it to the sensor-alerts topic.
      */
     @EventListener
     public void handleBoundBreach(SensorBoundBreachedEvent event) {

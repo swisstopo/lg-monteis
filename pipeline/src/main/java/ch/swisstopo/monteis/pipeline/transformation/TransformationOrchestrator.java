@@ -4,12 +4,13 @@ import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.transformation.standardization.SIStandardizer;
+import ch.swisstopo.monteis.pipeline.transformation.validation.BoundStatus;
 import ch.swisstopo.monteis.pipeline.transformation.validation.BoundsValidator;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 @Component
 public class TransformationOrchestrator {
@@ -25,7 +26,7 @@ public class TransformationOrchestrator {
     public SensorReadingRecord transform(String sensorId, Double rawValue, String rawTimestamp, SensorConfig config) {
         OffsetDateTime timestamp;
         try {
-            timestamp = OffsetDateTime.ofInstant(Instant.ofEpochMilli(Long.parseLong(rawTimestamp)), ZoneId.systemDefault());
+            timestamp = OffsetDateTime.ofInstant(Instant.ofEpochMilli(Long.parseLong(rawTimestamp)), ZoneOffset.UTC);
         } catch (NumberFormatException e) {
             // Translate parsing error
             throw new TransformationException("Invalid epoch timestamp format: '" + rawTimestamp + "'", e);
@@ -40,7 +41,7 @@ public class TransformationOrchestrator {
             Double standardizedToSI = siStandardizer.standardizeToSI(rawValue, config);
 
             // 2. Validate the value
-            RangeCategory status = boundsValidator.evaluateBounds(sensorId, standardizedToSI, config);
+            BoundStatus status = boundsValidator.evaluateBounds(sensorId, standardizedToSI, config);
 
             // 3. Map to jOOQ record
             SensorReadingRecord sensorReading = new SensorReadingRecord();
@@ -48,12 +49,20 @@ public class TransformationOrchestrator {
             sensorReading.setTimestamp(timestamp);
             sensorReading.setRawValue(rawValue);
             sensorReading.setNormValue(standardizedToSI);
-            sensorReading.setStatus(status);
+            sensorReading.setStatus(toRangeCategory(status));
             sensorReading.setVersion(config.getVersion().shortValue());
 
             return sensorReading;
         } catch (ArithmeticException | NullPointerException e) {
             throw new TransformationException("Failed to calculate normalized value", e, rawValue);
         }
+    }
+
+    private RangeCategory toRangeCategory(BoundStatus status) {
+        return switch (status) {
+            case OK -> RangeCategory.correct;
+            case TOO_LOW -> RangeCategory.too_low;
+            case TOO_HIGH -> RangeCategory.too_high;
+        };
     }
 }

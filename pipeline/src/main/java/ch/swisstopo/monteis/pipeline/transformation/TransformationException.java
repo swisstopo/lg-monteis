@@ -1,19 +1,19 @@
 package ch.swisstopo.monteis.pipeline.transformation;
 
 public class TransformationException extends RuntimeException {
-    private final transient Object failedPayload;
 
-    public TransformationException(String message, Object failedPayload) {
-        super(message);
-        this.failedPayload = failedPayload;
+    private final Double failedPayload;
+
+    public TransformationException(String message, Throwable cause) {
+        this(message, cause, null);
     }
 
-    public TransformationException(String message, Throwable cause, Object failedPayload) {
+    public TransformationException(String message, Throwable cause, Double failedPayload) {
         super(message, cause);
         this.failedPayload = failedPayload;
     }
 
-    public Object getFailedPayload() {
+    public Double getFailedPayload() {
         return failedPayload;
     }
 }
