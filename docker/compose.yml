@@ -1,17 +1,4 @@
 services:
-  metadata_db:
-    container_name: monteis-meta-db
-    image: postgres:18
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pwd
-      POSTGRES_DB: monteis-meta
-    ports:
-      - "5432:5432"
-    profiles: [ '', core, db ]
-    volumes:
-      - ./dataset-meta:/docker-entrypoint-initdb.d
 
   time_series_db:
     container_name: timescale-db
@@ -23,13 +10,71 @@ services:
       POSTGRES_DB: monteis-tsdb
     ports:
       - "5433:5432"
-    profiles: [ '', core, db ]
+    profiles: [ '', core, db, test ]
     volumes:
       - ./dataset-tsdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d monteis-tsdb" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  flyway-timescale:
+    image: flyway/flyway
+    depends_on:
+      time_series_db:
+        condition: service_healthy
+    profiles: [ '', core, db, test ]
+    volumes:
+      - ./../db/timescale/schema:/flyway/sql/schema
+      - ./../db/timescale/seed:/flyway/sql/seed
+    command: -url=jdbc:postgresql://time_series_db:5432/monteis-tsdb
+      -user=ts_flyway
+      -password=pwd_ts_flyway
+      -locations=filesystem:/flyway/sql/schema,filesystem:/flyway/sql/seed
+      migrate
+
+  metadata_db:
+    container_name: monteis-meta-db
+    image: postgres:18
+    restart: unless-stopped
+    depends_on:
+      time_series_db:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pwd
+      POSTGRES_DB: monteis-meta
+    ports:
+      - "5432:5432"
+    profiles: [ '', core, db, test ]
+    volumes:
+      - ./dataset-meta:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d monteis-meta"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  flyway-postgres:
+    image: flyway/flyway
+    depends_on:
+      metadata_db:
+        condition: service_healthy
+    profiles: [ '', core, db, test ]
+    volumes:
+      - ./../db/psql/schema:/flyway/sql/schema
+      - ./../db/psql/seed:/flyway/sql/seed
+    command: -url=jdbc:postgresql://metadata_db:5432/monteis-meta
+      -user=core_flyway
+      -password=pwd_core_flyway
+      -locations=filesystem:/flyway/sql/schema,filesystem:/flyway/sql/seed
+      migrate
 
   kafka:
     image: apache/kafka:4.3.0
     container_name: local-msk-broker
+    profiles: [ '', core, db ] # todo: fixme
     ports:
       - "9092:9092"
     environment:
@@ -66,6 +111,7 @@ services:
     container_name: local-msk-connect
     ports:
       - "8083:8083"
+    profiles: [ '', core, db ] # todo: fixme
     depends_on:
       - kafka
     environment:
@@ -81,6 +127,7 @@ services:
 
   connect-init:
     image: curlimages/curl:8.7.1
+    profiles: [ '', core, db ] # todo: fixme
     container_name: local-msk-connect-init
     depends_on:
       - connect

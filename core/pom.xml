@@ -18,15 +18,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-flyway</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.flywaydb</groupId>
-      <artifactId>flyway-database-postgresql</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
@@ -88,6 +79,16 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers-junit-jupiter</artifactId>
       <scope>test</scope>
@@ -115,15 +116,6 @@
               <profiles>
                 <profile>openapi</profile>
               </profiles>
-              <arguments>
-                <argument>--server.port=9090</argument>
-                <argument>--spring.datasource.url=jdbc:h2:mem:openapi_db;DB_CLOSE_DELAY=-1</argument>
-                <argument>--spring.datasource.driver-class-name=org.h2.Driver</argument>
-                <argument>--spring.datasource.username=sa</argument>
-                <argument>--spring.datasource.password=</argument>
-                <argument>--spring.jooq.sql-dialect=H2</argument>
-                <argument>--spring.flyway.enabled=false</argument>
-              </arguments>
             </configuration>
           </execution>
           <execution>
@@ -133,6 +125,16 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <db.migration.root>${project.basedir}/..</db.migration.root>
+          </systemPropertyVariables>
+        </configuration>
       </plugin>
 
       <plugin>
@@ -213,7 +215,7 @@
               <user>user</user>
               <password>pwd</password>
               <locations>
-                <location>filesystem:src/main/resources/db/migration/timeseries</location>
+                <location>filesystem:../db/timescale/schema</location>
               </locations>
             </configuration>
           </execution>
@@ -231,7 +233,7 @@
               <user>user</user>
               <password>pwd</password>
               <locations>
-                <location>filesystem:src/main/resources/db/migration/meta</location>
+                <location>filesystem:../db/psql/schema</location>
               </locations>
               <placeholders>
                 <fdw_ts_host>time_series_db</fdw_ts_host>

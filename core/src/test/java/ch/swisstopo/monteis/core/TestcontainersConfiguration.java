@@ -1,9 +1,9 @@
 package ch.swisstopo.monteis.core;
 
+import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
@@ -25,16 +25,14 @@ class TestcontainersConfiguration {
 
   @Bean
   PostgreSQLContainer<?> timescaleDB(
-      Network network,
-      @Value("${app.migration.meta.placeholders.fdw_ts_host}") String fdwTsHost,
-      @Value("${app.migration.timescale.dbname}") String tsDbName) {
+      Network network) {
 
     return new PostgreSQLContainer<>(
             DockerImageName.parse("timescale/timescaledb:latest-pg18")
                 .asCompatibleSubstituteFor("postgres"))
         .withNetwork(network)
-        .withNetworkAliases(fdwTsHost)
-        .withDatabaseName(tsDbName)
+        .withNetworkAliases("time_series_db")
+        .withDatabaseName("monteis-tsdb")
         .withCopyFileToContainer(
             MountableFile.forHostPath("../docker/dataset-tsdb/init_tsdb.sql"),
             "/docker-entrypoint-initdb.d/init_tsdb.sql")
@@ -42,14 +40,29 @@ class TestcontainersConfiguration {
   }
 
   @Bean
+  DatabaseMigrations timeScaleMigrations(
+          @Qualifier("timescaleDB") PostgreSQLContainer<?> timescaleDB
+  ){
+      String migrationRoot = System.getProperty("db.migration.root", "..");
+      log.info("Migrating Timescale DB...");
+      Flyway.configure()
+              .dataSource(timescaleDB.getJdbcUrl(), "ts_flyway", "pwd_ts_flyway")
+              .locations("filesystem:" + migrationRoot + "/db/timescale/schema", "filesystem:" + migrationRoot + "/db/timescale/seed")
+              .load()
+              .migrate();
+      return new DatabaseMigrations();
+  }
+
+    static final class DatabaseMigrations {}
+
+  @Bean
   PostgreSQLContainer<?> metaDataDB(
       Network network,
-      PostgreSQLContainer<?> timescaleDB,
-      @Value("${app.migration.meta.dbname}") String metaDbName) {
+      PostgreSQLContainer<?> timescaleDB) {
 
     return new PostgreSQLContainer<>(DockerImageName.parse("postgres:18-alpine"))
         .withNetwork(network)
-        .withDatabaseName(metaDbName)
+        .withDatabaseName("monteis-meta")
         .withCopyFileToContainer(
             MountableFile.forHostPath("../docker/dataset-meta/init_meta.sql"),
             "/docker-entrypoint-initdb.d/init_meta.sql")
@@ -57,14 +70,26 @@ class TestcontainersConfiguration {
         .withLogConsumer(new Slf4jLogConsumer(log).withPrefix("METADB"));
   }
 
+    @Bean
+    DatabaseMigrations metaDataMigrations(
+            @Qualifier("metaDataDB") PostgreSQLContainer<?> metaDataDB,
+            @Qualifier("timeScaleMigrations") DatabaseMigrations tsDBMigrations
+    ){
+        String migrationRoot = System.getProperty("db.migration.root", "..");
+        log.info("Migrating Metadata DB...");
+        Flyway.configure()
+                .dataSource(metaDataDB.getJdbcUrl(),"core_flyway", "pwd_core_flyway")
+                .locations("filesystem:" + migrationRoot + "/db/psql/schema", "filesystem:" + migrationRoot + "/db/psql/seed")
+                .load()
+                .migrate();
+        return new DatabaseMigrations();
+    }
+
   @Bean
   DynamicPropertyRegistrar dynamicPropertyRegistrar(
-      @Qualifier("metaDataDB") PostgreSQLContainer<?> meta,
-      @Qualifier("timescaleDB") PostgreSQLContainer<?> ts) {
+      @Qualifier("metaDataDB") PostgreSQLContainer<?> meta) {
     return (registry) -> {
       registry.add("spring.datasource.url", meta::getJdbcUrl);
-      registry.add("app.migration.meta.url", meta::getJdbcUrl);
-      registry.add("app.migration.timescale.url", ts::getJdbcUrl);
     };
   }
 }
