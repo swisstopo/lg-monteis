@@ -79,14 +79,14 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-flyway</artifactId>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-database-postgresql</artifactId>
-      <scope>runtime</scope>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
@@ -173,7 +173,7 @@
 
                                 def tsDb = new PostgreSQLContainer(DockerImageName.parse("timescale/timescaledb:latest-pg18").asCompatibleSubstituteFor("postgres"))
                                         .withNetwork(network)
-                                        .withNetworkAliases("time_series_db")
+                                        .withNetworkAliases("ts_db")
                                         .withDatabaseName("monteis-tsdb")
                                         .withUsername("user")
                                         .withPassword("pwd")
@@ -200,6 +200,13 @@
       <plugin>
         <groupId>org.flywaydb</groupId>
         <artifactId>flyway-maven-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <version>11.14.1</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <!-- Cares only for migration of the TimeScaleDB -->
@@ -217,6 +224,9 @@
               <locations>
                 <location>filesystem:../db/timescale/schema</location>
               </locations>
+              <placeholders>
+                <fdw_read_user>fdw_user</fdw_read_user>
+              </placeholders>
             </configuration>
           </execution>
           <execution>
@@ -233,7 +243,7 @@
               <user>user</user>
               <password>pwd</password>
               <locations>
-                <location>filesystem:../db/psql/schema</location>
+                <location>filesystem:../db/meta/schema</location>
               </locations>
               <placeholders>
                 <fdw_ts_host>time_series_db</fdw_ts_host>

@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS sensor_reading (
                                               PRIMARY KEY (timestamp, sensor_id)
     );
 
-GRANT SELECT ON TABLE sensor_reading TO fdw_user;
+GRANT SELECT ON TABLE sensor_reading TO "${fdw_read_user}";
 
 -- 3. In eine Hypertable konvertieren (Partitionierung nach 'timestamp')
 SELECT create_hypertable('sensor_reading', 'timestamp');

@@ -2,8 +2,7 @@
 -- Repeatable migration: re-applies whenever this file's checksum changes.
 -- Delete-then-insert so the script is the single source of truth.
 
--- TRUNCATE works fine on hypertables — it drops all chunks, which is
--- actually cheaper than per-row DELETE on a partitioned table.
+-- TRUNCATE works fine on hypertables
 TRUNCATE TABLE sensor_reading;
 
 INSERT INTO sensor_reading (timestamp, sensor_id, raw_value, norm_value, version, status)

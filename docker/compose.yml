@@ -1,20 +1,20 @@
 services:
-
-  time_series_db:
+# TODO: set profiles per usecase, different migration paths
+  ts_db:
     container_name: timescale-db
     image: timescale/timescaledb:latest-pg18
     restart: unless-stopped
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pwd
-      POSTGRES_DB: monteis-tsdb
+      POSTGRES_DB: ${TS_DB_NAME}
     ports:
       - "5433:5432"
-    profiles: [ '', core, db, test ]
+    profiles: [ '', core, db]
     volumes:
       - ./dataset-tsdb:/docker-entrypoint-initdb.d
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U user -d monteis-tsdb" ]
+      test: [ "CMD-SHELL", "pg_isready -U user -d '${TS_DB_NAME}'" ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -22,15 +22,16 @@ services:
   flyway-timescale:
     image: flyway/flyway
     depends_on:
-      time_series_db:
+      ts_db:
         condition: service_healthy
-    profiles: [ '', core, db, test ]
+    profiles: [ '', core, db ]
     volumes:
       - ./../db/timescale/schema:/flyway/sql/schema
       - ./../db/timescale/seed:/flyway/sql/seed
-    command: -url=jdbc:postgresql://time_series_db:5432/monteis-tsdb
-      -user=ts_flyway
-      -password=pwd_ts_flyway
+    command: -url=jdbc:postgresql://ts_db:5432/${TS_DB_NAME}
+      -user=${TS_FLYWAY_USER}
+      -password=${TS_FLYWAY_PWD}
+      -placeholders.fdw_read_user=${FDW_READ_USER}
       -locations=filesystem:/flyway/sql/schema,filesystem:/flyway/sql/seed
       migrate
 
@@ -39,19 +40,19 @@ services:
     image: postgres:18
     restart: unless-stopped
     depends_on:
-      time_series_db:
+      ts_db:
         condition: service_healthy
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pwd
-      POSTGRES_DB: monteis-meta
+      POSTGRES_DB: ${META_DB_NAME}
     ports:
       - "5432:5432"
-    profiles: [ '', core, db, test ]
+    profiles: [ '', core, db ]
     volumes:
       - ./dataset-meta:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d monteis-meta"]
+      test: ["CMD-SHELL", "pg_isready -U user -d '${META_DB_NAME}'"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -61,13 +62,13 @@ services:
     depends_on:
       metadata_db:
         condition: service_healthy
-    profiles: [ '', core, db, test ]
+    profiles: [ '', core, db ]
     volumes:
-      - ./../db/psql/schema:/flyway/sql/schema
-      - ./../db/psql/seed:/flyway/sql/seed
-    command: -url=jdbc:postgresql://metadata_db:5432/monteis-meta
-      -user=core_flyway
-      -password=pwd_core_flyway
+      - ./../db/meta/schema:/flyway/sql/schema
+      - ./../db/metal/seed:/flyway/sql/seed
+    command: -url=jdbc:postgresql://metadata_db:5432/${META_DB_NAME}
+      -user=${META_FLYWAY_USER}
+      -password=${META_FLYWAY_PWD}
       -locations=filesystem:/flyway/sql/schema,filesystem:/flyway/sql/seed
       migrate
 
