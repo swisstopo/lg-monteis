@@ -35,15 +35,6 @@
             <artifactId>spring-boot-starter-jooq</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-flyway</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
@@ -57,6 +48,36 @@
             <artifactId>spring-boot-starter-kafka-test</artifactId>
             <scope>test</scope>
         </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-flyway-test</artifactId>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-core</artifactId>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-database-postgresql</artifactId>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-junit-jupiter</artifactId>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>postgresql</artifactId>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-testcontainers</artifactId>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
 
     <build>
@@ -124,6 +145,13 @@
             <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
+              <dependencies>
+                <dependency>
+                  <groupId>org.flywaydb</groupId>
+                  <artifactId>flyway-database-postgresql</artifactId>
+                  <version>11.14.1</version>
+                </dependency>
+              </dependencies>
                 <executions>
                     <execution>
                         <id>flyway-migrate-timescale-for-jooq</id>
@@ -133,12 +161,18 @@
                         </goals>
                         <configuration>
                             <skip>${jooq.codegen.skip}</skip>
-                            <url>${pipeline.codegen.timescale.url}</url>
-                            <user>${pipeline.codegen.timescale.user}</user>
-                            <password>${pipeline.codegen.timescale.password}</password>
+                          <!--suppress UnresolvedMavenProperty -->
+                          <url>${pipeline.codegen.timescale.url}</url>
+                          <!--suppress UnresolvedMavenProperty -->
+                          <user>${pipeline.codegen.timescale.user}</user>
+                          <!--suppress UnresolvedMavenProperty -->
+                          <password>${pipeline.codegen.timescale.password}</password>
                             <locations>
-                                <location>filesystem:src/main/resources/db/migration/timeseries</location>
+                              <location>filesystem:../db/timescale/schema</location>
                             </locations>
+                          <placeholders>
+                            <fdw_read_user>fdw_user</fdw_read_user>
+                          </placeholders>
                         </configuration>
                     </execution>
                 </executions>
@@ -157,9 +191,12 @@
                         <configuration>
                             <skip>${jooq.codegen.skip}</skip>
                             <jdbc>
-                                <url>${pipeline.codegen.timescale.url}</url>
-                                <user>${pipeline.codegen.timescale.user}</user>
-                                <password>${pipeline.codegen.timescale.password}</password>
+                              <!--suppress UnresolvedMavenProperty -->
+                              <url>${pipeline.codegen.timescale.url}</url>
+                              <!--suppress UnresolvedMavenProperty -->
+                              <user>${pipeline.codegen.timescale.user}</user>
+                              <!--suppress UnresolvedMavenProperty -->
+                              <password>${pipeline.codegen.timescale.password}</password>
                             </jdbc>
                             <generator>
                                 <database>

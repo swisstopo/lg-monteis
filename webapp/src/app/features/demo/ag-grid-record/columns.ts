@@ -9,6 +9,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetric>
       header: 'Sensor ID',
       sortable: true,
       filter: true,
+      resizable: true,
       flex: 1,
     },
     {

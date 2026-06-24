@@ -4,6 +4,7 @@
 target/
 .mvn/wrapper/maven-wrapper.jar
 HELP.md
+htmlReport/
 
 # Exceptions (if you have source folders named target/build)
 !**/src/main/**/target/
