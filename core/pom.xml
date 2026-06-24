@@ -245,14 +245,6 @@
               <locations>
                 <location>filesystem:../db/meta/schema</location>
               </locations>
-              <placeholders>
-                <fdw_ts_host>time_series_db</fdw_ts_host>
-                <fdw_ts_port>5432</fdw_ts_port>
-                <fdw_ts_dbname>monteis-tsdb</fdw_ts_dbname>
-                <fdw_ts_user>ts_flyway</fdw_ts_user>
-                <fdw_ts_password>pwd_ts_flyway</fdw_ts_password>
-                <fdw_app_user>core_app</fdw_app_user>
-              </placeholders>
             </configuration>
           </execution>
         </executions>

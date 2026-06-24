@@ -57,7 +57,7 @@ services:
       timeout: 3s
       retries: 10
 
-  flyway-postgres:
+  flyway-metadata :
     image: flyway/flyway
     depends_on:
       metadata_db:
@@ -65,7 +65,7 @@ services:
     profiles: [ '', core, db ]
     volumes:
       - ./../db/meta/schema:/flyway/sql/schema
-      - ./../db/metal/seed:/flyway/sql/seed
+      - ./../db/meta/seed:/flyway/sql/seed
     command: -url=jdbc:postgresql://metadata_db:5432/${META_DB_NAME}
       -user=${META_FLYWAY_USER}
       -password=${META_FLYWAY_PWD}
@@ -75,7 +75,7 @@ services:
   kafka:
     image: apache/kafka:4.3.0
     container_name: local-msk-broker
-    profiles: [ '', core, db ] # todo: fixme
+    profiles: [ '', pipeline ] # todo: fixme
     ports:
       - "9092:9092"
     environment:
@@ -112,7 +112,7 @@ services:
     container_name: local-msk-connect
     ports:
       - "8083:8083"
-    profiles: [ '', core, db ] # todo: fixme
+    profiles: [ '', pipeline ] # todo: fixme
     depends_on:
       - kafka
     environment:
@@ -128,7 +128,7 @@ services:
 
   connect-init:
     image: curlimages/curl:8.7.1
-    profiles: [ '', core, db ] # todo: fixme
+    profiles: [ '', pipeline ] # todo: fixme
     container_name: local-msk-connect-init
     depends_on:
       - connect
