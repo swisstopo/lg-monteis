@@ -51,7 +51,7 @@ class ReprocessChunkServiceTest {
     }
 
     @Test
-    void shouldReturnZeroWhenNoOldRecordsFound() {
+    void should_return_zero_when_no_old_records_found() {
         // given
         SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 2);
 
@@ -67,7 +67,7 @@ class ReprocessChunkServiceTest {
     }
 
     @Test
-    void shouldProcessAndBulkUpdateValidRecords() throws TransformationException {
+    void should_process_and_bulk_update_valid_records() throws TransformationException {
         // given
         SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 2);
         OffsetDateTime timestamp = OffsetDateTime.now();
@@ -97,7 +97,7 @@ class ReprocessChunkServiceTest {
     }
 
     @Test
-    void shouldHandlePoisonPillsByBumpingVersionAndSettingNullNormValue() throws TransformationException {
+    void should_handle_poison_pills_by_bumping_version_and_setting_null_norm_value() throws TransformationException {
         // given
         SensorConfig config = new SensorConfig("deviceB", Map.of(), 50.0, -10.0, 3);
         OffsetDateTime timestamp = OffsetDateTime.now();

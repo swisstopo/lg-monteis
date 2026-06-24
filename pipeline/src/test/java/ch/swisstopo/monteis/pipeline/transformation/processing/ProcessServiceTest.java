@@ -46,7 +46,7 @@ class ProcessServiceTest {
     private ArgumentCaptor<List<SensorReadingRecord>> dbRecordsCaptor;
 
     @Test
-    void shouldProcessAndPersistValidBatchSuccessfully() throws TransformationException {
+    void should_process_and_persist_valid_batch_successfully() throws TransformationException {
         // given
         NormalizedSensorData data1 = new NormalizedSensorData("deviceA", "2026-06-23T10:00:00Z", 10.5);
         NormalizedSensorData data2 = new NormalizedSensorData("deviceB", "2026-06-23T10:05:00Z", 20.0);
@@ -75,7 +75,7 @@ class ProcessServiceTest {
     }
 
     @Test
-    void shouldFilterOutPoisonPillsAndPersistValidRecords() throws TransformationException {
+    void should_filter_out_poison_pills_and_persist_valid_records() throws TransformationException {
         // given
         NormalizedSensorData validData = new NormalizedSensorData("deviceA", "2026-06-23T10:00:00Z", 10.5);
         NormalizedSensorData poisonData = new NormalizedSensorData("deviceB", "2026-06-23T10:05:00Z", -999.0);
@@ -112,7 +112,7 @@ class ProcessServiceTest {
     }
 
     @Test
-    void shouldAcknowledgeEvenIfEntireBatchFails() throws TransformationException {
+    void should_acknowledge_even_if_entire_batch_fails() throws TransformationException {
         // given
         NormalizedSensorData poisonData = new NormalizedSensorData("deviceB", "2026-06-23T10:05:00Z", -999.0);
         List<NormalizedSensorData> batch = List.of(poisonData);

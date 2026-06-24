@@ -27,7 +27,7 @@ class SensorConfigReprocessingListenerTest {
     private SensorConfigReprocessingListener listener;
 
     @Test
-    void shouldTriggerReprocessingAndAcknowledgeOnSuccess() {
+    void should_trigger_reprocessing_and_acknowledge_on_success() {
         // given
         SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 2);
 
@@ -40,7 +40,7 @@ class SensorConfigReprocessingListenerTest {
     }
 
     @Test
-    void shouldNotAcknowledgeIfReprocessingFails() {
+    void should_not_acknowledge_if_reprocessing_fails() {
         // given
         SensorConfig config = new SensorConfig("deviceB", Map.of(), 50.0, -10.0, 3);
 

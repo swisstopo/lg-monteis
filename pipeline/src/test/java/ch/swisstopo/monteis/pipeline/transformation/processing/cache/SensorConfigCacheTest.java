@@ -12,7 +12,7 @@ class SensorConfigCacheTest {
     private final SensorConfigCache cache = new SensorConfigCache();
 
     @Test
-    void shouldReturnDefaultConfigWhenSensorDoesNotExist() {
+    void should_return_default_config_when_sensor_does_not_exist() {
         // given
         String unknownSensorId = "device-unknown";
 
@@ -26,7 +26,7 @@ class SensorConfigCacheTest {
     }
 
     @Test
-    void shouldStoreAndReturnConfigWhenUpdated() {
+    void should_store_and_return_config_when_updated() {
         // given
         String sensorId = "deviceA";
         SensorConfig config = new SensorConfig(
@@ -42,7 +42,7 @@ class SensorConfigCacheTest {
     }
 
     @Test
-    void shouldOverwriteExistingConfigWhenUpdatedAgain() {
+    void should_overwrite_existing_config_when_updated_again() {
         // given
         String sensorId = "deviceB";
         SensorConfig initialConfig = new SensorConfig(sensorId, Map.of(), 50.0, -10.0, 1);

@@ -20,7 +20,7 @@ class NormalizedSensorDataPublisherTest {
     private KafkaTemplate<String, NormalizedSensorData> kafkaTemplate;
 
     @Test
-    void shouldDelegateToKafkaTemplate() {
+    void should_delegate_to_kafka_template() {
         // given
         String topic = "test-topic";
         NormalizedSensorDataPublisher publisher = new NormalizedSensorDataPublisher(kafkaTemplate, topic);

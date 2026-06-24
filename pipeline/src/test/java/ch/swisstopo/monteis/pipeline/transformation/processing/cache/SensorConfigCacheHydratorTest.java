@@ -25,7 +25,7 @@ class SensorConfigCacheHydratorTest {
     private SensorConfigCacheHydrator hydrator;
 
     @Test
-    void shouldUpdateCacheAndAcknowledgeMessage() {
+    void should_update_cache_and_acknowledge_message() {
         // given
         SensorConfig config = new SensorConfig(
                 "deviceA", Map.of(), 100.0, 0.0, 1

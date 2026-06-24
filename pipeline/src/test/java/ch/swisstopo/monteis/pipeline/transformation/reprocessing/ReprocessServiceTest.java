@@ -27,7 +27,7 @@ class ReprocessServiceTest {
     private ReprocessService reprocessService;
 
     @Test
-    void shouldSkipReprocessingWhenNoOutdatedRecordsFound() {
+    void should_skip_reprocessing_when_no_outdated_records_found() {
         // given
         SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 2);
 
@@ -42,7 +42,7 @@ class ReprocessServiceTest {
     }
 
     @Test
-    void shouldReprocessInChunksUntilNoRecordsLeft() {
+    void should_reprocess_in_chunks_until_no_records_left() {
         // given
         SensorConfig config = new SensorConfig("deviceB", Map.of(), 100.0, 0.0, 3);
 

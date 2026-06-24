@@ -33,7 +33,7 @@ class RawSolExpertsSensorDataNormalizationServiceTest {
     private RawSolExpertsSensorDataNormalizationService service;
 
     @Test
-    void shouldAcknowledgeAndReturnWhenValuesAreEmpty() {
+    void should_acknowledge_and_return_when_values_are_empty() {
         // given
         RawSolExpertsSensorData emptyPayload = new RawSolExpertsSensorData(
                 "device1", "2026-06-23T09:00:00Z", Collections.emptyMap()
@@ -48,7 +48,7 @@ class RawSolExpertsSensorDataNormalizationServiceTest {
     }
 
     @Test
-    void shouldAcknowledgeAndReturnWhenValuesAreNull() {
+    void should_acknowledge_and_return_when_values_are_null() {
         // given
         RawSolExpertsSensorData nullPayload = new RawSolExpertsSensorData(
                 "device1", "2026-06-23T09:00:00Z", null
@@ -63,7 +63,7 @@ class RawSolExpertsSensorDataNormalizationServiceTest {
     }
 
     @Test
-    void shouldPublishMappedDataAndAcknowledgeOnSuccess() {
+    void should_publish_mapped_data_and_acknowledge_on_success() {
         // given
         Map<String, Double> values = Map.of(
                 "value", 15.5,
@@ -93,7 +93,7 @@ class RawSolExpertsSensorDataNormalizationServiceTest {
     }
 
     @Test
-    void shouldThrowExceptionAndNotAcknowledgeOnPublishFailure() {
+    void should_throw_exception_and_not_acknowledge_on_publish_failure() {
         // given
         Map<String, Double> values = Map.of("value", 15.5);
         RawSolExpertsSensorData payload = new RawSolExpertsSensorData(

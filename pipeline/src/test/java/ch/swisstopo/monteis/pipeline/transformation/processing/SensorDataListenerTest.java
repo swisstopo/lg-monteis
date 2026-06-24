@@ -25,7 +25,7 @@ class SensorDataListenerTest {
     private SensorDataListener listener;
 
     @Test
-    void shouldDelegateBatchToProcessService() {
+    void should_delegate_batch_to_process_service() {
         // given
         List<NormalizedSensorData> batch = List.of(
                 new NormalizedSensorData("deviceA", "2026-06-23T10:00:00Z", 10.5),

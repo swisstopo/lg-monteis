@@ -40,7 +40,7 @@ class BoundsValidatorTest {
     }
 
     @Test
-    void shouldReturnOkWhenValueIsStrictlyWithinBounds() {
+    void should_return_ok_when_value_is_strictly_within_bounds() {
         // given
         SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 1);
 
@@ -53,7 +53,7 @@ class BoundsValidatorTest {
     }
 
     @Test
-    void shouldReturnTooHighAndPublishUpperBreachEventWithExactTimestamp() {
+    void should_return_too_high_and_publish_upper_breach_event_with_exact_timestamp() {
         // given
         SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 1);
 
@@ -74,7 +74,7 @@ class BoundsValidatorTest {
     }
 
     @Test
-    void shouldReturnTooLowAndPublishLowerBreachEventWithExactTimestamp() {
+    void should_return_too_low_and_publish_lower_breach_event_with_exact_timestamp() {
         // given
         SensorConfig config = new SensorConfig("deviceB", Map.of(), 50.0, -10.0, 1);
 

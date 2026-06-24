@@ -34,7 +34,7 @@ class AlertPublisherTest {
     }
 
     @Test
-    void shouldPublishAlertSuccessfully() {
+    void should_publish_alert_successfully() {
         // given
         SensorBoundBreachedEvent event = new SensorBoundBreachedEvent(
                 "deviceA",
@@ -60,7 +60,7 @@ class AlertPublisherTest {
     }
 
     @Test
-    void shouldHandlePublishingFailureGracefully() {
+    void should_handle_publishing_failure_gracefully() {
         // given
         SensorBoundBreachedEvent event = new SensorBoundBreachedEvent(
                 "deviceB",

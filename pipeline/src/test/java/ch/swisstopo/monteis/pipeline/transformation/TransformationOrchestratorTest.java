@@ -38,7 +38,7 @@ class TransformationOrchestratorTest {
     private final OffsetDateTime defaultTimestamp = OffsetDateTime.now();
 
     @Test
-    void shouldSuccessfullyParseEpochTimestampAndOrchestrate() {
+    void should_successfully_parse_epoch_timestamp_and_orchestrate() {
         // given
         long epochMilli = 1718880000000L;
         String rawTimestamp = String.valueOf(epochMilli);
@@ -64,7 +64,7 @@ class TransformationOrchestratorTest {
     }
 
     @Test
-    void shouldThrowTransformationExceptionWhenTimestampFormatIsInvalid() {
+    void should_throw_transformation_exception_when_timestamp_format_is_invalid() {
         // given
         String invalidTimestamp = "not-a-number";
 
@@ -81,7 +81,7 @@ class TransformationOrchestratorTest {
     }
 
     @Test
-    void shouldMapTooHighStatusToCorrectDatabaseEnum() {
+    void should_map_too_high_status_to_correct_database_enum() {
         // given
         Double rawValue = 150.0;
         Double standardizedValue = 150.0;
@@ -97,7 +97,7 @@ class TransformationOrchestratorTest {
     }
 
     @Test
-    void shouldMapTooLowStatusToCorrectDatabaseEnum() {
+    void should_map_too_low_status_to_correct_database_enum() {
         // given
         Double rawValue = -10.0;
         Double standardizedValue = -10.0;
@@ -113,7 +113,7 @@ class TransformationOrchestratorTest {
     }
 
     @Test
-    void shouldWrapMathExceptionsIntoTransformationException() {
+    void should_wrap_math_exceptions_into_transformation_exception() {
         // given
         Double rawValue = 0.0;
 
@@ -135,7 +135,7 @@ class TransformationOrchestratorTest {
     }
 
     @Test
-    void shouldWrapNullPointerExceptionsIntoTransformationException() {
+    void should_wrap_null_pointer_exceptions_into_transformation_exception() {
         // given
         Double nullRawValue = null;
 
