@@ -74,11 +74,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-testcontainers</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
       <scope>test</scope>
@@ -86,6 +81,11 @@
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-database-postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -102,6 +102,7 @@
 
   <build>
     <plugins>
+      <!--      TODO: check if can factor out-->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
@@ -130,6 +131,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+        <!--        TODO: check if needed and if so factor out-->
         <configuration>
           <systemPropertyVariables>
             <db.migration.root>${project.basedir}/..</db.migration.root>
@@ -143,6 +145,7 @@
       </plugin>
 
       <plugin>
+        <!--        TODO: check if can factor out-->
         <groupId>org.codehaus.gmaven</groupId>
         <artifactId>groovy-maven-plugin</artifactId>
         <dependencies>
@@ -198,6 +201,7 @@
       </plugin>
 
       <plugin>
+        <!--        TODO: factor out-->
         <groupId>org.flywaydb</groupId>
         <artifactId>flyway-maven-plugin</artifactId>
         <dependencies>

@@ -10,7 +10,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetric>
       sortable: true,
       filter: true,
       resizable: true,
-      flex: 1,
+      flex: 2,
     },
     {
       field: 'timestamp',
@@ -18,7 +18,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetric>
       sortable: true,
       filter: true,
       resizable: true,
-      flex: 2,
+      flex: 1.5,
       valueFormatter: (params) => datePipe.transform(params.value, 'medium') ?? '',
     },
     {
