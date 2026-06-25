@@ -1,181 +1,193 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>ch.swisstopo.monteis</groupId>
-        <artifactId>parent</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
-    </parent>
+  <parent>
+    <groupId>ch.swisstopo.monteis</groupId>
+    <artifactId>parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
 
-    <artifactId>pipeline</artifactId>
+  <artifactId>pipeline</artifactId>
 
-    <properties>
-        <jooq.codegen.skip>false</jooq.codegen.skip>
-    </properties>
+  <dependencies>
+    <dependency>
+      <groupId>ch.swisstopo.monteis</groupId>
+      <artifactId>contracts</artifactId>
+    </dependency>
 
-    <dependencies>
-        <dependency>
-            <groupId>ch.swisstopo.monteis</groupId>
-            <artifactId>contracts</artifactId>
-        </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-kafka</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-json</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jooq</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-kafka</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-json</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-jooq</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-flyway</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-kafka-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    <!--    Testing -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-kafka-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
 
-            <plugin>
-                <groupId>com.diffplug.spotless</groupId>
-                <artifactId>spotless-maven-plugin</artifactId>
-            </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
 
-            <plugin>
-                <groupId>org.codehaus.gmaven</groupId>
-                <artifactId>groovy-maven-plugin</artifactId>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.testcontainers</groupId>
-                        <artifactId>postgresql</artifactId>
-                        <version>${testcontainers.postgres.version}</version>
-                    </dependency>
-                </dependencies>
-                <executions>
-                    <execution>
-                        <id>start-timescale-for-jooq</id>
-                        <goals>
-                            <goal>execute</goal>
-                        </goals>
-                        <phase>generate-sources</phase>
-                        <configuration>
-                            <source>
-                                import org.testcontainers.containers.PostgreSQLContainer
-                                import org.testcontainers.utility.DockerImageName
-                                import org.testcontainers.utility.MountableFile
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+      </plugin>
 
-                                if ("${jooq.codegen.skip}" == "true") {
-                                    println "[INFO] Skipping TimescaleDB Testcontainer for jOOQ."
-                                } else {
-                                    println "[INFO] Starting TimescaleDB Testcontainer for pipeline jOOQ codegen..."
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+      </plugin>
 
-                                    def tsDb = new PostgreSQLContainer(
-                                            DockerImageName.parse("timescale/timescaledb:latest-pg18")
-                                                    .asCompatibleSubstituteFor("postgres")
-                                    )
-                                            .withDatabaseName("monteis-tsdb")
-                                            .withUsername("pipeline_codegen")
-                                            .withPassword("pipeline_codegen")
-                                            .withCopyFileToContainer(MountableFile.forHostPath("${project.basedir}/../docker/dataset-tsdb/init_tsdb.sql"), "/docker-entrypoint-initdb.d/init_tsdb.sql")
-                                    tsDb.start()
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>groovy-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>start-timescale-for-jooq</id>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <source>import org.testcontainers.containers.PostgreSQLContainer
+                import org.testcontainers.utility.DockerImageName
+                import org.testcontainers.utility.MountableFile
 
-                                    project.properties.setProperty("pipeline.codegen.timescale.url", tsDb.getJdbcUrl())
-                                    project.properties.setProperty("pipeline.codegen.timescale.user", tsDb.getUsername())
-                                    project.properties.setProperty("pipeline.codegen.timescale.password", tsDb.getPassword())
+                if ("${jooq.codegen.skip}" == "true") {
+                  println "[INFO] Skipping TimescaleDB Testcontainer for jOOQ."
+                } else {
+                  println "[INFO] Starting TimescaleDB Testcontainer for pipeline jOOQ codegen..."
 
-                                    println "[INFO] TimescaleDB for pipeline jOOQ codegen started at " + tsDb.getJdbcUrl()
-                                }
-                            </source>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+                  def tsDb = new PostgreSQLContainer(
+                    DockerImageName.parse("timescale/timescaledb:latest-pg18")
+                      .asCompatibleSubstituteFor("postgres")
+                  )
+                    .withDatabaseName("monteis-tsdb")
+                    .withUsername("user")
+                    .withPassword("pwd")
+                    .withCopyFileToContainer(MountableFile.forHostPath("${project.basedir}/../docker/dataset-tsdb/init_tsdb.sql"), "/docker-entrypoint-initdb.d/init_tsdb.sql")
+                  tsDb.start()
 
-            <plugin>
-                <groupId>org.flywaydb</groupId>
-                <artifactId>flyway-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>flyway-migrate-timescale-for-jooq</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>migrate</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${jooq.codegen.skip}</skip>
-                            <url>${pipeline.codegen.timescale.url}</url>
-                            <user>${pipeline.codegen.timescale.user}</user>
-                            <password>${pipeline.codegen.timescale.password}</password>
-                            <locations>
-                                <location>filesystem:src/main/resources/db/migration/timeseries</location>
-                            </locations>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+                  project.properties.setProperty("pipeline.codegen.timescale.url", tsDb.getJdbcUrl())
 
-            <plugin>
-                <groupId>org.jooq</groupId>
-                <artifactId>jooq-codegen-maven</artifactId>
-                <executions>
-                    <execution>
-                        <id>generate-jooq</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${jooq.codegen.skip}</skip>
-                            <jdbc>
-                                <url>${pipeline.codegen.timescale.url}</url>
-                                <user>${pipeline.codegen.timescale.user}</user>
-                                <password>${pipeline.codegen.timescale.password}</password>
-                            </jdbc>
-                            <generator>
-                                <database>
-                                    <name>org.jooq.meta.postgres.PostgresDatabase</name>
-                                    <inputSchema>public</inputSchema>
-                                    <excludes>flyway_schema_history</excludes>
-                                </database>
-                                <target>
-                                    <packageName>ch.swisstopo.monteis.pipeline.jooq.generated</packageName>
-                                    <directory>target/generated-sources/jooq</directory>
-                                </target>
-                            </generator>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+                  println "[INFO] TimescaleDB for pipeline jOOQ codegen started at " + tsDb.getJdbcUrl()
+                }</source>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>flyway-migrate-timescale-for-jooq</id>
+            <goals>
+              <goal>migrate</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <!--suppress UnresolvedMavenProperty -->
+              <url>${pipeline.codegen.timescale.url}</url>
+              <locations>
+                <location>filesystem:${maven.multiModuleProjectDirectory}/db/timescale/schema</location>
+              </locations>
+              <placeholders>
+                <fdw_read_user>fdw_user</fdw_read_user>
+              </placeholders>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jooq</groupId>
+        <artifactId>jooq-codegen-maven</artifactId>
+        <executions>
+          <execution>
+            <id>generate-jooq</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <jdbc>
+                <!--suppress UnresolvedMavenProperty -->
+                <url>${pipeline.codegen.timescale.url}</url>
+                <user>user</user>
+                <password>pwd</password>
+              </jdbc>
+              <generator>
+                <target>
+                  <packageName>ch.swisstopo.monteis.pipeline.jooq.generated</packageName>
+                </target>
+              </generator>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

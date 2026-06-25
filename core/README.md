@@ -37,3 +37,13 @@ We enforce the API contract by generating it from the controllers using OpenAPI.
 mvn verify -Dopenapi.codegen.skip=false
 ```
 
+## Dev UP
+
+To start the Project you need to start the according compose setup first, this can be done using:
+
+### View with seeding Data
+
+```shell
+cd ../docker && make core  
+```
+

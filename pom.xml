@@ -1,119 +1,237 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.6</version>
-        <relativePath/>
-    </parent>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.0.6</version>
+    <relativePath/>
+  </parent>
 
-    <groupId>ch.swisstopo.monteis</groupId>
-    <artifactId>parent</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <packaging>pom</packaging>
+  <groupId>ch.swisstopo.monteis</groupId>
+  <artifactId>parent</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
 
-    <modules>
-        <module>contracts</module>
-        <module>core</module>
-        <module>pipeline</module>
-    </modules>
+  <modules>
+    <module>contracts</module>
+    <module>core</module>
+    <module>pipeline</module>
+  </modules>
 
-    <properties>
-        <java.version>25</java.version>
-        <testcontainers.postgres.version>1.21.4</testcontainers.postgres.version>
-        <postgresql.version>42.7.10</postgresql.version>
-        <springdoc.version>3.0.2</springdoc.version>
-        <springdoc-plugin.version>1.5</springdoc-plugin.version>
-        <spotless.version>3.4.0</spotless.version>
-        <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
-        <openapi-generator-plugin.version>7.23.0</openapi-generator-plugin.version>
-        <swagger-annotations.version>2.2.21</swagger-annotations.version>
-        <jackson-databind.version>2.21.2</jackson-databind.version>
-        <jackson-databind-nullable.version>0.2.6</jackson-databind-nullable.version>
-    </properties>
+  <properties>
+    <java.version>25</java.version>
+    <testcontainers.postgres.version>1.21.4</testcontainers.postgres.version>
+    <postgresql.version>42.7.10</postgresql.version>
+    <springdoc.version>3.0.2</springdoc.version>
+    <springdoc-plugin.version>1.5</springdoc-plugin.version>
+    <spotless.version>3.4.0</spotless.version>
+    <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
+    <openapi-generator-plugin.version>7.23.0</openapi-generator-plugin.version>
+    <swagger-annotations.version>2.2.21</swagger-annotations.version>
+    <jackson-databind.version>2.21.2</jackson-databind.version>
+    <jackson-databind-nullable.version>0.2.6</jackson-databind-nullable.version>
 
-    <dependencyManagement>
-        <dependencies>
+    <jooq.codegen.skip>false</jooq.codegen.skip>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>contracts</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson-databind.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.swagger.core.v3</groupId>
+        <artifactId>swagger-annotations</artifactId>
+        <version>${swagger-annotations.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.openapitools</groupId>
+        <artifactId>jackson-databind-nullable</artifactId>
+        <version>${jackson-databind-nullable.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>jakarta.validation</groupId>
+        <artifactId>jakarta.validation-api</artifactId>
+      </dependency>
+
+      <dependency>
+        <groupId>jakarta.annotation</groupId>
+        <artifactId>jakarta.annotation-api</artifactId>
+      </dependency>
+
+      <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        <version>${springdoc.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>${postgresql.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>${testcontainers.postgres.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <systemPropertyVariables>
+              <monteis.repo.root>${maven.multiModuleProjectDirectory}</monteis.repo.root>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <configuration>
+            <systemPropertyVariables>
+              <monteis.repo.root>${maven.multiModuleProjectDirectory}</monteis.repo.root>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+
+        <!--        FORMATTING -->
+        <plugin>
+          <groupId>com.diffplug.spotless</groupId>
+          <artifactId>spotless-maven-plugin</artifactId>
+          <version>${spotless.version}</version>
+          <configuration>
+            <formats>
+              <format>
+                <includes>
+                  <include>.gitattributes</include>
+                  <include>.gitignore</include>
+                </includes>
+                <trimTrailingWhitespace/>
+                <endWithNewline/>
+                <indent>
+                  <tabs>true</tabs>
+                  <spacesPerTab>4</spacesPerTab>
+                </indent>
+              </format>
+            </formats>
+            <java>
+              <includes>
+                <include>**/src/main/java/**/*.java</include>
+                <include>**/src/test/java/**/*.java</include>
+              </includes>
+              <googleJavaFormat>
+                <reflowLongStrings>true</reflowLongStrings>
+                <formatJavadoc>false</formatJavadoc>
+              </googleJavaFormat>
+              <removeUnusedImports/>
+            </java>
+            <sql>
+              <includes>
+                <include>**/src/main/resources/**/*.sql</include>
+              </includes>
+            </sql>
+            <pom>
+              <includes>
+                <include>**/pom.xml</include>
+              </includes>
+              <sortPom>
+                <encoding>UTF-8</encoding>
+                <keepBlankLines>true</keepBlankLines>
+              </sortPom>
+            </pom>
+            <markdown>
+              <includes>
+                <include>**/*.md</include>
+              </includes>
+              <excludes>
+                <exclude>webapp/**/*.md</exclude>
+              </excludes>
+              <flexmark/>
+            </markdown>
+          </configuration>
+        </plugin>
+        <!--        JOOQ CODE GEN incl. FLYWAY-->
+        <plugin>
+          <groupId>org.codehaus.gmaven</groupId>
+          <artifactId>groovy-maven-plugin</artifactId>
+          <version>${groovy-maven-plugin.version}</version>
+          <dependencies>
             <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>contracts</artifactId>
-                <version>${project.version}</version>
+              <groupId>org.testcontainers</groupId>
+              <artifactId>postgresql</artifactId>
+              <version>${testcontainers.postgres.version}</version>
             </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.springdoc</groupId>
+          <artifactId>springdoc-openapi-maven-plugin</artifactId>
+          <version>${springdoc-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.openapitools</groupId>
+          <artifactId>openapi-generator-maven-plugin</artifactId>
+          <version>${openapi-generator-plugin.version}</version>
+        </plugin>
 
+        <plugin>
+          <groupId>org.flywaydb</groupId>
+          <artifactId>flyway-maven-plugin</artifactId>
+          <version>${flyway.version}</version>
+          <configuration>
+            <skip>${jooq.codegen.skip}</skip>
+            <user>user</user>
+            <password>pwd</password>
+          </configuration>
+          <dependencies>
             <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${jackson-databind.version}</version>
+              <groupId>org.flywaydb</groupId>
+              <artifactId>flyway-database-postgresql</artifactId>
+              <version>${flyway.version}</version>
             </dependency>
-            <dependency>
-                <groupId>io.swagger.core.v3</groupId>
-                <artifactId>swagger-annotations</artifactId>
-                <version>${swagger-annotations.version}</version>
-            </dependency>
+          </dependencies>
+        </plugin>
 
-            <dependency>
-                <groupId>org.openapitools</groupId>
-                <artifactId>jackson-databind-nullable</artifactId>
-                <version>${jackson-databind-nullable.version}</version>
-            </dependency>
+        <plugin>
+          <groupId>org.jooq</groupId>
+          <artifactId>jooq-codegen-maven</artifactId>
+          <version>${jooq.version}</version>
+          <configuration>
+            <skip>${jooq.codegen.skip}</skip>
+            <generator>
+              <database>
+                <name>org.jooq.meta.postgres.PostgresDatabase</name>
+                <inputSchema>public</inputSchema>
+                <excludes>flyway_schema_history</excludes>
+              </database>
+              <target>
+                <directory>target/generated-sources/jooq</directory>
+              </target>
+            </generator>
+          </configuration>
+        </plugin>
 
-            <dependency>
-                <groupId>jakarta.validation</groupId>
-                <artifactId>jakarta.validation-api</artifactId>
-            </dependency>
-
-            <dependency>
-                <groupId>jakarta.annotation</groupId>
-                <artifactId>jakarta.annotation-api</artifactId>
-            </dependency>
-
-            <dependency>
-                <groupId>org.springdoc</groupId>
-                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-                <version>${springdoc.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.postgresql</groupId>
-                <artifactId>postgresql</artifactId>
-                <version>${postgresql.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>postgresql</artifactId>
-                <version>${testcontainers.postgres.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>com.diffplug.spotless</groupId>
-                    <artifactId>spotless-maven-plugin</artifactId>
-                    <version>${spotless.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.codehaus.gmaven</groupId>
-                    <artifactId>groovy-maven-plugin</artifactId>
-                    <version>${groovy-maven-plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.springdoc</groupId>
-                    <artifactId>springdoc-openapi-maven-plugin</artifactId>
-                    <version>${springdoc-plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.openapitools</groupId>
-                    <artifactId>openapi-generator-maven-plugin</artifactId>
-                    <version>${openapi-generator-plugin.version}</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
+      </plugins>
+    </pluginManagement>
+  </build>
 </project>

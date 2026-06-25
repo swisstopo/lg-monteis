@@ -1,35 +1,83 @@
 services:
-  metadata_db:
-    container_name: monteis-meta-db
-    image: postgres:18
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pwd
-      POSTGRES_DB: monteis-meta
-    ports:
-      - "5432:5432"
-    profiles: [ '', core, db ]
-    volumes:
-      - ./dataset-meta:/docker-entrypoint-initdb.d
-
-  time_series_db:
+  ts_db:
     container_name: timescale-db
     image: timescale/timescaledb:latest-pg18
     restart: unless-stopped
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pwd
-      POSTGRES_DB: monteis-tsdb
+      POSTGRES_DB: ${TS_DB_NAME}
     ports:
       - "5433:5432"
-    profiles: [ '', core, db ]
+    profiles: [ core, pipeline]
     volumes:
       - ./dataset-tsdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d '${TS_DB_NAME}'" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  flyway-timescale:
+    image: flyway/flyway
+    depends_on:
+      ts_db:
+        condition: service_healthy
+    profiles: [ core, pipeline ]
+    volumes:
+      - ./../db/timescale/schema:/flyway/sql/schema
+      - ./../db/timescale/seed:/flyway/sql/seed
+    # Uses the environment variable if present; otherwise defaults to schema + seed
+    command: > 
+      -url=jdbc:postgresql://ts_db:5432/${TS_DB_NAME}
+      -user=${TS_FLYWAY_USER}
+      -password=${TS_FLYWAY_PWD}
+      -placeholders.fdw_read_user=${FDW_READ_USER}
+      -locations=${TS_FLYWAY_LOCATIONS:-filesystem:/flyway/sql/schema,filesystem:/flyway/sql/seed}
+      migrate
+
+  metadata_db:
+    container_name: monteis-meta-db
+    image: postgres:18
+    restart: unless-stopped
+    depends_on:
+      ts_db:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pwd
+      POSTGRES_DB: ${META_DB_NAME}
+    ports:
+      - "5432:5432"
+    profiles: [ core ]
+    volumes:
+      - ./dataset-meta:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d '${META_DB_NAME}'"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  flyway-metadata :
+    image: flyway/flyway
+    depends_on:
+      metadata_db:
+        condition: service_healthy
+    profiles: [ core ]
+    volumes:
+      - ./../db/meta/schema:/flyway/sql/schema
+      - ./../db/meta/seed:/flyway/sql/seed
+    command: >
+      -url=jdbc:postgresql://metadata_db:5432/${META_DB_NAME}
+      -user=${META_FLYWAY_USER}
+      -password=${META_FLYWAY_PWD}
+      -locations=filesystem:/flyway/sql/schema,filesystem:/flyway/sql/seed
+      migrate
 
   kafka:
     image: apache/kafka:4.3.0
     container_name: local-msk-broker
+    profiles: [ pipeline ]
     ports:
       - "9092:9092"
     environment:
@@ -60,14 +108,22 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   connect:
     image: apache/kafka:4.3.0
     container_name: local-msk-connect
     ports:
       - "8083:8083"
+    profiles: [ pipeline ]
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     environment:
       SOLEXPERTS_KAFKA_USERNAME: ${SOLEXPERTS_KAFKA_USERNAME}
       SOLEXPERTS_KAFKA_PASSWORD: ${SOLEXPERTS_KAFKA_PASSWORD}
@@ -78,25 +134,26 @@ services:
       "/opt/kafka/bin/connect-distributed.sh",
       "/opt/kafka/config/connect-distributed.properties"
     ]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo '' > /dev/tcp/127.0.0.1/8083"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   connect-init:
     image: curlimages/curl:8.7.1
+    profiles: [ pipeline ]
     container_name: local-msk-connect-init
     depends_on:
-      - connect
+      connect:
+        condition: service_healthy
     volumes:
       # Mount the file directly to its final destination
       - ./connect/mm2-config.json:/tmp/mm2-config.json
     command: |
-      sh -c "
-        echo '⏳ Waiting for Kafka Connect REST API to be ready...'
-        while ! curl -s http://connect:8083/ > /dev/null; do
-          echo 'Waiting 5 more seconds...'
-          sleep 5
-        done
-      
+      sh -c "      
         echo '✅ Kafka Connect is up! Registering MirrorMaker 2 connector...'
-        curl -X POST -H 'Content-Type: application/json' -d @/tmp/mm2-config.json http://connect:8083/connectors
-      
+        curl -f -X POST -H 'Content-Type: application/json' -d @/tmp/mm2-config.json http://connect:8083/connectors
         echo '\n🎉 Connector registered successfully!'
       "

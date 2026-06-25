@@ -12,20 +12,10 @@
   <artifactId>core</artifactId>
 
   <properties>
-    <jooq.codegen.skip>false</jooq.codegen.skip>
     <openapi.codegen.skip>true</openapi.codegen.skip>
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-flyway</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.flywaydb</groupId>
-      <artifactId>flyway-database-postgresql</artifactId>
-      <scope>runtime</scope>
-    </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
@@ -83,6 +73,16 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-testcontainers</artifactId>
       <scope>test</scope>
@@ -115,15 +115,6 @@
               <profiles>
                 <profile>openapi</profile>
               </profiles>
-              <arguments>
-                <argument>--server.port=9090</argument>
-                <argument>--spring.datasource.url=jdbc:h2:mem:openapi_db;DB_CLOSE_DELAY=-1</argument>
-                <argument>--spring.datasource.driver-class-name=org.h2.Driver</argument>
-                <argument>--spring.datasource.username=sa</argument>
-                <argument>--spring.datasource.password=</argument>
-                <argument>--spring.jooq.sql-dialect=H2</argument>
-                <argument>--spring.flyway.enabled=false</argument>
-              </arguments>
             </configuration>
           </execution>
           <execution>
@@ -136,6 +127,16 @@
       </plugin>
 
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+      </plugin>
+
+      <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
       </plugin>
@@ -143,13 +144,6 @@
       <plugin>
         <groupId>org.codehaus.gmaven</groupId>
         <artifactId>groovy-maven-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>${testcontainers.postgres.version}</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>start-testcontainers</id>
@@ -171,7 +165,7 @@
 
                                 def tsDb = new PostgreSQLContainer(DockerImageName.parse("timescale/timescaledb:latest-pg18").asCompatibleSubstituteFor("postgres"))
                                         .withNetwork(network)
-                                        .withNetworkAliases("time_series_db")
+                                        .withNetworkAliases("ts_db")
                                         .withDatabaseName("monteis-tsdb")
                                         .withUsername("user")
                                         .withPassword("pwd")
@@ -207,14 +201,14 @@
             </goals>
             <phase>generate-sources</phase>
             <configuration>
-              <skip>${jooq.codegen.skip}</skip>
               <!--suppress UnresolvedMavenProperty -->
               <url>${codegen.ts.url}</url>
-              <user>user</user>
-              <password>pwd</password>
               <locations>
-                <location>filesystem:src/main/resources/db/migration/timeseries</location>
+                <location>filesystem:${maven.multiModuleProjectDirectory}/db/timescale/schema</location>
               </locations>
+              <placeholders>
+                <fdw_read_user>fdw_user</fdw_read_user>
+              </placeholders>
             </configuration>
           </execution>
           <execution>
@@ -225,22 +219,11 @@
             </goals>
             <phase>generate-sources</phase>
             <configuration>
-              <skip>${jooq.codegen.skip}</skip>
               <!--suppress UnresolvedMavenProperty -->
               <url>${codegen.meta.url}</url>
-              <user>user</user>
-              <password>pwd</password>
               <locations>
-                <location>filesystem:src/main/resources/db/migration/meta</location>
+                <location>filesystem:${maven.multiModuleProjectDirectory}/db/meta/schema</location>
               </locations>
-              <placeholders>
-                <fdw_ts_host>time_series_db</fdw_ts_host>
-                <fdw_ts_port>5432</fdw_ts_port>
-                <fdw_ts_dbname>monteis-tsdb</fdw_ts_dbname>
-                <fdw_ts_user>ts_flyway</fdw_ts_user>
-                <fdw_ts_password>pwd_ts_flyway</fdw_ts_password>
-                <fdw_app_user>core_app</fdw_app_user>
-              </placeholders>
             </configuration>
           </execution>
         </executions>
@@ -257,7 +240,6 @@
             </goals>
             <phase>generate-sources</phase>
             <configuration>
-              <skip>${jooq.codegen.skip}</skip>
               <jdbc>
                 <!-- Only connect to metadata DB for JOOQ -->
                 <!--suppress UnresolvedMavenProperty -->
@@ -266,14 +248,8 @@
                 <password>pwd</password>
               </jdbc>
               <generator>
-                <database>
-                  <name>org.jooq.meta.postgres.PostgresDatabase</name>
-                  <inputSchema>public</inputSchema>
-                  <excludes>flyway_schema_history</excludes>
-                </database>
                 <target>
                   <packageName>ch.swisstopo.monteis.core.jooq.generated</packageName>
-                  <directory>target/generated-sources/jooq</directory>
                 </target>
               </generator>
             </configuration>

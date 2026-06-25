@@ -10,27 +10,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class SensorConfigCacheHydrator {
 
-    private static final Logger log = LoggerFactory.getLogger(SensorConfigCacheHydrator.class);
+  private static final Logger log = LoggerFactory.getLogger(SensorConfigCacheHydrator.class);
 
-    private final SensorConfigCache cacheService;
+  private final SensorConfigCache cacheService;
 
-    public SensorConfigCacheHydrator(SensorConfigCache cacheService) {
-        this.cacheService = cacheService;
-    }
+  public SensorConfigCacheHydrator(SensorConfigCache cacheService) {
+    this.cacheService = cacheService;
+  }
 
-    @KafkaListener(
-            topics = "${app.kafka.topics.sensor-config}",
-            // 1. Generate the unique ID so it broadcasts to all pods
-            groupId = "cache-hydrator-#{T(java.util.UUID).randomUUID().toString()}",
-            // 2. FORCE Kafka to send everything from the beginning of the topic!
-            properties = {
-                    "auto.offset.reset=earliest"
-            }
-    )
-    public void consumeSensorConfigUpdate(SensorConfig sensorConfig, Acknowledgment ack) {
-        cacheService.updateSensorConfig(sensorConfig);
-        log.info("Pod cache updated for sensor {}", sensorConfig.getSensorId());
+  @KafkaListener(
+      topics = "${app.kafka.topics.sensor-config}",
+      // 1. Generate the unique ID so it broadcasts to all pods
+      groupId = "cache-hydrator-#{T(java.util.UUID).randomUUID().toString()}",
+      // 2. FORCE Kafka to send everything from the beginning of the topic!
+      properties = {"auto.offset.reset=earliest"})
+  public void consumeSensorConfigUpdate(SensorConfig sensorConfig, Acknowledgment ack) {
+    cacheService.updateSensorConfig(sensorConfig);
+    log.info("Pod cache updated for sensor {}", sensorConfig.getSensorId());
 
-        ack.acknowledge();
-    }
+    ack.acknowledge();
+  }
 }
