@@ -30,6 +30,7 @@ allow:
   - EDL-1.0
   - EPL-1.0
   - EPL-1.0 AND LicenseRef-MPL-2.0
+  - EPL-2.0 AND LicenseRef-GPL2-w--CPE
   - LicenseRef-MPL-2.0
   - OFL-1.1
   - CC0-1.0
@@ -70,6 +71,7 @@ ignore-packages: [
   # --- 4. Ignore Messy Metadata (Safely BSD/EPL/Apache) ---
   "spring-kafka",
   "spring-boot-starter-kafka*",
+  "spring-boot-starter-json*",
   "postgresql"
 ]
 
