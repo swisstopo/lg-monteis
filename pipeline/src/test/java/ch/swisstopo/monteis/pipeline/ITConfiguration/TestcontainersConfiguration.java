@@ -26,7 +26,7 @@ public class TestcontainersConfiguration {
 
   @Bean
   PostgreSQLContainer<?> timescaleDB(@Value("${ts.db.name}") String dbName, Network network) {
-
+    String monteisRoot = System.getProperty("monteis.repo.root", "..");
     return new PostgreSQLContainer<>(
             DockerImageName.parse("timescale/timescaledb:latest-pg18")
                 .asCompatibleSubstituteFor("postgres"))
@@ -34,7 +34,7 @@ public class TestcontainersConfiguration {
         .withNetworkAliases("ts_db") // needed for fdw
         .withDatabaseName(dbName)
         .withCopyFileToContainer(
-            MountableFile.forHostPath("../docker/dataset-tsdb/init_tsdb.sql"),
+            MountableFile.forHostPath(monteisRoot + "/docker/dataset-tsdb/init_tsdb.sql"),
             "/docker-entrypoint-initdb.d/init_tsdb.sql")
         .withLogConsumer(new Slf4jLogConsumer(log).withPrefix("TIMESCALEDB"));
   }
@@ -45,11 +45,11 @@ public class TestcontainersConfiguration {
       @Value("${ts.flyway.user.name}") String flywayUserName,
       @Value("${ts.flyway.user.pwd}") String flywayUserPwd,
       @Value("${fdw.read.user}") String fdwReadUser) {
-    String migrationRoot = System.getProperty("db.migration.root", "..");
+    String monteisRoot = System.getProperty("monteis.repo.root", "..");
     log.info("Migrating Timescale DB...");
     Flyway.configure()
         .dataSource(timescaleDB.getJdbcUrl(), flywayUserName, flywayUserPwd)
-        .locations("filesystem:" + migrationRoot + "/db/timescale/schema")
+        .locations("filesystem:" + monteisRoot + "/db/timescale/schema")
         .placeholders(
             Map.of(
                 "fdw_read_user", fdwReadUser)) // let the fdw read user be controlled from outside

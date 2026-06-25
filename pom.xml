@@ -11,7 +11,7 @@
 
   <groupId>ch.swisstopo.monteis</groupId>
   <artifactId>parent</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>${revision}</version>
   <packaging>pom</packaging>
 
   <modules>
@@ -32,6 +32,9 @@
     <swagger-annotations.version>2.2.21</swagger-annotations.version>
     <jackson-databind.version>2.21.2</jackson-databind.version>
     <jackson-databind-nullable.version>0.2.6</jackson-databind-nullable.version>
+
+    <jooq.codegen.skip>false</jooq.codegen.skip>
+    <revision>0.0.1-SNAPSHOT</revision>
   </properties>
 
   <dependencyManagement>
@@ -93,6 +96,27 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <systemPropertyVariables>
+              <monteis.repo.root>${maven.multiModuleProjectDirectory}</monteis.repo.root>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <configuration>
+            <systemPropertyVariables>
+              <monteis.repo.root>${maven.multiModuleProjectDirectory}</monteis.repo.root>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+
+        <!--        FORMATTING -->
+        <plugin>
           <groupId>com.diffplug.spotless</groupId>
           <artifactId>spotless-maven-plugin</artifactId>
           <version>${spotless.version}</version>
@@ -147,6 +171,7 @@
             </markdown>
           </configuration>
         </plugin>
+        <!--        JOOQ CODE GEN incl. FLYWAY-->
         <plugin>
           <groupId>org.codehaus.gmaven</groupId>
           <artifactId>groovy-maven-plugin</artifactId>
@@ -169,6 +194,44 @@
           <artifactId>openapi-generator-maven-plugin</artifactId>
           <version>${openapi-generator-plugin.version}</version>
         </plugin>
+
+        <plugin>
+          <groupId>org.flywaydb</groupId>
+          <artifactId>flyway-maven-plugin</artifactId>
+          <version>${flyway.version}</version>
+          <configuration>
+            <skip>${jooq.codegen.skip}</skip>
+            <user>user</user>
+            <password>pwd</password>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.flywaydb</groupId>
+              <artifactId>flyway-database-postgresql</artifactId>
+              <version>${flyway.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+
+        <plugin>
+          <groupId>org.jooq</groupId>
+          <artifactId>jooq-codegen-maven</artifactId>
+          <version>${jooq.version}</version>
+          <configuration>
+            <skip>${jooq.codegen.skip}</skip>
+            <generator>
+              <database>
+                <name>org.jooq.meta.postgres.PostgresDatabase</name>
+                <inputSchema>public</inputSchema>
+                <excludes>flyway_schema_history</excludes>
+              </database>
+              <target>
+                <directory>target/generated-sources/jooq</directory>
+              </target>
+            </generator>
+          </configuration>
+        </plugin>
+
       </plugins>
     </pluginManagement>
   </build>

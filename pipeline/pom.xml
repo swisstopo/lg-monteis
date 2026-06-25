@@ -5,15 +5,11 @@
   <parent>
     <groupId>ch.swisstopo.monteis</groupId>
     <artifactId>parent</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>${revision}</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>pipeline</artifactId>
-
-  <properties>
-    <jooq.codegen.skip>false</jooq.codegen.skip>
-  </properties>
 
   <dependencies>
     <dependency>
@@ -89,41 +85,23 @@
       </plugin>
 
       <plugin>
-        <groupId>com.diffplug.spotless</groupId>
-        <artifactId>spotless-maven-plugin</artifactId>
-      </plugin>
-
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <!--        TODO: check if needed and if so factor out-->
-        <configuration>
-          <systemPropertyVariables>
-            <db.migration.root>${project.basedir}/..</db.migration.root>
-          </systemPropertyVariables>
-        </configuration>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
-        <configuration>
-          <systemPropertyVariables>
-            <db.migration.root>${project.basedir}/..</db.migration.root>
-          </systemPropertyVariables>
-        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
       </plugin>
 
       <plugin>
         <groupId>org.codehaus.gmaven</groupId>
         <artifactId>groovy-maven-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>${testcontainers.postgres.version}</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>start-timescale-for-jooq</id>
@@ -146,14 +124,12 @@
                       .asCompatibleSubstituteFor("postgres")
                   )
                     .withDatabaseName("monteis-tsdb")
-                    .withUsername("pipeline_codegen")
-                    .withPassword("pipeline_codegen")
+                    .withUsername("user")
+                    .withPassword("pwd")
                     .withCopyFileToContainer(MountableFile.forHostPath("${project.basedir}/../docker/dataset-tsdb/init_tsdb.sql"), "/docker-entrypoint-initdb.d/init_tsdb.sql")
                   tsDb.start()
 
                   project.properties.setProperty("pipeline.codegen.timescale.url", tsDb.getJdbcUrl())
-                  project.properties.setProperty("pipeline.codegen.timescale.user", tsDb.getUsername())
-                  project.properties.setProperty("pipeline.codegen.timescale.password", tsDb.getPassword())
 
                   println "[INFO] TimescaleDB for pipeline jOOQ codegen started at " + tsDb.getJdbcUrl()
                 }</source>
@@ -165,13 +141,6 @@
       <plugin>
         <groupId>org.flywaydb</groupId>
         <artifactId>flyway-maven-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
-            <version>11.14.1</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>flyway-migrate-timescale-for-jooq</id>
@@ -180,15 +149,10 @@
             </goals>
             <phase>generate-sources</phase>
             <configuration>
-              <skip>${jooq.codegen.skip}</skip>
               <!--suppress UnresolvedMavenProperty -->
               <url>${pipeline.codegen.timescale.url}</url>
-              <!--suppress UnresolvedMavenProperty -->
-              <user>${pipeline.codegen.timescale.user}</user>
-              <!--suppress UnresolvedMavenProperty -->
-              <password>${pipeline.codegen.timescale.password}</password>
               <locations>
-                <location>filesystem:../db/timescale/schema</location>
+                <location>filesystem:${maven.multiModuleProjectDirectory}/db/timescale/schema</location>
               </locations>
               <placeholders>
                 <fdw_read_user>fdw_user</fdw_read_user>
@@ -209,24 +173,15 @@
             </goals>
             <phase>generate-sources</phase>
             <configuration>
-              <skip>${jooq.codegen.skip}</skip>
               <jdbc>
                 <!--suppress UnresolvedMavenProperty -->
                 <url>${pipeline.codegen.timescale.url}</url>
-                <!--suppress UnresolvedMavenProperty -->
-                <user>${pipeline.codegen.timescale.user}</user>
-                <!--suppress UnresolvedMavenProperty -->
-                <password>${pipeline.codegen.timescale.password}</password>
+                <user>user</user>
+                <password>pwd</password>
               </jdbc>
               <generator>
-                <database>
-                  <name>org.jooq.meta.postgres.PostgresDatabase</name>
-                  <inputSchema>public</inputSchema>
-                  <excludes>flyway_schema_history</excludes>
-                </database>
                 <target>
                   <packageName>ch.swisstopo.monteis.pipeline.jooq.generated</packageName>
-                  <directory>target/generated-sources/jooq</directory>
                 </target>
               </generator>
             </configuration>
