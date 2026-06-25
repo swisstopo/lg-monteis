@@ -23,7 +23,7 @@ public class DemoService {
 
     if (!results.isEmpty()) {
       for (ReadSimpleMetric result : results) {
-        log.debug(result.val().toString());
+        log.debug(result.normValue().toString());
       }
     } else {
       log.error("fetching worked but nothing found");

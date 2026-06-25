@@ -13,9 +13,10 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-kafka</artifactId>
+      <groupId>ch.swisstopo.monteis</groupId>
+      <artifactId>contracts</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
@@ -23,7 +24,55 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-kafka</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-json</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jooq</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
+    <!--    Testing -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-kafka-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -36,8 +85,108 @@
       </plugin>
 
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+      </plugin>
+
+      <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>groovy-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>start-timescale-for-jooq</id>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <source>import org.testcontainers.containers.PostgreSQLContainer
+                import org.testcontainers.utility.DockerImageName
+                import org.testcontainers.utility.MountableFile
+
+                if ("${jooq.codegen.skip}" == "true") {
+                  println "[INFO] Skipping TimescaleDB Testcontainer for jOOQ."
+                } else {
+                  println "[INFO] Starting TimescaleDB Testcontainer for pipeline jOOQ codegen..."
+
+                  def tsDb = new PostgreSQLContainer(
+                    DockerImageName.parse("timescale/timescaledb:latest-pg18")
+                      .asCompatibleSubstituteFor("postgres")
+                  )
+                    .withDatabaseName("monteis-tsdb")
+                    .withUsername("user")
+                    .withPassword("pwd")
+                    .withCopyFileToContainer(MountableFile.forHostPath("${project.basedir}/../docker/dataset-tsdb/init_tsdb.sql"), "/docker-entrypoint-initdb.d/init_tsdb.sql")
+                  tsDb.start()
+
+                  project.properties.setProperty("pipeline.codegen.timescale.url", tsDb.getJdbcUrl())
+
+                  println "[INFO] TimescaleDB for pipeline jOOQ codegen started at " + tsDb.getJdbcUrl()
+                }</source>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>flyway-migrate-timescale-for-jooq</id>
+            <goals>
+              <goal>migrate</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <!--suppress UnresolvedMavenProperty -->
+              <url>${pipeline.codegen.timescale.url}</url>
+              <locations>
+                <location>filesystem:${maven.multiModuleProjectDirectory}/db/timescale/schema</location>
+              </locations>
+              <placeholders>
+                <fdw_read_user>fdw_user</fdw_read_user>
+              </placeholders>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jooq</groupId>
+        <artifactId>jooq-codegen-maven</artifactId>
+        <executions>
+          <execution>
+            <id>generate-jooq</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <jdbc>
+                <!--suppress UnresolvedMavenProperty -->
+                <url>${pipeline.codegen.timescale.url}</url>
+                <user>user</user>
+                <password>pwd</password>
+              </jdbc>
+              <generator>
+                <target>
+                  <packageName>ch.swisstopo.monteis.pipeline.jooq.generated</packageName>
+                </target>
+              </generator>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

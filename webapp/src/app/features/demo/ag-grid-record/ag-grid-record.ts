@@ -18,7 +18,7 @@ export default class AgGridRecord {
 
   protected demoService = inject(DemoControllerService);
   protected metricsResource = rxResource({
-    stream: () => this.demoService.getMetrics(100),
+    stream: () => this.demoService.getMetrics(50),
   });
 
   protected wrappedCols = createColumns(this.datePipe);
