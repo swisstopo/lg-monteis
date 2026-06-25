@@ -11,7 +11,7 @@
 
   <groupId>ch.swisstopo.monteis</groupId>
   <artifactId>parent</artifactId>
-  <version>${revision}</version>
+  <version>0.0.1-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <modules>
@@ -34,7 +34,6 @@
     <jackson-databind-nullable.version>0.2.6</jackson-databind-nullable.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
-    <revision>0.0.1-SNAPSHOT</revision>
   </properties>
 
   <dependencyManagement>
