@@ -6,6 +6,7 @@
 /out-tsc
 /bazel-out
 /**/generated/
+package-lock.json
 
 # =========================
 # Node & Dependencies
