@@ -29,8 +29,12 @@ allow:
   - EPL-2.0
   - EDL-1.0
   - EPL-1.0
+  - EPL 1.0
+  - MPL-2.0
   - EPL-1.0 AND LicenseRef-MPL-2.0
   - EPL-2.0 AND LicenseRef-GPL2-w--CPE
+  - GPL-2.0-with-classpath-exception
+  - GNU Lesser General Public License
   - LicenseRef-MPL-2.0
   - OFL-1.1
   - CC0-1.0

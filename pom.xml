@@ -30,7 +30,6 @@
     <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
     <openapi-generator-plugin.version>7.23.0</openapi-generator-plugin.version>
     <swagger-annotations.version>2.2.21</swagger-annotations.version>
-    <jackson-databind.version>2.21.2</jackson-databind.version>
     <jackson-databind-nullable.version>0.2.6</jackson-databind-nullable.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
@@ -45,11 +44,6 @@
       </dependency>
 
       <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-databind</artifactId>
-        <version>${jackson-databind.version}</version>
-      </dependency>
-      <dependency>
         <groupId>io.swagger.core.v3</groupId>
         <artifactId>swagger-annotations</artifactId>
         <version>${swagger-annotations.version}</version>
@@ -59,16 +53,6 @@
         <groupId>org.openapitools</groupId>
         <artifactId>jackson-databind-nullable</artifactId>
         <version>${jackson-databind-nullable.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>jakarta.validation</groupId>
-        <artifactId>jakarta.validation-api</artifactId>
-      </dependency>
-
-      <dependency>
-        <groupId>jakarta.annotation</groupId>
-        <artifactId>jakarta.annotation-api</artifactId>
       </dependency>
 
       <dependency>
