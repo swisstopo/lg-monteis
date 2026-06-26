@@ -2,5 +2,41 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "matchPackagePrefixes": ["ch.swisstopo.monteis"],
+      "enabled": false
+    },
+    {
+      "description": "CRITICAL: Always sync Angular and Scion major version bumps in a single PR",
+      "matchPackagePrefixes": ["@angular/", "@scion/"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "Angular and Scion major upgrades"
+    },
+    {
+      "description": "Group all Angular minor/patch updates together",
+      "matchPackagePrefixes": ["@angular/"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Angular non-major"
+    },
+    {
+      "description": "Group all Scion minor/patch updates together",
+      "matchPackagePrefixes": ["@scion/"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Scion non-major"
+    },
+    {
+      "description": "Keep AG-Grid community and angular packages perfectly synced",
+      "matchPackagePrefixes": ["ag-grid-"],
+      "groupName": "AG-Grid ecosystem"
+    },
+    {
+      "description": "Group the rest of the frontend minor/patch dependencies to reduce noise",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "excludePackagePrefixes": ["@angular/", "@scion/", "ag-grid-"],
+      "groupName": "Frontend non-major dependencies"
+    }
   ]
 }
