@@ -16,10 +16,16 @@
       "groupName": "Angular & Scion Ecosystem (Major)"
     },
     {
-      "description": "Group all Angular and Scion minor/patch updates together",
-      "matchPackagePrefixes": ["@angular/", "@scion/"],
+      "description": "Group all Angular minor/patch updates together independently",
+      "matchPackagePrefixes": ["@angular/"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "Angular & Scion Ecosystem (Minor/Patch)"
+      "groupName": "Angular Ecosystem (Minor/Patch)"
+    },
+    {
+      "description": "Group all Scion minor/patch updates together independently",
+      "matchPackagePrefixes": ["@scion/"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Scion Ecosystem (Minor/Patch)"
     },
     {
       "description": "Keep AG-Grid community and angular packages perfectly synced",

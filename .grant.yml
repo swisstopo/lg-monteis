@@ -36,6 +36,7 @@ allow:
   - GPL-2.0-with-classpath-exception
   - GNU Lesser General Public License
   - LicenseRef-MPL-2.0
+  - LGPL-2.1-only
   - OFL-1.1
   - CC0-1.0
   - MIT
