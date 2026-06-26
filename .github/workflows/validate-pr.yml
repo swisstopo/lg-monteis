@@ -32,4 +32,5 @@ jobs:
           # Restrict scopes to strictly ticket ID format (e.g., MON-123)
           scopes: |
             MON-\d+
+            deps
           requireScope: true
