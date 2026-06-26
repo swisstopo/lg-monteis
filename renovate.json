@@ -2,5 +2,53 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "description": "Ignore internal Maven monorepo modules",
+      "matchPackagePrefixes": ["ch.swisstopo.monteis"],
+      "enabled": false
+    },
+    {
+      "description": "CRITICAL: Sync all Angular (Core, CLI, Material, CDK) and Scion MAJOR bumps",
+      "matchPackagePrefixes": ["@angular/", "@scion/"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "Angular & Scion Ecosystem (Major)"
+    },
+    {
+      "description": "Group all Angular and Scion minor/patch updates together",
+      "matchPackagePrefixes": ["@angular/", "@scion/"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Angular & Scion Ecosystem (Minor/Patch)"
+    },
+    {
+      "description": "Keep AG-Grid community and angular packages perfectly synced",
+      "matchPackagePrefixes": ["ag-grid-"],
+      "groupName": "AG-Grid Ecosystem"
+    },
+    {
+      "description": "Group all Backend (Maven) minor/patch updates",
+      "matchManagers": ["maven"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "excludePackageNames": ["org.springframework.boot:spring-boot-starter-parent"],
+      "groupName": "Backend Minor/Patch Updates"
+    },
+    {
+      "description": "Group all Frontend tooling and utilities",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "excludePackagePrefixes": ["@angular/", "@scion/", "ag-grid-"],
+      "groupName": "Frontend Tooling & Utilities"
+    },
+    {
+      "description": "Group all GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions Dependencies"
+    },
+    {
+      "description": "Group all Docker Compose infrastructure updates",
+      "matchManagers": ["docker-compose"],
+      "groupName": "Docker Infrastructure"
+    }
   ]
 }
