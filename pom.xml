@@ -23,7 +23,7 @@
   <properties>
     <java.version>25</java.version>
     <testcontainers.postgres.version>1.21.4</testcontainers.postgres.version>
-    <postgresql.version>42.7.10</postgresql.version>
+    <postgresql.version>42.7.11</postgresql.version>
     <springdoc.version>3.0.2</springdoc.version>
     <springdoc-plugin.version>1.5</springdoc-plugin.version>
     <spotless.version>3.4.0</spotless.version>
