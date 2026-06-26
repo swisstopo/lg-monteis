@@ -13,7 +13,6 @@ jobs:
         uses: actions/checkout@v6
 
       # --- 1. Check Cache First ---
-      # Updated to cache both SBOM files
       - name: Cache Generated SBOMs
         id: sbom-cache
         uses: actions/cache@v5
@@ -60,16 +59,15 @@ jobs:
         working-directory: webapp
         run: pnpm install --frozen-lockfile
 
-      - name: Install Syft
+      - name: Generate Frontend SBOM
         if: steps.sbom-cache.outputs.cache-hit != 'true'
-        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sudo sh -s -- -b /usr/local/bin
-
-      - name: Generate Frontend SBOM (Syft)
-        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        uses: anchore/sbom-action@v0
         env:
           SYFT_JAVASCRIPT_SEARCH_REMOTE_LICENSES: "true"
-        # We point Syft STRICTLY at the webapp directory so it ignores the Java POMs entirely
-        run: syft dir:webapp -o spdx-json=frontend-sbom.json
+        with:
+          path: webapp/
+          format: spdx-json
+          output-file: frontend-sbom.json
 
       # --- 4. Always Run Policy Enforcement ---
       - name: Install Anchore Grant
