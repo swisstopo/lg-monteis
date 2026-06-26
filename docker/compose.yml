@@ -75,7 +75,7 @@ services:
       migrate
 
   kafka:
-    image: apache/kafka:4.3.0
+    image: apache/kafka:4.3.1
     container_name: local-msk-broker
     profiles: [ pipeline ]
     ports:
@@ -116,7 +116,7 @@ services:
       start_period: 15s
 
   connect:
-    image: apache/kafka:4.3.0
+    image: apache/kafka:4.3.1
     container_name: local-msk-connect
     ports:
       - "8083:8083"
