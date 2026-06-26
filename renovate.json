@@ -3,7 +3,6 @@
   "extends": [
     "config:recommended"
   ],
-  "npmClient": "pnpm",
   "packageRules": [
     {
       "description": "Ignore internal Maven monorepo modules",
