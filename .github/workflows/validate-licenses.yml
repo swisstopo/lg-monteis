@@ -85,6 +85,8 @@ jobs:
             frontend-sbom.json
           retention-days: 5
 
-      - name: Enforce License Policy
-        # Grant natively supports checking multiple files in one command!
-        run: grant check target/backend-sbom.json frontend-sbom.json
+      - name: Enforce License Policy (Backend)
+        run: grant check target/backend-sbom.json
+
+      - name: Enforce License Policy (Frontend)
+        run: grant check frontend-sbom.json
