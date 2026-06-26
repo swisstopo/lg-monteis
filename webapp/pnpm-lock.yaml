@@ -43,10 +43,10 @@ importers:
         version: 2.1.0(rxjs@7.8.2)
       '@scion/workbench':
         specifier: 21.0.0-beta.7
-        version: 21.0.0-beta.7(82cc518612915a537849b77c12a4ee72)
+        version: 21.0.0-beta.7(c0f0d401469d38e6132d7d66c102cdee)
       '@scion/workbench-client':
-        specifier: 1.0.0-beta.41
-        version: 1.0.0-beta.41(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
+        specifier: 1.0.0-beta.42
+        version: 1.0.0-beta.42(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
       ag-grid-angular:
         specifier: ^35.3.0
         version: 35.3.0(@angular/common@21.2.15(@angular/core@21.2.15(@angular/compiler@21.2.15)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.15(@angular/compiler@21.2.15)(rxjs@7.8.2))
@@ -177,6 +177,7 @@ packages:
   '@angular/animations@21.2.15':
     resolution: {integrity: sha512-Z8AsLTwc++Fcu0fJnclAF9zMfumAd5KXrwtSdyECqLpqd+lEmmsOpeOl6P7loqdDz99KYh/8UF4eJxdMvnsaKw==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
+    deprecated: '@angular/animations is deprecated. Use `animate.enter` and `animate.leave` instead. For more information see: https://v22.angular.dev/guide/animations.'
     peerDependencies:
       '@angular/core': 21.2.15
 
@@ -1435,12 +1436,12 @@ packages:
     peerDependencies:
       rxjs: ^7.8.0
 
-  '@scion/workbench-client@1.0.0-beta.41':
-    resolution: {integrity: sha512-pFpmoOQPFHVGxPFzlaQOoVvfPqJpeC3X6pWoR5V16MOAktKLZGoKFRp/dt7GC5Pb7by2cbvuDHdV1DOnq4IiKA==}
+  '@scion/workbench-client@1.0.0-beta.42':
+    resolution: {integrity: sha512-uGfgIUjFcB3sZRePeA0UdVkvrg0EAY0UeshZPkkzUvyizt3ZEB6J6LkMrXQyeDXomKSVw7XDLFfqlgcCoDGgCA==}
     peerDependencies:
       '@scion/microfrontend-platform': ^2.0.0
       '@scion/toolkit': ^2.1.0
-      rxjs: ^7.5.0
+      rxjs: ^7.8.0
 
   '@scion/workbench@21.0.0-beta.7':
     resolution: {integrity: sha512-o0Yskaq8zbQfeKLL44UCu/2MHJMu3qudYCNmqJ42sc4QGQAlwnBSwDk4J4BaOZrHbVKB+Lck7fF7HdAVSvku4A==}
@@ -4462,14 +4463,14 @@ snapshots:
       rxjs: 7.8.2
       tslib: 2.8.1
 
-  '@scion/workbench-client@1.0.0-beta.41(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)':
+  '@scion/workbench-client@1.0.0-beta.42(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)':
     dependencies:
       '@scion/microfrontend-platform': 2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
       '@scion/toolkit': 2.1.0(rxjs@7.8.2)
       rxjs: 7.8.2
       tslib: 2.8.1
 
-  '@scion/workbench@21.0.0-beta.7(82cc518612915a537849b77c12a4ee72)':
+  '@scion/workbench@21.0.0-beta.7(c0f0d401469d38e6132d7d66c102cdee)':
     dependencies:
       '@angular/animations': 21.2.15(@angular/core@21.2.15(@angular/compiler@21.2.15)(rxjs@7.8.2))
       '@angular/cdk': 21.2.13(@angular/common@21.2.15(@angular/core@21.2.15(@angular/compiler@21.2.15)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.15(@angular/compiler@21.2.15)(rxjs@7.8.2))(@angular/platform-browser@21.2.15(@angular/animations@21.2.15(@angular/core@21.2.15(@angular/compiler@21.2.15)(rxjs@7.8.2)))(@angular/common@21.2.15(@angular/core@21.2.15(@angular/compiler@21.2.15)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.15(@angular/compiler@21.2.15)(rxjs@7.8.2)))(rxjs@7.8.2)
@@ -4483,7 +4484,7 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@scion/microfrontend-platform': 2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
-      '@scion/workbench-client': 1.0.0-beta.41(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
+      '@scion/workbench-client': 1.0.0-beta.42(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
 
   '@sigstore/bundle@4.0.0':
     dependencies:

@@ -26,7 +26,7 @@
     "@scion/microfrontend-platform": "^2.1.0",
     "@scion/toolkit": "^2.1.0",
     "@scion/workbench": "21.0.0-beta.7",
-    "@scion/workbench-client": "1.0.0-beta.41",
+    "@scion/workbench-client": "1.0.0-beta.42",
     "ag-grid-angular": "^35.3.0",
     "ag-grid-community": "^35.3.0",
     "rxjs": "~7.8.0",
