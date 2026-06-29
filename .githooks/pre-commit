@@ -16,7 +16,7 @@ fi
 # ==========================================
 
 # Filter for files that should be formatted by spotless (core, pipeline, and root configuration files)
-BACKEND_FILES=$(echo "$STAGED_FILES" | grep -E '^(core/|pipeline/|pom\.xml|\.gitignore|\.gitattributes)' || true)
+BACKEND_FILES=$(echo "$STAGED_FILES" | grep -E '^(core/|pipeline/|README\.md|pom\.xml|\.gitignore|\.gitattributes)' || true)
 
 if [ -n "$BACKEND_FILES" ]; then
   echo "[INFO]: Formatting backend files with Spotless..."
