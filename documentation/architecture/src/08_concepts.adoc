@@ -147,12 +147,12 @@ Egal ob eine DTO-Annotation fehlschlägt oder der Service eine Exception wirft, 
 }
 ```
 
-= Architektur- und Skalierungskonzept: Data Pipeline
+== Architektur- und Skalierungskonzept: Data Pipeline
 :toc:
 :toc-title: Inhaltsverzeichnis
 :icons: font
 
-== 1. Architekturübersicht
+=== 1. Architekturübersicht
 
 Das folgende Diagramm veranschaulicht den Datenfluss vom externen Partner bis zur TimeScaleDB. Es zeigt die physische Gruppierung in einen "Core Pod" und einen "Pipeline Pod" und verdeutlicht die Entkopplung von Ingress (Adapter), Verarbeitung (Processor), Cache-Befüllung und Reprocessing.
 
@@ -161,7 +161,7 @@ Das folgende Diagramm veranschaulicht den Datenfluss vom externen Partner bis zu
 include::../images/pipeline-services.puml[]
 ....
 
-== 2. Übersicht der Kafka Topics
+=== 2. Übersicht der Kafka Topics
 
 Die Architektur nutzt eine strikte Trennung der Topics, um die Verarbeitung zu entkoppeln und das Reprocessing zu ermöglichen.
 
@@ -174,7 +174,7 @@ Die Architektur nutzt eine strikte Trennung der Topics, um die Verarbeitung zu e
 | `internal-sensor-config` | Lokal (Compacted) | Wird von der Core API befüllt (`cleanup.policy=compact`). Dient als Source-of-Truth für den In-Memory-Cache der Worker (`SensorConfigCache`) und als Trigger für das Reprocessing.
 |===
 
-== 3. Skalierungsstrategien (High Throughput)
+=== 3. Skalierungsstrategien (High Throughput)
 
 Da das externe Quell-Topic 6 Partitionen besitzt, ist die gesamte Pipeline auf maximale Parallelität über genau diese 6 Partitionen ausgelegt.
 
@@ -182,11 +182,11 @@ Da das externe Quell-Topic 6 Partitionen besitzt, ist die gesamte Pipeline auf m
 * **Ingress Adapter (`SolExpertsRawSensorDataNormalizationService`):** Übernimmt das Entpacken der herstellerspezifischen Payloads. Nutzt `@KafkaListener(concurrency = "6")`, um die Last optimal auf die Partitionen zu verteilen.
 * **Datenbank-Schicht (TimeScaleDB):** Um die Datenbank bei hohen Datenraten nicht zu überlasten, konsumiert der Processor (`SensorDataListener`) im **Batch-Modus** (`spring.kafka.listener.type=batch`, `max-poll-records=200`). Das Schreiben erfolgt über hochoptimierte jOOQ Batch-Inserts (`ctx.batchInsert()`).
 
-== 4. Datenintegrität & Zero-Data-Loss Architektur
+=== 4. Datenintegrität & Zero-Data-Loss Architektur
 
 Das Monteis-Pipeline-System verarbeitet Sensordaten über zwei primäre Datenströme: Den **Process-Flow** für Echtzeitdaten und den **Reprocess-Flow** für historische Datenkorrekturen. Ein zentrales Element dieser Architektur ist das Zusammenspiel aus manuellen Kafka-Acknowledgments, idempotenten Datenbank-Operationen und gezieltem Poison-Pill-Handling.
 
-=== 4.1. Gemeinsame Basis: Orchestrator & Kafka-Offsets
+==== 4.1. Gemeinsame Basis: Orchestrator & Kafka-Offsets
 
 Beide Flows stützen sich auf gemeinsame Komponenten und eine strikte Kafka-Konfiguration, die garantiert, dass keine Nachricht im Nirvana verschwindet.
 
@@ -195,7 +195,7 @@ Beide Flows stützen sich auf gemeinsame Komponenten und eine strikte Kafka-Konf
 * **Deaktiviertes Auto-Commit (`enable-auto-commit: false`):** Spring Boot darf Kafka-Offsets niemals im Hintergrund bestätigen. Das System verlässt sich ausschliesslich auf manuelle Bestätigungen (`ack-mode: manual`).
 * **Das Guarded Acknowledgment Pattern (At-Least-Once):** In allen Listenern wird der Kafka-Offset erst explizit committet (`ack.acknowledge()`), **nachdem** die Daten sicher in die nächste Schicht oder die TimeScaleDB persistiert wurden. Fällt ein Pod aus, pausiert Kafka und liefert das Event nach dem Neustart erneut aus.
 
-=== 4.2. Echtzeit-Verarbeitung (Process-Flow)
+==== 4.2. Echtzeit-Verarbeitung (Process-Flow)
 
 Dieser Flow verarbeitet neue, normalisierte Sensordaten, standardisiert sie und speichert sie in der TimeScaleDB.
 
@@ -203,7 +203,7 @@ Dieser Flow verarbeitet neue, normalisierte Sensordaten, standardisiert sie und 
 * **Idempotente UPSERTs:** Der `ProcessService` nutzt jOOQs `ON CONFLICT (timestamp, sensor_id) DO UPDATE`. Wenn Kafka einen Batch nach einem Absturz erneut sendet, überschreibt die Datenbank die Zeilen einfach mit exakt denselben, korrekten Daten. Es entstehen keine Duplikate.
 * **Poison Pill Handling (Batch-Rettung):** Wenn ein einzelner Datensatz innerhalb eines 200er-Batches fehlerhaft ist (z. B. unlesbarer Timestamp), fängt der `ProcessService` die `TransformationException` lokal ab, loggt den fehlerhaften Rohwert und überspringt ihn (`return null`). Die verbleibenden 199 validen Datensätze werden erfolgreich in der DB gespeichert, anstatt den gesamten Batch in eine Dead Letter Queue (DLQ) zu leiten.
 
-=== 4.3. Historische Daten-Reprozessierung (Reprocess-Flow)
+==== 4.3. Historische Daten-Reprozessierung (Reprocess-Flow)
 
 Dieser Flow wird durch ein Sensor-Config-Update (`SensorConfig`) ausgelöst und muss potenziell Hunderttausende von Datensätzen aktualisieren, ohne den Speicher zu sprengen oder andere Prozesse zu blockieren. Die Logik ist in eine spezifische Orchestrator-und-Chunk-Architektur unterteilt.
 
