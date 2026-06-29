@@ -25,6 +25,7 @@ allow:
   - https---opensource.org-licenses-BSD-2-Clause-description-BSD-2-Clause-License
   - The--New--BSD-License
   - The-BSD-License
+  - Simplified BSD License
   - BlueOak-1.0.0
   - EPL-2.0
   - EDL-1.0

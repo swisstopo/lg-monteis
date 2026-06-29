@@ -31,6 +31,7 @@
     <openapi-generator-plugin.version>7.23.0</openapi-generator-plugin.version>
     <swagger-annotations.version>2.2.52</swagger-annotations.version>
     <jackson-databind-nullable.version>0.2.10</jackson-databind-nullable.version>
+    <parsington.version>3.2.0</parsington.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
   </properties>
@@ -53,6 +54,12 @@
         <groupId>org.openapitools</groupId>
         <artifactId>jackson-databind-nullable</artifactId>
         <version>${jackson-databind-nullable.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.scijava</groupId>
+        <artifactId>parsington</artifactId>
+        <version>${parsington.version}</version>
       </dependency>
 
       <dependency>

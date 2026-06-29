@@ -3,7 +3,6 @@ package ch.swisstopo.monteis.pipeline.transformation.processing.cache;
 import static org.mockito.BDDMockito.then;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,13 +22,14 @@ class SensorConfigCacheHydratorTest {
   @Test
   void should_update_cache_and_acknowledge_message() {
     // given
-    SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 1);
+    ActiveSensorConfig config =
+        new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1));
 
     // when
-    hydrator.consumeSensorConfigUpdate(config, ack);
+    hydrator.consumeSensorConfigUpdate(config.getConfig(), ack);
 
     // then
-    then(cacheService).should().updateSensorConfig(config);
+    then(cacheService).should().updateSensorConfig(config.getConfig());
     then(ack).should().acknowledge();
   }
 }

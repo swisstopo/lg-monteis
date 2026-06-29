@@ -1,8 +1,8 @@
 package ch.swisstopo.monteis.pipeline.transformation;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
+import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import ch.swisstopo.monteis.pipeline.transformation.standardization.SIStandardizer;
 import ch.swisstopo.monteis.pipeline.transformation.validation.BoundStatus;
 import ch.swisstopo.monteis.pipeline.transformation.validation.BoundsValidator;
@@ -24,43 +24,39 @@ public class TransformationOrchestrator {
   }
 
   public SensorReadingRecord transform(
-      String sensorId, Double rawValue, String rawTimestamp, SensorConfig config) {
+      String sensorId, Double rawValue, String rawTimestamp, ActiveSensorConfig activeConfig) {
     OffsetDateTime timestamp;
     try {
       timestamp =
           OffsetDateTime.ofInstant(
               Instant.ofEpochMilli(Long.parseLong(rawTimestamp)), ZoneOffset.UTC);
     } catch (NumberFormatException e) {
-      // Translate parsing error
       throw new TransformationException(
-          "Invalid epoch timestamp format: '" + rawTimestamp + "'", e);
+          "Invalid epoch timestamp format: '" + rawTimestamp + "'", e, rawValue);
     }
 
-    return transform(sensorId, rawValue, timestamp, config);
+    return transform(sensorId, rawValue, timestamp, activeConfig);
   }
 
   public SensorReadingRecord transform(
-      String sensorId, Double rawValue, OffsetDateTime timestamp, SensorConfig config) {
-    try {
-      // 1. Standardize the value
-      Double standardizedToSI = siStandardizer.standardizeToSI(rawValue, config);
+      String sensorId, Double rawValue, OffsetDateTime timestamp, ActiveSensorConfig activeConfig) {
+    // 1. Standardize the value
+    Double standardizedToSI = siStandardizer.standardizeToSI(rawValue, activeConfig);
 
-      // 2. Validate the value
-      BoundStatus status = boundsValidator.evaluateBounds(sensorId, standardizedToSI, config);
+    // 2. Validate the value
+    BoundStatus status =
+        boundsValidator.evaluateBounds(sensorId, standardizedToSI, activeConfig.getConfig());
 
-      // 3. Map to jOOQ record
-      SensorReadingRecord sensorReading = new SensorReadingRecord();
-      sensorReading.setSensorId(sensorId);
-      sensorReading.setTimestamp(timestamp);
-      sensorReading.setRawValue(rawValue);
-      sensorReading.setNormValue(standardizedToSI);
-      sensorReading.setStatus(toRangeCategory(status));
-      sensorReading.setVersion(config.getVersion().shortValue());
+    // 3. Map to jOOQ record
+    SensorReadingRecord sensorReading = new SensorReadingRecord();
+    sensorReading.setSensorId(sensorId);
+    sensorReading.setTimestamp(timestamp);
+    sensorReading.setRawValue(rawValue);
+    sensorReading.setNormValue(standardizedToSI);
+    sensorReading.setStatus(toRangeCategory(status));
+    sensorReading.setVersion(activeConfig.getConfig().getVersion().shortValue());
 
-      return sensorReading;
-    } catch (ArithmeticException | NullPointerException e) {
-      throw new TransformationException("Failed to calculate normalized value", e, rawValue);
-    }
+    return sensorReading;
   }
 
   private RangeCategory toRangeCategory(BoundStatus status) {

@@ -13,9 +13,9 @@ import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReading
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
+import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,9 +47,11 @@ class ReprocessChunkServiceTest {
   @Test
   void should_return_zero_when_no_old_records_found() {
     // given
-    SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 2);
+    ActiveSensorConfig config =
+        new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 2));
 
-    given(sensorReadingRepository.fetchOldSensorData(config, testChunkSize)).willReturn(List.of());
+    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize))
+        .willReturn(List.of());
 
     // when
     int processedCount = chunkService.processNextChunk(config);
@@ -63,13 +65,14 @@ class ReprocessChunkServiceTest {
   @Test
   void should_process_and_bulk_update_valid_records() throws TransformationException {
     // given
-    SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 2);
+    ActiveSensorConfig config =
+        new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 2));
     OffsetDateTime timestamp = OffsetDateTime.now();
 
     SensorReadingRecord oldRecord =
         new SensorReadingRecord(timestamp, "deviceA", 10.0, 15.0, (short) 1, RangeCategory.correct);
 
-    given(sensorReadingRepository.fetchOldSensorData(config, testChunkSize))
+    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize))
         .willReturn(List.of(oldRecord));
 
     SensorReadingRecord transformedRecord =
@@ -92,7 +95,8 @@ class ReprocessChunkServiceTest {
   void should_handle_poison_pills_by_bumping_version_and_setting_null_norm_value()
       throws TransformationException {
     // given
-    SensorConfig config = new SensorConfig("deviceB", Map.of(), 50.0, -10.0, 3);
+    ActiveSensorConfig config =
+        new ActiveSensorConfig(new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 3));
     OffsetDateTime timestamp = OffsetDateTime.now();
 
     // The old record has version 1 and a raw value that will cause math to fail
@@ -100,7 +104,7 @@ class ReprocessChunkServiceTest {
         new SensorReadingRecord(
             timestamp, "deviceB", -999.0, 5.0, (short) 1, RangeCategory.correct);
 
-    given(sensorReadingRepository.fetchOldSensorData(config, testChunkSize))
+    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize))
         .willReturn(List.of(poisonRecord));
 
     TransformationException ex = mock(TransformationException.class);

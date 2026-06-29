@@ -43,18 +43,11 @@ components:
           description: The unique identifier for the sensor.
           example: "sensor-geo-8472"
         formula:
-          type: object
-          description: Normalized representation of the conversion formula using JSONLogic.
-          additionalProperties: true
-          example:
-            "+":
-              - "sqrt":
-                  - "pow":
-                      - "*":
-                          - "var": "x"
-                          - 1.8
-                      - 2
-              - 32
+          type: string
+          description: The dynamic mathematical expression used to standardize raw readings into SI units. 
+            Must use standard infix notation and include the variable 'x' (representing the raw value).
+          default: "x"
+          example: "x * 1.8 + 32"
         upper_bound:
           type: number
           format: double

@@ -9,7 +9,6 @@ import ch.swisstopo.monteis.pipeline.transformation.events.SensorBoundBreachedEv
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +38,7 @@ class BoundsValidatorTest {
   @Test
   void should_return_ok_when_value_is_strictly_within_bounds() {
     // given
-    SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 1);
+    SensorConfig config = new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1);
 
     // when
     BoundStatus status = boundsValidator.evaluateBounds("deviceA", 50.0, config);
@@ -52,7 +51,7 @@ class BoundsValidatorTest {
   @Test
   void should_return_too_high_and_publish_upper_breach_event_with_exact_timestamp() {
     // given
-    SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 1);
+    SensorConfig config = new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1);
 
     // when
     BoundStatus status = boundsValidator.evaluateBounds("deviceA", 150.5, config);
@@ -73,7 +72,7 @@ class BoundsValidatorTest {
   @Test
   void should_return_too_low_and_publish_lower_breach_event_with_exact_timestamp() {
     // given
-    SensorConfig config = new SensorConfig("deviceB", Map.of(), 50.0, -10.0, 1);
+    SensorConfig config = new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1);
 
     // when
     BoundStatus status = boundsValidator.evaluateBounds("deviceB", -25.0, config);

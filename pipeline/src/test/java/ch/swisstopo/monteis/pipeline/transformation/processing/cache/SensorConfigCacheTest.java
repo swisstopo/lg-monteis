@@ -3,7 +3,6 @@ package ch.swisstopo.monteis.pipeline.transformation.processing.cache;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class SensorConfigCacheTest {
@@ -16,43 +15,44 @@ class SensorConfigCacheTest {
     String unknownSensorId = "device-unknown";
 
     // when
-    SensorConfig result = cache.getSensorConfig(unknownSensorId);
+    ActiveSensorConfig result = cache.getActiveConfig(unknownSensorId);
 
     // then
     assertThat(result).isNotNull();
-    assertThat(result.getSensorId()).isEqualTo("UNKNOWN_SENSOR");
-    assertThat(result.getVersion()).isZero();
+    assertThat(result.getConfig().getSensorId()).isEqualTo("UNKNOWN_SENSOR");
+    assertThat(result.getConfig().getVersion()).isZero();
   }
 
   @Test
   void should_store_and_return_config_when_updated() {
     // given
     String sensorId = "deviceA";
-    SensorConfig config = new SensorConfig(sensorId, Map.of(), 100.0, 0.0, 1);
+    SensorConfig config = new SensorConfig(sensorId, "x + 1", 100.0, 0.0, 1);
 
     // when
     cache.updateSensorConfig(config);
-    SensorConfig result = cache.getSensorConfig(sensorId);
+    ActiveSensorConfig result = cache.getActiveConfig(sensorId);
 
     // then
-    assertThat(result).isNotNull().isEqualTo(config);
+    assertThat(result).isNotNull();
+    assertThat(result.getConfig()).isEqualTo(config);
   }
 
   @Test
   void should_overwrite_existing_config_when_updated_again() {
     // given
     String sensorId = "deviceB";
-    SensorConfig initialConfig = new SensorConfig(sensorId, Map.of(), 50.0, -10.0, 1);
-    SensorConfig newerConfig = new SensorConfig(sensorId, Map.of(), 60.0, -20.0, 2);
+    SensorConfig initialConfig = new SensorConfig(sensorId, "x + 1", 50.0, -10.0, 1);
+    SensorConfig newerConfig = new SensorConfig(sensorId, "x + 2", 60.0, -20.0, 2);
 
     cache.updateSensorConfig(initialConfig);
 
     // when
     cache.updateSensorConfig(newerConfig);
-    SensorConfig result = cache.getSensorConfig(sensorId);
+    ActiveSensorConfig result = cache.getActiveConfig(sensorId);
 
     // then
-    assertThat(result.getVersion()).isEqualTo(2);
-    assertThat(result.getUpperBound()).isEqualTo(60.0);
+    assertThat(result.getConfig().getVersion()).isEqualTo(2);
+    assertThat(result.getConfig().getUpperBound()).isEqualTo(60.0);
   }
 }

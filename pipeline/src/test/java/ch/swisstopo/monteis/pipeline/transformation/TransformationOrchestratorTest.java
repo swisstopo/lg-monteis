@@ -8,13 +8,13 @@ import static org.mockito.BDDMockito.then;
 import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
+import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import ch.swisstopo.monteis.pipeline.transformation.standardization.SIStandardizer;
 import ch.swisstopo.monteis.pipeline.transformation.validation.BoundStatus;
 import ch.swisstopo.monteis.pipeline.transformation.validation.BoundsValidator;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,9 +28,11 @@ class TransformationOrchestratorTest {
 
   @Mock private BoundsValidator boundsValidator;
 
+  @Mock private ActiveSensorConfig activeConfig;
+
   @InjectMocks private TransformationOrchestrator orchestrator;
 
-  private final SensorConfig defaultConfig = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 1);
+  private final SensorConfig sensorConfig = new SensorConfig("deviceA", "x", 100.0, 0.0, 1);
   private final OffsetDateTime defaultTimestamp = OffsetDateTime.now();
 
   @Test
@@ -41,13 +43,14 @@ class TransformationOrchestratorTest {
     Double rawValue = 15.5;
     Double standardizedValue = 20.0;
 
-    given(siStandardizer.standardizeToSI(rawValue, defaultConfig)).willReturn(standardizedValue);
-    given(boundsValidator.evaluateBounds("deviceA", standardizedValue, defaultConfig))
+    given(activeConfig.getConfig()).willReturn(sensorConfig);
+    given(siStandardizer.standardizeToSI(rawValue, activeConfig)).willReturn(standardizedValue);
+    given(boundsValidator.evaluateBounds("deviceA", standardizedValue, sensorConfig))
         .willReturn(BoundStatus.OK);
 
     // when
     SensorReadingRecord result =
-        orchestrator.transform("deviceA", rawValue, rawTimestamp, defaultConfig);
+        orchestrator.transform("deviceA", rawValue, rawTimestamp, activeConfig);
 
     // then
     assertThat(result.getSensorId()).isEqualTo("deviceA");
@@ -71,7 +74,7 @@ class TransformationOrchestratorTest {
     TransformationException exception =
         assertThrows(
             TransformationException.class,
-            () -> orchestrator.transform("deviceA", 15.5, invalidTimestamp, defaultConfig));
+            () -> orchestrator.transform("deviceA", 15.5, invalidTimestamp, activeConfig));
 
     // then
     assertThat(exception.getMessage()).contains("Invalid epoch timestamp format: 'not-a-number'");
@@ -87,13 +90,14 @@ class TransformationOrchestratorTest {
     Double rawValue = 150.0;
     Double standardizedValue = 150.0;
 
-    given(siStandardizer.standardizeToSI(rawValue, defaultConfig)).willReturn(standardizedValue);
-    given(boundsValidator.evaluateBounds("deviceA", standardizedValue, defaultConfig))
+    given(activeConfig.getConfig()).willReturn(sensorConfig);
+    given(siStandardizer.standardizeToSI(rawValue, activeConfig)).willReturn(standardizedValue);
+    given(boundsValidator.evaluateBounds("deviceA", standardizedValue, sensorConfig))
         .willReturn(BoundStatus.TOO_HIGH);
 
     // when
     SensorReadingRecord result =
-        orchestrator.transform("deviceA", rawValue, defaultTimestamp, defaultConfig);
+        orchestrator.transform("deviceA", rawValue, defaultTimestamp, activeConfig);
 
     // then
     assertThat(result.getStatus()).isEqualTo(RangeCategory.too_high);
@@ -105,61 +109,38 @@ class TransformationOrchestratorTest {
     Double rawValue = -10.0;
     Double standardizedValue = -10.0;
 
-    given(siStandardizer.standardizeToSI(rawValue, defaultConfig)).willReturn(standardizedValue);
-    given(boundsValidator.evaluateBounds("deviceA", standardizedValue, defaultConfig))
+    given(activeConfig.getConfig()).willReturn(sensorConfig);
+    given(siStandardizer.standardizeToSI(rawValue, activeConfig)).willReturn(standardizedValue);
+    given(boundsValidator.evaluateBounds("deviceA", standardizedValue, sensorConfig))
         .willReturn(BoundStatus.TOO_LOW);
 
     // when
     SensorReadingRecord result =
-        orchestrator.transform("deviceA", rawValue, defaultTimestamp, defaultConfig);
+        orchestrator.transform("deviceA", rawValue, defaultTimestamp, activeConfig);
 
     // then
     assertThat(result.getStatus()).isEqualTo(RangeCategory.too_low);
   }
 
   @Test
-  void should_wrap_math_exceptions_into_transformation_exception() {
+  void should_propagate_transformation_exception_from_standardizer() {
     // given
     Double rawValue = 0.0;
 
-    // Simulate a division by zero or similar math error in the standardizer
-    given(siStandardizer.standardizeToSI(rawValue, defaultConfig))
-        .willThrow(new ArithmeticException("/ by zero"));
+    TransformationException expectedException =
+        new TransformationException(
+            "Math calculation failed: / by zero", new ArithmeticException("/ by zero"), rawValue);
+
+    given(siStandardizer.standardizeToSI(rawValue, activeConfig)).willThrow(expectedException);
 
     // when
     TransformationException exception =
         assertThrows(
             TransformationException.class,
-            () -> orchestrator.transform("deviceA", rawValue, defaultTimestamp, defaultConfig));
+            () -> orchestrator.transform("deviceA", rawValue, defaultTimestamp, activeConfig));
 
     // then
-    assertThat(exception.getMessage()).isEqualTo("Failed to calculate normalized value");
-    assertThat(exception.getCause()).isInstanceOf(ArithmeticException.class);
-
-    // Assert that the raw payload was safely captured in the exception for logging
-    // (Assuming your TransformationException constructor accepts the rawValue and exposes it via
-    // getFailedPayload())
+    assertThat(exception).isSameAs(expectedException);
     assertThat(exception.getFailedPayload()).isEqualTo(rawValue);
-  }
-
-  @Test
-  void should_wrap_null_pointer_exceptions_into_transformation_exception() {
-    // given
-    Double nullRawValue = null;
-
-    // Simulate a null pointer exception if the formula evaluator chokes on a null value
-    given(siStandardizer.standardizeToSI(nullRawValue, defaultConfig))
-        .willThrow(new NullPointerException("Value cannot be null"));
-
-    // when
-    TransformationException exception =
-        assertThrows(
-            TransformationException.class,
-            () -> orchestrator.transform("deviceA", nullRawValue, defaultTimestamp, defaultConfig));
-
-    // then
-    assertThat(exception.getMessage()).isEqualTo("Failed to calculate normalized value");
-    assertThat(exception.getCause()).isInstanceOf(NullPointerException.class);
-    assertThat(exception.getFailedPayload()).isNull();
   }
 }
