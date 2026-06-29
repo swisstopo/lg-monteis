@@ -80,10 +80,10 @@ importers:
         version: 29.1.1
       prettier:
         specifier: ^3.8.5
-        version: 3.8.5
+        version: 3.9.1
       prettier-plugin-organize-imports:
         specifier: ^4.3.0
-        version: 4.3.0(prettier@3.8.5)(typescript@6.0.3)
+        version: 4.3.0(prettier@3.9.1)(typescript@6.0.3)
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -2419,8 +2419,8 @@ packages:
     resolution: {integrity: sha512-FCeMZT4NiRQGh+YkeKMtWrOmBgWjHjMJ26WQWrRQyoyzqevdaGSakUaJW5xQYmjLlUVk2qUnCjYVBax9EKKg8A==}
     engines: {node: ^20.17.0 || >=22.9.0}
 
-  immutable@5.1.7:
-    resolution: {integrity: sha512-47Xb+LFbZ/ZIjQMj6Q5J3IfK7PJFuqRdFOC9FpGgRTK6U2dAEVmkR9hp58qU4FpYux5YXpneDwkj2EP6lppzFA==}
+  immutable@5.1.8:
+    resolution: {integrity: sha512-TM5YqrGeTsVIPPpILzeqZ8D2Zc2TvNgSDi88zPF2a4cyqQdWV/wVWBDRDbNzzrLeRWScrFcOX9lW2iX6GOtUDw==}
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
@@ -2844,8 +2844,8 @@ packages:
       vue-tsc:
         optional: true
 
-  prettier@3.8.5:
-    resolution: {integrity: sha512-zxcTTCedNGJM4R8sj/Cq/F0W/c4iE0afWBcBwMTRtw4WHYP9TWkYjdiH3npPRUYsXQCPR0hTU9yjovOu+E6EQA==}
+  prettier@3.9.1:
+    resolution: {integrity: sha512-ppiDo2CSwexck1eyZUwJHg/N3nf1+6IRCv7W/VJ5vaLnVCmB7+3CdRfMwoCHBBX6xTrREDTksZ4OZl5SSf4zXA==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -5611,7 +5611,7 @@ snapshots:
     dependencies:
       minimatch: 10.2.5
 
-  immutable@5.1.7: {}
+  immutable@5.1.8: {}
 
   inherits@2.0.4: {}
 
@@ -6065,12 +6065,12 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  prettier-plugin-organize-imports@4.3.0(prettier@3.8.5)(typescript@6.0.3):
+  prettier-plugin-organize-imports@4.3.0(prettier@3.9.1)(typescript@6.0.3):
     dependencies:
-      prettier: 3.8.5
+      prettier: 3.9.1
       typescript: 6.0.3
 
-  prettier@3.8.5: {}
+  prettier@3.9.1: {}
 
   proc-log@6.1.0: {}
 
@@ -6212,7 +6212,7 @@ snapshots:
   sass@1.99.0:
     dependencies:
       chokidar: 4.0.3
-      immutable: 5.1.7
+      immutable: 5.1.8
       source-map-js: 1.2.1
     optionalDependencies:
       '@parcel/watcher': 2.5.6
