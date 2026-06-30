@@ -21,3 +21,4 @@ jobs:
           ignore-unfixed: true
           format: 'table'
           severity: 'HIGH,CRITICAL'
+          exit-code: '1'
