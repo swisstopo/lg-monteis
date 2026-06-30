@@ -1,0 +1,6 @@
+# This file contains CVEs that are not relevant for this project
+# USE WITH CAUTION!
+
+# Ignore loadash issue because its a test
+CVE-2021-23337
+CVE-2026-4800
