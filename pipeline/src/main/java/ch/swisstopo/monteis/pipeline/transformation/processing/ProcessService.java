@@ -1,11 +1,11 @@
 package ch.swisstopo.monteis.pipeline.transformation.processing;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.ingress.internal.NormalizedSensorData;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
+import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.SensorConfigCache;
 import java.util.List;
 import org.slf4j.Logger;
@@ -41,9 +41,10 @@ public class ProcessService {
             .map(
                 sensorData -> {
                   try {
-                    SensorConfig config = sensorConfigCache.getSensorConfig(sensorData.sensorId());
+                    ActiveSensorConfig activeConfig =
+                        sensorConfigCache.getActiveConfig(sensorData.sensorId());
                     return orchestrator.transform(
-                        sensorData.sensorId(), sensorData.value(), sensorData.ts(), config);
+                        sensorData.sensorId(), sensorData.value(), sensorData.ts(), activeConfig);
                   } catch (TransformationException ex) {
                     log.error(
                         "POISON PILL: Transformation failed for sensor {}. Failed Value: [{}]. Full"

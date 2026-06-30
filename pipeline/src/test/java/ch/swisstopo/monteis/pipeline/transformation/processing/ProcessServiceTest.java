@@ -11,9 +11,9 @@ import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReading
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
+import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.SensorConfigCache;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -45,11 +45,13 @@ class ProcessServiceTest {
     NormalizedSensorData data2 = new NormalizedSensorData("deviceB", "2026-06-23T10:05:00Z", 20.0);
     List<NormalizedSensorData> batch = List.of(data1, data2);
 
-    SensorConfig configA = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 1);
-    SensorConfig configB = new SensorConfig("deviceB", Map.of(), 50.0, -10.0, 1);
+    ActiveSensorConfig configA =
+        new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1));
+    ActiveSensorConfig configB =
+        new ActiveSensorConfig(new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1));
 
-    given(sensorConfigCache.getSensorConfig("deviceA")).willReturn(configA);
-    given(sensorConfigCache.getSensorConfig("deviceB")).willReturn(configB);
+    given(sensorConfigCache.getActiveConfig("deviceA")).willReturn(configA);
+    given(sensorConfigCache.getActiveConfig("deviceB")).willReturn(configB);
 
     SensorReadingRecord record1 = new SensorReadingRecord();
     SensorReadingRecord record2 = new SensorReadingRecord();
@@ -78,11 +80,13 @@ class ProcessServiceTest {
         new NormalizedSensorData("deviceB", "2026-06-23T10:05:00Z", -999.0);
     List<NormalizedSensorData> batch = List.of(validData, poisonData);
 
-    SensorConfig configA = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 1);
-    SensorConfig configB = new SensorConfig("deviceB", Map.of(), 50.0, -10.0, 1);
+    ActiveSensorConfig configA =
+        new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1));
+    ActiveSensorConfig configB =
+        new ActiveSensorConfig(new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1));
 
-    given(sensorConfigCache.getSensorConfig("deviceA")).willReturn(configA);
-    given(sensorConfigCache.getSensorConfig("deviceB")).willReturn(configB);
+    given(sensorConfigCache.getActiveConfig("deviceA")).willReturn(configA);
+    given(sensorConfigCache.getActiveConfig("deviceB")).willReturn(configB);
 
     SensorReadingRecord validRecord = new SensorReadingRecord();
     given(orchestrator.transform("deviceA", 10.5, "2026-06-23T10:00:00Z", configA))
@@ -116,8 +120,9 @@ class ProcessServiceTest {
         new NormalizedSensorData("deviceB", "2026-06-23T10:05:00Z", -999.0);
     List<NormalizedSensorData> batch = List.of(poisonData);
 
-    SensorConfig configB = new SensorConfig("deviceB", Map.of(), 50.0, -10.0, 1);
-    given(sensorConfigCache.getSensorConfig("deviceB")).willReturn(configB);
+    ActiveSensorConfig configB =
+        new ActiveSensorConfig(new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1));
+    given(sensorConfigCache.getActiveConfig("deviceB")).willReturn(configB);
 
     TransformationException poisonException = mock(TransformationException.class);
     given(orchestrator.transform("deviceB", -999.0, "2026-06-23T10:05:00Z", configB))

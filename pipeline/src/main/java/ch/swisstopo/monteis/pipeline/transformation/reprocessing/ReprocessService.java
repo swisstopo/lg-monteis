@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
+import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -20,10 +20,10 @@ public class ReprocessService {
     this.chunkService = chunkService;
   }
 
-  public void checkAndReprocessHistoricalData(SensorConfig sensorConfig) {
-    String sensorId = sensorConfig.getSensorId();
+  public void checkAndReprocessHistoricalData(ActiveSensorConfig activeSensorConfig) {
+    String sensorId = activeSensorConfig.getConfig().getSensorId();
 
-    if (!sensorReadingRepository.checkOldSensorData(sensorConfig)) {
+    if (!sensorReadingRepository.checkOldSensorData(activeSensorConfig.getConfig())) {
       log.debug("No outdated records found for Sensor {}. Skipping reprocessing.", sensorId);
       return;
     }
@@ -35,7 +35,7 @@ public class ReprocessService {
     int currentBatchSize;
 
     do {
-      currentBatchSize = chunkService.processNextChunk(sensorConfig);
+      currentBatchSize = chunkService.processNextChunk(activeSensorConfig);
       totalProcessed += currentBatchSize;
     } while (currentBatchSize > 0);
 

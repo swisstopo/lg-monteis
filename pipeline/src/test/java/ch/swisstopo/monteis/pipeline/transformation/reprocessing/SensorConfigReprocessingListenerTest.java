@@ -1,13 +1,19 @@
 package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.BDDMockito.willAnswer;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
-import java.util.Map;
+import ch.swisstopo.monteis.pipeline.transformation.processing.SensorConfigMessageProcessor;
+import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,39 +24,39 @@ class SensorConfigReprocessingListenerTest {
 
   @Mock private ReprocessService reprocessService;
 
+  @Mock private SensorConfigMessageProcessor messageProcessor;
+
   @Mock private Acknowledgment ack;
 
   @InjectMocks private SensorConfigReprocessingListener listener;
 
-  @Test
-  void should_trigger_reprocessing_and_acknowledge_on_success() {
-    // given
-    SensorConfig config = new SensorConfig("deviceA", Map.of(), 100.0, 0.0, 2);
-
-    // when
-    listener.consumeSensorConfigUpdate(config, ack);
-
-    // then
-    then(reprocessService).should().checkAndReprocessHistoricalData(config);
-    then(ack).should().acknowledge();
-  }
+  @Captor private ArgumentCaptor<ActiveSensorConfig> activeConfigCaptor;
 
   @Test
-  void should_not_acknowledge_if_reprocessing_fails() {
+  void should_delegate_to_processor_and_trigger_reprocessing() {
     // given
-    SensorConfig config = new SensorConfig("deviceB", Map.of(), 50.0, -10.0, 3);
+    String sensorId = "deviceA";
+    SensorConfig config = new SensorConfig(sensorId, "x * 2.5", 100.0, 0.0, 2);
 
-    // Simulate a failure during the chunk processing (e.g., DB connection dropped)
-    willThrow(new RuntimeException("Database timeout during reprocessing"))
-        .given(reprocessService)
-        .checkAndReprocessHistoricalData(config);
+    // Simulate the messageProcessor instantly executing the lambda function passed to it
+    willAnswer(
+            invocation -> {
+              SensorConfig passedConfig = invocation.getArgument(0);
+              Consumer<SensorConfig> businessLogicLambda = invocation.getArgument(3);
+
+              businessLogicLambda.accept(passedConfig); // Execute the lambda
+              return null;
+            })
+        .given(messageProcessor)
+        .processSafely(any(), any(), any(), any());
 
     // when
-    // The exception must bubble up to Spring Kafka to trigger the retry/error handler
-    assertThrows(RuntimeException.class, () -> listener.consumeSensorConfigUpdate(config, ack));
+    listener.consumeSensorConfigUpdate(config, sensorId, ack);
 
     // then
-    then(reprocessService).should().checkAndReprocessHistoricalData(config);
-    then(ack).shouldHaveNoInteractions();
+    then(messageProcessor).should().processSafely(eq(config), eq(sensorId), eq(ack), any());
+
+    then(reprocessService).should().checkAndReprocessHistoricalData(activeConfigCaptor.capture());
+    assertThat(activeConfigCaptor.getValue().getConfig()).isEqualTo(config);
   }
 }

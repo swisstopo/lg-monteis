@@ -11,7 +11,6 @@ import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -119,7 +118,7 @@ class SensorReadingRepositoryIT {
   @Test
   void checkOldSensorData_should_detect_old_sensor_data() {
     // given
-    var config = new SensorConfig("sensor-001", Map.of(), 100.0, 0.0, 5);
+    var config = new SensorConfig("sensor-001", "x + 1", 100.0, 0.0, 5);
 
     ctx.insertInto(Tables.SENSOR_READING)
         .set(Tables.SENSOR_READING.SENSOR_ID, "sensor-001")
@@ -140,7 +139,7 @@ class SensorReadingRepositoryIT {
   @Test
   void checkOldSensorData_should_return_false_when_no_old_data_exists() {
     // given
-    var config = new SensorConfig("sensor-999", Map.of(), 100.0, 0.0, 5);
+    var config = new SensorConfig("sensor-999", "x + 1", 100.0, 0.0, 5);
 
     // when
     boolean result = repo.checkOldSensorData(config);
@@ -163,7 +162,7 @@ class SensorReadingRepositoryIT {
           .set(Tables.SENSOR_READING.STATUS, RangeCategory.correct)
           .execute();
     }
-    var config = new SensorConfig(sensorId, Map.of(), 100.0, 0.0, 4);
+    var config = new SensorConfig(sensorId, "x + 1", 100.0, 0.0, 4);
 
     // when
     var result = repo.fetchOldSensorData(config, 2);

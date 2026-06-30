@@ -1,10 +1,15 @@
 package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.pipeline.transformation.processing.SensorConfigMessageProcessor;
+import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,25 +18,31 @@ public class SensorConfigReprocessingListener {
   private static final Logger log = LoggerFactory.getLogger(SensorConfigReprocessingListener.class);
 
   private final ReprocessService reprocessService;
+  private final SensorConfigMessageProcessor messageProcessor;
 
-  public SensorConfigReprocessingListener(ReprocessService reprocessService) {
+  public SensorConfigReprocessingListener(
+      ReprocessService reprocessService, SensorConfigMessageProcessor messageProcessor) {
     this.reprocessService = reprocessService;
+    this.messageProcessor = messageProcessor;
   }
 
-  @KafkaListener(topics = "${app.kafka.topics.sensor-config}", groupId = "reprocessing-group")
-  public void consumeSensorConfigUpdate(SensorConfig sensorConfig, Acknowledgment ack) {
-    log.info(
-        "Received sensor config update for Sensor {}. Triggering reprocessing flow.",
-        sensorConfig.getSensorId());
+  @KafkaListener(
+      topics = "${app.kafka.topics.sensor-config}",
+      groupId = "reprocessing-group",
+      containerFactory = "singleMessageFactory")
+  public void consumeSensorConfigUpdate(
+      @Payload(required = false) SensorConfig sensorConfig,
+      @Header(KafkaHeaders.RECEIVED_KEY) String sensorId,
+      Acknowledgment ack) {
 
-    // Hand off to the orchestrator service
-    // If an exception occurs in the chunking process, it will bubble up and bypass the ack.
-    reprocessService.checkAndReprocessHistoricalData(sensorConfig);
-
-    // Acknowledge the message ONLY after all chunks have been safely processed
-    // This guarantees zero data loss if the pod crashes mid-reprocessing.
-    ack.acknowledge();
-    log.debug(
-        "Successfully acknowledged sensor config update for Sensor {}", sensorConfig.getSensorId());
+    messageProcessor.processSafely(
+        sensorConfig,
+        sensorId,
+        ack,
+        validConfig -> {
+          log.info("Triggering reprocessing flow for Sensor {}.", validConfig.getSensorId());
+          ActiveSensorConfig activeConfig = new ActiveSensorConfig(validConfig);
+          reprocessService.checkAndReprocessHistoricalData(activeConfig);
+        });
   }
 }

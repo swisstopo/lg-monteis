@@ -1,10 +1,10 @@
 package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
+import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +33,9 @@ public class ReprocessChunkService {
   }
 
   @Transactional
-  public int processNextChunk(SensorConfig sensorConfig) {
+  public int processNextChunk(ActiveSensorConfig activeSensorConfig) {
     List<SensorReadingRecord> oldRecords =
-        sensorReadingRepository.fetchOldSensorData(sensorConfig, chunkSize);
+        sensorReadingRepository.fetchOldSensorData(activeSensorConfig.getConfig(), chunkSize);
 
     if (oldRecords.isEmpty()) {
       return 0;
@@ -50,7 +50,7 @@ public class ReprocessChunkService {
                         reading.getSensorId(),
                         reading.getRawValue(),
                         reading.getTimestamp(), // This is already an OffsetDateTime from DB
-                        sensorConfig);
+                        activeSensorConfig);
                   } catch (TransformationException ex) {
                     log.error(
                         "POISON PILL REPROCESSING: Math failed for historical record of sensor {}."
@@ -62,7 +62,7 @@ public class ReprocessChunkService {
                         ex);
 
                     // CRITICAL: We must update the version to break the do-while loop!
-                    reading.setVersion(sensorConfig.getVersion().shortValue());
+                    reading.setVersion(activeSensorConfig.getConfig().getVersion().shortValue());
 
                     // Set norm_value to null because the new formula cannot process this specific
                     // raw value.

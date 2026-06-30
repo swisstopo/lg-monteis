@@ -26,7 +26,8 @@ public class RawSolExpertsSensorDataNormalizationService {
   @KafkaListener(
       topics = "${app.kafka.topics.raw-solexperts}",
       groupId = "solexperts-adapter-group",
-      concurrency = "${app.kafka.concurrency:6}")
+      concurrency = "${app.kafka.concurrency:6}",
+      containerFactory = "singleMessageFactory")
   public void processRawMessage(RawSolExpertsSensorData rawPayload, Acknowledgment ack) {
     log.info("Received raw SolExperts message: {}", rawPayload);
 
