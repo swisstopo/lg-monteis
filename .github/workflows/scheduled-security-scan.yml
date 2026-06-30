@@ -2,7 +2,7 @@ name: Scheduled Security Scan
 
 on:
   pull_request:
-    types: [ opened, edited, synchronize, reopened ]
+    types: [ opened, edited, synchronize, reopened ] # todo: remove me!
   schedule:
     - cron: '0 4 * * *'
   workflow_dispatch:
@@ -38,9 +38,9 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'HIGH,CRITICAL'
+          limit-severities-for-sarif: true  # todo: discuss in daily
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
         with:
           sarif_file: 'trivy-results.sarif'
