@@ -19,9 +19,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Set up JDK ${{ vars.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Resolve Maven Dependencies
+        run: mvn dependency:go-offline
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@v0.36.0
         with:
+          version: 'v0.72.0'
           scan-type: 'fs'
           ignore-unfixed: true
           format: 'sarif'
