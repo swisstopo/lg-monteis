@@ -21,7 +21,7 @@ jobs:
           cache: maven
           cache-dependency-path: pom.xml
 
-      - name: Run Core Tests
+      - name: Maven Install
         run: mvn clean install -DskipTests -Dopenapi.codegen.skip=false
 
       - name: Upload JAR
@@ -30,8 +30,26 @@ jobs:
           name: backend-jar
           path: "**/target/*.jar"
 
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Create and modify .env file
+        env:
+          ENV_CONTENTS: ${{ secrets.TEST_ENV_FILE_CONTENTS }}
+        run: |
+          echo "$ENV_CONTENTS" > .env
+
+      - name: Upload .env artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: shared-env-file
+          path: .env
+          include-hidden-files: true
+
   core-test:
-    needs: build
+    needs: [build, setup]
     name: Core Tests
     runs-on: ubuntu-24.04
     steps:
@@ -54,6 +72,11 @@ jobs:
           name: backend-jar
           path: target
 
+      - name: Download .env artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: shared-env-file
+
       - name: Run Core Tests
         run: |
           cd core
@@ -61,7 +84,7 @@ jobs:
           mvn verify
 
   pipeline-test:
-    needs: build
+    needs: [build, setup]
     name: Pipeline Tests
     runs-on: ubuntu-24.04
     steps:
@@ -84,6 +107,11 @@ jobs:
           name: backend-jar
           path: target
 
+      - name: Download .env artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: shared-env-file
+
       - name: Run Pipeline Tests
         run: |
           cd pipeline
@@ -91,7 +119,7 @@ jobs:
           mvn verify
 
   webapp-test:
-    needs: build
+    needs: [build, setup]
     name: Webapp Tests
     runs-on: ubuntu-24.04
     steps:
@@ -108,6 +136,11 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           package_json_file: webapp/package.json
+          
+      - name: Download .env artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: shared-env-file
 
       - name: Set up Node.js ${{ vars.NODE_VERSION }}
         uses: actions/setup-node@v4
