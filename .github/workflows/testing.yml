@@ -1,0 +1,74 @@
+name: testing.yml
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  core-test:
+    name: Core Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ vars.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRIBUTION }}
+          server-id: github
+          settings-path: ${{ github.workspace }}
+          cache: maven
+          cache-dependency-path: pom.xml
+
+      - name: Run Core Tests
+        run: |
+          cd core
+          mvn verify
+
+  pipeline-test:
+    name: Pipeline Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ vars.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRIBUTION }}
+          server-id: github
+          settings-path: ${{ github.workspace }}
+          cache: maven
+          cache-dependency-path: pom.xml
+
+      - name: Run Pipeline Tests
+        run: |
+          cd pipeline
+          mvn verify
+
+  webapp-test:
+    name: Webapp Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 11
+
+      - name: Set up Node.js ${{ vars.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ vars.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: webapp/pnpm-lock.yaml
+
+      - name: Run Webapp Tests
+        run: |
+          cd webapp
+          pnpm install
+          pnpm test
