@@ -4,8 +4,8 @@ on:
     types: [opened, edited, synchronize, reopened]
 
 jobs:
-  core-test:
-    name: Core Tests
+  build:
+    name: Build backend
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
@@ -22,11 +22,46 @@ jobs:
           cache-dependency-path: pom.xml
 
       - name: Run Core Tests
+        run: mvn clean install -DskipTests -Dopenapi.codegen.skip=false
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-jar
+          path: target/*.jar
+
+  core-test:
+    needs: build
+    name: Core Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ vars.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRIBUTION }}
+          server-id: github
+          settings-path: ${{ github.workspace }}
+          cache: maven
+          cache-dependency-path: pom.xml
+
+      - name: Download build
+        uses: actions/download-artifact@v8
+        with:
+          name: backend-jar
+          path: target
+
+      - name: Run Core Tests
         run: |
           cd core
+          java -jar ../target/*.jar &
           mvn verify
 
   pipeline-test:
+    needs: build
     name: Pipeline Tests
     runs-on: ubuntu-24.04
     steps:
@@ -43,22 +78,36 @@ jobs:
           cache: maven
           cache-dependency-path: pom.xml
 
+      - name: Download build
+        uses: actions/download-artifact@v8
+        with:
+          name: backend-jar
+          path: target
+
       - name: Run Pipeline Tests
         run: |
           cd pipeline
+          java -jar ../target/*.jar &
           mvn verify
 
   webapp-test:
+    needs: build
     name: Webapp Tests
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
+      - name: Download build
+        uses: actions/download-artifact@v8
         with:
-          version: 11
+          name: backend-jar
+          path: target
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: webapp/package.json
 
       - name: Set up Node.js ${{ vars.NODE_VERSION }}
         uses: actions/setup-node@v4
@@ -69,6 +118,7 @@ jobs:
 
       - name: Run Webapp Tests
         run: |
+          java -jar target/*.jar &
           cd webapp
           pnpm install
           pnpm test
