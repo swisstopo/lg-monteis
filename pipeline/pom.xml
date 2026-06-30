@@ -16,10 +16,6 @@
       <groupId>ch.swisstopo.monteis</groupId>
       <artifactId>contracts</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-    </dependency>
 
     <dependency>
       <groupId>org.postgresql</groupId>
