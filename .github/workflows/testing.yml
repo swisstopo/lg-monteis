@@ -91,4 +91,5 @@ jobs:
           cd webapp
           pnpm install
           pnpm run generate-api
+          pnpm exec playwright install
           pnpm vitest --browser.headless=true
