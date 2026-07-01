@@ -3,53 +3,22 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
 
+env:
+  TS_DB_NAME: ${{ vars.TS_DB_NAME }}
+  TS_FLYWAY_USER: ${{ vars.TS_FLYWAY_USER }}
+  TS_FLYWAY_PWD: ${{ vars.TS_FLYWAY_PWD }}
+  META_DB_NAME: ${{ vars.META_DB_NAME }}
+  META_FLYWAY_USER: ${{ vars.META_FLYWAY_USER }}
+  META_FLYWAY_PWD: ${{ vars.META_FLYWAY_PWD }}
+
+  FDW_READ_USER: ${{ vars.FDW_READ_USER }}
+  PIPELINE_APP_TS_DB_USER: ${{ vars.PIPELINE_APP_TS_DB_USER}}
+  PIPELINE_APP_TS_DB_PWD: ${{ vars.PIPELINE_APP_TS_DB_PWD }}
+  CORE_APP_META_DB_USER: ${{ vars.CORE_APP_META_DB_USER }}
+  CORE_APP_META_DB_PWD: ${{ vars.CORE_APP_META_DB_PWD }}
+
 jobs:
-  build:
-    name: Build backend
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v7
-
-      - name: Set up JDK ${{ vars.JAVA_VERSION }}
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ vars.JAVA_VERSION }}
-          distribution: ${{ vars.JAVA_DISTRIBUTION }}
-          server-id: github
-          settings-path: ${{ github.workspace }}
-          cache: maven
-          cache-dependency-path: pom.xml
-
-      - name: Maven Install
-        run: mvn clean install -DskipTests -Dopenapi.codegen.skip=false
-
-      - name: Upload JAR
-        uses: actions/upload-artifact@v7
-        with:
-          name: backend-jar
-          path: "**/target/*.jar"
-
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Create and modify .env file
-        env:
-          ENV_CONTENTS: ${{ secrets.TEST_ENV_FILE_CONTENTS }}
-        run: |
-          echo "$ENV_CONTENTS" > .env
-
-      - name: Upload .env artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: shared-env-file
-          path: .env
-          include-hidden-files: true
-
   core-test:
-    needs: [build, setup]
     name: Core Tests
     runs-on: ubuntu-24.04
     steps:
@@ -61,32 +30,32 @@ jobs:
         with:
           java-version: ${{ vars.JAVA_VERSION }}
           distribution: ${{ vars.JAVA_DISTRIBUTION }}
-          server-id: github
-          settings-path: ${{ github.workspace }}
           cache: maven
           cache-dependency-path: pom.xml
 
-      - name: Download build
-        uses: actions/download-artifact@v7
-        with:
-          name: backend-jar
-          path: target
-
-      - name: Create .env file for tests
-        env:
-          ENV_CONTENTS: ${{ secrets.TEST_ENV_FILE_CONTENTS }}
-        run: |
-          echo "$ENV_CONTENTS" > .env
-
       - name: Run Core Tests
-        run: |
-          cd core
-          java -jar ../target/*.jar &
-          mvn verify
+        run: mvn verify -pl core -am
 
   pipeline-test:
-    needs: [build, setup]
     name: Pipeline Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ vars.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRIBUTION }}
+          cache: maven
+          cache-dependency-path: pom.xml
+
+      - name: Run Pipeline Tests
+        run: mvn verify -pl pipeline -am
+
+  webapp-test:
+    name: Webapp Tests
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
@@ -102,46 +71,13 @@ jobs:
           cache: maven
           cache-dependency-path: pom.xml
 
-      - name: Download build
-        uses: actions/download-artifact@v7
-        with:
-          name: backend-jar
-          path: target
-
-      - name: Download .env artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: shared-env-file
-
-      - name: Run Pipeline Tests
-        run: |
-          cd pipeline
-          java -jar ../target/*.jar &
-          mvn verify
-
-  webapp-test:
-    needs: [build, setup]
-    name: Webapp Tests
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v7
-
-      - name: Download build
-        uses: actions/download-artifact@v7
-        with:
-          name: backend-jar
-          path: target
+      - name: Install Dependencies and generate Sources
+        run: mvn clean install -DskipTests -Dopenapi.codegen.skip=false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
           package_json_file: webapp/package.json
-          
-      - name: Download .env artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: shared-env-file
 
       - name: Set up Node.js ${{ vars.NODE_VERSION }}
         uses: actions/setup-node@v4
@@ -152,7 +88,7 @@ jobs:
 
       - name: Run Webapp Tests
         run: |
-          java -jar target/*.jar &
           cd webapp
           pnpm install
+          pnpm run generate-api
           pnpm test
