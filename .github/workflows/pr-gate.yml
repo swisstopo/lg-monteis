@@ -74,48 +74,58 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Resolve Maven Dependencies
-        run: mvn dependency:go-offline
+      - name: Setup Java Environment
+        uses: ./.github/actions/setup-java-maven
 
-      - name: Run Trivy (Table format) for PR Quality Gate
-        id: trivy-pr
+      - name: Run Trivy vulnerability scanner in repo mode
         uses: aquasecurity/trivy-action@v0.36.0
-        continue-on-error: true
         with:
           version: 'v0.72.0'
           scan-type: 'fs'
           ignore-unfixed: true
           format: 'table'
-          output: 'trivy-report.txt'
           severity: 'HIGH,CRITICAL'
           exit-code: '1'
           trivyignores: '.trivyignore'
 
+      # --- 2. Informational Scan (Reports LOW/MEDIUM, never fails PR) ---
+      - name: Run Trivy (Informational)
+        id: trivy-info
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          version: 'v0.72.0'
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'table'
+          output: 'trivy-findings.txt'
+          severity: 'UNKNOWN,LOW,MEDIUM'
+          exit-code: '0' # Never fails the pipeline
+          trivyignores: '.trivyignore'
+
       - name: Prepare PR Comment Content
-        if: always()
         run: |
-          echo "### 🛡️ Trivy Security Scan Results" > pr-comment.md
-          if [ -s trivy-report.txt ]; then
-            echo "<details><summary>🚨 <b>Found HIGH or CRITICAL vulnerabilities!</b> Click to expand.</summary>" >> pr-comment.md
+          # If the file exists and is not empty
+          if [ -s trivy-findings.txt ]; then
+            echo "### ℹ️ Trivy Security Scan (Informational)" > pr-comment.md
+            echo "✅ **Quality Gate Passed!** No HIGH or CRITICAL vulnerabilities found." >> pr-comment.md
+            echo "" >> pr-comment.md
+            echo "<details><summary>Found non-critical issues (LOW/MEDIUM). Click to review.</summary>" >> pr-comment.md
             echo "" >> pr-comment.md
             echo "\`\`\`text" >> pr-comment.md
-            cat trivy-report.txt >> pr-comment.md
+            cat trivy-findings.txt >> pr-comment.md
             echo "\`\`\`" >> pr-comment.md
             echo "</details>" >> pr-comment.md
           else
-            echo "✅ **Quality Gate Passed!** No HIGH or CRITICAL vulnerabilities found." >> pr-comment.md
+            echo "### 🛡️ Trivy Security Scan Results" > pr-comment.md
+            echo "✅ **Perfect Scan!** No vulnerabilities found at any severity level." >> pr-comment.md
           fi
 
+      # --- 4. Post Sticky Comment ---
       - name: Post Sticky PR Comment
-        if: always()
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: trivy-scan-results
           path: pr-comment.md
-
-      - name: Enforce Quality Gate (Fail Job if Vulns Found)
-        if: always() && steps.trivy-pr.outcome == 'failure'
-        run: exit 1
 
   format-backend:
     name: Format Backend
@@ -165,7 +175,7 @@ jobs:
 
       - name: Setup Java Environment (Hits Cache)
         if: steps.sbom-cache.outputs.cache-hit != 'true'
-        uses: ./.github/actions/setup-java-maven #todo: check if needed!!
+        uses: ./.github/actions/setup-java-maven
 
       - name: Generate Backend SBOM (Maven)
         if: steps.sbom-cache.outputs.cache-hit != 'true'
