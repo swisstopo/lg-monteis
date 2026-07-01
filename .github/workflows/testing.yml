@@ -86,10 +86,14 @@ jobs:
           cache: pnpm
           cache-dependency-path: webapp/pnpm-lock.yaml
 
-      - name: Run Webapp Tests
+      - name: Install Node Modules and Playwright
         run: |
           cd webapp
           pnpm install
-          pnpm run generate-api
           pnpm exec playwright install
+          pnpm run generate-api
+
+      - name: Run Webapp Tests
+        run: |
+          cd webapp
           pnpm vitest --browser.headless=true
