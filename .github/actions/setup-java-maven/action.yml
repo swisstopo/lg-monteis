@@ -10,7 +10,3 @@ runs:
         distribution: ${{ env.JAVA_DISTRIBUTION }}
         cache: maven
         cache-dependency-path: '**/pom.xml'
-
-    - name: Resolve Maven Dependencies
-      shell: bash
-      run: mvn dependency:go-offline

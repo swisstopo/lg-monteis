@@ -10,6 +10,11 @@ env:
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
   NODE_VERSION: ${{ vars.NODE_VERSION }}
 
+# Default permissions: Read Only
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   # ---------------------------------------------------------
   # 0. PR TITLE VALIDATION (Runs instantly, needs no cache)
@@ -55,6 +60,7 @@ jobs:
       - name: Setup Java Environment
         uses: ./.github/actions/setup-java-maven
 
+      # Resolve mvn dependencies once globally!
       - name: Download Maven Dependencies
         run: mvn dependency:go-offline
 
@@ -88,8 +94,7 @@ jobs:
           exit-code: '1'
           trivyignores: '.trivyignore'
 
-      # --- 2. Informational Scan (Reports LOW/MEDIUM, never fails PR) ---
-      - name: Run Trivy (Informational)
+      - name: Run Trivy (Informational for Notification)
         id: trivy-info
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -103,25 +108,9 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Prepare PR Comment Content
-        run: |
-          # If the file exists and is not empty
-          if [ -s trivy-findings.txt ]; then
-            echo "### ℹ️ Trivy Security Scan (Informational)" > pr-comment.md
-            echo "✅ **Quality Gate Passed!** No HIGH or CRITICAL vulnerabilities found." >> pr-comment.md
-            echo "" >> pr-comment.md
-            echo "<details><summary>Found non-critical issues (LOW/MEDIUM). Click to review.</summary>" >> pr-comment.md
-            echo "" >> pr-comment.md
-            echo "\`\`\`text" >> pr-comment.md
-            cat trivy-findings.txt >> pr-comment.md
-            echo "\`\`\`" >> pr-comment.md
-            echo "</details>" >> pr-comment.md
-          else
-            echo "### 🛡️ Trivy Security Scan Results" > pr-comment.md
-            echo "✅ **Perfect Scan!** No vulnerabilities found at any severity level." >> pr-comment.md
-          fi
+        run: bash .github/scripts/generate-trivy-comment.sh trivy-findings.txt pr-comment.md
 
-      # --- 4. Post Sticky Comment ---
-      - name: Post Sticky PR Comment
+      - name: Post Sticky PR Comment # todo: take new action
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: trivy-scan-results
@@ -159,7 +148,6 @@ jobs:
   license-governance:
     name: Enforce Licenses
     needs: warmup-caches
-
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
