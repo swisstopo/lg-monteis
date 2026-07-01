@@ -74,6 +74,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Resolve Maven Dependencies
+        run: mvn dependency:go-offline
+
       - name: Run Trivy (Table format) for PR Quality Gate
         id: trivy-pr
         uses: aquasecurity/trivy-action@v0.36.0
