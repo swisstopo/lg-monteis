@@ -1,4 +1,4 @@
-name: testing.yml
+name: Test
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
@@ -91,4 +91,4 @@ jobs:
           cd webapp
           pnpm install
           pnpm run generate-api
-          pnpm vitest **/*.spec.ts
+          pnpm vitest
