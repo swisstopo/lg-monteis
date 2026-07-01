@@ -1,8 +1,6 @@
 name: Scheduled Security Scan
 
 on:
-  pull_request:
-    types: [ opened, edited, synchronize, reopened ] # todo: remove me!
   schedule:
     - cron: '0 4 * * *'
   workflow_dispatch:

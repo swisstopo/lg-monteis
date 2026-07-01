@@ -4,19 +4,14 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
 
-# Define variables once for all jobs
 env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION }}
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
   NODE_VERSION: ${{ vars.NODE_VERSION }}
 
-# Default permissions: Read Only
 permissions: read-all
 
 jobs:
-  # ---------------------------------------------------------
-  # 0. PR TITLE VALIDATION (Runs instantly, needs no cache)
-  # ---------------------------------------------------------
   validate-pr-title:
     name: Validate PR Title
     runs-on: ubuntu-latest
@@ -45,9 +40,6 @@ jobs:
             deps
           requireScope: true
 
-  # ---------------------------------------------------------
-  # 1. THE WARM-UP JOB
-  # ---------------------------------------------------------
   warmup-caches:
     name: Warm up Caches
     runs-on: ubuntu-24.04
@@ -58,16 +50,13 @@ jobs:
       - name: Setup Java Environment
         uses: ./.github/actions/setup-java-maven
 
-      # Resolve mvn dependencies once globally!
+      # Resolve mvn dependencies once globally
       - name: Download Maven Dependencies
         run: mvn dependency:go-offline
 
       - name: Setup Node and pnpm Environment
         uses: ./.github/actions/setup-node-pnpm
 
-  # ---------------------------------------------------------
-  # 2. PARALLEL JOBS (Fan-out after warmup)
-  # ---------------------------------------------------------
   security-scan:
     name: Trivy Security Scan
     needs: warmup-caches
