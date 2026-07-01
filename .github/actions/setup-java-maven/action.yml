@@ -1,0 +1,17 @@
+name: 'Setup Java and Maven'
+description: 'Sets up JDK and resolves Maven dependencies with caching'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: ${{ vars.JAVA_VERSION }}
+        distribution: ${{ vars.JAVA_DISTRIBUTION }}
+        cache: maven
+        cache-dependency-path: pom.xml
+
+    - name: Resolve Maven Dependencies
+      shell: bash
+      run: mvn dependency:go-offline

@@ -14,12 +14,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up JDK ${{ vars.JAVA_VERSION }}
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ vars.JAVA_VERSION }}
-          distribution: ${{ vars.JAVA_DISTRIBUTION }}
-          cache: maven
+      - name: Setup Java Environment
+        uses: ./.github/actions/setup-java-maven
 
       - name: Resolve Maven Dependencies
         run: mvn dependency:go-offline
