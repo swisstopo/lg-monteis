@@ -1,22 +1,22 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { provideRouter } from '@angular/router';
+import { WorkbenchStorage } from '@scion/workbench';
 import MetricsMenu from './metrics-menu';
 
 describe('MetricsMenu', () => {
-  let component: MetricsMenu;
   let fixture: ComponentFixture<MetricsMenu>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [MetricsMenu],
+      providers: [WorkbenchStorage, provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MetricsMenu);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(fixture.componentInstance).toBeTruthy();
   });
 });

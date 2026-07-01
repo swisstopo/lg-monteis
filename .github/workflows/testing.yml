@@ -91,4 +91,4 @@ jobs:
           cd webapp
           pnpm install
           pnpm run generate-api
-          pnpm test
+          pnpm vitest **/*.spec.ts

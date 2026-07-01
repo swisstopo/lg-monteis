@@ -1,22 +1,25 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { provideRouter } from '@angular/router';
+import { WorkbenchStorage } from '@scion/workbench';
 import { RouteButton } from './route-button';
 
 describe('RouteButton', () => {
-  let component: RouteButton;
   let fixture: ComponentFixture<RouteButton>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [RouteButton],
+      providers: [provideRouter([]), WorkbenchStorage],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RouteButton);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.componentRef.setInput('label', 'test');
+    fixture.componentRef.setInput('route', ['test']);
+    fixture.detectChanges();
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(fixture.componentInstance).toBeTruthy();
   });
 });
