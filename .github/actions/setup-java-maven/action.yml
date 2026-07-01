@@ -1,5 +1,11 @@
 name: 'Setup Java and Maven'
-description: 'Sets up JDK and resolves Maven dependencies with caching'
+description: 'Sets up JDK'
+
+inputs:
+  java-version:
+    required: true
+  java-distribution:
+    required: true
 
 runs:
   using: "composite"
@@ -7,10 +13,9 @@ runs:
     - name: Set up JDK
       uses: actions/setup-java@v5
       with:
-        java-version: ${{ vars.JAVA_VERSION }}
-        distribution: ${{ vars.JAVA_DISTRIBUTION }}
+        java-version: ${{ inputs.java-version }}
+        distribution: ${{ inputs.java-distribution }}
         cache: maven
-        cache-dependency-path: pom.xml
 
     - name: Resolve Maven Dependencies
       shell: bash

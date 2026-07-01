@@ -16,6 +16,9 @@ jobs:
 
       - name: Setup Java Environment
         uses: ./.github/actions/setup-java-maven
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          java-distribution: ${{ vars.JAVA_DISTRIBUTION }}
 
       - name: Resolve Maven Dependencies
         run: mvn dependency:go-offline
