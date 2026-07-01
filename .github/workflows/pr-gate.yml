@@ -11,6 +11,11 @@ env:
 
 permissions: read-all
 
+# Cancel obsolete runs if a new commit is pushed to the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-pr-title:
     name: Validate PR Title
