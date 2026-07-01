@@ -60,6 +60,18 @@ jobs:
           cache: maven
           cache-dependency-path: pom.xml
 
+      - name: Download build
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-jar
+          path: target
+
+      - name: Create .env file for tests
+        env:
+          ENV_CONTENTS: ${{ secrets.TEST_ENV_FILE_CONTENTS }}
+        run: |
+          echo "$ENV_CONTENTS" > .env
+
       - name: Run Core Tests
         run: mvn verify -pl core -am
 
