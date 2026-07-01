@@ -1,55 +1,55 @@
-name: Format Validation
-
-on:
-  pull_request:
-    types: [opened, edited, synchronize, reopened]
-
-jobs:
-  backend:
-    name: Format Backend (Core & Pipeline)
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Set up JDK ${{ vars.JAVA_VERSION }}
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ vars.JAVA_VERSION }}
-          distribution: ${{ vars.JAVA_DISTRIBUTION }}
-          server-id: github
-          settings-path: ${{ github.workspace }}
-          cache: maven
-          # Cache based on the parent pom now
-          cache-dependency-path: pom.xml
-
-      - name: Format backend
-        run: mvn spotless:check
-
-  webapp:
-    name: Format Webapp
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: webapp
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          package_json_file: webapp/package.json
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ vars.NODE_VERSION }}
-          cache: 'pnpm'
-          cache-dependency-path: webapp/pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Check frontend formatting
-        run: pnpm run format:check
+#name: Format Validation
+#
+#on:
+#  pull_request:
+#    types: [opened, edited, synchronize, reopened]
+#
+#jobs:
+#  backend:
+#    name: Format Backend (Core & Pipeline)
+#    runs-on: ubuntu-24.04
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v7
+#
+#      - name: Set up JDK ${{ vars.JAVA_VERSION }}
+#        uses: actions/setup-java@v5
+#        with:
+#          java-version: ${{ vars.JAVA_VERSION }}
+#          distribution: ${{ vars.JAVA_DISTRIBUTION }}
+#          server-id: github
+#          settings-path: ${{ github.workspace }}
+#          cache: maven
+#          # Cache based on the parent pom now
+#          cache-dependency-path: pom.xml
+#
+#      - name: Format backend
+#        run: mvn spotless:check
+#
+#  webapp:
+#    name: Format Webapp
+#    runs-on: ubuntu-24.04
+#    defaults:
+#      run:
+#        working-directory: webapp
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v7
+#
+#      - name: Install pnpm
+#        uses: pnpm/action-setup@v6
+#        with:
+#          package_json_file: webapp/package.json
+#
+#      - name: Set up Node.js
+#        uses: actions/setup-node@v6
+#        with:
+#          node-version: ${{ vars.NODE_VERSION }}
+#          cache: 'pnpm'
+#          cache-dependency-path: webapp/pnpm-lock.yaml
+#
+#      - name: Install dependencies
+#        run: pnpm install --frozen-lockfile
+#
+#      - name: Check frontend formatting
+#        run: pnpm run format:check

@@ -1,0 +1,202 @@
+name: PR Gate
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+# Define variables once for all jobs
+env:
+  JAVA_VERSION: ${{ vars.JAVA_VERSION }}
+  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
+  NODE_VERSION: ${{ vars.NODE_VERSION }}
+
+jobs:
+  # ---------------------------------------------------------
+  # 0. PR TITLE VALIDATION (Runs instantly, needs no cache)
+  # ---------------------------------------------------------
+  validate-pr-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Enforce Conventional Commits
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          scopes: |
+            MON-\d+
+            deps
+          requireScope: true
+
+  # ---------------------------------------------------------
+  # 1. THE WARM-UP JOB
+  # ---------------------------------------------------------
+  warmup-caches:
+    name: Warm up Caches
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Setup Java Environment
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Download Maven Dependencies
+        run: mvn dependency:go-offline
+
+      - name: Setup Node and pnpm Environment
+        uses: ./.github/actions/setup-node-pnpm
+
+  # ---------------------------------------------------------
+  # 2. PARALLEL JOBS (Fan-out after warmup)
+  # ---------------------------------------------------------
+  security-scan:
+    name: Trivy Security Scan
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write # Required for sticky comments
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run Trivy (Table format) for PR Quality Gate
+        id: trivy-pr
+        uses: aquasecurity/trivy-action@v0.36.0
+        continue-on-error: true
+        with:
+          version: 'v0.72.0'
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'table'
+          output: 'trivy-report.txt'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+          trivyignores: '.trivyignore'
+
+      - name: Prepare PR Comment Content
+        if: always()
+        run: |
+          echo "### 🛡️ Trivy Security Scan Results" > pr-comment.md
+          if [ -s trivy-report.txt ]; then
+            echo "<details><summary>🚨 <b>Found HIGH or CRITICAL vulnerabilities!</b> Click to expand.</summary>" >> pr-comment.md
+            echo "" >> pr-comment.md
+            echo "\`\`\`text" >> pr-comment.md
+            cat trivy-report.txt >> pr-comment.md
+            echo "\`\`\`" >> pr-comment.md
+            echo "</details>" >> pr-comment.md
+          else
+            echo "✅ **Quality Gate Passed!** No HIGH or CRITICAL vulnerabilities found." >> pr-comment.md
+          fi
+
+      - name: Post Sticky PR Comment
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: trivy-scan-results
+          path: pr-comment.md
+
+      - name: Enforce Quality Gate (Fail Job if Vulns Found)
+        if: always() && steps.trivy-pr.outcome == 'failure'
+        run: exit 1
+
+  format-backend:
+    name: Format Backend
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Java Environment
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Format backend
+        run: mvn spotless:check
+
+  format-frontend:
+    name: Format Frontend
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: webapp
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node Environment (Hits Cache)
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Check frontend formatting
+        run: pnpm run format:check
+
+  license-governance:
+    name: Enforce Licenses
+    needs: warmup-caches
+
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache Generated SBOMs
+        id: sbom-cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            target/backend-sbom.json
+            webapp/frontend-sbom.json
+          key: ${{ runner.os }}-sboms-${{ hashFiles('**/pom.xml', '**/pnpm-lock.yaml') }}
+
+      - name: Setup Java Environment (Hits Cache)
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-java-maven #todo: check if needed!!
+
+      - name: Generate Backend SBOM (Maven)
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        run: mvn org.cyclonedx:cyclonedx-maven-plugin:2.8.0:makeAggregateBom -DoutputFormat=json -DoutputName=backend-sbom
+
+      - name: Setup Node Environment (Hits Cache)
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Generate Frontend SBOM
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        uses: anchore/sbom-action@v0
+        env:
+          SYFT_JAVASCRIPT_SEARCH_REMOTE_LICENSES: "true"
+        with:
+          path: webapp/
+          format: spdx-json
+          output-file: webapp/frontend-sbom.json
+
+      - name: Install Anchore Grant
+        run: curl -sSfL https://get.anchore.io/grant | sudo sh -s -- -b /usr/local/bin
+
+      - name: Upload SBOM Artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sbom-artifacts
+          path: |
+            target/backend-sbom.json
+            webapp/frontend-sbom.json
+          retention-days: 5
+
+      - name: Enforce License Policy (Backend)
+        run: grant check target/backend-sbom.json
+
+      - name: Enforce License Policy (Frontend)
+        run: grant check webapp/frontend-sbom.json

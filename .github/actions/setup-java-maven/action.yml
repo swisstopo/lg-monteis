@@ -1,22 +1,12 @@
 name: 'Setup Java and Maven'
 description: 'Sets up JDK'
-
-inputs:
-  java-version:
-    required: true
-  java-distribution:
-    required: true
-
 runs:
   using: "composite"
   steps:
     - name: Set up JDK
       uses: actions/setup-java@v5
       with:
-        java-version: ${{ inputs.java-version }}
-        distribution: ${{ inputs.java-distribution }}
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
         cache: maven
-
-    - name: Resolve Maven Dependencies
-      shell: bash
-      run: mvn dependency:go-offline
+        cache-dependency-path: pom.xml
