@@ -1,46 +1,57 @@
-#name: Scheduled Security Scan
-#
-#on:
-#  pull_request:
-#    types: [ opened, edited, synchronize, reopened ] # todo: remove me!
-#  schedule:
-#    - cron: '0 4 * * *'
-#  workflow_dispatch:
-#
-#jobs:
-#  scan:
-#    name: Scheduled Scan Main
-#    runs-on: ubuntu-24.04
-#    permissions:
-#      contents: read
-#      security-events: write
-#      actions: read
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v7
-#
-#      - name: Set up JDK ${{ vars.JAVA_VERSION }}
-#        uses: actions/setup-java@v5
-#        with:
-#          java-version: ${{ vars.JAVA_VERSION }}
-#          distribution: ${{ vars.JAVA_DISTRIBUTION }}
-#          cache: maven
-#
-#      - name: Resolve Maven Dependencies
-#        run: mvn dependency:go-offline
-#
-#      - name: Run Trivy vulnerability scanner
-#        uses: aquasecurity/trivy-action@v0.36.0
-#        with:
-#          version: 'v0.72.0'
-#          scan-type: 'fs'
-#          ignore-unfixed: true
-#          format: 'sarif'
-#          output: 'trivy-results.sarif'
-#          severity: 'HIGH,CRITICAL'
-#          limit-severities-for-sarif: true  # todo: discuss in daily
-#
-#      - name: Upload Trivy scan results to GitHub Security tab
-#        uses: github/codeql-action/upload-sarif@v4
-#        with:
-#          sarif_file: 'trivy-results.sarif'
+name: Scheduled Security Scan
+
+on:
+  pull_request:
+    types: [ opened, edited, synchronize, reopened ] # todo: remove me!
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: ${{ vars.JAVA_VERSION }}
+  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
+
+permissions: read-all
+
+jobs:
+  warmup-cache:
+    name: Warm up Cache
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Setup Java Environment
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Download Maven Dependencies
+        run: mvn dependency:go-offline
+
+  scan:
+    name: Scheduled Scan Main
+    needs: warmup-cache
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Java Environment
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          version: 'v0.72.0'
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'

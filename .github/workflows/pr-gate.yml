@@ -11,9 +11,7 @@ env:
   NODE_VERSION: ${{ vars.NODE_VERSION }}
 
 # Default permissions: Read Only
-permissions:
-  contents: read
-  pull-requests: read
+permissions: read-all
 
 jobs:
   # ---------------------------------------------------------
@@ -110,8 +108,8 @@ jobs:
       - name: Prepare PR Comment Content
         run: bash .github/scripts/generate-trivy-comment.sh trivy-findings.txt pr-comment.md
 
-      - name: Post Sticky PR Comment # todo: take new action
-        uses: marocchino/sticky-pull-request-comment@v2
+      - name: Post Sticky PR Comment
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: trivy-scan-results
           path: pr-comment.md
