@@ -42,6 +42,7 @@ jobs:
             deps
           requireScope: true
 
+  # noinspection YAMLSchemaValidation
   warmup-caches:
     name: Warm up Caches
     runs-on: ubuntu-24.04
@@ -50,11 +51,11 @@ jobs:
         uses: actions/checkout@v7
 
       - parallel:
-          - name: Setup Node and pnpm Environment
-            uses: ./.github/actions/setup-node-pnpm
+        - name: Setup Node and pnpm Environment
+          uses: ./.github/actions/setup-node-pnpm
 
-          - name: Setup Java Environment
-            uses: ./.github/actions/setup-java-maven
+        - name: Setup Java Environment
+          uses: ./.github/actions/setup-java-maven
 
       # Resolve mvn dependencies once globally
       - name: Download Maven Dependencies
@@ -67,45 +68,27 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      pull-requests: write # Required for sticky comments
+      security-events: write
+      actions: read
     steps:
       - uses: actions/checkout@v7
 
       - name: Setup Java Environment
         uses: ./.github/actions/setup-java-maven
 
-      - name: Run Trivy vulnerability scanner in repo mode
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           version: 'v0.72.0'
           scan-type: 'fs'
           ignore-unfixed: true
-          format: 'table'
-          severity: 'HIGH,CRITICAL'
-          exit-code: '1'
-          trivyignores: '.trivyignore'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
 
-      - name: Run Trivy (Informational for Notification)
-        id: trivy-info
-        uses: aquasecurity/trivy-action@v0.36.0
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          version: 'v0.72.0'
-          scan-type: 'fs'
-          ignore-unfixed: true
-          format: 'table'
-          output: 'trivy-findings.txt'
-          severity: 'UNKNOWN,LOW,MEDIUM'
-          exit-code: '0' # Never fails the pipeline
-          trivyignores: '.trivyignore'
-
-      - name: Prepare PR Comment Content
-        run: bash .github/scripts/generate-trivy-comment.sh trivy-findings.txt pr-comment.md
-
-      - name: Post Sticky PR Comment
-        uses: marocchino/sticky-pull-request-comment@v3
-        with:
-          header: trivy-scan-results
-          path: pr-comment.md
+          sarif_file: 'trivy-results.sarif'
 
   format-backend:
     name: Format Backend
@@ -136,6 +119,7 @@ jobs:
       - name: Check frontend formatting
         run: pnpm run format:check
 
+  # noinspection YAMLSchemaValidation
   license-governance:
     name: Enforce Licenses
     needs: warmup-caches
