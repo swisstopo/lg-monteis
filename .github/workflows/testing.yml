@@ -43,9 +43,9 @@ jobs:
           path: .
           include-hidden-files: true
 
-  core-test:
+  core-unit-test:
     needs: setup
-    name: Core Tests
+    name: Core Unit Tests
     runs-on: ubuntu-24.04
     steps:
       - name: Download Workspace
@@ -62,11 +62,32 @@ jobs:
           cache-dependency-path: pom.xml
 
       - name: Run Core Tests
-        run: mvn verify -pl core -Djooq.codegen.skip=true
+        run: mvn test -pl core -Djooq.codegen.skip=true
 
-  pipeline-test:
+  core-integration-test:
     needs: setup
-    name: Pipeline Tests
+    name: Core Integration Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download Workspace
+        uses: actions/download-artifact@v7
+        with:
+          name: compiled-workspace
+
+      - name: Set up JDK ${{ vars.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRIBUTION }}
+          cache: maven
+          cache-dependency-path: pom.xml
+
+      - name: Run Core Tests
+        run: mvn -Dskip.ut=true verify -pl core -Djooq.codegen.skip=true
+
+  pipeline-unit-test:
+    needs: setup
+    name: Pipeline Unit Tests
     runs-on: ubuntu-24.04
     steps:
       - name: Download Workspace
@@ -84,6 +105,27 @@ jobs:
 
       - name: Run Pipeline Tests
         run: mvn verify -pl pipeline -Djooq.codegen.skip=true
+
+  pipeline-integration-test:
+    needs: setup
+    name: Pipeline Integration Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download Workspace
+        uses: actions/download-artifact@v7
+        with:
+          name: compiled-workspace
+
+      - name: Set up JDK ${{ vars.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRIBUTION }}
+          cache: maven
+          cache-dependency-path: pom.xml
+
+      - name: Run Pipeline Tests
+        run: mvn -Dskip.ut=true verify -pl pipeline -Djooq.codegen.skip=true
 
   webapp-test:
     name: Webapp Tests

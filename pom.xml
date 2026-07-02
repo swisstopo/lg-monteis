@@ -35,6 +35,7 @@
     <maven-build-helper.version>3.6.1</maven-build-helper.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
+    <skip.ut>false</skip.ut>
   </properties>
 
   <dependencyManagement>
@@ -93,6 +94,7 @@
             <systemPropertyVariables>
               <monteis.repo.root>${maven.multiModuleProjectDirectory}</monteis.repo.root>
             </systemPropertyVariables>
+            <skipTests>${skip.ut}</skipTests>
           </configuration>
         </plugin>
 
