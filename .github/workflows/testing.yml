@@ -31,84 +31,15 @@ jobs:
           java-version: ${{ vars.JAVA_VERSION }}
           distribution: ${{ vars.JAVA_DISTRIBUTION }}
           cache: maven
-          cache-dependency-path: pom.xml
+          cache-dependency-path: '**/*pom.xml'
 
       - name: Generate and Compile All Classes
         run: mvn install -DskipTests
 
-      - name: Persist Workspace
-        uses: actions/upload-artifact@v7
-        with:
-          name: compiled-workspace
-          path: .
-          include-hidden-files: true
-
-  core-unit-test:
+  # noinspection YAMLSchemaValidation
+  run-backend-tests:
     needs: setup
-    name: Core Unit Tests
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Download Workspace
-        uses: actions/download-artifact@v7
-        with:
-          name: compiled-workspace
-        
-      - name: Set up JDK ${{ vars.JAVA_VERSION }}
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ vars.JAVA_VERSION }}
-          distribution: ${{ vars.JAVA_DISTRIBUTION }}
-          cache: maven
-          cache-dependency-path: pom.xml
-
-      - name: Run Core Tests
-        run: mvn test -pl core -Djooq.codegen.skip=true
-
-  core-integration-test:
-    needs: setup
-    name: Core Integration Tests
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Download Workspace
-        uses: actions/download-artifact@v7
-        with:
-          name: compiled-workspace
-
-      - name: Set up JDK ${{ vars.JAVA_VERSION }}
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ vars.JAVA_VERSION }}
-          distribution: ${{ vars.JAVA_DISTRIBUTION }}
-          cache: maven
-          cache-dependency-path: pom.xml
-
-      - name: Run Core Tests
-        run: mvn -Dskip.ut=true verify -pl core -Djooq.codegen.skip=true
-
-  pipeline-unit-test:
-    needs: setup
-    name: Pipeline Unit Tests
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Download Workspace
-        uses: actions/download-artifact@v7
-        with:
-          name: compiled-workspace
-
-      - name: Set up JDK ${{ vars.JAVA_VERSION }}
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ vars.JAVA_VERSION }}
-          distribution: ${{ vars.JAVA_DISTRIBUTION }}
-          cache: maven
-          cache-dependency-path: pom.xml
-
-      - name: Run Pipeline Tests
-        run: mvn test -pl pipeline -Djooq.codegen.skip=true
-
-  pipeline-integration-test:
-    needs: setup
-    name: Pipeline Integration Tests
+    name: Backend Tests
     runs-on: ubuntu-24.04
     steps:
       - name: Set up JDK ${{ vars.JAVA_VERSION }}
@@ -117,16 +48,21 @@ jobs:
           java-version: ${{ vars.JAVA_VERSION }}
           distribution: ${{ vars.JAVA_DISTRIBUTION }}
           cache: maven
-          cache-dependency-path: pom.xml
+          cache-dependency-path: '**/*pom.xml'
 
-      - name: Download Workspace
-        uses: actions/download-artifact@v7
-        with:
-          name: compiled-workspace
-          path: ..
+      - parallel:
+        - name: Run Core Tests
+          run: mvn test -pl core -Djooq.codegen.skip=true
 
-      - name: Run Pipeline Tests
-        run: mvn -Dskip.ut=true verify -pl pipeline -Djooq.codegen.skip=true
+        - name: Run Core Tests
+          run: mvn -Dskip.ut=true verify -pl core -Djooq.codegen.skip=true
+
+        - name: Run Pipeline Tests
+          run: mvn test -pl pipeline -Djooq.codegen.skip=true
+
+        - name: Run Pipeline Tests
+          run: mvn -Dskip.ut=true verify -pl pipeline -Djooq.codegen.skip=true
+
 
   webapp-test:
     name: Webapp Tests
@@ -143,7 +79,7 @@ jobs:
           server-id: github
           settings-path: ${{ github.workspace }}
           cache: maven
-          cache-dependency-path: pom.xml
+          cache-dependency-path: '**/*pom.xml'
 
       - name: Install Dependencies and generate Sources
         run: mvn clean install -DskipTests -Dopenapi.codegen.skip=false
@@ -161,13 +97,12 @@ jobs:
           cache-dependency-path: webapp/pnpm-lock.yaml
 
       - name: Install Node Modules and Playwright
+        working-directory: webapp
         run: |
-          cd webapp
           pnpm install
           pnpm exec playwright install
           pnpm run generate-api
 
       - name: Run Webapp Tests
-        run: |
-          cd webapp
-          pnpm vitest --browser.headless=true
+        working-directory: webapp
+        run: pnpm vitest --browser.headless=true
