@@ -1,0 +1,169 @@
+name: PR Gate
+
+on:
+  pull_request:
+    types: [ opened, edited, synchronize, reopened ]
+
+env:
+  JAVA_VERSION: ${{ vars.JAVA_VERSION }}
+  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
+  NODE_VERSION: ${{ vars.NODE_VERSION }}
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-pr-title:
+    name: Validate PR Title
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Enforce Conventional Commits
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          scopes: |
+            MON-\d+
+            deps
+          requireScope: true
+
+  # noinspection YAMLSchemaValidation
+  warmup-caches:
+    name: Warm up Caches
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - parallel:
+        - name: Setup Node and pnpm Environment
+          uses: ./.github/actions/setup-node-pnpm
+
+        - name: Setup Java Environment
+          uses: ./.github/actions/setup-java-maven
+
+      # Resolve mvn dependencies once globally
+      - name: Download Maven Dependencies
+        run: mvn dependency:go-offline
+
+  security-scan:
+    name: Trivy Security Scan
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Java Environment
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Execute Security Scan
+        uses: ./.github/actions/trivy-scan
+
+  format-backend:
+    name: Format Backend
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Java Environment
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Format backend
+        run: mvn spotless:check
+
+  format-frontend:
+    name: Format Frontend
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: webapp
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node Environment (Hits Cache)
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Check frontend formatting
+        run: pnpm run format:check
+
+  # noinspection YAMLSchemaValidation
+  license-governance:
+    name: Enforce Licenses
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache Generated SBOMs
+        id: sbom-cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            target/backend-sbom.json
+            webapp/frontend-sbom.json
+          key: ${{ runner.os }}-sboms-${{ hashFiles('**/pom.xml', '**/pnpm-lock.yaml') }}
+
+      - parallel:
+        - name: Setup Java Environment (Hits Cache)
+          if: steps.sbom-cache.outputs.cache-hit != 'true'
+          uses: ./.github/actions/setup-java-maven
+
+        - name: Setup Node Environment (Hits Cache)
+          if: steps.sbom-cache.outputs.cache-hit != 'true'
+          uses: ./.github/actions/setup-node-pnpm
+
+        - name: Install Anchore Grant License Scanner
+          run: curl -sSfL https://get.anchore.io/grant | sudo sh -s -- -b /usr/local/bin
+
+      - parallel:
+        - name: Generate Backend SBOM (Maven)
+          if: steps.sbom-cache.outputs.cache-hit != 'true'
+          run: mvn org.cyclonedx:cyclonedx-maven-plugin:2.8.0:makeAggregateBom -DoutputFormat=json -DoutputName=backend-sbom
+
+        - name: Generate Frontend SBOM
+          if: steps.sbom-cache.outputs.cache-hit != 'true'
+          uses: anchore/sbom-action@v0
+          env:
+            SYFT_JAVASCRIPT_SEARCH_REMOTE_LICENSES: "true"
+          with:
+            path: webapp/
+            format: spdx-json
+            output-file: webapp/frontend-sbom.json
+
+      - name: Upload SBOM Artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sbom-artifacts
+          path: |
+            target/backend-sbom.json
+            webapp/frontend-sbom.json
+          retention-days: 5
+
+      - parallel:
+        - name: Enforce License Policy (Backend)
+          run: grant check target/backend-sbom.json
+
+        - name: Enforce License Policy (Frontend)
+          run: grant check webapp/frontend-sbom.json
