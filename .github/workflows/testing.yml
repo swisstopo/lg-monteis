@@ -94,7 +94,6 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           name: compiled-workspace
-          path: ..
 
       - name: Set up JDK ${{ vars.JAVA_VERSION }}
         uses: actions/setup-java@v5
@@ -105,18 +104,13 @@ jobs:
           cache-dependency-path: pom.xml
 
       - name: Run Pipeline Tests
-        run: mvn verify -pl pipeline -Djooq.codegen.skip=true
+        run: mvn test -pl pipeline -Djooq.codegen.skip=true
 
   pipeline-integration-test:
     needs: setup
     name: Pipeline Integration Tests
     runs-on: ubuntu-24.04
     steps:
-      - name: Download Workspace
-        uses: actions/download-artifact@v7
-        with:
-          name: compiled-workspace
-
       - name: Set up JDK ${{ vars.JAVA_VERSION }}
         uses: actions/setup-java@v5
         with:
@@ -124,6 +118,12 @@ jobs:
           distribution: ${{ vars.JAVA_DISTRIBUTION }}
           cache: maven
           cache-dependency-path: pom.xml
+
+      - name: Download Workspace
+        uses: actions/download-artifact@v7
+        with:
+          name: compiled-workspace
+          path: ..
 
       - name: Run Pipeline Tests
         run: mvn -Dskip.ut=true verify -pl pipeline -Djooq.codegen.skip=true
