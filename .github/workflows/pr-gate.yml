@@ -9,6 +9,20 @@ env:
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
   NODE_VERSION: ${{ vars.NODE_VERSION }}
 
+  # Used vor testing
+  TS_DB_NAME: ${{ vars.TS_DB_NAME }}
+  TS_FLYWAY_USER: ${{ vars.TS_FLYWAY_USER }}
+  TS_FLYWAY_PWD: ${{ vars.TS_FLYWAY_PWD }}
+  META_DB_NAME: ${{ vars.META_DB_NAME }}
+  META_FLYWAY_USER: ${{ vars.META_FLYWAY_USER }}
+  META_FLYWAY_PWD: ${{ vars.META_FLYWAY_PWD }}
+
+  FDW_READ_USER: ${{ vars.FDW_READ_USER }}
+  PIPELINE_APP_TS_DB_USER: ${{ vars.PIPELINE_APP_TS_DB_USER}}
+  PIPELINE_APP_TS_DB_PWD: ${{ vars.PIPELINE_APP_TS_DB_PWD }}
+  CORE_APP_META_DB_USER: ${{ vars.CORE_APP_META_DB_USER }}
+  CORE_APP_META_DB_PWD: ${{ vars.CORE_APP_META_DB_PWD }}
+
 permissions: read-all
 
 concurrency:
@@ -167,3 +181,62 @@ jobs:
 
         - name: Enforce License Policy (Frontend)
           run: grant check webapp/frontend-sbom.json
+
+  # noinspection YAMLSchemaValidation
+  run-backend-tests:
+    needs: warmup-caches
+    name: Backend Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Java Environment (Hits Cache)
+        if: steps.sbom-cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Generate Sources
+        run: mvn compile -DskipTests
+      # todo: add step for jooq gen, add some sort of cache or speedup for testcontainers, ensure only unit or IT
+      - parallel:
+          - name: Run Core Unit Tests
+            run: mvn test -pl core -Djooq.codegen.skip=true
+
+          - name: Run Core Integration Tests
+            run: mvn test-compile failsafe:integration-test -pl core -Djooq.codegen.skip=true
+
+          - name: Run Pipeline Unit Tests
+            run: mvn test -pl pipeline -Djooq.codegen.skip=true
+
+          - name: Run Pipeline Integration Tests
+            run: mvn test-compile failsafe:integration-test -pl pipeline -Djooq.codegen.skip=true
+
+  # noinspection YAMLSchemaValidation
+  run-frontend-unit-tests:
+    name: Webapp Unit Tests
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - parallel:
+          - name: Setup Java Environment (Hits Cache)
+            if: steps.sbom-cache.outputs.cache-hit != 'true'
+            uses: ./.github/actions/setup-java-maven
+
+          - name: Setup Node Environment (Hits Cache)
+            if: steps.sbom-cache.outputs.cache-hit != 'true'
+            uses: ./.github/actions/setup-node-pnpm
+
+      - name: Generate Sources
+        run: mvn install -DskipTests -Dopenapi.codegen.skip=false #todo: check if verify or compile is enough
+
+      - name: Install Node Modules and Playwright
+        working-directory: webapp
+        run: |
+          pnpm install
+          pnpm exec playwright install
+          pnpm run generate-api
+
+      - name: Run Webapp Tests
+        working-directory: webapp
+        run: pnpm vitest --browser.headless=true
