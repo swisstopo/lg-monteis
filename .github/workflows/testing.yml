@@ -20,7 +20,7 @@ env:
 jobs:
   setup:
     name: Setup and Generate
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
