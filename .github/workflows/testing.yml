@@ -17,6 +17,10 @@ env:
   CORE_APP_META_DB_USER: ${{ vars.CORE_APP_META_DB_USER }}
   CORE_APP_META_DB_PWD: ${{ vars.CORE_APP_META_DB_PWD }}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   setup:
     name: Setup and Generate
@@ -31,10 +35,10 @@ jobs:
           java-version: ${{ vars.JAVA_VERSION }}
           distribution: ${{ vars.JAVA_DISTRIBUTION }}
           cache: maven
-          cache-dependency-path: '**/*pom.xml'
+          cache-dependency-path: '**/pom.xml'
 
       - name: Generate and Compile All Classes
-        run: mvn install -DskipTests
+        run: mvn dependency:go-offline
 
   # noinspection YAMLSchemaValidation
   run-backend-tests:
@@ -42,30 +46,33 @@ jobs:
     name: Backend Tests
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v7
+
       - name: Set up JDK ${{ vars.JAVA_VERSION }}
         uses: actions/setup-java@v5
         with:
           java-version: ${{ vars.JAVA_VERSION }}
           distribution: ${{ vars.JAVA_DISTRIBUTION }}
           cache: maven
-          cache-dependency-path: '**/*pom.xml'
+          cache-dependency-path: '**/pom.xml'
 
       - parallel:
         - name: Run Core Tests
-          run: mvn test -pl core -Djooq.codegen.skip=true
+          run: mvn test -pl core
 
         - name: Run Core Tests
-          run: mvn -Dskip.ut=true verify -pl core -Djooq.codegen.skip=true
+          run: mvn verify -pl core
 
         - name: Run Pipeline Tests
-          run: mvn test -pl pipeline -Djooq.codegen.skip=true
+          run: mvn test -pl pipeline
 
         - name: Run Pipeline Tests
-          run: mvn -Dskip.ut=true verify -pl pipeline -Djooq.codegen.skip=true
+          run: mvn verify -pl pipeline
 
 
   webapp-test:
     name: Webapp Tests
+    needs: setup
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
@@ -79,7 +86,7 @@ jobs:
           server-id: github
           settings-path: ${{ github.workspace }}
           cache: maven
-          cache-dependency-path: '**/*pom.xml'
+          cache-dependency-path: '**/pom.xml'
 
       - name: Install Dependencies and generate Sources
         run: mvn clean install -DskipTests -Dopenapi.codegen.skip=false
