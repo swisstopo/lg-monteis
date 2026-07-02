@@ -9,12 +9,14 @@ env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION }}
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
 
-permissions: read-all
-
 jobs:
-  warmup-cache:
-    name: Warm up Cache
+  scan:
+    name: Scheduled Scan Main
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -24,21 +26,6 @@ jobs:
 
       - name: Download Maven Dependencies
         run: mvn dependency:go-offline
-
-  scan:
-    name: Scheduled Scan Main
-    needs: warmup-cache
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Setup Java Environment
-        uses: ./.github/actions/setup-java-maven
 
       - name: Execute Security Scan
         uses: ./.github/actions/trivy-scan

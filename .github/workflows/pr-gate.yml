@@ -133,7 +133,7 @@ jobs:
           if: steps.sbom-cache.outputs.cache-hit != 'true'
           uses: ./.github/actions/setup-node-pnpm
 
-        - name: Install Anchore Grant
+        - name: Install Anchore Grant License Scanner
           run: curl -sSfL https://get.anchore.io/grant | sudo sh -s -- -b /usr/local/bin
 
       - parallel:
