@@ -48,6 +48,9 @@ jobs:
     name: Core Unit Tests
     runs-on: ubuntu-24.04
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
       - name: Download Workspace
         uses: actions/download-artifact@v7
         with:
@@ -69,6 +72,9 @@ jobs:
     name: Core Integration Tests
     runs-on: ubuntu-24.04
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
       - name: Download Workspace
         uses: actions/download-artifact@v7
         with:
@@ -90,6 +96,9 @@ jobs:
     name: Pipeline Unit Tests
     runs-on: ubuntu-24.04
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
       - name: Download Workspace
         uses: actions/download-artifact@v7
         with:
@@ -111,6 +120,9 @@ jobs:
     name: Pipeline Integration Tests
     runs-on: ubuntu-24.04
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        
       - name: Download Workspace
         uses: actions/download-artifact@v7
         with:
