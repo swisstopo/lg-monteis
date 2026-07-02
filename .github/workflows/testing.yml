@@ -34,7 +34,7 @@ jobs:
           cache-dependency-path: pom.xml
 
       - name: Generate and Compile All Classes
-        run: mvn test-compile -am
+        run: mvn install -DskipTests
 
       - name: Persist Workspace
         uses: actions/upload-artifact@v7
