@@ -152,30 +152,32 @@ jobs:
             webapp/frontend-sbom.json
           key: ${{ runner.os }}-sboms-${{ hashFiles('**/pom.xml', '**/pnpm-lock.yaml') }}
 
-      - name: Setup Java Environment (Hits Cache)
-        if: steps.sbom-cache.outputs.cache-hit != 'true'
-        uses: ./.github/actions/setup-java-maven
+      - parallel:
+        - name: Setup Java Environment (Hits Cache)
+          if: steps.sbom-cache.outputs.cache-hit != 'true'
+          uses: ./.github/actions/setup-java-maven
 
-      - name: Generate Backend SBOM (Maven)
-        if: steps.sbom-cache.outputs.cache-hit != 'true'
-        run: mvn org.cyclonedx:cyclonedx-maven-plugin:2.8.0:makeAggregateBom -DoutputFormat=json -DoutputName=backend-sbom
+        - name: Setup Node Environment (Hits Cache)
+          if: steps.sbom-cache.outputs.cache-hit != 'true'
+          uses: ./.github/actions/setup-node-pnpm
 
-      - name: Setup Node Environment (Hits Cache)
-        if: steps.sbom-cache.outputs.cache-hit != 'true'
-        uses: ./.github/actions/setup-node-pnpm
+        - name: Install Anchore Grant
+          run: curl -sSfL https://get.anchore.io/grant | sudo sh -s -- -b /usr/local/bin
 
-      - name: Generate Frontend SBOM
-        if: steps.sbom-cache.outputs.cache-hit != 'true'
-        uses: anchore/sbom-action@v0
-        env:
-          SYFT_JAVASCRIPT_SEARCH_REMOTE_LICENSES: "true"
-        with:
-          path: webapp/
-          format: spdx-json
-          output-file: webapp/frontend-sbom.json
+      - parallel:
+        - name: Generate Backend SBOM (Maven)
+          if: steps.sbom-cache.outputs.cache-hit != 'true'
+          run: mvn org.cyclonedx:cyclonedx-maven-plugin:2.8.0:makeAggregateBom -DoutputFormat=json -DoutputName=backend-sbom
 
-      - name: Install Anchore Grant
-        run: curl -sSfL https://get.anchore.io/grant | sudo sh -s -- -b /usr/local/bin
+        - name: Generate Frontend SBOM
+          if: steps.sbom-cache.outputs.cache-hit != 'true'
+          uses: anchore/sbom-action@v0
+          env:
+            SYFT_JAVASCRIPT_SEARCH_REMOTE_LICENSES: "true"
+          with:
+            path: webapp/
+            format: spdx-json
+            output-file: webapp/frontend-sbom.json
 
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v7
@@ -187,8 +189,9 @@ jobs:
             webapp/frontend-sbom.json
           retention-days: 5
 
-      - name: Enforce License Policy (Backend)
-        run: grant check target/backend-sbom.json
+      - parallel:
+        - name: Enforce License Policy (Backend)
+          run: grant check target/backend-sbom.json
 
-      - name: Enforce License Policy (Frontend)
-        run: grant check webapp/frontend-sbom.json
+        - name: Enforce License Policy (Frontend)
+          run: grant check webapp/frontend-sbom.json
