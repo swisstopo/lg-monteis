@@ -18,12 +18,40 @@ env:
   CORE_APP_META_DB_PWD: ${{ vars.CORE_APP_META_DB_PWD }}
 
 jobs:
-  core-test:
-    name: Core Tests
-    runs-on: ubuntu-24.04
+  setup:
+    name: Setup and Generate
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ vars.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRIBUTION }}
+          cache: maven
+          cache-dependency-path: pom.xml
+
+      - name: Generate and Compile All Classes
+        run: mvn test-compile -am
+
+      - name: Persist Workspace
+        uses: actions/upload-artifact@v7
+        with:
+          name: compiled-workspace
+          path: .
+          include-hidden-files: true
+
+  core-test:
+    needs: setup
+    name: Core Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download Workspace
+        uses: actions/download-artifact@v7
+        with:
+          name: compiled-workspace
 
       - name: Set up JDK ${{ vars.JAVA_VERSION }}
         uses: actions/setup-java@v5
@@ -34,14 +62,17 @@ jobs:
           cache-dependency-path: pom.xml
 
       - name: Run Core Tests
-        run: mvn verify -pl core -am
+        run: mvn verify -pl core -Djooq.codegen.skip=true
 
   pipeline-test:
+    needs: setup
     name: Pipeline Tests
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v7
+      - name: Download Workspace
+        uses: actions/download-artifact@v7
+        with:
+          name: compiled-workspace
 
       - name: Set up JDK ${{ vars.JAVA_VERSION }}
         uses: actions/setup-java@v5
@@ -52,7 +83,7 @@ jobs:
           cache-dependency-path: pom.xml
 
       - name: Run Pipeline Tests
-        run: mvn verify -pl pipeline -am
+        run: mvn verify -pl pipeline -Djooq.codegen.skip=true
 
   webapp-test:
     name: Webapp Tests

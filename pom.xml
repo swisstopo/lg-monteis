@@ -32,6 +32,7 @@
     <swagger-annotations.version>2.2.52</swagger-annotations.version>
     <jackson-databind-nullable.version>0.2.10</jackson-databind-nullable.version>
     <parsington.version>3.2.0</parsington.version>
+    <maven-build-helper.version>3.6.1</maven-build-helper.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
   </properties>
@@ -220,6 +221,25 @@
               </target>
             </generator>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>${maven-build-helper.version}</version>
+          <executions>
+            <execution>
+              <id>add-jooq-source</id>
+              <goals>
+                <goal>add-source</goal>
+              </goals>
+              <phase>generate-sources</phase>
+              <configuration>
+                <sources>
+                  <source>target/generated-sources/jooq</source>
+                </sources>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
 
       </plugins>
