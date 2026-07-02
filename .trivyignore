@@ -1,8 +1,0 @@
-# This file contains CVEs that are not relevant for this project
-# USE WITH CAUTION!
-
-# Example
-# CVE-2026-XXXX
-
-# Springboot relies internally on Jackson-databind 2.21.4, we do not use the affected code we can safely ignore it
-CVE-2026-54515
