@@ -56,18 +56,21 @@ jobs:
           cache: maven
           cache-dependency-path: '**/pom.xml'
 
+      - name: Generate Sources
+        run: mvn verify -DskipTests
+# todo: add step for jooq gen, add some sort of cache or speedup for testcontainers, ensure only unit or IT
       - parallel:
-        - name: Run Core Tests
-          run: mvn test -pl core
+        - name: Run Core Unit Tests
+          run: mvn test -pl core -Djooq.codegen.skip=true
 
-        - name: Run Core Tests
-          run: mvn verify -pl core
+        - name: Run Core Integration Tests
+          run: mvn test-compile failsafe:integration-test -pl core -Djooq.codegen.skip=true
 
-        - name: Run Pipeline Tests
-          run: mvn test -pl pipeline
+        - name: Run Pipeline Unit Tests
+          run: mvn test -pl pipeline -Djooq.codegen.skip=true
 
-        - name: Run Pipeline Tests
-          run: mvn verify -pl pipeline
+        - name: Run Pipeline Integration Tests
+          run: mvn test-compile failsafe:integration-test -pl pipeline -Djooq.codegen.skip=true
 
 
   webapp-test:
@@ -75,8 +78,7 @@ jobs:
     needs: setup
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
       - name: Set up JDK ${{ vars.JAVA_VERSION }}
         uses: actions/setup-java@v5
@@ -88,8 +90,8 @@ jobs:
           cache: maven
           cache-dependency-path: '**/pom.xml'
 
-      - name: Install Dependencies and generate Sources
-        run: mvn clean install -DskipTests -Dopenapi.codegen.skip=false
+      - name: Generate Sources
+        run: mvn verify -DskipTests #todo: check if verify or compile is enough
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
