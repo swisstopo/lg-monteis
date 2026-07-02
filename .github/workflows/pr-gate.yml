@@ -2,7 +2,7 @@ name: PR Gate
 
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened]
+    types: [ opened, edited, synchronize, reopened ]
 
 env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION }}
@@ -18,7 +18,7 @@ concurrency:
 jobs:
   validate-pr-title:
     name: Validate PR Title
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Enforce Conventional Commits
         uses: amannn/action-semantic-pull-request@v6
@@ -49,15 +49,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
 
-      - name: Setup Java Environment
-        uses: ./.github/actions/setup-java-maven
+      - parallel:
+          - name: Setup Node and pnpm Environment
+            uses: ./.github/actions/setup-node-pnpm
+
+          - name: Setup Java Environment
+            uses: ./.github/actions/setup-java-maven
 
       # Resolve mvn dependencies once globally
       - name: Download Maven Dependencies
         run: mvn dependency:go-offline
 
-      - name: Setup Node and pnpm Environment
-        uses: ./.github/actions/setup-node-pnpm
 
   security-scan:
     name: Trivy Security Scan
