@@ -72,6 +72,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Setup Java Environment
+        uses: ./.github/actions/setup-java-maven
+
       - name: Execute Security Scan
         uses: ./.github/actions/trivy-scan
 
