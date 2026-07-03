@@ -5,6 +5,10 @@ on:
     branches:
       - mon-93-docker-build
 
+env:
+  JAVA_VERSION: ${{ vars.JAVA_VERSION }}
+  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
+  NODE_VERSION: ${{ vars.NODE_VERSION }}
 
 permissions:
   contents: read
@@ -14,7 +18,7 @@ jobs:
     name: Build & Scan Core API
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Must fetch history so the bot can read the commits
           filter: blob:none
@@ -38,8 +42,26 @@ jobs:
           enable_prerelease_mode: true
           debug: true
 
-#      - name: Setup Java Environment
-#        uses: ./.github/actions/setup-java-maven
+      - name: Setup Java Environment
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Build Spring Boot Image
+        env:
+          VERSION: ${{ steps.semver.outputs.version }}
+        run: |
+          mvn -pl core spring-boot:build-image \
+            -Dspring-boot.build-image.imageName=local-registry/core-api:$VERSION \
+            -DskipTests
+
+      - name: Run Trivy Image Scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'local-registry/core-api:${{ steps.semver.outputs.version }}'
+          scan-type: 'image'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
 
       - name: Output the generated version
         run: |
