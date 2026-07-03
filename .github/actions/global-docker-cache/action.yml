@@ -22,7 +22,7 @@ runs:
       uses: actions/cache@v6
       with:
         path: /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}
-        key: docker-cache-${{ inputs.image }}-${{ hashFiles('**/pom.xml') }}
+        key: docker-cache-${{ steps.vars.outputs.dir_name }}
 
     - name: Load from Global Cache
       if: steps.global-cache.outputs.cache-hit == 'true'
@@ -30,7 +30,7 @@ runs:
       run: docker load -i /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}/image.tar || true
 
     - name: Pull and Upload to Global Cache
-      if: steps.global-cache.outputs.cache-hit == 'false'
+      if: steps.global-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         mkdir -p /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}
