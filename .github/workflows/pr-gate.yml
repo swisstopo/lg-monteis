@@ -196,13 +196,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Java Environment (Hits Cache)
-        if: steps.sbom-cache.outputs.cache-hit != 'true'
-        uses: ./.github/actions/setup-java-maven
+      - parallel:
+        - name: Setup Java Environment (Hits Cache)
+          if: steps.sbom-cache.outputs.cache-hit != 'true'
+          uses: ./.github/actions/setup-java-maven
+
+        - name: Load Docker Images from Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            images: 'postgres:18-alpine timescale/timescaledb:latest-pg18 testcontainers/ryuk:0.12.0'
+            cache-version: 'v1'
 
       - name: Generate Sources
         run: mvn compile -DskipTests
-      # todo: add some sort of cache or speedup for testcontainers
       - parallel:
           - name: Run Core Unit Tests
             run: mvn test -pl core -Djooq.codegen.skip=true
