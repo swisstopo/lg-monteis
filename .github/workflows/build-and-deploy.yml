@@ -1,0 +1,47 @@
+name: Build and Push Core API
+# todo: add spec for path!
+on:
+  push:
+    branches:
+      - mon-93-docker-build
+
+
+permissions:
+  contents: read
+
+jobs:
+  build-scan-tag:
+    name: Build & Scan Core API
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Must fetch history so the bot can read the commits
+          filter: blob:none
+
+      # ---------------------------------------------------------
+      # 1. DRY RUN VERSION CALCULATION
+      # This looks at the commits, calculates the next tag, and stops.
+      # It does NOT push the tag to GitHub.
+      # ---------------------------------------------------------
+      - name: Calculate Semantic Version
+        id: semver
+        uses: paulhatch/semantic-version@v6.0.2
+        with:
+          tag_prefix: "core-api/v"
+          change_path: "core/"
+          major_pattern: "/!:|BREAKING CHANGE:/"
+          minor_pattern: "/feat(\\(.+\\))?:/"
+          version_format: "${major}.${minor}.${patch}-${increment}"
+          bump_each_commit: false
+          search_commit_body: false
+          enable_prerelease_mode: true
+          debug: true
+
+#      - name: Setup Java Environment
+#        uses: ./.github/actions/setup-java-maven
+
+      - name: Output the generated version
+        run: |
+          echo "The raw version is: ${{ steps.semver.outputs.version }}"
+          echo "The full Git tag is: ${{ steps.semver.outputs.version_tag }}"
