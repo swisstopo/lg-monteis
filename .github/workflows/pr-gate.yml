@@ -196,7 +196,7 @@ jobs:
 
       - name: Generate Sources
         run: mvn compile -DskipTests
-      # todo: add step for jooq gen, add some sort of cache or speedup for testcontainers, ensure only unit or IT
+      # todo: add step for jooq gen, add some sort of cache or speedup for testcontainers
       - parallel:
           - name: Run Core Unit Tests
             run: mvn test -pl core -Djooq.codegen.skip=true
@@ -228,14 +228,16 @@ jobs:
             uses: ./.github/actions/setup-node-pnpm
 
       - name: Generate Sources
-        run: mvn install -DskipTests -Dopenapi.codegen.skip=false #todo: check if verify or compile is enough
+        run: mvn install -DskipTests -Dopenapi.codegen.skip=false
 
       - name: Install Node Modules and Playwright
         working-directory: webapp
         run: |
           pnpm install
           pnpm exec playwright install
-          pnpm run generate-api
+
+      - name: Generate API
+          pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
 
       - name: Run Webapp Tests
         working-directory: webapp
