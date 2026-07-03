@@ -1,0 +1,37 @@
+name: 'Dynamic Docker Pull Cache'
+description: 'Caches dynamically requested Docker images globally'
+
+inputs:
+  images:
+    description: 'A space-separated list of Docker images to cache and load'
+    required: true
+  cache-version:
+    description: 'Bump this version to manually invalidate the cache'
+    default: 'v1'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Access Global Cache
+      id: global-cache
+      uses: actions/cache@v4
+      with:
+        path: /tmp/docker-cache
+        key: docker-cache-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ hashFiles('.github/actions/global-docker-cache/action.yml') }}
+
+    - name: Load from Global Cache
+      if: steps.global-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: docker load -i /tmp/docker-cache/images.tar || true
+
+    - name: Pull and Upload to Global Cache
+      if: steps.global-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        mkdir -p /tmp/docker-cache
+        
+        for image in ${{ inputs.images }}; do
+          docker pull $image
+        done
+        
+        docker save ${{ inputs.images }} -o /tmp/docker-cache/images.tar

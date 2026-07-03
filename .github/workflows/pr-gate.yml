@@ -75,6 +75,12 @@ jobs:
       - name: Download Maven Dependencies
         run: mvn dependency:go-offline
 
+      - name: Initialize Global Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          images: 'postgres:18-alpine timescale/timescaledb:latest-pg18 testcontainers/ryuk:0.12.0'
+          cache-version: 'v1'
+
   security-scan:
     name: Trivy Security Scan
     needs: warmup-caches
@@ -226,6 +232,12 @@ jobs:
           - name: Setup Node Environment (Hits Cache)
             if: steps.sbom-cache.outputs.cache-hit != 'true'
             uses: ./.github/actions/setup-node-pnpm
+
+          - name: Load Docker Images from Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              images: 'postgres:18-alpine timescale/timescaledb:latest-pg18 testcontainers/ryuk:0.12.0'
+              cache-version: 'v1'
 
       - name: Generate Sources
         run: mvn install -DskipTests -Dopenapi.codegen.skip=false
