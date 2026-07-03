@@ -1,9 +1,9 @@
 name: 'Dynamic Docker Pull Cache'
-description: 'Caches dynamically requested Docker images globally'
+description: 'Caches a dynamically requested Docker image globally'
 
 inputs:
-  images:
-    description: 'A space-separated list of Docker images to cache and load'
+  image:
+    description: 'The Docker image to cache and load'
     required: true
   cache-version:
     description: 'Bump this version to manually invalidate the cache'
@@ -12,26 +12,27 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Sanitize Image Name
+      id: vars
+      shell: bash
+      run: echo "dir_name=$(echo '${{ inputs.image }}' | tr '/:' '-')" >> "$GITHUB_OUTPUT"
+
     - name: Access Global Cache
       id: global-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
-        path: /tmp/docker-cache
-        key: docker-cache-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ hashFiles('.github/actions/global-docker-cache/action.yml') }}
+        path: /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}
+        key: docker-cache-${{ inputs.image }}-${{ hashFiles('**/pom.xml') }}
 
     - name: Load from Global Cache
       if: steps.global-cache.outputs.cache-hit == 'true'
       shell: bash
-      run: docker load -i /tmp/docker-cache/images.tar || true
+      run: docker load -i /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}/image.tar || true
 
     - name: Pull and Upload to Global Cache
-      if: steps.global-cache.outputs.cache-hit != 'true'
+      if: steps.global-cache.outputs.cache-hit == 'false'
       shell: bash
       run: |
-        mkdir -p /tmp/docker-cache
-        
-        for image in ${{ inputs.images }}; do
-          docker pull $image
-        done
-        
-        docker save ${{ inputs.images }} -o /tmp/docker-cache/images.tar
+        mkdir -p /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}
+        docker pull ${{ inputs.image }}
+        docker save ${{ inputs.image }} -o /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}/image.tar
