@@ -189,22 +189,22 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+      - parallel:
+          - name: Setup Java Environment (Hits Cache)
+            uses: ./.github/actions/setup-java-maven
 
-      - name: Setup Java Environment (Hits Cache)
-        uses: ./.github/actions/setup-java-maven
-
-      - name: Initialize Postgres Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'postgres:18-alpine'
-      - name: Initialize Test Containers Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'testcontainers/ryuk:0.12.0'
-      - name: Initialize TimeScaleDB Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'timescale/timescaledb:latest-pg18'
+          - name: Initialize Postgres Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: 'postgres:18-alpine'
+          - name: Initialize Test Containers Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: 'testcontainers/ryuk:0.12.0'
+          - name: Initialize TimeScaleDB Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: 'timescale/timescaledb:latest-pg18'
 
       - name: Generate Sources
         run: mvn compile -DskipTests
@@ -230,24 +230,26 @@ jobs:
       - uses: actions/checkout@v7
 
       - parallel:
-          - name: Setup Java Environment (Hits Cache)
-            uses: ./.github/actions/setup-java-maven
+        - name: Setup Java Environment (Hits Cache)
+          uses: ./.github/actions/setup-java-maven
 
-          - name: Setup Node Environment (Hits Cache)
-            uses: ./.github/actions/setup-node-pnpm
+        - name: Setup Node Environment (Hits Cache)
+          uses: ./.github/actions/setup-node-pnpm
 
-      - name: Initialize Postgres Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'postgres:18-alpine'
-      - name: Initialize Test Containers Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'testcontainers/ryuk:0.12.0'
-      - name: Initialize TimeScaleDB Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'timescale/timescaledb:latest-pg18'
+        - name: Initialize Postgres Docker Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            image: 'postgres:18-alpine'
+
+        - name: Initialize Test Containers Docker Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            image: 'testcontainers/ryuk:0.12.0'
+            
+        - name: Initialize TimeScaleDB Docker Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            image: 'timescale/timescaledb:latest-pg18'
 
       - name: Generate Sources
         run: mvn install -DskipTests -Dopenapi.codegen.skip=false
