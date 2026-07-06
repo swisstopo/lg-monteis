@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { WorkbenchView } from '@scion/workbench';
 import Dialog from './dialog';
 
 describe('Dialog', () => {
@@ -9,14 +10,14 @@ describe('Dialog', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Dialog],
+      providers: [WorkbenchView],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Dialog);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(fixture.componentInstance).toBeTruthy();
   });
 });

@@ -9,6 +9,20 @@ env:
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
   NODE_VERSION: ${{ vars.NODE_VERSION }}
 
+  # Used vor testing
+  TS_DB_NAME: ${{ vars.TS_DB_NAME }}
+  TS_FLYWAY_USER: ${{ vars.TS_FLYWAY_USER }}
+  TS_FLYWAY_PWD: ${{ vars.TS_FLYWAY_PWD }}
+  META_DB_NAME: ${{ vars.META_DB_NAME }}
+  META_FLYWAY_USER: ${{ vars.META_FLYWAY_USER }}
+  META_FLYWAY_PWD: ${{ vars.META_FLYWAY_PWD }}
+
+  FDW_READ_USER: ${{ vars.FDW_READ_USER }}
+  PIPELINE_APP_TS_DB_USER: ${{ vars.PIPELINE_APP_TS_DB_USER}}
+  PIPELINE_APP_TS_DB_PWD: ${{ vars.PIPELINE_APP_TS_DB_PWD }}
+  CORE_APP_META_DB_USER: ${{ vars.CORE_APP_META_DB_USER }}
+  CORE_APP_META_DB_PWD: ${{ vars.CORE_APP_META_DB_PWD }}
+
 permissions: read-all
 
 concurrency:
@@ -167,3 +181,87 @@ jobs:
 
         - name: Enforce License Policy (Frontend)
           run: grant check webapp/frontend-sbom.json
+
+  # noinspection YAMLSchemaValidation
+  run-backend-tests:
+    name: Backend Tests
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Java Environment (Hits Cache)
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Load Postgres Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: 'postgres:18-alpine'
+
+      - name: Load Test Containers Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: 'testcontainers/ryuk:0.12.0'
+
+      - name: Load TimeScaleDB Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: 'timescale/timescaledb:latest-pg18'
+
+      - name: Generate Sources
+        run: mvn -T 2C compile -DskipTests
+      - parallel:
+          - name: Run Core Unit Tests
+            run: mvn -T 2C test -pl core -Djooq.codegen.skip=true
+
+          - name: Run Core Integration Tests
+            run: mvn -T 2C test-compile failsafe:integration-test -pl core -Djooq.codegen.skip=true
+
+          - name: Run Pipeline Unit Tests
+            run: mvn -T 2C test -pl pipeline -Djooq.codegen.skip=true
+
+          - name: Run Pipeline Integration Tests
+            run: mvn -T 2C test-compile failsafe:integration-test -pl pipeline -Djooq.codegen.skip=true
+
+  # noinspection YAMLSchemaValidation
+  run-frontend-unit-tests:
+    name: Webapp Unit Tests
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - parallel:
+        - name: Setup Java Environment (Hits Cache)
+          uses: ./.github/actions/setup-java-maven
+
+        - name: Setup Node Environment (Hits Cache)
+          uses: ./.github/actions/setup-node-pnpm
+
+      - name: Load Postgres Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: 'postgres:18-alpine'
+      - name: Load Test Containers Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: 'testcontainers/ryuk:0.12.0'
+      - name: Load TimeScaleDB Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: 'timescale/timescaledb:latest-pg18'
+
+      - name: Generate Sources
+        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
+
+      - name: Install Node Modules and Playwright
+        working-directory: webapp
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Generate API
+        working-directory: webapp
+        run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
+
+      - name: Run Webapp Tests
+        working-directory: webapp
+        run: pnpm vitest --browser.headless=true

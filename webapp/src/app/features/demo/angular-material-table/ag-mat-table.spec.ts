@@ -1,22 +1,34 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { WorkbenchView } from '@scion/workbench';
+import { of } from 'rxjs';
+import { vi } from 'vitest';
+import { DemoControllerService } from '../../../core/generated';
 import AgMatTable from './ag-mat-table';
 
+const demoServiceMock = {
+  getMetrics: vi.fn().mockReturnValue(of([])),
+};
+
 describe('AgMatTable', () => {
-  let component: AgMatTable;
   let fixture: ComponentFixture<AgMatTable>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AgMatTable],
+      providers: [
+        {
+          provide: DemoControllerService,
+          useValue: demoServiceMock,
+        },
+        WorkbenchView,
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AgMatTable);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(fixture.componentInstance).toBeTruthy();
   });
 });
