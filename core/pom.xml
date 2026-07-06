@@ -257,6 +257,9 @@
                 <password>pwd</password>
               </jdbc>
               <generator>
+                <database>
+                  <recordVersionFields>VERSION|version</recordVersionFields>
+                </database>
                 <target>
                   <packageName>ch.swisstopo.monteis.core.jooq.generated</packageName>
                 </target>

@@ -1,22 +1,23 @@
 -- Initial schema for PostgresDB (owned by CoreAPI)
 
-CREATE TABLE customer
-(
-    id         BIGSERIAL PRIMARY KEY,
-    name       TEXT        NOT NULL,
-    email      TEXT        NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE device
+CREATE TABLE sensors
 (
     id          BIGSERIAL PRIMARY KEY,
-    customer_id BIGINT      NOT NULL REFERENCES customer (id) ON DELETE CASCADE,
-    external_id TEXT        NOT NULL UNIQUE,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    code        TEXT UNIQUE      NOT NULL,
+    upper_bound DOUBLE PRECISION NOT NULL,
+    lower_bound DOUBLE PRECISION NOT NULL,
+    version     INTEGER          NOT NULL DEFAULT 1
 );
 
-CREATE INDEX idx_device_customer_id ON device (customer_id);
+CREATE TABLE formulas
+(
+    id         BIGSERIAL PRIMARY KEY,
+    sensor_id  BIGINT  NOT NULL REFERENCES sensors (id) ON DELETE CASCADE,
+    expression TEXT    NOT NULL,
+    version    INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX idx_formulas_sensor_id ON formulas (sensor_id);
 
 -- Foreign table mapping CoreAPI's view of TimescaleDB's sensor_reading
 -- Lives in PostgresDB's migrations (FDW mapping DDL belongs with the consumer, not the producer)
