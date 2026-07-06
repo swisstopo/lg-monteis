@@ -48,15 +48,16 @@ jobs:
       - name: Build Spring Boot Image
         env:
           VERSION: ${{ steps.semver.outputs.version }}
+          SHA: ${{ steps.semver.outputs.current_commit }}
         run: |
           mvn -pl core spring-boot:build-image \
-            -Dspring-boot.build-image.imageName=local-registry/core-api:$VERSION \
+            -Dspring-boot.build-image.imageName=local-registry/core-api:$VERSION-$SHA\
             -DskipTests
 
       - name: Run Trivy Image Scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: 'local-registry/core-api:${{ steps.semver.outputs.version }}'
+          image-ref: 'local-registry/core-api:${{ steps.semver.outputs.version }}-${{ steps.semver.outputs.current_commit }}'
           scan-type: 'image'
           format: 'table'
           exit-code: '1'
