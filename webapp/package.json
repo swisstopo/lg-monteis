@@ -38,6 +38,8 @@
     "@angular/cli": "^22.0.4",
     "@angular/compiler-cli": "^22.0.3",
     "@openapitools/openapi-generator-cli": "^2.39.0",
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^26.1.0",
     "@vitest/browser-playwright": "^4.1.9",
     "corepack": "^0.35.0",
     "jsdom": "^29.1.1",
