@@ -193,33 +193,35 @@ jobs:
       - name: Setup Java Environment (Hits Cache)
         uses: ./.github/actions/setup-java-maven
 
-      - name: Initialize Postgres Docker Cache
+      - name: Load Postgres Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
           image: 'postgres:18-alpine'
-      - name: Initialize Test Containers Docker Cache
+
+      - name: Load Test Containers Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
           image: 'testcontainers/ryuk:0.12.0'
-      - name: Initialize TimeScaleDB Docker Cache
+
+      - name: Load TimeScaleDB Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
           image: 'timescale/timescaledb:latest-pg18'
 
       - name: Generate Sources
-        run: mvn compile -DskipTests
+        run: mvn -T 2C compile -DskipTests
       - parallel:
           - name: Run Core Unit Tests
-            run: mvn test -pl core -Djooq.codegen.skip=true
+            run: mvn -T 2C test -pl core -Djooq.codegen.skip=true
 
           - name: Run Core Integration Tests
-            run: mvn test-compile failsafe:integration-test -pl core -Djooq.codegen.skip=true
+            run: mvn -T 2C test-compile failsafe:integration-test -pl core -Djooq.codegen.skip=true
 
           - name: Run Pipeline Unit Tests
-            run: mvn test -pl pipeline -Djooq.codegen.skip=true
+            run: mvn -T 2C test -pl pipeline -Djooq.codegen.skip=true
 
           - name: Run Pipeline Integration Tests
-            run: mvn test-compile failsafe:integration-test -pl pipeline -Djooq.codegen.skip=true
+            run: mvn -T 2C test-compile failsafe:integration-test -pl pipeline -Djooq.codegen.skip=true
 
   # noinspection YAMLSchemaValidation
   run-frontend-unit-tests:
@@ -236,21 +238,21 @@ jobs:
         - name: Setup Node Environment (Hits Cache)
           uses: ./.github/actions/setup-node-pnpm
 
-      - name: Initialize Postgres Docker Cache
+      - name: Load Postgres Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
           image: 'postgres:18-alpine'
-      - name: Initialize Test Containers Docker Cache
+      - name: Load Test Containers Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
           image: 'testcontainers/ryuk:0.12.0'
-      - name: Initialize TimeScaleDB Docker Cache
+      - name: Load TimeScaleDB Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
           image: 'timescale/timescaledb:latest-pg18'
 
       - name: Generate Sources
-        run: mvn install -DskipTests -Dopenapi.codegen.skip=false
+        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
 
       - name: Install Node Modules and Playwright
         working-directory: webapp
