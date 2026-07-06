@@ -75,6 +75,26 @@ jobs:
       - name: Download Maven Dependencies
         run: mvn dependency:go-offline
 
+  warmup-image-caches:
+    name: Warm up Docker Image Caches
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Initialize Postgres Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: 'postgres:18-alpine'
+      - name: Initialize Test Containers Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: 'testcontainers/ryuk:0.12.0'
+      - name: Initialize TimeScaleDB Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: 'timescale/timescaledb:latest-pg18'
+
   security-scan:
     name: Trivy Security Scan
     needs: warmup-caches
@@ -184,27 +204,14 @@ jobs:
 
   # noinspection YAMLSchemaValidation
   run-backend-tests:
-    needs: warmup-caches
     name: Backend Tests
+    needs: [warmup-caches, warmup-image-caches]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - parallel:
-          - name: Setup Java Environment (Hits Cache)
-            uses: ./.github/actions/setup-java-maven
 
-          - name: Initialize Postgres Docker Cache
-            uses: ./.github/actions/global-docker-cache
-            with:
-              image: 'postgres:18-alpine'
-          - name: Initialize Test Containers Docker Cache
-            uses: ./.github/actions/global-docker-cache
-            with:
-              image: 'testcontainers/ryuk:0.12.0'
-          - name: Initialize TimeScaleDB Docker Cache
-            uses: ./.github/actions/global-docker-cache
-            with:
-              image: 'timescale/timescaledb:latest-pg18'
+      - name: Setup Java Environment (Hits Cache)
+        uses: ./.github/actions/setup-java-maven
 
       - name: Generate Sources
         run: mvn compile -DskipTests
@@ -224,7 +231,7 @@ jobs:
   # noinspection YAMLSchemaValidation
   run-frontend-unit-tests:
     name: Webapp Unit Tests
-    needs: warmup-caches
+    needs: [warmup-caches, warmup-image-caches]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -235,21 +242,6 @@ jobs:
 
         - name: Setup Node Environment (Hits Cache)
           uses: ./.github/actions/setup-node-pnpm
-
-        - name: Initialize Postgres Docker Cache
-          uses: ./.github/actions/global-docker-cache
-          with:
-            image: 'postgres:18-alpine'
-
-        - name: Initialize Test Containers Docker Cache
-          uses: ./.github/actions/global-docker-cache
-          with:
-            image: 'testcontainers/ryuk:0.12.0'
-            
-        - name: Initialize TimeScaleDB Docker Cache
-          uses: ./.github/actions/global-docker-cache
-          with:
-            image: 'timescale/timescaledb:latest-pg18'
 
       - name: Generate Sources
         run: mvn install -DskipTests -Dopenapi.codegen.skip=false
