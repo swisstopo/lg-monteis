@@ -152,8 +152,59 @@ services:
       # Mount the file directly to its final destination
       - ./connect/mm2-config.json:/tmp/mm2-config.json
     command: |
-      sh -c "      
+      sh -c "
         echo '✅ Kafka Connect is up! Registering MirrorMaker 2 connector...'
         curl -f -X POST -H 'Content-Type: application/json' -d @/tmp/mm2-config.json http://connect:8083/connectors
         echo '\n🎉 Connector registered successfully!'
       "
+
+  # ── Keycloak local IdP (MON-18) ─────────────────────────────────────────────
+  # Local dev identity provider. Uses Keycloak's own dev store (start-dev), NOT
+  # RDS. Seeded from a realm rendered by `realm-builder` (base + patch.local.json,
+  # same P2 approach as the cloud realm in lg-monteis-infra).
+  realm-builder:
+    image: mikefarah/yq:4
+    container_name: keycloak-realm-builder
+    profiles: [ core ]
+    volumes:
+      - ./keycloak/realm:/realm:ro
+      - kc_realm_out:/out
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        # jq-style targeted merge in yq: set SPA URLs + append local users.
+        yq -o=json eval-all '
+          select(fi==0) as $base | select(fi==1) as $p
+          | $base
+          | .clients |= map(select(.clientId=="monteis-spa") .redirectUris = $p.spa.redirectUris | .webOrigins = $p.spa.webOrigins)
+          | .users = (($base.users // []) + ($p.users // []))
+        ' /realm/realm-base.json /realm/patch.local.json > /out/realm-local.json
+        echo "rendered /out/realm-local.json"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.4
+    container_name: monteis-keycloak
+    profiles: [ core ]
+    depends_on:
+      realm-builder:
+        condition: service_completed_successfully
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-admin}
+      KC_HTTP_RELATIVE_PATH: /auth
+    command: [ "start-dev", "--import-realm" ]
+    ports:
+      - "8081:8080" # 8080 taken by kafka-connect host mapping elsewhere; Keycloak on 8081
+    volumes:
+      - kc_realm_out:/opt/keycloak/data/import:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /auth/health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  kc_realm_out:
