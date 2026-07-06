@@ -1,0 +1,35 @@
+name: 'Dynamic Docker Pull Cache'
+description: 'Caches a dynamically requested Docker image globally'
+
+inputs:
+  image:
+    description: 'The Docker image to cache and load'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Sanitize Image Name
+      id: vars
+      shell: bash
+      run: echo "dir_name=$(echo '${{ inputs.image }}' | tr '/:' '-')" >> "$GITHUB_OUTPUT"
+
+    - name: Access Global Cache
+      id: global-cache
+      uses: actions/cache@v6
+      with:
+        path: /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}
+        key: docker-cache-${{ steps.vars.outputs.dir_name }}
+
+    - name: Load from Global Cache
+      if: steps.global-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: docker load -i /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}/image.tar || true
+
+    - name: Pull and Upload to Global Cache
+      if: steps.global-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        mkdir -p /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}
+        docker pull ${{ inputs.image }}
+        docker save ${{ inputs.image }} -o /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}/image.tar

@@ -1,0 +1,12 @@
+name: 'Setup Java and Maven'
+description: 'Sets up JDK'
+runs:
+  using: "composite"
+  steps:
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
+        cache: maven
+        cache-dependency-path: '**/pom.xml'

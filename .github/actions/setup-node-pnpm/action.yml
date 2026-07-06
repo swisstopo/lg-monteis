@@ -1,0 +1,21 @@
+name: 'Setup Node and pnpm'
+description: 'Sets up pnpm and Node.js with caching using workflow environment variables'
+runs:
+  using: "composite"
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@v6
+      with:
+        package_json_file: webapp/package.json
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
+        cache-dependency-path: webapp/pnpm-lock.yaml
+
+    - name: Install dependencies (Link node_modules)
+      shell: bash
+      working-directory: webapp
+      run: pnpm install --frozen-lockfile
