@@ -12,6 +12,8 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - uses: actions/checkout@v7
+
     - name: Sanitize Image Name
       id: vars
       shell: bash
