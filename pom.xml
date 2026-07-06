@@ -34,6 +34,7 @@
     <parsington.version>3.2.0</parsington.version>
     <maven-build-helper.version>3.6.1</maven-build-helper.version>
     <javers.version>7.11.4</javers.version>
+    <spring-boot-starter-aop.version>3.5.16</spring-boot-starter-aop.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
   </properties>
@@ -80,6 +81,12 @@
         <groupId>org.javers</groupId>
         <artifactId>javers-persistence-sql</artifactId>
         <version>${javers.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-aop</artifactId>
+        <version>${spring-boot-starter-aop.version}</version>
       </dependency>
 
       <dependency>

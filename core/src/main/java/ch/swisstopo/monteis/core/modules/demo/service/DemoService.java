@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.demo.service;
 
+import ch.swisstopo.monteis.core.infrastructure.AuditChanges;
 import ch.swisstopo.monteis.core.modules.demo.jooq.DemoRepository;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.ReadSimpleMetric;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.WriteSensorDto;
@@ -34,6 +35,7 @@ public class DemoService {
   }
 
   @Transactional
+  @AuditChanges
   public WriteSensorDto saveOrUpdateSensor(WriteSensorDto dto) {
     return repository.saveSensorWithFormula(dto);
   }
