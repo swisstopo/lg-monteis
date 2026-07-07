@@ -7,7 +7,6 @@ import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.ReadSimpleMetric;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.WriteSensorDto;
 import java.util.List;
-import java.util.Objects;
 import org.jooq.DSLContext;
 import org.jooq.exception.DataChangedException;
 import org.jspecify.annotations.NonNull;
@@ -54,21 +53,33 @@ public class DemoRepository {
       throw new DataChangedException("Record no longer exists.");
     }
 
-    // Step A: Validate the client's version against the DB baseline
+    // Validate the client's version against the DB baseline
     if (!sensorRecord.getVersion().equals(dto.version())
         || !formulaRecord.getVersion().equals(dto.formulaVersion())) {
       throw new DataChangedException("Concurrent modification detected.");
     }
 
-    // Step B: Apply values only if they differ (to prevent Ghost Updates for JaVers)
-    if (!Objects.equals(sensorRecord.getCode(), dto.code())) sensorRecord.setCode(dto.code());
-    if (!Objects.equals(sensorRecord.getUpperBound(), dto.upperBound()))
-      sensorRecord.setUpperBound(dto.upperBound());
-    if (!Objects.equals(sensorRecord.getLowerBound(), dto.lowerBound()))
-      sensorRecord.setLowerBound(dto.lowerBound());
+    var currentDto =
+        new WriteSensorDto(
+            dto.id(),
+            sensorRecord.getCode(),
+            sensorRecord.getUpperBound(),
+            sensorRecord.getLowerBound(),
+            sensorRecord.getVersion(),
+            formulaRecord.getExpression(),
+            formulaRecord.getVersion());
 
-    if (!Objects.equals(formulaRecord.getExpression(), dto.expression()))
-      formulaRecord.setExpression(dto.expression());
+    // Ghost update: nothing actually changed, so skip the write entirely. jOOQ marks a
+    // field as changed as soon as its setter is called, even with an unchanged value,
+    // so we must avoid calling any setter at all rather than diff field by field.
+    if (currentDto.equals(dto)) {
+      return currentDto;
+    }
+
+    sensorRecord.setCode(dto.code());
+    sensorRecord.setUpperBound(dto.upperBound());
+    sensorRecord.setLowerBound(dto.lowerBound());
+    formulaRecord.setExpression(dto.expression());
 
     sensorRecord.update();
     formulaRecord.update();
