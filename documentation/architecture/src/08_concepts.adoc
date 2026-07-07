@@ -57,7 +57,6 @@ Wenn bei der Versionierung etwas schief geht, erfolgt ein Rollback der Übergeor
 Damit die Service-Schicht nur minimale Kenntnisse von der Versionierung haben muss, wird ein Spring AOP Aspekt verwendet. Methoden werden lediglich mit einer eigenen Annotation versehen (`@AuditChanges`), damit das betroffene Objekt vom Aspekt aufgegriffen und sauber in den Versionstabellen von JaVers abgelegt wird. Hier gilt zu beachten, dass `@AfterReturning` verwendet wird, damit beim Einfügen eines neuen Objekts dessen eindeutige ID bereits gesetzt wurde. Hier ist ein Beispiel, wie der Aspekt aussehen könnte:
 
 ``` JAVA
-import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.javers.core.Javers;
@@ -68,32 +67,26 @@ import org.springframework.stereotype.Component;
 @Component
 public class JaversAuditAspect {
 
-    private final Javers javers;
+  private final Javers javers;
 
-    public JaversAuditAspect(Javers javers) {
-        this.javers = javers;
+  public JaversAuditAspect(Javers javers) {
+    this.javers = javers;
+  }
+
+  @AfterReturning(pointcut = "@annotation(AuditChanges)", returning = "result")
+  public void auditReturnValue(Object result) {
+
+    if (result == null) {
+      return;
     }
 
-    // Intercept any method annotated with @AuditChanges AFTER it returns successfully
-    @AfterReturning("@annotation(AuditChanges)")
-    public void auditMethodArguments(JoinPoint joinPoint) {
-
-        // 1. Get the current user from your JWT Security Context
-        String currentUser = "SYSTEM";
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
-        }
-
-        // 2. Loop through the method arguments and commit them
-        Object[] args = joinPoint.getArgs();
-        for (Object arg : args) {
-            // Optional: You might want to check if 'arg' is a specific interface
-            // like 'AuditableDto' so you don't accidentally audit simple Strings/Integers.
-            if (arg != null) {
-                javers.commit(currentUser, arg);
-            }
-        }
+    String currentUser = "SYSTEM";
+    if (SecurityContextHolder.getContext().getAuthentication() != null) {
+      currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
     }
+
+    javers.commit(currentUser, result);
+  }
 }
 ```
 
