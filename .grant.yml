@@ -78,7 +78,12 @@ ignore-packages: [
   "spring-kafka",
   "spring-boot-starter-kafka*",
   "spring-boot-starter-json*",
-  "postgresql"
+  "postgresql",
+
+  # --- Accepted Legacy / Transitive Risks ---
+  # Ignored because it uses BSD-4-Clause (Advertising Clause),
+  # but is a safe, deeply nested transitive dependency of JaVers.
+  "picocontainer"
 ]
 
 # Policy enforcement options

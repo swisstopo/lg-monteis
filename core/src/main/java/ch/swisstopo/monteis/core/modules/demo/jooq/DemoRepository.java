@@ -4,6 +4,8 @@ import static ch.swisstopo.monteis.core.jooq.generated.tables.Formulas.FORMULAS;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.RawSensorReading.RAW_SENSOR_READING;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
 
+import ch.swisstopo.monteis.core.jooq.generated.tables.records.FormulasRecord;
+import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorsRecord;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.ReadSimpleMetric;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.WriteSensorDto;
 import java.util.List;
@@ -53,45 +55,21 @@ public class DemoRepository {
       throw new DataChangedException("Record no longer exists.");
     }
 
-    // Validate the client's version against the DB baseline
-    if (!sensorRecord.getVersion().equals(dto.version())
-        || !formulaRecord.getVersion().equals(dto.formulaVersion())) {
-      throw new DataChangedException("Concurrent modification detected.");
-    }
+    // 1. Rewind versions for Optimistic Locking
+    sensorRecord.setVersion(dto.version());
+    formulaRecord.setVersion(dto.formulaVersion());
 
-    var currentDto =
-        new WriteSensorDto(
-            dto.id(),
-            sensorRecord.getCode(),
-            sensorRecord.getUpperBound(),
-            sensorRecord.getLowerBound(),
-            sensorRecord.getVersion(),
-            formulaRecord.getExpression(),
-            formulaRecord.getVersion());
-
-    // Ghost update: nothing actually changed, so skip the write entirely. jOOQ marks a
-    // field as changed as soon as its setter is called, even with an unchanged value,
-    // so we must avoid calling any setter at all rather than diff field by field.
-    if (currentDto.equals(dto)) {
-      return currentDto;
-    }
-
+    // 2. Apply the data
     sensorRecord.setCode(dto.code());
     sensorRecord.setUpperBound(dto.upperBound());
     sensorRecord.setLowerBound(dto.lowerBound());
     formulaRecord.setExpression(dto.expression());
 
+    // 3. Update
     sensorRecord.update();
     formulaRecord.update();
 
-    return new WriteSensorDto(
-        dto.id(),
-        sensorRecord.getCode(),
-        sensorRecord.getUpperBound(),
-        sensorRecord.getLowerBound(),
-        sensorRecord.getVersion(),
-        formulaRecord.getExpression(),
-        formulaRecord.getVersion());
+    return toDto(sensorRecord, formulaRecord);
   }
 
   private @NonNull WriteSensorDto insertSensorWithFormula(WriteSensorDto dto) {
@@ -106,6 +84,10 @@ public class DemoRepository {
     formulaRecord.setExpression(dto.expression());
     formulaRecord.insert();
 
+    return toDto(sensorRecord, formulaRecord);
+  }
+
+  private static WriteSensorDto toDto(SensorsRecord sensorRecord, FormulasRecord formulaRecord) {
     return new WriteSensorDto(
         sensorRecord.getId(),
         sensorRecord.getCode(),

@@ -38,7 +38,7 @@ REST-Schicht (DTOs): Dient als Ein- und Ausgangspunkt. Das DTO transportiert die
 
 Service-Schicht (Domain Models): Führt die reine Geschäftslogik aus. Diese Schicht arbeitet mit domänenspezifischen Java-Objekten. Ein Spring AOP-Aspekt (Aspektorientierte Programmierung) überwacht hier die Service-Methoden (z.B. getriggert durch @AfterReturning oder eine Custom Annotation).
 
-Persistenz-Schicht (jOOQ Records): Übernimmt das Mapping vom Domain Model auf den jOOQ UpdatableRecord. Durch den Aufruf von `record.store()` generiert jOOQ das notwendige SQL für das Optimistic Locking vollautomatisch und wertet die betroffenen Zeilen aus.
+Persistenz-Schicht (jOOQ Records): Übernimmt das Mapping vom Domain Model auf den jOOQ UpdatableRecord. Durch den expliziten Aufruf von `record.update()` generiert jOOQ das notwendige SQL für das Optimistic Locking vollautomatisch und wertet die betroffenen Zeilen aus. (Neue Datensätze werden regulär über `record.insert()` gespeichert).
 
 Audit-Schicht (JaVers): Arbeitet vollkommen passiv. Der AOP-Aspekt greift sich das resultierende Domain Model nur dann, wenn die Methode der Business-Schicht erfolgreich und ohne Exceptions beendet wurde, und committet den Status-Diff in die JaVers-Tabellen.
 
@@ -99,6 +99,36 @@ public class JaversAuditAspect {
     <artifactId>spring-boot-starter-aop</artifactId>
 </dependency>
 ```
+
+==== Entwickler-Leitfaden: Neue Entitäten für Audit & Locking anbinden
+
+Wenn ein neues Fachobjekt (z. B. `Experiment`) in die Architektur integriert wird, müssen folgende Schritte zwingend eingehalten werden, damit Optimistic Locking (via jOOQ) und die Historisierung (via JaVers) reibungslos ineinandergreifen:
+
+*1. Datenbank & jOOQ (Persistenz-Schicht)*
+
+* **Schema:** Die neue Datenbanktabelle benötigt zwingend eine Versions-Spalte (z. B. `version INTEGER NOT NULL DEFAULT 1`).
+* **jOOQ Generator:** Die Konfiguration im `pom.xml` (`<recordVersionFields>VERSION|version</recordVersionFields>`) sorgt dafür, dass jOOQ das Optimistic Locking vollautomatisch anwendet.
+* **Dirty Tracking (Wichtig):** Global in der Spring Boot Konfiguration muss das jOOQ-Setting `RecordDirtyTracking.MODIFIED` aktiviert sein. Dadurch prüft jOOQ via `Objects.equals()`, ob sich ein Wert *wirklich* geändert hat, bevor ein Datensatz als "dirty" markiert wird.
+
+*2. DTO-Schicht (Data Transfer Objects als Java Records)*
+
+* **JaVers-Annotationen:** Das DTO _muss_ die `@Id`-Annotation (aus `org.javers.core.metamodel.annotation.Id`) auf dem Primärschlüssel tragen, damit JaVers den Datensatz als eigenständige Entity trackt. Die Nutzung von `@TypeName("WunschName")` wird dringend empfohlen, um den Audit-Log von Java-Refactorings zu entkoppeln.
+* **State-Transport:** Das DTO muss die Version(en) zwingend als Attribut enthalten (z. B. `version` und `formulaVersion`).
+
+*3. Repository-Schicht*
+
+* **Strikte Trennung:** `INSERT`- und `UPDATE`-Logik müssen in dedizierte Methoden aufgeteilt werden (Auf das generische `record.store()` wird verzichtet, da Optimistic Locking nur für Updates relevant ist).
+* **Das Update-Pattern:** Jede Update-Methode muss exakt diesen Ablauf befolgen:
+. Den aktuellen Datensatz (Baseline) aus der DB laden.
+. *Versions-Rewind (Locking Prep):* Die Version des geladenen jOOQ-Records explizit auf die Version des eingehenden DTOs zurücksetzen (z. B. `sensorRecord.setVersion(dto.version())`).
+. Neue Werte aus dem DTO blind in den Record setzen (via Setters). Dank `RecordDirtyTracking.MODIFIED` ignoriert jOOQ Setters mit identischen Werten völlig.
+. `record.update()` aufrufen. jOOQ generiert nun automatisch die `WHERE id = ? AND version = ?` Klausel auf Basis der "rewound" Version. Liefert der Client eine veraltete Version, schlägt dieses Update fehl und jOOQ wirft nativ eine `DataChangedException`.
+. *Ghost-Updates verhindert:* Wenn sich keine Nutzdaten geändert haben, führt `update()` dank des MODIFIED-Trackings kein SQL-Update aus und die Version bleibt unverändert. JaVers registriert dies, erkennt keine Differenz und legt automatisch keinen leeren Audit-Log an.
+
+*4. Service-Schicht*
+
+* **Trigger:** Die speichernde Service-Methode muss zwingend mit `@Transactional` und der eigenen Annotation `@AuditChanges` versehen werden.
+* **Rückgabewert (Kritisch!):** Die Methode _muss_ das frisch gespeicherte DTO zurückgeben. Der AOP-Aspekt auditiert exakt diesen Rückgabewert, um sicherzustellen, dass die aktualisierte Version und generierte ID korrekt im Audit-Log landen.
 
 === Core-API Validierung (Validation & Error Handling)
 Die Validierung ist in zwei Schichten unterteilt und wird über einen zentralen Mechanismus so verarbeitet, dass das Frontend (Angular) immer eine einheitliche, übersetzungsfertige Struktur erhält.
