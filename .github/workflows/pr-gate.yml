@@ -209,7 +209,7 @@ jobs:
           image: 'timescale/timescaledb:latest-pg18'
 
       - name: Generate Sources
-        run: mvn -T 2C compile -DskipTests
+        run: mvn -T 2C install -DskipTests
       - parallel:
           - name: Run Core Unit Tests
             run: mvn -T 2C test -pl core -Djooq.codegen.skip=true
