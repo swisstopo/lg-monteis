@@ -58,8 +58,6 @@ jobs:
       - name: Login to Amazon ECR Public
         id: login-ecr-public
         uses: aws-actions/amazon-ecr-login@v2.1.6
-        with:
-          registry-type: public
 
       - name: Setup Java Environment
         uses: ./.github/actions/setup-java-maven
@@ -89,10 +87,10 @@ jobs:
           VERSION: ${{ steps.semver.outputs.version }}
         run: |
           # Tag the locally built image with the ECR registry path + SemVer
-          docker tag local-registry/core:$VERSION $REGISTRY/$REPOSITORY:$VERSION
+          docker tag local-registry/core:$VERSION ${REGISTRY}${REPOSITORY}:$VERSION
           
           # Push the tag to AWS ECR
-          docker push $REGISTRY/$REPOSITORY:$VERSION
+          docker push ${REGISTRY}${REPOSITORY}:$VERSION
 
       # create github tag
       - name: Output the generated version
