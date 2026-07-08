@@ -12,6 +12,7 @@ env:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build-scan-tag:
@@ -32,15 +33,33 @@ jobs:
         id: semver
         uses: paulhatch/semantic-version@v6.0.2
         with:
-          tag_prefix: "core-api/v"
+          tag_prefix: "core/v"
           change_path: "core/"
           major_pattern: "/!:|BREAKING CHANGE:/"
           minor_pattern: "/feat(\\(.+\\))?:/"
           version_format: "${major}.${minor}.${patch}-${increment}"
           bump_each_commit: false
           search_commit_body: false
-          enable_prerelease_mode: true
+          enable_prerelease_mode: true # todo: remove for go live
           debug: true
+
+      # aws login
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.2
+        with:
+          role-to-assume: ${{vars.AWS_ROLE_ECR_PUSH}}
+          aws-region: ${{vars.AWS_REGION}}
+      - name: Additional steps
+        run: |
+          # Your commands that require AWS credentials
+          aws sts get-caller-identity
+
+      # login to ecr
+      - name: Login to Amazon ECR Public
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@v2.1.6
+        with:
+          registry-type: public
 
       - name: Setup Java Environment
         uses: ./.github/actions/setup-java-maven
@@ -48,22 +67,34 @@ jobs:
       - name: Build Spring Boot Image
         env:
           VERSION: ${{ steps.semver.outputs.version }}
-          SHA: ${{ steps.semver.outputs.current_commit }}
         run: |
           mvn -pl core spring-boot:build-image \
-            -Dspring-boot.build-image.imageName=local-registry/core-api:$VERSION-$SHA\
+            -Dspring-boot.build-image.imageName=local-registry/core:$VERSION \
             -DskipTests
 
       - name: Run Trivy Image Scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: 'local-registry/core-api:${{ steps.semver.outputs.version }}-${{ steps.semver.outputs.current_commit }}'
+          image-ref: 'local-registry/core:${{ steps.semver.outputs.version }}'
           scan-type: 'image'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
 
+      - name: Build, tag, and push docker image to Amazon ECR Public
+        env:
+          REGISTRY: ${{ vars.AWS_ECR_REGISTRY }}
+          REPOSITORY: "core"
+          VERSION: ${{ steps.semver.outputs.version }}
+        run: |
+          # Tag the locally built image with the ECR registry path + SemVer
+          docker tag local-registry/core:$VERSION $REGISTRY/$REPOSITORY:$VERSION
+          
+          # Push the tag to AWS ECR
+          docker push $REGISTRY/$REPOSITORY:$VERSION
+
+      # create github tag
       - name: Output the generated version
         run: |
           echo "The raw version is: ${{ steps.semver.outputs.version }}"
