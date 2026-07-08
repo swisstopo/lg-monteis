@@ -83,7 +83,6 @@ export default defineConfig({
       command: 'SPRING_PROFILES_ACTIVE=test mvn spring-boot:test-run',
       cwd: '../core',
       reuseExistingServer: !process.env.CI,
-      timeout: 120000,
     },
     {
       command: 'pnpm run start',
