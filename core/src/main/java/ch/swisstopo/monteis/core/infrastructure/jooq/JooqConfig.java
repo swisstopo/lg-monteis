@@ -1,15 +1,15 @@
-package ch.swisstopo.monteis.core.infrastructure;
+package ch.swisstopo.monteis.core.infrastructure.jooq;
 
 import org.jooq.conf.RecordDirtyTracking;
 import org.jooq.conf.Settings;
+import org.springframework.boot.jooq.autoconfigure.DefaultConfigurationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class JooqConfig {
   @Bean
-  public org.springframework.boot.jooq.autoconfigure.DefaultConfigurationCustomizer
-      configurationCustomizer() {
+  public DefaultConfigurationCustomizer configurationCustomizer() {
     return c -> {
       Settings settings = c.settings();
 

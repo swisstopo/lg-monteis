@@ -9,8 +9,10 @@ import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorsRecord;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.ReadSimpleMetric;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.WriteSensorDto;
 import java.util.List;
+import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.exception.DataChangedException;
+import org.jooq.impl.DSL;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Repository;
 
@@ -96,5 +98,27 @@ public class DemoRepository {
         sensorRecord.getVersion(),
         formulaRecord.getExpression(),
         formulaRecord.getVersion());
+  }
+
+  public Stream<WriteSensorDto> streamUnauditedSensors() {
+    return dsl.select(SENSORS.fields())
+        .select(FORMULAS.fields())
+        .from(SENSORS)
+        .join(FORMULAS)
+        .on(SENSORS.ID.eq(FORMULAS.SENSOR_ID))
+        .whereNotExists(
+            dsl.selectOne()
+                .from(DSL.table("jv_global_id"))
+                // JaVers stores IDs as strings, so we cast it to match SENSORS.ID
+                .where(DSL.field("local_id").cast(Long.class).eq(SENSORS.ID))
+                // Ensure this matches your JaVers @TypeName or class name!
+                .and(DSL.field("type_name").eq(WriteSensorDto.JAVERS_TYPE_NAME)))
+        .fetchStream()
+        .map(
+            r -> {
+              var sensorRecord = r.into(SENSORS);
+              var formulaRecord = r.into(FORMULAS);
+              return toDto(sensorRecord, formulaRecord);
+            });
   }
 }

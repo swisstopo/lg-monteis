@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.infrastructure;
+package ch.swisstopo.monteis.core.infrastructure.javers;
 
 import javax.sql.DataSource;
 import org.javers.core.Javers;

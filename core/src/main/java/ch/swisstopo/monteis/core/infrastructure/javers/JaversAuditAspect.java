@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.infrastructure;
+package ch.swisstopo.monteis.core.infrastructure.javers;
 
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
@@ -16,7 +16,9 @@ public class JaversAuditAspect {
     this.javers = javers;
   }
 
-  @AfterReturning(pointcut = "@annotation(AuditChanges)", returning = "result")
+  @AfterReturning(
+      pointcut = "@annotation(ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges)",
+      returning = "result")
   public void auditReturnValue(Object result) {
 
     if (result == null) {

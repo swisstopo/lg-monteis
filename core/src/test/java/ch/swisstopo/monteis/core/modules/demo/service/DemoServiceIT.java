@@ -11,8 +11,10 @@ import org.javers.repository.jql.QueryBuilder;
 import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 @IT
+@Transactional
 class DemoServiceIT {
 
   @Autowired private DemoService demoService;
@@ -148,5 +150,29 @@ class DemoServiceIT {
         javers.findSnapshots(
             QueryBuilder.byInstanceId(savedSensor.id(), WriteSensorDto.class).build());
     assertThat(snapshots).hasSize(1);
+  }
+
+  @Test
+  void should_throw_exception_when_updating_with_null_version() {
+    // given: an existing sensor in the database
+    var initialDto = new WriteSensorDto(null, "sensor-001", 100.0, 0.0, null, "x * 2", null);
+    var savedSensor = demoService.saveOrUpdateSensor(initialDto);
+
+    // when: an update is attempted but the client omits the version data (passes nulls)
+    var updateWithNullVersion =
+        new WriteSensorDto(savedSensor.id(), "sensor-001-updated", 200.0, 0.0, null, "x * 3", null);
+
+    // then: jOOQ's native optimistic locking treats 'null' as a mismatch and throws an exception
+    assertThrows(
+        DataChangedException.class,
+        () -> {
+          demoService.saveOrUpdateSensor(updateWithNullVersion);
+        });
+
+    // and the failed invalid update is strictly excluded from the JaVers audit log
+    var snapshots =
+        javers.findSnapshots(
+            QueryBuilder.byInstanceId(savedSensor.id(), WriteSensorDto.class).build());
+    assertThat(snapshots).hasSize(1); // Only the initial insert remains
   }
 }
