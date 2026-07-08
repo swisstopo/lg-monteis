@@ -26,6 +26,20 @@ public class DemoController {
     return ResponseEntity.ok(result);
   }
 
+  @GetMapping(value = "/error", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<ReadSimpleMetric> getErrorDto(
+      @RequestParam(defaultValue = "true") boolean testError) {
+    ReadSimpleMetric result = demoService.fetchErrors(testError);
+    return ResponseEntity.ok(result);
+  }
+
+  @GetMapping(value = "/exception", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<ReadSimpleMetric> getExceptionDto(
+      @RequestParam(defaultValue = "true") boolean testException) {
+    ReadSimpleMetric result = demoService.fetchException(testException);
+    return ResponseEntity.ok(result);
+  }
+
   @PostMapping(
       value = "/sensors",
       consumes = MediaType.APPLICATION_JSON_VALUE,

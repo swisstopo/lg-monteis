@@ -1,10 +1,12 @@
 package ch.swisstopo.monteis.core.modules.demo.service;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.BusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.modules.demo.jooq.DemoRepository;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.ReadSimpleMetric;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.WriteSensorDto;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -36,5 +38,23 @@ public class DemoService {
   @AuditChanges
   public WriteSensorDto saveOrUpdateSensor(WriteSensorDto dto) {
     return repository.saveSensorWithFormula(dto);
+  }
+
+  public ReadSimpleMetric fetchErrors(boolean testError) {
+    List<ReadSimpleMetric> results = repository.fetchRecentMetrics(1);
+    ReadSimpleMetric finalResult = results.getFirst();
+    if (testError) {
+      throw new BusinessValidationException("age", 15, "sensor.age.too.low", Map.of("min", 18));
+    }
+    return finalResult;
+  }
+
+  public ReadSimpleMetric fetchException(boolean testRuntimeException) {
+    List<ReadSimpleMetric> results = repository.fetchRecentMetrics(1);
+    ReadSimpleMetric finalResult = results.getFirst();
+    if (testRuntimeException) {
+      throw new NullPointerException("Something went horribly wrong, nullpointer");
+    }
+    return finalResult;
   }
 }
