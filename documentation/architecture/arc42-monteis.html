@@ -439,7 +439,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h1><span class="image"><img src="./images/arc42-logo.png" alt="arc42"></span> MONTEIS - Architektur</h1>
 <div class="details">
 <span id="revnumber">version 1.0.0-rc,</span>
-<span id="revdate">2026-05-19</span>
+<span id="revdate">2026-05-20</span>
 <br><span id="revremark">Draft</span>
 </div>
 <div id="toc" class="toc">
@@ -506,21 +506,37 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_core_api_datenzugriff_sicherheit">8.1. Core-API Datenzugriff &amp; Sicherheit</a></li>
 <li><a href="#_core_api_optimistic_locking_und_versionierungauditierung">8.2. Core-API Optimistic Locking und Versionierung/Auditierung</a></li>
 <li><a href="#_core_api_validierung_validation_error_handling">8.3. Core-API Validierung (Validation &amp; Error Handling)</a></li>
-<li><a href="#_datenbankschemata">8.4. Datenbankschemata</a></li>
-<li><a href="#_api_schnittstellen_contracts">8.5. API-Schnittstellen (Contracts)</a></li>
-<li><a href="#_teststrategie">8.6. Teststrategie</a></li>
-<li><a href="#_entwickler_workflow_cicd_pipeline">8.7. Entwickler-Workflow &amp; CI/CD Pipeline</a></li>
 </ul>
 </li>
-<li><a href="#section-design-decisions">9. Architekturentscheidungen</a></li>
-<li><a href="#section-quality-scenarios">10. Qualitätsanforderungen</a>
+<li><a href="#_architektur_und_skalierungskonzept_data_pipeline">9. Architektur- und Skalierungskonzept: Data Pipeline</a>
 <ul class="sectlevel2">
-<li><a href="#_übersicht_der_qualitätsanforderungen">10.1. Übersicht der Qualitätsanforderungen</a></li>
-<li><a href="#_qualitätsszenarien">10.2. Qualitätsszenarien</a></li>
+<li><a href="#_1_architekturübersicht">9.1. 1. Architekturübersicht</a></li>
+<li><a href="#_2_übersicht_der_kafka_topics">9.2. 2. Übersicht der Kafka Topics</a></li>
+<li><a href="#_3_skalierungsstrategien_high_throughput">9.3. 3. Skalierungsstrategien (High Throughput)</a></li>
+<li><a href="#_4_datenintegrität_zero_data_loss_architektur">9.4. 4. Datenintegrität &amp; Zero-Data-Loss Architektur</a></li>
 </ul>
 </li>
-<li><a href="#section-technical-risks">11. Risiken und technische Schulden</a></li>
-<li><a href="#section-glossary">12. Glossar</a></li>
+<li><a href="#_5_integration_neuer_externer_datenquellen">10. 5. Integration neuer externer Datenquellen</a>
+<ul class="sectlevel2">
+<li><a href="#_5_1_ingress_layer_konfigurieren_kafka_connect">10.1. 5.1. Ingress Layer konfigurieren (Kafka Connect)</a></li>
+<li><a href="#_5_2_raw_data_model_definieren">10.2. 5.2. Raw Data Model definieren</a></li>
+<li><a href="#_5_3_normalization_service_implementieren">10.3. 5.3. Normalization Service implementieren</a></li>
+<li><a href="#_alternative_zero_code_ingestion_via_kafka_connect_smts">10.4. Alternative: Zero-Code Ingestion via Kafka Connect SMTs</a></li>
+<li><a href="#_datenbankschemata">10.5. Datenbankschemata</a></li>
+<li><a href="#_api_schnittstellen_contracts">10.6. API-Schnittstellen (Contracts)</a></li>
+<li><a href="#_teststrategie">10.7. Teststrategie</a></li>
+<li><a href="#_entwickler_workflow_cicd_pipeline">10.8. Entwickler-Workflow &amp; CI/CD Pipeline</a></li>
+</ul>
+</li>
+<li><a href="#section-design-decisions">11. Architekturentscheidungen</a></li>
+<li><a href="#section-quality-scenarios">12. Qualitätsanforderungen</a>
+<ul class="sectlevel2">
+<li><a href="#_übersicht_der_qualitätsanforderungen">12.1. Übersicht der Qualitätsanforderungen</a></li>
+<li><a href="#_qualitätsszenarien">12.2. Qualitätsszenarien</a></li>
+</ul>
+</li>
+<li><a href="#section-technical-risks">13. Risiken und technische Schulden</a></li>
+<li><a href="#section-glossary">14. Glossar</a></li>
 </ul>
 </div>
 </div>
@@ -551,7 +567,7 @@ Creative Commons Attribution-ShareAlike 4.0 International
 Creative Commons Attribution-ShareAlike 4.0 International Lizenz bereitgestellt.</p>
 </div>
 <div class="paragraph">
-<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-05-19</p>
+<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-05-20</p>
 </div>
 <hr>
 <div style="page-break-after: always;"></div>
@@ -1952,7 +1968,7 @@ Ref: <a href="https://pcg.io/insights/vpc-endpoints-explanation-and-cost-compari
 <p>Service-Schicht (Domain Models): Führt die reine Geschäftslogik aus. Diese Schicht arbeitet mit domänenspezifischen Java-Objekten. Ein Spring AOP-Aspekt (Aspektorientierte Programmierung) überwacht hier die Service-Methoden (z.B. getriggert durch @AfterReturning oder eine Custom Annotation).</p>
 </div>
 <div class="paragraph">
-<p>Persistenz-Schicht (jOOQ Records): Übernimmt das Mapping vom Domain Model auf den jOOQ UpdatableRecord. Durch den Aufruf von <code>record.store()</code> generiert jOOQ das notwendige SQL für das Optimistic Locking vollautomatisch und wertet die betroffenen Zeilen aus.</p>
+<p>Persistenz-Schicht (jOOQ Records): Übernimmt das Mapping vom Domain Model auf den jOOQ UpdatableRecord. Durch den expliziten Aufruf von <code>record.update()</code> generiert jOOQ das notwendige SQL für das Optimistic Locking vollautomatisch und wertet die betroffenen Zeilen aus. (Neue Datensätze werden regulär über <code>record.insert()</code> gespeichert).</p>
 </div>
 <div class="paragraph">
 <p>Audit-Schicht (JaVers): Arbeitet vollkommen passiv. Der AOP-Aspekt greift sich das resultierende Domain Model nur dann, wenn die Methode der Business-Schicht erfolgreich und ohne Exceptions beendet wurde, und committet den Status-Diff in die JaVers-Tabellen.</p>
@@ -1979,8 +1995,7 @@ Ref: <a href="https://pcg.io/insights/vpc-endpoints-explanation-and-cost-compari
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-JAVA" data-lang="JAVA">import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.annotation.AfterReturning;
+<pre class="highlight"><code class="language-JAVA" data-lang="JAVA">import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.javers.core.Javers;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -1990,32 +2005,26 @@ import org.springframework.stereotype.Component;
 @Component
 public class JaversAuditAspect {
 
-    private final Javers javers;
+  private final Javers javers;
 
-    public JaversAuditAspect(Javers javers) {
-        this.javers = javers;
+  public JaversAuditAspect(Javers javers) {
+    this.javers = javers;
+  }
+
+  @AfterReturning(pointcut = "@annotation(AuditChanges)", returning = "result")
+  public void auditReturnValue(Object result) {
+
+    if (result == null) {
+      return;
     }
 
-    // Intercept any method annotated with @AuditChanges AFTER it returns successfully
-    @AfterReturning("@annotation(AuditChanges)")
-    public void auditMethodArguments(JoinPoint joinPoint) {
-
-        // 1. Get the current user from your JWT Security Context
-        String currentUser = "SYSTEM";
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
-        }
-
-        // 2. Loop through the method arguments and commit them
-        Object[] args = joinPoint.getArgs();
-        for (Object arg : args) {
-            // Optional: You might want to check if 'arg' is a specific interface
-            // like 'AuditableDto' so you don't accidentally audit simple Strings/Integers.
-            if (arg != null) {
-                javers.commit(currentUser, arg);
-            }
-        }
+    String currentUser = "SYSTEM";
+    if (SecurityContextHolder.getContext().getAuthentication() != null) {
+      currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
     }
+
+    javers.commit(currentUser, result);
+  }
 }</code></pre>
 </div>
 </div>
@@ -2039,6 +2048,86 @@ public class JaversAuditAspect {
 &lt;/dependency&gt;</code></pre>
 </div>
 </div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_entwickler_leitfaden_neue_entitäten_für_audit_locking_anbinden">8.2.5. Entwickler-Leitfaden: Neue Entitäten für Audit &amp; Locking anbinden</h4>
+<div class="paragraph">
+<p>Wenn ein neues Fachobjekt (z. B. <code>Experiment</code>) in die Architektur integriert wird, müssen folgende Schritte zwingend eingehalten werden, damit Optimistic Locking (via jOOQ) und die Historisierung (via JaVers) reibungslos ineinandergreifen:</p>
+</div>
+<div class="paragraph">
+<p><strong>1. Datenbank &amp; jOOQ (Persistenz-Schicht)</strong></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Schema:</strong> Die neue Datenbanktabelle benötigt zwingend eine Versions-Spalte (z. B. <code>version INTEGER NOT NULL DEFAULT 1</code>).</p>
+</li>
+<li>
+<p><strong>jOOQ Generator:</strong> Die Konfiguration im <code>pom.xml</code> (<code>&lt;recordVersionFields&gt;VERSION|version&lt;/recordVersionFields&gt;</code>) sorgt dafür, dass jOOQ das Optimistic Locking vollautomatisch anwendet.</p>
+</li>
+<li>
+<p><strong>Dirty Tracking (Wichtig):</strong> Global in der Spring Boot Konfiguration muss das jOOQ-Setting <code>RecordDirtyTracking.MODIFIED</code> aktiviert sein. Dadurch prüft jOOQ via <code>Objects.equals()</code>, ob sich ein Wert <strong>wirklich</strong> geändert hat, bevor ein Datensatz als "dirty" markiert wird.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>2. DTO-Schicht (Data Transfer Objects als Java Records)</strong></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>JaVers-Annotationen:</strong> Das DTO <em>muss</em> die <code>@Id</code>-Annotation (aus <code>org.javers.core.metamodel.annotation.Id</code>) auf dem Primärschlüssel tragen, damit JaVers den Datensatz als eigenständige Entity trackt. Die Nutzung von <code>@TypeName("WunschName")</code> wird dringend empfohlen, um den Audit-Log von Java-Refactorings zu entkoppeln.</p>
+</li>
+<li>
+<p><strong>State-Transport:</strong> Das DTO muss die Version(en) zwingend als Attribut enthalten (z. B. <code>version</code> und <code>formulaVersion</code>).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>3. Repository-Schicht</strong></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Strikte Trennung:</strong> <code>INSERT</code>- und <code>UPDATE</code>-Logik müssen in dedizierte Methoden aufgeteilt werden (Auf das generische <code>record.store()</code> wird verzichtet, da Optimistic Locking nur für Updates relevant ist).</p>
+</li>
+<li>
+<p><strong>Das Update-Pattern:</strong> Jede Update-Methode muss exakt diesen Ablauf befolgen:</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Den aktuellen Datensatz (Baseline) aus der DB laden.</p>
+</li>
+<li>
+<p><strong>Versions-Rewind (Locking Prep):</strong> Die Version des geladenen jOOQ-Records explizit auf die Version des eingehenden DTOs zurücksetzen (z. B. <code>sensorRecord.setVersion(dto.version())</code>).</p>
+</li>
+<li>
+<p>Neue Werte aus dem DTO blind in den Record setzen (via Setters). Dank <code>RecordDirtyTracking.MODIFIED</code> ignoriert jOOQ Setters mit identischen Werten völlig.</p>
+</li>
+<li>
+<p><code>record.update()</code> aufrufen. jOOQ generiert nun automatisch die <code>WHERE id = ? AND version = ?</code> Klausel auf Basis der "rewound" Version. Liefert der Client eine veraltete Version, schlägt dieses Update fehl und jOOQ wirft nativ eine <code>DataChangedException</code>.</p>
+</li>
+<li>
+<p><strong>Ghost-Updates verhindert:</strong> Wenn sich keine Nutzdaten geändert haben, führt <code>update()</code> dank des MODIFIED-Trackings kein SQL-Update aus und die Version bleibt unverändert. JaVers registriert dies, erkennt keine Differenz und legt automatisch keinen leeren Audit-Log an.</p>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>4. Service-Schicht</strong></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Trigger:</strong> Die speichernde Service-Methode muss zwingend mit <code>@Transactional</code> und der eigenen Annotation <code>@AuditChanges</code> versehen werden.</p>
+</li>
+<li>
+<p><strong>Rückgabewert (Kritisch!):</strong> Die Methode <em>muss</em> das frisch gespeicherte DTO zurückgeben. Der AOP-Aspekt auditiert exakt diesen Rückgabewert, um sicherzustellen, dass die aktualisierte Version und generierte ID korrekt im Audit-Log landen.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -2122,8 +2211,270 @@ Im Angular Asset Folder werden die Übersetzungsfiles platziert. Sie enthalten d
 </div>
 </div>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_architektur_und_skalierungskonzept_data_pipeline">9. Architektur- und Skalierungskonzept: Data Pipeline</h2>
+<div class="sectionbody">
 <div class="sect2">
-<h3 id="_datenbankschemata">8.4. Datenbankschemata</h3>
+<h3 id="_1_architekturübersicht">9.1. 1. Architekturübersicht</h3>
+<div class="paragraph">
+<p>Das folgende Diagramm veranschaulicht den Datenfluss vom externen Partner bis zur TimeScaleDB. Es zeigt die physische Gruppierung in einen "Core Pod" und einen "Pipeline Pod" und verdeutlicht die Entkopplung von Ingress (Adapter), Verarbeitung (Processor), Cache-Befüllung und Reprocessing.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/pipeline-services.svg" alt="pipeline services" width="1953" height="1164">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_2_übersicht_der_kafka_topics">9.2. 2. Übersicht der Kafka Topics</h3>
+<div class="paragraph">
+<p>Die Architektur nutzt eine strikte Trennung der Topics, um die Verarbeitung zu entkoppeln und das Reprocessing zu ermöglichen.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Topic Name</th>
+<th class="tableblock halign-left valign-top">Typ / Ort</th>
+<th class="tableblock halign-left valign-top">Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>solexperts_to_swisstopo</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extern</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Das Quell-Topic des Partners. Besitzt <strong>6 Partitionen</strong>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>internal-raw-solexperts</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Lokal</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1:1 Spiegelung des externen Topics durch MirrorMaker 2 (mit SMT RegexRouter). Dient als lokaler Puffer.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>internal-normalized</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Lokal</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enthält die abgeflachten, aufbereiteten Daten im kanonischen Format, produziert vom Adapter.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>internal-sensor-config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Lokal (Compacted)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Wird von der Core API befüllt (<code>cleanup.policy=compact</code>). Dient als Source-of-Truth für den In-Memory-Cache der Worker (<code>SensorConfigCache</code>) und als Trigger für das Reprocessing.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_3_skalierungsstrategien_high_throughput">9.3. 3. Skalierungsstrategien (High Throughput)</h3>
+<div class="paragraph">
+<p>Da das externe Quell-Topic 6 Partitionen besitzt, ist die gesamte Pipeline auf maximale Parallelität über genau diese 6 Partitionen ausgelegt.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Kafka Connect (Ingestion):</strong> Der MirrorSourceConnector ist mit <code>"tasks.max": "6"</code> konfiguriert. Kafka Connect baut exakt 6 parallele Threads auf, um das externe Topic ohne Bottlenecks abzusaugen.</p>
+</li>
+<li>
+<p><strong>Ingress Adapter (<code>SolExpertsRawSensorDataNormalizationService</code>):</strong> Übernimmt das Entpacken der herstellerspezifischen Payloads. Nutzt <code>@KafkaListener(concurrency = "6")</code>, um die Last optimal auf die Partitionen zu verteilen.</p>
+</li>
+<li>
+<p><strong>Datenbank-Schicht (TimeScaleDB):</strong> Um die Datenbank bei hohen Datenraten nicht zu überlasten, konsumiert der Processor (<code>SensorDataListener</code>) im <strong>Batch-Modus</strong> (<code>spring.kafka.listener.type=batch</code>, <code>max-poll-records=200</code>). Das Schreiben erfolgt über hochoptimierte jOOQ Batch-Inserts (<code>ctx.batchInsert()</code>).</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_4_datenintegrität_zero_data_loss_architektur">9.4. 4. Datenintegrität &amp; Zero-Data-Loss Architektur</h3>
+<div class="paragraph">
+<p>Das Monteis-Pipeline-System verarbeitet Sensordaten über zwei primäre Datenströme: Den <strong>Process-Flow</strong> für Echtzeitdaten und den <strong>Reprocess-Flow</strong> für historische Datenkorrekturen. Ein zentrales Element dieser Architektur ist das Zusammenspiel aus manuellen Kafka-Acknowledgments, idempotenten Datenbank-Operationen und gezieltem Poison-Pill-Handling.</p>
+</div>
+<div class="sect3">
+<h4 id="_4_1_gemeinsame_basis_orchestrator_kafka_offsets">9.4.1. 4.1. Gemeinsame Basis: Orchestrator &amp; Kafka-Offsets</h4>
+<div class="paragraph">
+<p>Beide Flows stützen sich auf gemeinsame Komponenten und eine strikte Kafka-Konfiguration, die garantiert, dass keine Nachricht im Nirvana verschwindet.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Shared Transformation Orchestrator:</strong> Um mathematische Abweichungen zu verhindern, teilen sich der Ingestion-Flow und der Backfill-Flow exakt dieselbe Logik. Dies garantiert, dass Standardisierung und Validierungs-Flags systemweit identisch berechnet werden.</p>
+</li>
+<li>
+<p><strong>Cache Broadcast Pattern:</strong> Damit jeder Pipeline-Pod einen synchronen Metadaten-Cache besitzt, generiert der <code>SensorConfigCacheHydrator</code> beim Start eine zufällige UUID als Consumer Group (<code>cache-hydrator-#{UUID}</code>). Dadurch wird jedes Metadaten-Update an <strong>jeden</strong> laufenden Pod gebroadcastet.</p>
+</li>
+<li>
+<p><strong>Deaktiviertes Auto-Commit (<code>enable-auto-commit: false</code>):</strong> Spring Boot darf Kafka-Offsets niemals im Hintergrund bestätigen. Das System verlässt sich ausschliesslich auf manuelle Bestätigungen (<code>ack-mode: manual</code>).</p>
+</li>
+<li>
+<p><strong>Das Guarded Acknowledgment Pattern (At-Least-Once):</strong> In allen Listenern wird der Kafka-Offset erst explizit committet (<code>ack.acknowledge()</code>), <strong>nachdem</strong> die Daten sicher in die nächste Schicht oder die TimeScaleDB persistiert wurden. Fällt ein Pod aus, pausiert Kafka und liefert das Event nach dem Neustart erneut aus.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_4_2_echtzeit_verarbeitung_process_flow">9.4.2. 4.2. Echtzeit-Verarbeitung (Process-Flow)</h4>
+<div class="paragraph">
+<p>Dieser Flow verarbeitet neue, normalisierte Sensordaten, standardisiert sie und speichert sie in der TimeScaleDB.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Kafka Batching:</strong> Der Konsum erfolgt in Batches, um den Durchsatz zu maximieren.</p>
+</li>
+<li>
+<p><strong>Idempotente UPSERTs:</strong> Der <code>ProcessService</code> nutzt jOOQs <code>ON CONFLICT (timestamp, sensor_id) DO UPDATE</code>. Wenn Kafka einen Batch nach einem Absturz erneut sendet, überschreibt die Datenbank die Zeilen einfach mit exakt denselben, korrekten Daten. Es entstehen keine Duplikate.</p>
+</li>
+<li>
+<p><strong>Poison Pill Handling (Batch-Rettung):</strong> Wenn ein einzelner Datensatz innerhalb eines 200er-Batches fehlerhaft ist (z. B. unlesbarer Timestamp), fängt der <code>ProcessService</code> die <code>TransformationException</code> lokal ab, loggt den fehlerhaften Rohwert und überspringt ihn (<code>return null</code>). Die verbleibenden 199 validen Datensätze werden erfolgreich in der DB gespeichert, anstatt den gesamten Batch in eine Dead Letter Queue (DLQ) zu leiten.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_4_3_historische_daten_reprozessierung_reprocess_flow">9.4.3. 4.3. Historische Daten-Reprozessierung (Reprocess-Flow)</h4>
+<div class="paragraph">
+<p>Dieser Flow wird durch ein Sensor-Config-Update (<code>SensorConfig</code>) ausgelöst und muss potenziell Hunderttausende von Datensätzen aktualisieren, ohne den Speicher zu sprengen oder andere Prozesse zu blockieren. Die Logik ist in eine spezifische Orchestrator-und-Chunk-Architektur unterteilt.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>High-Performance Guard:</strong> Der <code>ReprocessService</code> führt zuerst eine <code>EXISTS</code>-Abfrage aus. Gibt es keine alten Versionen, wird der Prozess in Millisekunden beendet.</p>
+</li>
+<li>
+<p><strong>Die AOP-Proxy-Falle &amp; Transaktionsgrenzen:</strong> Wenn im Spring Framework eine Methode mit der <code>@Transactional</code>-Annotation aus derselben Klasse heraus aufgerufen wird, wird der Proxy umgangen. Daher ist die Logik strikt aufgeteilt: Der <strong><code>ReprocessService</code></strong> steuert die Schleife (ohne Transaktion), während der extern aufgerufene <strong><code>ReprocessChunkService</code></strong> jeden einzelnen Chunk in einer isolierten Datenbanktransaktion ausführt.</p>
+</li>
+<li>
+<p><strong>Iteratives Chunking (Speichersicherheit):</strong> Eine <code>do-while</code>-Schleife ruft den Chunk-Service auf. Um JVM-OOM-Fehler zu vermeiden, erzwingt die jOOQ-Abfrage ein konfigurierbares <code>LIMIT</code> (z.B. 1000, gesteuert via <code>application.properties</code>). Die Schleife wiederholt sich, bis die Fetch-Size <code>0</code> erreicht.</p>
+</li>
+<li>
+<p><strong>Poison Pill Handling (Die Endlosschleifen-Falle):</strong> Tritt bei einem historischen Datensatz ein Fehler auf (z. B. Division durch Null), darf dieser <strong>nicht</strong> einfach übersprungen werden. Andernfalls würde die SQL-Abfrage ihn im nächsten Schleifendurchlauf erneut laden, was zu einer Endlosschleife führt.</p>
+<div class="paragraph">
+<p><strong>Die Loop-Breaker Lösung:</strong> Die Exception wird abgefangen, die <code>version</code> des fehlerhaften Datensatzes wird explizit hochgezählt und der <code>norm_value</code> wird auf <code>null</code> gesetzt. Dadurch wird die Endlosschleife gebrochen:</p>
+</div>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">} catch (TransformationException ex) {
+    log.error("POISON PILL REPROCESSING: Math failed for historical record of sensor {}. " +
+              "Raw Value: [{}]. Bumping version to bypass infinite loop. Reason: {}",
+              reading.getSensorId(), reading.getRawValue(), ex.getMessage(), ex);
+
+    // 1. Version erzwingen zu inkrementieren, damit die DB-Abfrage den Datensatz beim nächsten Schleifendurchlauf ignoriert
+    reading.setVersion(sensorConfig.getVersion().shortValue());
+
+    // 2. norm_value auf null setzen, um sicherzustellen, dass nachgelagerte Systeme keine falsch berechneten Daten anzeigen
+    reading.setNormValue(null);
+
+    return reading;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_5_integration_neuer_externer_datenquellen">10. 5. Integration neuer externer Datenquellen</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Die Architektur verwendet das <strong>Adapter-Pattern</strong>, um neue Datenquellen nahtlos als eigenständige "Plug-and-Play"-Komponenten zu integrieren. Um eine maximale Entkopplung und Testbarkeit zu gewährleisten, setzt die Pipeline konsequent auf <strong>Komposition statt Vererbung</strong> (Composition over Inheritance). Die Kern-Pipeline (alles ab dem <code>internal-normalized</code> Topic) bleibt von der Herkunft und dem ursprünglichen Format der Daten vollständig isoliert.</p>
+</div>
+<div class="paragraph">
+<p>Wenn ein neues externes System angebunden werden soll (z. B. Sensordaten im CSV-Format auf einem FTP-Server), ist der folgende standardisierte Prozess durchzuführen:</p>
+</div>
+<div class="sect2">
+<h3 id="_5_1_ingress_layer_konfigurieren_kafka_connect">10.1. 5.1. Ingress Layer konfigurieren (Kafka Connect)</h3>
+<div class="paragraph">
+<p>Um die Architektur strikt ereignisgesteuert (event-driven) zu halten, sollte die Spring Boot Applikation externe Systeme nicht selbst aktiv pollen.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Konfiguration eines <strong>Kafka Connect Source Connectors</strong> (z. B. SFTP Plugin oder SpoolDir/FilePulse).</p>
+</li>
+<li>
+<p>Der Connector pollt die externe Quelle und schreibt diese Rohdaten in ein neues, dediziertes Raw-Topic (z. B. <code>internal-raw-ftp-sensors</code>).</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_5_2_raw_data_model_definieren">10.2. 5.2. Raw Data Model definieren</h3>
+<div class="paragraph">
+<p>Analog zur <code>RawSolExpertsSensorData</code>-Klasse muss ein spezifisches Java-Record für die Payload der neuen Datenquelle erstellt werden (z. B. <code>RawFtpCsvSensorData</code>).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_5_3_normalization_service_implementieren">10.3. 5.3. Normalization Service implementieren</h3>
+<div class="paragraph">
+<p>Die eigentliche Übersetzungslogik wird als dedizierter, isolierter Service innerhalb der Java-Applikation umgesetzt.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Service-Erstellung:</strong> Erstellen eines neuen Spring <code>@Service</code> (z. B. <code>RawFtpCsvSensorDataNormalizationService</code>).</p>
+</li>
+<li>
+<p><strong>Komposition:</strong> Injizieren des zentralen <code>NormalizedSensorDataPublisher</code> via Konstruktor-Injection.</p>
+</li>
+<li>
+<p><strong>Event-Ingestion:</strong> Hinzufügen eines <code>@KafkaListener</code>, der auf das neu erstellte Raw-Topic lauscht.</p>
+</li>
+<li>
+<p><strong>Transformation:</strong> Innerhalb der Listener-Methode die herstellerspezifischen Rohdaten parsen und in das kanonische Standardformat (<code>NormalizedSensorData</code>) umwandeln.</p>
+</li>
+<li>
+<p><strong>Wichtig - Guarded Acknowledgment:</strong> Um Datenverlust (At-Least-Once Delivery) bei Fehlern oder Pod-Crashes garantiert auszuschliessen, muss das Acknowledgment-Pattern exakt wie folgt implementiert werden:</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Für jeden extrahierten Sensorwert die Methode <code>publisher.publish(sensorId, canonicalPayload)</code> aufrufen.</p>
+</li>
+<li>
+<p>Die resultierenden asynchronen <code>CompletableFuture</code>-Objekte in einer Liste sammeln.</p>
+</li>
+<li>
+<p>Mittels <code>CompletableFuture.allOf(&#8230;&#8203;).join()</code> blockierend darauf warten, dass der Kafka-Broker den Erhalt <strong>aller</strong> Nachrichten bestätigt hat.</p>
+</li>
+<li>
+<p><strong>Erst nach erfolgreicher Bestätigung aller Futures</strong> darf der Offset des ursprünglichen Raw-Topics via <code>ack.acknowledge()</code> committet werden.</p>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_alternative_zero_code_ingestion_via_kafka_connect_smts">10.4. Alternative: Zero-Code Ingestion via Kafka Connect SMTs</h3>
+<div class="paragraph">
+<p>Für einfache, flache Datenformate (wie standardisierte CSV-Dateien via FTP) wird ein <strong>Zero-Code-Ansatz</strong> bevorzugt:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Single Message Transforms (SMTs):</strong> Der Kafka Connect Source Connector führt einfache Transformationen (wie Spaltenumbenennungen oder Datentyp-Casts) direkt "on-the-fly" durch.</p>
+</li>
+<li>
+<p><strong>Direktes Routing:</strong> Der Connector überspringt das Raw-Topic und schreibt die standardisierten Payloads direkt in das <code>internal-normalized</code> Topic.</p>
+</li>
+<li>
+<p><strong>Vorteile:</strong> Keine zusätzliche Java-Codebasis, keine Unit-Tests und eine reduzierte Infrastruktur-Komplexität.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Die Implementierung eines dedizierten Java-basierten Normalisierungsservices bleibt somit ausschliesslich für Datenquellen reserviert, die komplexe Restrukturierungen, dynamisches Key-Mapping (z. B. Auflösen von verschachtelten Key-Value-Maps) oder bedingte Logik erfordern.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_datenbankschemata">10.5. Datenbankschemata</h3>
 <div class="paragraph">
 <p>Im Folgenden ist das aktuelle logische und physische Datenbankschema dokumentiert. Wie in Kapitel 5 beschrieben, verwenden wir als primären Einstiegspunkt eine PostgreSQL-Datenbank mit der PostGIS-Erweiterung für die Verwaltung der Metadaten und Geoinformationen.</p>
 </div>
@@ -2133,7 +2484,7 @@ Im Angular Asset Folder werden die Übersetzungsfiles platziert. Sie enthalten d
 </div>
 </div>
 <div class="sect3">
-<h4 id="_timescaledb_schema_zeitreihen_downsampling">8.4.1. TimeScaleDB Schema (Zeitreihen &amp; Downsampling)</h4>
+<h4 id="_timescaledb_schema_zeitreihen_downsampling">10.5.1. TimeScaleDB Schema (Zeitreihen &amp; Downsampling)</h4>
 <div class="paragraph">
 <p>Das Schema der TimeScaleDB für die hochfrequenten Zeitreihendaten umfasst neben der Hypertable auch die Continuous Aggregates (Downsampling-Buckets) und die Retention-Policies für das Daten-Lebenszyklus-Management.</p>
 </div>
@@ -2145,7 +2496,7 @@ CREATE TYPE range_category AS ENUM ('too_low', 'correct', 'too_high');
 
 -- 2. Base Table erstellen (Raw Data)
 -- Hinweis: sensor_id ist sensor_code in der Metadaten DB
-CREATE TABLE sensor_readings (
+CREATE TABLE sensor_reading (
     timestamp   TIMESTAMPTZ NOT NULL,
     sensor_id   TEXT NOT NULL,
     raw_value   DOUBLE PRECISION NOT NULL,
@@ -2158,14 +2509,14 @@ CREATE TABLE sensor_readings (
 );
 
 -- 3. In eine Hypertable konvertieren (Partitionierung nach 'timestamp')
-SELECT create_hypertable('sensor_readings', 'timestamp');
+SELECT create_hypertable('sensor_reading', 'timestamp');
 
 -- 4. Native Kompression für Originaldaten aktivieren (nach 120 Tagen)
-ALTER TABLE sensor_readings SET (
+ALTER TABLE sensor_reading SET (
     timescaledb.compress,
     timescaledb.compress_segmentby = 'sensor_id'
 );
-SELECT add_compression_policy('sensor_readings', INTERVAL '120 days');
+SELECT add_compression_policy('sensor_reading', INTERVAL '120 days');
 
 
 -- ==========================================
@@ -2173,41 +2524,41 @@ SELECT add_compression_policy('sensor_readings', INTERVAL '120 days');
 -- ==========================================
 
 -- Bucket 1: 1-Minuten-Aggregation
-CREATE MATERIALIZED VIEW sensor_readings_1m
+CREATE MATERIALIZED VIEW sensor_reading_1m
 WITH (timescaledb.continuous) AS
 SELECT time_bucket('1 minute', timestamp) AS bucket,
        sensor_id,
        AVG(norm_value) AS avg_value,
        MAX(norm_value) AS max_value,
        MIN(norm_value) AS min_value
-FROM sensor_readings
+FROM sensor_reading
 GROUP BY bucket, sensor_id;
 
 -- Bucket 2: 15-Minuten-Aggregation
-CREATE MATERIALIZED VIEW sensor_readings_15m
+CREATE MATERIALIZED VIEW sensor_reading_15m
 WITH (timescaledb.continuous) AS
 SELECT time_bucket('15 minutes', timestamp) AS bucket,
        sensor_id,
        AVG(norm_value) AS avg_value
-FROM sensor_readings
+FROM sensor_reading
 GROUP BY bucket, sensor_id;
 
 -- Bucket 3: 1-Stunden-Aggregation
-CREATE MATERIALIZED VIEW sensor_readings_1h
+CREATE MATERIALIZED VIEW sensor_reading_1h
 WITH (timescaledb.continuous) AS
 SELECT time_bucket('1 hour', timestamp) AS bucket,
        sensor_id,
        AVG(norm_value) AS avg_value
-FROM sensor_readings
+FROM sensor_reading
 GROUP BY bucket, sensor_id;
 
 -- Bucket 4: 1-Tages-Aggregation (Langzeitarchiv)
-CREATE MATERIALIZED VIEW sensor_readings_1d
+CREATE MATERIALIZED VIEW sensor_reading_1d
 WITH (timescaledb.continuous) AS
 SELECT time_bucket('1 day', timestamp) AS bucket,
        sensor_id,
        AVG(norm_value) AS avg_value
-FROM sensor_readings
+FROM sensor_reading
 GROUP BY bucket, sensor_id;
 
 
@@ -2216,35 +2567,35 @@ GROUP BY bucket, sensor_id;
 -- ==========================================
 
 -- Alte Aggregationen verwerfen, sobald sie aus ihrem Zeitfenster fallen:
-SELECT add_retention_policy('sensor_readings_1m', INTERVAL '30 days');
-SELECT add_retention_policy('sensor_readings_15m', INTERVAL '60 days');
-SELECT add_retention_policy('sensor_readings_1h', INTERVAL '2 years');
--- Anmerkung: Die 'sensor_readings_1d' View behält Daten dauerhaft.
+SELECT add_retention_policy('sensor_reading_1m', INTERVAL '30 days');
+SELECT add_retention_policy('sensor_reading_15m', INTERVAL '60 days');
+SELECT add_retention_policy('sensor_reading_1h', INTERVAL '2 years');
+-- Anmerkung: Die 'sensor_reading_1d' View behält Daten dauerhaft.
 
 -- ==========================================
 -- REFRESH POLICIES (Background Jobs für Continuous Aggregates)
 -- ==========================================
 
 -- 1-Minuten-Bucket: Aktualisiert sich jede Minute im Hintergrund
-SELECT add_continuous_aggregate_policy('sensor_readings_1m',
+SELECT add_continuous_aggregate_policy('sensor_reading_1m',
     start_offset =&gt; NULL,
     end_offset   =&gt; INTERVAL '1 minute',
     schedule_interval =&gt; INTERVAL '1 minute');
 
 -- 15-Minuten-Bucket: Aktualisiert sich alle 15 Minuten
-SELECT add_continuous_aggregate_policy('sensor_readings_15m',
+SELECT add_continuous_aggregate_policy('sensor_reading_15m',
     start_offset =&gt; NULL,
     end_offset   =&gt; INTERVAL '15 minutes',
     schedule_interval =&gt; INTERVAL '15 minutes');
 
 -- 1-Stunden-Bucket: Aktualisiert sich stündlich
-SELECT add_continuous_aggregate_policy('sensor_readings_1h',
+SELECT add_continuous_aggregate_policy('sensor_reading_1h',
     start_offset =&gt; NULL,
     end_offset   =&gt; INTERVAL '1 hour',
     schedule_interval =&gt; INTERVAL '1 hour');
 
 -- 1-Tages-Bucket: Aktualisiert sich einmal pro Tag (z.B. Nachts)
-SELECT add_continuous_aggregate_policy('sensor_readings_1d',
+SELECT add_continuous_aggregate_policy('sensor_reading_1d',
     start_offset =&gt; NULL,
     end_offset   =&gt; INTERVAL '1 day',
     schedule_interval =&gt; INTERVAL '1 day');</code></pre>
@@ -2253,7 +2604,7 @@ SELECT add_continuous_aggregate_policy('sensor_readings_1d',
 </div>
 </div>
 <div class="sect2">
-<h3 id="_api_schnittstellen_contracts">8.5. API-Schnittstellen (Contracts)</h3>
+<h3 id="_api_schnittstellen_contracts">10.6. API-Schnittstellen (Contracts)</h3>
 <div class="paragraph">
 <p>Im folgenden Abschnitt sind die API-Endpoints als OpenAPI-Spezifikation (YAML) definiert. Diese Spezifikation dient während der aktiven Entwicklungsphase als fester Vertrag (Contract) zwischen dem Backend, dem Frontend und der Ingestion-Pipeline. Die YAML-Blöcke können direkt in Werkzeuge wie den Swagger Editor kopiert werden, um Mocks und Client-Code zu generieren.</p>
 </div>
@@ -2307,18 +2658,11 @@ components:
           description: The unique identifier for the sensor.
           example: "sensor-geo-8472"
         formula:
-          type: object
-          description: Normalized representation of the conversion formula using JSONLogic.
-          additionalProperties: true
-          example:
-            "+":
-              - "sqrt":
-                  - "pow":
-                      - "*":
-                          - "var": "x"
-                          - 1.8
-                      - 2
-              - 32
+          type: string
+          description: The dynamic mathematical expression used to standardize raw readings into SI units.
+            Must use standard infix notation and include the variable 'x' (representing the raw value).
+          default: "x"
+          example: "x * 1.8 + 32"
         upper_bound:
           type: number
           format: double
@@ -2331,13 +2675,14 @@ components:
           example: -100.0
         version:
           type: integer
+          format: int16
           description: The version number of this specific configuration record.
           example: 2</code></pre>
 </div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_teststrategie">8.6. Teststrategie</h3>
+<h3 id="_teststrategie">10.7. Teststrategie</h3>
 <div class="paragraph">
 <p>Um die Stabilität und Datenintegrität von MONTEIS zu gewährleisten, verfolgen wir eine schichtenbasierte Teststrategie. Der Fokus liegt darauf, die gesamte Funktionalität und das fachliche Verhalten der Applikation rigoros abzusichern, ohne durch fragile Layout-Tests unnötigen Wartungsaufwand zu erzeugen.</p>
 </div>
@@ -2345,7 +2690,7 @@ components:
 <p>Um eine konstant hohe Code-Qualität zu garantieren, wird systemübergreifend <strong>SonarQube</strong> eingesetzt. Eine Mindestabdeckung dient als Guardrail, wobei die Aussagekraft der Tests (fachliche Relevanz, Fehlererkennungsfähigkeit) höher gewichtet wird als die reine Prozentzahl.</p>
 </div>
 <div class="sect3">
-<h4 id="_frontend_testing">8.6.1. Frontend Testing</h4>
+<h4 id="_frontend_testing">10.7.1. Frontend Testing</h4>
 <div class="paragraph">
 <p>Im Angular-Frontend liegt der Fokus auf der Überprüfung der isolierten UI-Logik (z. B. State-Management, Filter-Logik, Datenaufbereitung für Charts).</p>
 </div>
@@ -2361,7 +2706,7 @@ components:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_backend_testing_spring_boot">8.6.2. Backend Testing (Spring Boot)</h4>
+<h4 id="_backend_testing_spring_boot">10.7.2. Backend Testing (Spring Boot)</h4>
 <div class="paragraph">
 <p>Das Backend wird strikt in verschiedene Test-Ebenen unterteilt (Test-Pyramide), um schnelle Feedback-Zyklen und realitätsnahe Datenbanktests optimal zu kombinieren. Als Basis dient hierbei die native <strong>Spring Boot Test Suite</strong>.</p>
 </div>
@@ -2390,7 +2735,7 @@ components:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_end_to_end_testing_e2e">8.6.3. End-to-End Testing (E2E)</h4>
+<h4 id="_end_to_end_testing_e2e">10.7.3. End-to-End Testing (E2E)</h4>
 <div class="paragraph">
 <p>Um die isolierten Komponenten-Tests zu komplementieren und das Zusammenspiel des gesamten Systems (Frontend + Backend + Datenbank) zu validieren, setzen wir ebenenübergreifende E2E-Tests ein.</p>
 </div>
@@ -2410,12 +2755,12 @@ components:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_entwickler_workflow_cicd_pipeline">8.7. Entwickler-Workflow &amp; CI/CD Pipeline</h3>
+<h3 id="_entwickler_workflow_cicd_pipeline">10.8. Entwickler-Workflow &amp; CI/CD Pipeline</h3>
 <div class="paragraph">
 <p>Um eine konsistente Code-Qualität zu garantieren, den Review-Prozess zu verschlanken und die Server-Ressourcen effizient zu nutzen, wird der Code-Lebenszyklus von lokalen Git-Hooks bis hin zu automatisierten GitHub Actions strikt orchestriert.</p>
 </div>
 <div class="sect3">
-<h4 id="_lokaler_workflow_git_hooks">8.7.1. Lokaler Workflow (Git Hooks)</h4>
+<h4 id="_lokaler_workflow_git_hooks">10.8.1. Lokaler Workflow (Git Hooks)</h4>
 <div class="paragraph">
 <p>Bevor Code in das Repository gepusht wird, greifen lokale Git-Hooks , um formelle Standards bereits auf dem Entwickler-Rechner zu erzwingen:</p>
 </div>
@@ -2441,7 +2786,7 @@ components:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_continuous_integration_pull_request_workflows">8.7.2. Continuous Integration (Pull Request Workflows)</h4>
+<h4 id="_continuous_integration_pull_request_workflows">10.8.2. Continuous Integration (Pull Request Workflows)</h4>
 <div class="paragraph">
 <p>Um die Ressourcen (und Kosten) der Pipeline zu schonen, werden ressourcenintensive CI-Jobs <strong>nicht bei jedem einzelnen Push</strong>, sondern ausschliesslich bei der Erstellung oder Aktualisierung von <strong>Pull Requests (PRs)</strong> ausgeführt.</p>
 </div>
@@ -2463,7 +2808,7 @@ components:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_continuous_deployment_release_workflows">8.7.3. Continuous Deployment &amp; Release-Workflows</h4>
+<h4 id="_continuous_deployment_release_workflows">10.8.3. Continuous Deployment &amp; Release-Workflows</h4>
 <div class="paragraph">
 <p>Sobald Code-Änderungen in den <code>main-branch</code> integriert werden oder offizielle Versionen anstehen, übernehmen automatisierte GitHub Actions das Deployment. Das Setup folgt strikt dem Build-Once-Prinzip für Produktions-Releases und einem GitOps-Ansatz für die Infrastruktur.</p>
 </div>
@@ -2560,32 +2905,77 @@ components:
 </div>
 </div>
 <div class="sect1">
-<h2 id="section-design-decisions">9. Architekturentscheidungen</h2>
+<h2 id="section-design-decisions">11. Architekturentscheidungen</h2>
 <div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 28.5714%;">
+<col style="width: 71.4286%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Kriterium</th>
+<th class="tableblock halign-left valign-top">Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Titel</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ADR: Einsatz von Anchore Syft und Grant für Open-Source-Lizenzkonformität</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Datum</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">08.06.2026</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Status</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">entschieden</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kontext &amp; Problem</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Vermeidung von riskanten Open-Source-Lizenzen (z.B. Copyleft wie GPL-3.0) in Node.js- und Java-Projekten. Benötigt wird eine automatisierte, tiefgehende Prüfung innerhalb der CI/CD-Pipeline vor dem Merge.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Entscheidung</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Einsatz von Anchore Syft zur Generierung der Software Bill of Materials (SBOM) im SPDX-JSON-Format und Anchore Grant zur lokalen Prüfung gegen eine .grant.yml-Richtlinie.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Begründung</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Performance durch Entkopplung: Syft führt tiefe Netzwerkscans durch (Ergebnis wird gecached), Grant prüft das lokale SBOM in Millisekunden.</p>
+<p class="tableblock">Tiefe Auflösung: Native Unterstützung für die Auflösung von Maven-Parent-POMs und externen npm-Registries.</p>
+<p class="tableblock">SaaS-frei &amp; Sicher: Die Prüfung läuft komplett lokal im GitHub Actions Runner ab. Keine Übertragung von Code oder Daten an Drittanbieter.</p>
+<p class="tableblock">Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Repository gespeichert.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Konsequenzen</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Schnelle CI-Pipelines und sofortiges Blockieren bei Lizenzverstößen. Erfordert als Trade-off die manuelle Pflege einer ignore-packages-Liste für fehlerhafte Lizenz-Strings oder interne CI-Tools.</p></td>
+</tr>
+</tbody>
+</table>
 <div style="page-break-after: always;"></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="section-quality-scenarios">10. Qualitätsanforderungen</h2>
+<h2 id="section-quality-scenarios">12. Qualitätsanforderungen</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_übersicht_der_qualitätsanforderungen">10.1. Übersicht der Qualitätsanforderungen</h3>
+<h3 id="_übersicht_der_qualitätsanforderungen">12.1. Übersicht der Qualitätsanforderungen</h3>
 
 </div>
 <div class="sect2">
-<h3 id="_qualitätsszenarien">10.2. Qualitätsszenarien</h3>
+<h3 id="_qualitätsszenarien">12.2. Qualitätsszenarien</h3>
 <div style="page-break-after: always;"></div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="section-technical-risks">11. Risiken und technische Schulden</h2>
+<h2 id="section-technical-risks">13. Risiken und technische Schulden</h2>
 <div class="sectionbody">
 <div style="page-break-after: always;"></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="section-glossary">12. Glossar</h2>
+<h2 id="section-glossary">14. Glossar</h2>
 <div class="sectionbody">
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -2615,6 +3005,14 @@ components:
 <td class="tableblock halign-left valign-top"><p class="tableblock"><em><a href="https://www.ag-grid.com/">AG-Grid</a></em></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><em>AG-Grid ist eine Library für Angular, speziell geeignet für anspruchsvolle filterbare Tabellen.</em></p></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em><a href="https://github.com/anchore/syft">Syft</a></em></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>CLI Tool zur Generierung der Software Bill of Materials (SBOM) im SPDX-JSON-Format.</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em><a href="https://github.com/anchore/grant">Grant</a></em></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>CLI Tool zur Prüfung der eingesetzten Lizenzen aller Dependencies gegen eine .grant.yml-Richtlinie.</em></p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -2623,7 +3021,7 @@ components:
 <div id="footer">
 <div id="footer-text">
 Version 1.0.0-rc<br>
-Last updated 2026-05-19 09:48:44 UTC
+Last updated 2026-05-20 11:35:20 UTC
 </div>
 </div>
 </body>

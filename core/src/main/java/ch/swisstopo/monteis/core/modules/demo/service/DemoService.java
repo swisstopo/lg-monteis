@@ -1,7 +1,9 @@
 package ch.swisstopo.monteis.core.modules.demo.service;
 
+import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.modules.demo.jooq.DemoRepository;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.ReadSimpleMetric;
+import ch.swisstopo.monteis.core.modules.demo.web.dto.WriteSensorDto;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,5 +31,10 @@ public class DemoService {
       log.error("fetching worked but nothing found");
     }
     return results;
+  }
+
+  @AuditChanges
+  public WriteSensorDto saveOrUpdateSensor(WriteSensorDto dto) {
+    return repository.saveSensorWithFormula(dto);
   }
 }
