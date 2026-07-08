@@ -77,4 +77,19 @@ export default defineConfig({
   //   url: 'http://localhost:3000',
   //   reuseExistingServer: !process.env.CI,
   // },
+
+  webServer: [
+    {
+      command: 'SPRING_PROFILES_ACTIVE=test mvn spring-boot:test-run',
+      cwd: '../core',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+    {
+      command: 'pnpm run start',
+      cwd: '.',
+      url: 'http://localhost:4200',
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });

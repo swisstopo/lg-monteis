@@ -317,19 +317,11 @@ jobs:
 
       - name: Install Node Modules and Playwright
         working-directory: webapp
-        run: pnpm exec playwright install chromium --with-deps
+        run: pnpm exec playwright install --with-deps
 
       - name: Generate API
         working-directory: webapp
         run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
-
-      - name: Start Backend & DB
-        working-directory: core
-        run: SPRING_PROFILES_ACTIVE=test mvn spring-boot:test-run
-
-      - name: Start Frontend
-        working-directory: webapp
-        run: pnpm run start
 
       - name: Run all e2e tests
         working-directory: webapp
