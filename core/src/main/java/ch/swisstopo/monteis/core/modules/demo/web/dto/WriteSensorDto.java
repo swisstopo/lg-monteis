@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.demo.web.dto;
 
+import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
 
@@ -11,7 +12,8 @@ public record WriteSensorDto(
     Double lowerBound,
     Integer version,
     String expression,
-    Integer formulaVersion) {
+    Integer formulaVersion)
+    implements Auditable {
 
   public static final String JAVERS_TYPE_NAME = "Sensor";
 }

@@ -16,10 +16,8 @@ public class JaversAuditAspect {
     this.javers = javers;
   }
 
-  @AfterReturning(
-      pointcut = "@annotation(ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges)",
-      returning = "result")
-  public void auditReturnValue(Object result) {
+  @AfterReturning(pointcut = "@annotation(AuditChanges)", returning = "result")
+  public void auditReturnValue(Auditable result) {
 
     if (result == null) {
       return;

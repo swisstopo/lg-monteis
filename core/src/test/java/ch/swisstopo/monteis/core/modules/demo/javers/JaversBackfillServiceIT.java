@@ -5,6 +5,7 @@ import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.swisstopo.monteis.core.IT;
+import ch.swisstopo.monteis.core.infrastructure.javers.JaversBackfillService;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.WriteSensorDto;
 import org.javers.core.Javers;
 import org.javers.core.metamodel.object.SnapshotType;

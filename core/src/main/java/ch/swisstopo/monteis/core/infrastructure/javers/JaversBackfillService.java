@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.demo.javers;
+package ch.swisstopo.monteis.core.infrastructure.javers;
 
 import ch.swisstopo.monteis.core.modules.demo.jooq.DemoRepository;
 import org.javers.core.Javers;
@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-@Transactional
 public class JaversBackfillService {
 
   private final Javers javers;
