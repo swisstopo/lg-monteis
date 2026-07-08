@@ -56,7 +56,8 @@ Wenn bei der Versionierung etwas schief geht, erfolgt ein Rollback der Übergeor
 ==== 4. Aspekt für die Versionierung
 Damit die Service-Schicht nur minimale Kenntnisse von der Versionierung haben muss, wird ein Spring AOP Aspekt verwendet. Methoden werden lediglich mit einer eigenen Annotation versehen (`@AuditChanges`), damit das betroffene Objekt vom Aspekt aufgegriffen und sauber in den Versionstabellen von JaVers abgelegt wird. Hier gilt zu beachten, dass `@AfterReturning` verwendet wird, damit beim Einfügen eines neuen Objekts dessen eindeutige ID bereits gesetzt wurde. Hier ist ein Beispiel, wie der Aspekt aussehen könnte:
 
-``` JAVA
+[source,java]
+----
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.javers.core.Javers;
@@ -74,7 +75,7 @@ public class JaversAuditAspect {
   }
 
   @AfterReturning(pointcut = "@annotation(AuditChanges)", returning = "result")
-  public void auditReturnValue(Object result) {
+  public void auditReturnValue(Auditable result) {
 
     if (result == null) {
       return;
@@ -88,7 +89,7 @@ public class JaversAuditAspect {
     javers.commit(currentUser, result);
   }
 }
-```
+----
 
 ===== Voraussetzung:
 * Aspekt muss als Komponente und Aspekt annotiert sein
@@ -112,7 +113,8 @@ Wenn ein neues Fachobjekt (z. B. `Experiment`) in die Architektur integriert wir
 
 *2. DTO-Schicht (Data Transfer Objects als Java Records)*
 
-* **JaVers-Annotationen:** Das DTO _muss_ die `@Id`-Annotation (aus `org.javers.core.metamodel.annotation.Id`) auf dem Primärschlüssel tragen, damit JaVers den Datensatz als eigenständige Entity trackt. Die Nutzung von `@TypeName("WunschName")` wird dringend empfohlen, um den Audit-Log von Java-Refactorings zu entkoppeln.
+* **Marker Interface:** Das DTO muss zwingend das Interface `Auditable` implementieren, damit der AOP-Aspekt es verarbeiten kann.
+* **JaVers-Annotationen & Konstanten:** Das DTO _muss_ die `@Id`-Annotation auf dem Primärschlüssel tragen. Die Nutzung von `@TypeName` wird zwingend vorgeschrieben, um den Audit-Log von Java-Refactorings zu entkoppeln. Der Wert für `@TypeName` muss als `public static final String` im Record definiert werden (z. B. `JAVERS_TYPE_NAME = "Sensor"`), damit Repositories bei nativen DB-Queries typsicher darauf zugreifen können.
 * **State-Transport:** Das DTO muss die Version(en) zwingend als Attribut enthalten (z. B. `version` und `formulaVersion`).
 
 *3. Repository-Schicht*
@@ -129,6 +131,17 @@ Wenn ein neues Fachobjekt (z. B. `Experiment`) in die Architektur integriert wir
 
 * **Trigger:** Die speichernde Service-Methode muss zwingend mit `@Transactional` und der eigenen Annotation `@AuditChanges` versehen werden.
 * **Rückgabewert (Kritisch!):** Die Methode _muss_ das frisch gespeicherte DTO zurückgeben. Der AOP-Aspekt auditiert exakt diesen Rückgabewert, um sicherzustellen, dass die aktualisierte Version und generierte ID korrekt im Audit-Log landen.
+
+==== 5. Umgang mit initialen Daten (Flyway Seeding & Backfill)
+
+Da initiale Test- oder Stamm-Daten oft via Flyway-SQL-Skripte direkt in die Datenbank (`INSERT INTO ...`) geschrieben werden, umgehen sie den Spring Service Layer und somit den JaVers AOP-Aspekt vollständig. Für JaVers existieren diese Datensätze nicht, was bedeutet, dass beim ersten regulären Update über die API die Historie des Ursprungszustands verloren geht.
+
+Um diesen "Blindspot" zu beheben, nutzt die Architektur einen **Startup Backfill Service**:
+
+* **Event-Trigger:** Ein `@EventListener(ApplicationReadyEvent.class)` prüft beim Hochfahren der Applikation auf un-auditierte Daten.
+* **jOOQ Streaming & NOT EXISTS:** Um Out-Of-Memory (OOM) Fehler und das "N+1 Query"-Problem bei grossen Datenmengen (z.B. >100.000 Sensoren) zu vermeiden, nutzt das Repository einen Datenbank-Cursor (`fetchStream()`). Über eine native `WHERE NOT EXISTS` Klausel direkt auf der JaVers-Tabelle (`jv_global_id`) wird die Filterung komplett in die Datenbank verlagert.
+* **Dynamische Typisierung:** Der Abgleich in jOOQ greift dabei sicher auf die statische Konstante des DTOs zurück (z. B. `WriteSensorDto.JAVERS_TYPE_NAME`).
+* **Sicherer Commit:** Gefundene unauditierte Datensätze werden vom Backfill-Service iterativ mit dem Autor `SYSTEM_SEEDER` in JaVers als `INITIAL` Snapshot committet.
 
 === Core-API Validierung (Validation & Error Handling)
 Die Validierung ist in zwei Schichten unterteilt und wird über einen zentralen Mechanismus so verarbeitet, dass das Frontend (Angular) immer eine einheitliche, übersetzungsfertige Struktur erhält.
