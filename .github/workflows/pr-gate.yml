@@ -2,7 +2,7 @@ name: PR Gate
 
 on:
   pull_request:
-    types: [ opened, edited, synchronize, reopened ]
+    types: [ opened, edited, synchronize, reopened, labeled ]
 
 env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION }}
@@ -273,10 +273,7 @@ jobs:
     outputs:
       file_list: ${{ steps.generate-file-list.outputs.file_list }}
     steps:
-      - name: Checkout Target Repo Code (to find test files)
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.COMMIT_HASH }}
+      - uses: actions/checkout@v7
 
       - name: Install jq (JSON processor)
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -326,7 +323,7 @@ jobs:
         working-directory: webapp
         run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
 
-      - name:
+      - name: Start Backend & DB
         working-directory: core
         run: SPRING_PROFILES_ACTIVE=test mvn spring-boot:test-run
 
