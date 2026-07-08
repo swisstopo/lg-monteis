@@ -265,3 +265,75 @@ jobs:
       - name: Run Webapp Tests
         working-directory: webapp
         run: pnpm vitest --browser.headless=true
+
+  get-e2e-files:
+    name: Get E2E test file to run
+    if: contains(github.event.pull_request.labels.*.name, 'e2e-test')
+    runs-on: ubuntu-24.04
+    outputs:
+      file_list: ${{ steps.generate-file-list.outputs.file_list }}
+    steps:
+      - name: Checkout Target Repo Code (to find test files)
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.COMMIT_HASH }}
+
+      - name: Install jq (JSON processor)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Generate list of E2E test files
+        id: generate-file-list
+        env:
+          E2E_DIR: webapp/e2e
+        run: |
+          if [ -d "$E2E_DIR" ] && find "$E2E_DIR" -type f -print -quit | grep -q .; then
+            FILES=$(find "$E2E_DIR" -type f | jq -R . | jq -s . | jq -c)
+            echo "Found test files: $FILES"
+          else
+            echo "No test files found in $E2E_DIR or directory does not exist."
+            FILES="[]"
+          fi
+          echo "file_list=$FILES" >> $GITHUB_OUTPUT
+
+  # noinspection YAMLSchemaValidation
+  run-e2e-tests:
+    name: E2E file test
+    if: contains(github.event.pull_request.labels.*.name, 'e2e-test')
+    needs: [warmup-caches, get-e2e-files]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        file: ${{ fromJSON(needs.get-e2e-files.outputs.file_list) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - parallel:
+          - name: Setup Java Environment (Hits Cache)
+            uses: ./.github/actions/setup-java-maven
+
+          - name: Setup Node Environment (Hits Cache)
+            uses: ./.github/actions/setup-node-pnpm
+
+      - name: Generate Sources
+        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
+
+      - name: Install Node Modules and Playwright
+        working-directory: webapp
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Generate API
+        working-directory: webapp
+        run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
+
+      - name:
+        working-directory: core
+        run: SPRING_PROFILES_ACTIVE=test mvn spring-boot:test-run
+
+      - name: Start Frontend
+        working-directory: webapp
+        run: pnpm run start
+
+      - name: Run all e2e tests
+        working-directory: webapp
+        run: pnpm run e2e:headless ${{ matrix.file }}
