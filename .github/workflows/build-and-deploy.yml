@@ -91,9 +91,14 @@ jobs:
           
           # Push the tag to AWS ECR
           docker push ${REGISTRY}${REPOSITORY}:$VERSION
-
-      # create github tag
-      - name: Output the generated version
+          
+      # create and push github tag
+      - name: Push Git Tag to GitHub
+        env:
+          TAG: ${{ steps.semver.outputs.version_tag }}
         run: |
-          echo "The raw version is: ${{ steps.semver.outputs.version }}"
-          echo "The full Git tag is: ${{ steps.semver.outputs.version_tag }}"
+          echo "[INFO]: Tagging commit with $TAG"
+      
+          # Create and push the tag
+          git tag $TAG
+          git push origin $TAG
