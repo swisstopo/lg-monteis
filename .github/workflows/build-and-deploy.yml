@@ -3,11 +3,10 @@ name: Build and Push Backend Images
 on:
   push:
     branches:
-      - mon-93-docker-build
+      - main
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
-      - '.github/**' #todo: remove me after testing
       - '.gitignore'
       - 'webapp/**'
       - 'LICENSE'

@@ -1,4 +1,4 @@
-name: Reusable Build and Push API
+name: Reusable Build and Push Backend Images
 
 on:
   workflow_call:
@@ -17,7 +17,6 @@ jobs:
   scan-build-tag:
     name: Build & Push ${{ inputs.service }}
     runs-on: ubuntu-24.04
-    # Permissions are required here for the reusable workflow to authenticate
     permissions:
       contents: write
       id-token: write
@@ -31,6 +30,7 @@ jobs:
           filter: blob:none
 
       # This is a dry run which is used later to set the github tag and have unique versioning
+      # change_path guards unnecessary execution!
       - name: Calculate Semantic Version
         id: semver
         uses: paulhatch/semantic-version@v6.0.2
