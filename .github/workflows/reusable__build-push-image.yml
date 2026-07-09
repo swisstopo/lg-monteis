@@ -64,6 +64,10 @@ jobs:
         if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
         uses: ./.github/actions/setup-java-maven
 
+      - name: Compile Internal Dependencies
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        run: mvn -T 2C clean install -DskipTests -Dopenapi.codegen.skip=false
+
       - name: Build Spring Boot Image
         if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
         env:
