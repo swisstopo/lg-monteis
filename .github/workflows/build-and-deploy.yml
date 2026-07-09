@@ -37,13 +37,13 @@ jobs:
           change_path: "core/"
 
       - name: Check if already tagged
-        if: steps.semver.outputs.is_tagged == 'true'
+        if: steps.semver.outputs.is_tagged == 'true' && steps.semver.outputs.changed == 'false'
         run: |
           echo "This commit is already tagged as ${{ steps.semver.outputs.version_tag }}. Skipping deployment."
 
       # aws login
       - name: Configure AWS Credentials
-        if: steps.semver.outputs.is_tagged == 'false'
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
         uses: aws-actions/configure-aws-credentials@v6.2.2
         with:
           role-to-assume: ${{vars.AWS_ROLE_ECR_PUSH}}
@@ -55,16 +55,16 @@ jobs:
 
       # login to ecr
       - name: Login to Amazon ECR Public
-        if: steps.semver.outputs.is_tagged == 'false'
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
         id: login-ecr-public
         uses: aws-actions/amazon-ecr-login@v2.1.6
 
       - name: Setup Java Environment
-        if: steps.semver.outputs.is_tagged == 'false'
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
         uses: ./.github/actions/setup-java-maven
 
       - name: Build Spring Boot Image
-        if: steps.semver.outputs.is_tagged == 'false'
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
         env:
           VERSION: ${{ steps.semver.outputs.version }}
         run: |
@@ -73,7 +73,7 @@ jobs:
             -DskipTests
 
       - name: Run Trivy Image Scan
-        if: steps.semver.outputs.is_tagged == 'false'
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'local-registry/core:${{ steps.semver.outputs.version }}'
@@ -84,7 +84,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Build, tag, and push docker image to Amazon ECR Public
-        if: steps.semver.outputs.is_tagged == 'false'
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
         env:
           REGISTRY: ${{ vars.AWS_ECR_REGISTRY }}
           REPOSITORY: "core"
@@ -95,10 +95,10 @@ jobs:
           
           # Push the tag to AWS ECR
           docker push ${REGISTRY}${REPOSITORY}:$VERSION
-          
+
       # create and push github tag
       - name: Push Git Tag to GitHub
-        if: steps.semver.outputs.is_tagged == 'false'
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
         env:
           TAG: ${{ steps.semver.outputs.version_tag }}
         run: |
