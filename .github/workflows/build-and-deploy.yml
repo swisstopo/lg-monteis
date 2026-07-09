@@ -11,8 +11,8 @@ env:
   NODE_VERSION: ${{ vars.NODE_VERSION }}
 
 permissions:
-  contents: read
-  id-token: write
+  contents: write # used for github tag creation
+  id-token: write # used for aws auth
 
 jobs:
   build-scan-tag:
@@ -33,14 +33,12 @@ jobs:
         id: semver
         uses: paulhatch/semantic-version@v6.0.2
         with:
-          tag_prefix: "core/v"
+          tag_prefix: "core-v"
           change_path: "core/"
           major_pattern: "/!:|BREAKING CHANGE:/"
           minor_pattern: "/feat(\\(.+\\))?:/"
-          version_format: "${major}.${minor}.${patch}-${increment}"
           bump_each_commit: false
           search_commit_body: false
-          enable_prerelease_mode: true # todo: remove for go live
           debug: true
 
       # aws login
