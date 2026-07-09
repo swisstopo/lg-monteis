@@ -1,0 +1,109 @@
+name: Reusable Build and Push API
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: 'Name of the service (used for directory path, image name, and tags)'
+        required: true
+        type: string
+
+env:
+  JAVA_VERSION: ${{ vars.JAVA_VERSION }}
+  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
+  NODE_VERSION: ${{ vars.NODE_VERSION }}
+
+jobs:
+  scan-build-tag:
+    name: Build & Push ${{ inputs.service }}
+    runs-on: ubuntu-24.04
+    # Permissions are required here for the reusable workflow to authenticate
+    permissions:
+      contents: write
+      id-token: write
+    # https://docs.github.com/en/actions/reference/security/secure-use#use-an-intermediate-environment-variable
+    env:
+      SERVICE: ${{ inputs.service }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Must fetch history so the bot can read the commits
+          filter: blob:none
+
+      # This is a dry run which is used later to set the github tag and have unique versioning
+      - name: Calculate Semantic Version
+        id: semver
+        uses: paulhatch/semantic-version@v6.0.2
+        with:
+          tag_prefix: "${{ env.SERVICE }}-v"
+          change_path: "${{ env.SERVICE }}/"
+
+      - name: Check if already tagged
+        run: |
+          echo "is tagged: ${{ steps.semver.outputs.is_tagged }}"
+          echo "changed: ${{ steps.semver.outputs.changed }}"
+
+      - name: Configure AWS Credentials
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        uses: aws-actions/configure-aws-credentials@v6.2.2
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ECR_PUSH }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Additional steps
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        run: |
+          aws sts get-caller-identity
+
+      - name: Login to Amazon ECR
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@v2.1.6
+
+      - name: Setup Java Environment
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Build Spring Boot Image
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.semver.outputs.version }}
+        run: |
+          mvn -pl ${{ env.SERVICE }} spring-boot:build-image \
+            -Dspring-boot.build-image.imageName=local-registry/${{ env.SERVICE }}:$VERSION \
+            -DskipTests
+
+      - name: Run Trivy Image Scan
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'local-registry/${{ env.SERVICE }}:${{ steps.semver.outputs.version }}'
+          scan-type: 'image'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      - name: Tag and push docker image to Amazon ECR Public
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        env:
+          REGISTRY: ${{ vars.AWS_ECR_REGISTRY }}
+          REPOSITORY: ${{ env.SERVICE }}
+          VERSION: ${{ steps.semver.outputs.version }}
+        run: |
+          # Tag the locally built image with the ECR registry path + SemVer
+          docker tag local-registry/${{ env.SERVICE }}:$VERSION ${REGISTRY}${REPOSITORY}:$VERSION
+
+          # Push the tag to AWS ECR
+          docker push ${REGISTRY}${REPOSITORY}:$VERSION
+
+      - name: Push Git Tag to GitHub
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        env:
+          TAG: ${{ steps.semver.outputs.version_tag }}
+        run: |
+          echo "[INFO]: Tagging commit with $TAG"
+
+          # Create and push the tag
+          git tag $TAG
+          git push origin $TAG
