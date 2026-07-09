@@ -40,69 +40,70 @@ jobs:
         run: |
           echo "is tagged: ${{ steps.semver.outputs.is_tagged }}"
           echo "changed: ${{steps.semver.outputs.changed}}"
-#      # aws login
-#      - name: Configure AWS Credentials
-#        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
-#        uses: aws-actions/configure-aws-credentials@v6.2.2
-#        with:
-#          role-to-assume: ${{vars.AWS_ROLE_ECR_PUSH}}
-#          aws-region: ${{vars.AWS_REGION}}
-#      - name: Additional steps
-#        run: |
-#          # Your commands that require AWS credentials
-#          aws sts get-caller-identity
-#
-#      # login to ecr
-#      - name: Login to Amazon ECR Public
-#        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
-#        id: login-ecr-public
-#        uses: aws-actions/amazon-ecr-login@v2.1.6
-#
-#      - name: Setup Java Environment
-#        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
-#        uses: ./.github/actions/setup-java-maven
-#
-#      - name: Build Spring Boot Image
-#        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
-#        env:
-#          VERSION: ${{ steps.semver.outputs.version }}
-#        run: |
-#          mvn -pl core spring-boot:build-image \
-#            -Dspring-boot.build-image.imageName=local-registry/core:$VERSION \
-#            -DskipTests
-#
-#      - name: Run Trivy Image Scan
-#        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
-#        uses: aquasecurity/trivy-action@v0.36.0
-#        with:
-#          image-ref: 'local-registry/core:${{ steps.semver.outputs.version }}'
-#          scan-type: 'image'
-#          format: 'table'
-#          exit-code: '1'
-#          ignore-unfixed: true
-#          severity: 'CRITICAL,HIGH'
-#
-#      - name: Build, tag, and push docker image to Amazon ECR Public
-#        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
-#        env:
-#          REGISTRY: ${{ vars.AWS_ECR_REGISTRY }}
-#          REPOSITORY: "core"
-#          VERSION: ${{ steps.semver.outputs.version }}
-#        run: |
-#          # Tag the locally built image with the ECR registry path + SemVer
-#          docker tag local-registry/core:$VERSION ${REGISTRY}${REPOSITORY}:$VERSION
-#
-#          # Push the tag to AWS ECR
-#          docker push ${REGISTRY}${REPOSITORY}:$VERSION
-#
-#      # create and push github tag
-#      - name: Push Git Tag to GitHub
-#        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
-#        env:
-#          TAG: ${{ steps.semver.outputs.version_tag }}
-#        run: |
-#          echo "[INFO]: Tagging commit with $TAG"
-#
-#          # Create and push the tag
-#          git tag $TAG
-#          git push origin $TAG
+      # aws login
+      - name: Configure AWS Credentials
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        uses: aws-actions/configure-aws-credentials@v6.2.2
+        with:
+          role-to-assume: ${{vars.AWS_ROLE_ECR_PUSH}}
+          aws-region: ${{vars.AWS_REGION}}
+      - name: Additional steps
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        run: |
+          # Your commands that require AWS credentials
+          aws sts get-caller-identity
+
+      # login to ecr
+      - name: Login to Amazon ECR Public
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@v2.1.6
+
+      - name: Setup Java Environment
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Build Spring Boot Image
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.semver.outputs.version }}
+        run: |
+          mvn -pl core spring-boot:build-image \
+            -Dspring-boot.build-image.imageName=local-registry/core:$VERSION \
+            -DskipTests
+
+      - name: Run Trivy Image Scan
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'local-registry/core:${{ steps.semver.outputs.version }}'
+          scan-type: 'image'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      - name: Build, tag, and push docker image to Amazon ECR Public
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        env:
+          REGISTRY: ${{ vars.AWS_ECR_REGISTRY }}
+          REPOSITORY: "core"
+          VERSION: ${{ steps.semver.outputs.version }}
+        run: |
+          # Tag the locally built image with the ECR registry path + SemVer
+          docker tag local-registry/core:$VERSION ${REGISTRY}${REPOSITORY}:$VERSION
+
+          # Push the tag to AWS ECR
+          docker push ${REGISTRY}${REPOSITORY}:$VERSION
+
+      # create and push github tag
+      - name: Push Git Tag to GitHub
+        if: steps.semver.outputs.is_tagged == 'false' && steps.semver.outputs.changed == 'true'
+        env:
+          TAG: ${{ steps.semver.outputs.version_tag }}
+        run: |
+          echo "[INFO]: Tagging commit with $TAG"
+
+          # Create and push the tag
+          git tag $TAG
+          git push origin $TAG
