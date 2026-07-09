@@ -14,3 +14,8 @@ jobs:
     uses: ./.github/workflows/reusable__build-push-image.yml
     with:
       service: 'core'
+
+  build-pipeline:
+    uses: ./.github/workflows/reusable__build-push-image.yml
+    with:
+      service: 'pipeline'
