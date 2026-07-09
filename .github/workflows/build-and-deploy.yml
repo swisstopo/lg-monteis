@@ -35,11 +35,6 @@ jobs:
         with:
           tag_prefix: "core-v"
           change_path: "core/"
-          major_pattern: "/!:|BREAKING CHANGE:/"
-          minor_pattern: "/feat(\\(.+\\))?:/"
-          bump_each_commit: false
-          search_commit_body: false
-          debug: true
 
       # aws login
       - name: Configure AWS Credentials
