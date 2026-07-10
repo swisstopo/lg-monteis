@@ -166,6 +166,9 @@ services:
     image: mikefarah/yq:4
     container_name: keycloak-realm-builder
     profiles: [ core ]
+    # mikefarah/yq runs as a non-root user; the named volume is root-owned on first
+    # creation → writing /out/realm-local.json fails. Run as root to seed it.
+    user: "0:0"
     volumes:
       - ./keycloak/realm:/realm:ro
       - kc_realm_out:/out
@@ -175,11 +178,12 @@ services:
       - |
         set -e
         # jq-style targeted merge in yq: set SPA URLs + append local users.
+        # $$ escapes Compose interpolation so yq receives literal $base/$p variables.
         yq -o=json eval-all '
-          select(fi==0) as $base | select(fi==1) as $p
-          | $base
-          | .clients |= map(select(.clientId=="monteis-spa") .redirectUris = $p.spa.redirectUris | .webOrigins = $p.spa.webOrigins)
-          | .users = (($base.users // []) + ($p.users // []))
+          select(fi==0) as $$base | select(fi==1) as $$p
+          | $$base
+          | .clients |= map(select(.clientId=="monteis-spa") .redirectUris = $$p.spa.redirectUris | .webOrigins = $$p.spa.webOrigins)
+          | .users = (($$base.users // []) + ($$p.users // []))
         ' /realm/realm-base.json /realm/patch.local.json > /out/realm-local.json
         echo "rendered /out/realm-local.json"
 
