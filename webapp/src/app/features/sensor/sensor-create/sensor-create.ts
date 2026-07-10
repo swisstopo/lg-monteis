@@ -1,4 +1,5 @@
 import { JsonPipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroupDirective, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -18,10 +19,6 @@ import {
   SensorResponseDto,
 } from '../../../core/generated';
 
-import { FormErrorService } from '../../../core/errors/form-error.service';
-import { Notification } from '../../../core/services/notification';
-import { FormErrorComponent } from '../../../core/shared/components/form-error.component/form-error.component';
-
 @Component({
   selector: 'app-sensor-create',
   standalone: true,
@@ -36,7 +33,6 @@ import { FormErrorComponent } from '../../../core/shared/components/form-error.c
     MatAutocomplete,
     MatAutocompleteTrigger,
     MatOption,
-    FormErrorComponent,
   ],
   templateUrl: './sensor-create.html',
   styleUrl: './sensor-create.scss',
@@ -50,11 +46,10 @@ export default class SensorCreate {
 
   private fb = inject(FormBuilder);
   private sensorService = inject(SensorControllerService);
-  private formErrorService = inject(FormErrorService);
-  private notification = inject(Notification);
 
+  // --- STRICTLY TYPED JSON DUMP SIGNALS ---
   protected serverResponse = signal<SensorResponseDto | null>(null);
-  protected serverError = signal<ErrorDTO[] | null>(null); // Typed as array because interceptor normalizes it
+  protected serverError = signal<ErrorDTO | null>(null);
   protected status = signal<number | null>(null);
 
   private formulasResource = rxResource({
@@ -96,46 +91,31 @@ export default class SensorCreate {
       return;
     }
 
+    // Clear UI dump state before new request
     this.serverResponse.set(null);
     this.serverError.set(null);
     this.status.set(null);
-    this.clearBackendErrors();
 
     const payload = this.mapFormToPayload(this.sensorForm.value);
 
     this.sensorService.createSensor(payload, 'response').subscribe({
       next: (response) => {
-        // Populate success debug signals
         this.status.set(response.status);
-        this.serverResponse.set(response.body);
+        this.serverResponse.set(response.body); // Typed as SensorResponseDto
 
         this.formulasResource.reload();
-        this.notification.success();
-
         formDirective.resetForm({
           ...this.sensorForm.value,
           formulaControl: '',
         });
       },
-      error: (errors: ErrorDTO[]) => {
-        // Populate error debug signals
-        this.status.set(422); // Fallback assumption since the interceptor throws the raw array
-        this.serverError.set(errors);
+      error: (err: HttpErrorResponse) => {
+        this.status.set(err.status);
 
-        if (errors && errors.length > 0) {
-          this.formErrorService.applyErrors(this.sensorForm, errors);
-        }
+        // Safely typed extraction since your backend advice guarantees this shape!
+        const backendError = err.error as ErrorDTO;
+        this.serverError.set(backendError);
       },
-    });
-  }
-
-  private clearBackendErrors(): void {
-    Object.values(this.sensorForm.controls).forEach((control) => {
-      const errors = control.errors;
-      if (!errors?.['backend']) return;
-
-      const { backend, ...remaining } = errors;
-      control.setErrors(Object.keys(remaining).length ? remaining : null);
     });
   }
 

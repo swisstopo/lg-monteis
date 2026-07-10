@@ -21,12 +21,6 @@
       <mat-form-field appearance="outline">
         <mat-label>Lower Bound</mat-label>
         <input matInput type="number" formControlName="lowerBound" />
-
-        @if (sensorForm.controls.lowerBound.hasError('backend')) {
-          <mat-error>
-            <app-form-error [control]="sensorForm.controls.lowerBound"></app-form-error>
-          </mat-error>
-        }
       </mat-form-field>
 
       <mat-form-field appearance="outline">

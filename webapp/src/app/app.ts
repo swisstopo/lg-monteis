@@ -1,5 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { Component, signal } from '@angular/core';
 import { WorkbenchComponent } from '@scion/workbench';
 
 @Component({
@@ -10,9 +9,6 @@ import { WorkbenchComponent } from '@scion/workbench';
 })
 export class App {
   protected readonly title = signal('MONTEIS');
-  private readonly translate = inject(TranslateService);
 
-  constructor() {
-    this.translate.use('en');
-  }
+  constructor() {}
 }

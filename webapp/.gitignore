@@ -31,3 +31,4 @@ __screenshots__/
 /connect.lock
 /libpeerconnection.log
 testem.log
+.vitest-attachments/
