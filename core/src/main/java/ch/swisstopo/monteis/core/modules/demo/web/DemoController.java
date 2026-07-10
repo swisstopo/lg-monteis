@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.modules.demo.web;
 
 import ch.swisstopo.monteis.core.modules.demo.service.DemoService;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.ReadSimpleMetric;
-import ch.swisstopo.monteis.core.modules.demo.web.dto.WriteSensorDto;
 import java.util.List;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -40,12 +39,12 @@ public class DemoController {
     return ResponseEntity.ok(result);
   }
 
-  @PostMapping(
-      value = "/sensors",
-      consumes = MediaType.APPLICATION_JSON_VALUE,
-      produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<WriteSensorDto> saveSensor(@RequestBody WriteSensorDto dto) {
-    WriteSensorDto savedState = demoService.saveOrUpdateSensor(dto);
-    return ResponseEntity.ok(savedState);
-  }
+  //  @PostMapping(
+  //      value = "/sensors",
+  //      consumes = MediaType.APPLICATION_JSON_VALUE,
+  //      produces = MediaType.APPLICATION_JSON_VALUE)
+  //  public ResponseEntity<WriteSensorDto> saveSensor(@RequestBody WriteSensorDto dto) {
+  //    WriteSensorDto savedState = demoService.saveOrUpdateSensor(dto);
+  //    return ResponseEntity.ok(savedState);
+  //  }
 }

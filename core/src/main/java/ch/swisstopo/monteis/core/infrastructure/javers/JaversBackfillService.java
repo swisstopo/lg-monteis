@@ -2,10 +2,7 @@ package ch.swisstopo.monteis.core.infrastructure.javers;
 
 import ch.swisstopo.monteis.core.modules.demo.jooq.DemoRepository;
 import org.javers.core.Javers;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class JaversBackfillService {
@@ -18,15 +15,15 @@ public class JaversBackfillService {
     this.demoRepository = demoRepository;
   }
 
-  @EventListener(ApplicationReadyEvent.class)
-  @Transactional
-  public void backfillMissingSnapshots() {
-    try (var unauditedSensorsStream = demoRepository.streamUnauditedSensors()) {
-
-      unauditedSensorsStream.forEach(
-          sensor -> {
-            javers.commit("SYSTEM_SEEDER", sensor);
-          });
-    }
-  }
+  //  @EventListener(ApplicationReadyEvent.class)
+  //  @Transactional
+  //  public void backfillMissingSnapshots() {
+  //    try (var unauditedSensorsStream = demoRepository.streamUnauditedSensors()) {
+  //
+  //      unauditedSensorsStream.forEach(
+  //          sensor -> {
+  //            javers.commit("SYSTEM_SEEDER", sensor);
+  //          });
+  //    }
+  //  }
 }

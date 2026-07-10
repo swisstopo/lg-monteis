@@ -12,7 +12,7 @@
     "format:write": "prettier --write \"src/**/*.{ts,html,scss}\""
   },
   "private": true,
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@11.10.0",
   "dependencies": {
     "@angular/cdk": "^22.0.2",
     "@angular/common": "^22.0.3",
@@ -21,6 +21,8 @@
     "@angular/forms": "^22.0.3",
     "@angular/material": "^22.0.2",
     "@angular/platform-browser": "^22.0.3",
+    "@ngx-translate/core": "^18.0.0",
+    "@ngx-translate/http-loader": "^18.0.0",
     "@angular/router": "^22.0.3",
     "@scion/components": "^22.0.0",
     "@scion/microfrontend-platform": "^2.1.0",

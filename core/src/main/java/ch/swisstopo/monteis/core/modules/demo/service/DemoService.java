@@ -1,10 +1,8 @@
 package ch.swisstopo.monteis.core.modules.demo.service;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.BusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.modules.demo.jooq.DemoRepository;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.ReadSimpleMetric;
-import ch.swisstopo.monteis.core.modules.demo.web.dto.WriteSensorDto;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -35,10 +33,10 @@ public class DemoService {
     return results;
   }
 
-  @AuditChanges
-  public WriteSensorDto saveOrUpdateSensor(WriteSensorDto dto) {
-    return repository.saveSensorWithFormula(dto);
-  }
+  //  @AuditChanges
+  //  public WriteSensorDto saveOrUpdateSensor(WriteSensorDto dto) {
+  //    return repository.saveSensorWithFormula(dto);
+  //  }
 
   public ReadSimpleMetric fetchErrors(boolean testError) {
     List<ReadSimpleMetric> results = repository.fetchRecentMetrics(1);

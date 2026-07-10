@@ -1,6 +1,9 @@
 package ch.swisstopo.monteis.core.infrastructure.error;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.BusinessValidationException;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.UUID;
@@ -16,6 +19,10 @@ public class GlobalErrorControllerAdvice {
   private static final Logger log = LoggerFactory.getLogger(GlobalErrorControllerAdvice.class);
 
   @ExceptionHandler(BusinessValidationException.class)
+  @ApiResponse(
+      responseCode = "422",
+      description = "Business validation failure",
+      content = @Content(schema = @Schema(implementation = ErrorDTO.class)))
   public ResponseEntity<ErrorDTO> handleBusinessValidationException(BusinessValidationException e) {
     ErrorDTO payload =
         new ErrorDTO(e.getField(), e.getActualValue(), e.getMessageKey(), e.getParams());
@@ -24,6 +31,10 @@ public class GlobalErrorControllerAdvice {
   }
 
   @ExceptionHandler(Exception.class)
+  @ApiResponse(
+      responseCode = "500",
+      description = "Unexpected Exceptions",
+      content = @Content(schema = @Schema(implementation = ErrorDTO.class)))
   public ResponseEntity<ErrorDTO> handleException(Exception e, HttpServletRequest request) {
     String errorId = UUID.randomUUID().toString();
 
