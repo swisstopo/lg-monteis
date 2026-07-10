@@ -1,5 +1,6 @@
 #!/bin/sh
-# Render the local Keycloak realm from base + patch (P2), into realm_rendered.json.
+# Render the local Keycloak realm from base + patch (P2) into /out/realm-local.json
+# (the kc_realm_out volume, imported by the keycloak service).
 # Run inside the mikefarah/yq container by the realm-builder compose service.
 # Kept as a script file (not inline in compose.yml) so Docker Compose never
 # interpolates the yq `$base`/`$p` variables.
