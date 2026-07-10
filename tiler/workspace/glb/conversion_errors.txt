@@ -1,0 +1,105 @@
+IfcOpenShell IfcConvert 0.8.5-1c5b825 (OCC 7.8.1)
+Scanning file...
+Done scanning file   
+Done resolving references
+Parsing input file took 9 seconds
+Creating geometry...
+Done creating geometry (7757 objects)                                
+
+Log:
+[Error] [2026-07-09 14:48:25] An enumeration literal 'TELEPHONE' is not valid for type 'IfcElectricApplianceTypeEnum' at offset 55252888
+[Error] [2026-07-09 14:48:25] An enumeration literal 'TELEPHONE' is not valid for type 'IfcElectricApplianceTypeEnum' at offset 55253155
+[Error] [2026-07-09 14:48:25] An enumeration literal 'TELEPHONE' is not valid for type 'IfcElectricApplianceTypeEnum' at offset 55253429
+[Error] [2026-07-09 14:48:25] An enumeration literal 'TELEPHONE' is not valid for type 'IfcElectricApplianceTypeEnum' at offset 55253702
+[Error] [2026-07-09 15:50:28] {269HQbIZ17Xfj8O8fwdiVI} Triangulation missing for face
+[Error] [2026-07-09 15:58:30] {1YAlUkGt$8sexRmE5THHtH} No segment successfully converted:
+#820052=IfcCurveSegment(.DISCONTINUOUS.,#820050,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {3cbJrbKF_orBcGnI5SFYnN} No segment successfully converted:
+#820182=IfcCurveSegment(.DISCONTINUOUS.,#820180,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {1ypNjC5Sq8n5Km0bbOFDcC} No segment successfully converted:
+#820244=IfcCurveSegment(.DISCONTINUOUS.,#820242,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {0O$IesyBcS4DN2dnT0$4hh} No segment successfully converted:
+#820268=IfcCurveSegment(.DISCONTINUOUS.,#820266,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {3MmecJDhhJdzUZiyH_LsSj} No segment successfully converted:
+#820301=IfcCurveSegment(.DISCONTINUOUS.,#820299,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {1iNU1YNgfD_HpATEUrgt5U} No segment successfully converted:
+#820325=IfcCurveSegment(.DISCONTINUOUS.,#820323,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {2F40ww07MQ8hCc7yXzKieo} No segment successfully converted:
+#820349=IfcCurveSegment(.DISCONTINUOUS.,#820347,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {3YkA$5glFASiigdm6xqImn} No segment successfully converted:
+#820402=IfcCurveSegment(.DISCONTINUOUS.,#820400,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {2wHW1EIou0XF2JKJFRIaoS} No segment successfully converted:
+#820426=IfcCurveSegment(.DISCONTINUOUS.,#820424,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {2zGdqDk0kfalLcpKTj7em8} No segment successfully converted:
+#820450=IfcCurveSegment(.DISCONTINUOUS.,#820448,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {0RslWgQVqUDKlIaDSkf2RQ} No segment successfully converted:
+#820483=IfcCurveSegment(.DISCONTINUOUS.,#820481,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {0TQo$3tQYFaO8nBEdJCtt8} No segment successfully converted:
+#820507=IfcCurveSegment(.DISCONTINUOUS.,#820505,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {3Mh73YuYfrPxeRswNLndug} No segment successfully converted:
+#820549=IfcCurveSegment(.DISCONTINUOUS.,#820547,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {2sbFjULdBm80U0hXmE5hZS} No segment successfully converted:
+#820573=IfcCurveSegment(.DISCONTINUOUS.,#820571,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {2UAX$uFIrCow7OaPFuQ92y} No segment successfully converted:
+#820597=IfcCurveSegment(.DISCONTINUOUS.,#820595,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {0SU9FQNQu1FmFrSGno9IEF} No segment successfully converted:
+#820621=IfcCurveSegment(.DISCONTINUOUS.,#820619,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {1abCtTuNdgcULrpeDmsE$m} No segment successfully converted:
+#820672=IfcCurveSegment(.DISCONTINUOUS.,#820670,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:30] {3q_ReuW0BBu0SFEJTapkCB} No segment successfully converted:
+#820696=IfcCurveSegment(.DISCONTINUOUS.,#820694,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {335oLMM46UqIZX5DPhsk8W} No segment successfully converted:
+#820720=IfcCurveSegment(.DISCONTINUOUS.,#820718,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {21Qt97jvQuo4$VEYZ3_wl4} No segment successfully converted:
+#820933=IfcCurveSegment(.DISCONTINUOUS.,#820932,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] IfcGradientCurve does not have a common domain with BaseCurve
+[Error] [2026-07-09 15:58:31] Failed to convert:
+#820937=IfcGradientCurve((#820933),.U.,#820056,$)
+[Error] [2026-07-09 15:58:31] {1HnN2BaTh9bxHOm_i_vr4e} No segment successfully converted:
+#821043=IfcCurveSegment(.DISCONTINUOUS.,#821042,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {3dafQtyphI4bGa6v4_gwEI} No segment successfully converted:
+#821222=IfcCurveSegment(.DISCONTINUOUS.,#821221,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {3mIvg_UxiQsVV1jxlP5kG6} No segment successfully converted:
+#821247=IfcCurveSegment(.DISCONTINUOUS.,#821246,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] IfcGradientCurve does not have a common domain with BaseCurve
+[Error] [2026-07-09 15:58:31] Failed to convert:
+#821251=IfcGradientCurve((#821247),.U.,#820272,$)
+[Error] [2026-07-09 15:58:31] {3mugrOvfVLkmT8pCp5eHpM} No segment successfully converted:
+#821298=IfcCurveSegment(.DISCONTINUOUS.,#821297,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {3fJnfVMnwbKhSeDoW5vkLC} No segment successfully converted:
+#821322=IfcCurveSegment(.DISCONTINUOUS.,#821321,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {3FX2fSld75Spg1yOj8VpLm} No segment successfully converted:
+#821346=IfcCurveSegment(.DISCONTINUOUS.,#821345,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {3ttlTkeavPlysi7KKuY$9t} No segment successfully converted:
+#821370=IfcCurveSegment(.DISCONTINUOUS.,#821369,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {1AZg1d24uSFmaJ2XBWHAcj} No segment successfully converted:
+#821394=IfcCurveSegment(.DISCONTINUOUS.,#821393,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {2ulF$Fc3zL6aIurFMh7dZB} No segment successfully converted:
+#821418=IfcCurveSegment(.DISCONTINUOUS.,#821417,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {2GG6272ZnXQopChbiX6JW1} No segment successfully converted:
+#821443=IfcCurveSegment(.DISCONTINUOUS.,#821442,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] IfcGradientCurve does not have a common domain with BaseCurve
+[Error] [2026-07-09 15:58:31] Failed to convert:
+#821447=IfcGradientCurve((#821443),.U.,#820487,$)
+[Error] [2026-07-09 15:58:31] {3xzdYzqXA2jl46DPFiTCfA} No segment successfully converted:
+#821467=IfcCurveSegment(.DISCONTINUOUS.,#821466,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {2uCV7XWA5G_HStetggzaLt} No segment successfully converted:
+#821491=IfcCurveSegment(.DISCONTINUOUS.,#821490,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {00ze4pvbL89dOdBn9aA7P6} No segment successfully converted:
+#821515=IfcCurveSegment(.DISCONTINUOUS.,#821514,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {08Vpk8NYnzvNTC5rXCRWs_} No segment successfully converted:
+#821539=IfcCurveSegment(.DISCONTINUOUS.,#821538,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {2LGv5VthOJ_M0HFOA5t3$C} No segment successfully converted:
+#821563=IfcCurveSegment(.DISCONTINUOUS.,#821562,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {2bK2dOo8yVG4T1vuFAi2vd} No segment successfully converted:
+#821626=IfcCurveSegment(.DISCONTINUOUS.,#821625,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] IfcGradientCurve does not have a common domain with BaseCurve
+[Error] [2026-07-09 15:58:31] Failed to convert:
+#821630=IfcGradientCurve((#821626),.U.,#820676,$)
+[Error] [2026-07-09 15:58:31] {1eqW0F9SCBL096EGzCDWF5} No segment successfully converted:
+#821650=IfcCurveSegment(.DISCONTINUOUS.,#821649,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+[Error] [2026-07-09 15:58:31] {13PoB3w4jnWmk20LM5tH7j} No segment successfully converted:
+#821797=IfcCurveSegment(.DISCONTINUOUS.,#821796,IfcLengthMeasure(0.),IfcLengthMeasure(0.),#819984)
+
+
+Conversion took 71 minutes 10 seconds
