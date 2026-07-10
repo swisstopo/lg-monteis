@@ -83,3 +83,13 @@ Desktop.ini
 
 # Security / Generated SBOMs
 sbom.spdx.json
+
+# =========================
+# Tilers
+# =========================
+*.ifc
+*.glb
+*.b3dm
+*.zip
+.venv
+node_modules/

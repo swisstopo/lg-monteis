@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>3D Tiles Building</title>
+    <meta charset="UTF-8" />
+    <meta name="name" content="3d-tiles-building" />
+    <meta
+      name="description"
+      content="Display a 3D Tiles building converted from a IFC file with py3dtiles."
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="icon" href="https://giro3d.org/images/favicon.svg" />
+    <link
+      href="https://giro3d.org/assets/bootstrap-custom.css"
+      rel="stylesheet"
+    />
+    <script src="https://giro3d.org/assets/bootstrap.bundle.min.js"></script>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://giro3d.org/latest/examples/css/example.css"
+    />
+    <script type="module" crossorigin src="/assets/index-CgrQBGX7.js"></script>
+  </head>
+
+  <body>
+    <div id="view" class="m-0 p-0 w-100 h-100"></div>
+    <div
+      id="inspector"
+      class="position-absolute top-0 start-0 mh-100 overflow-auto"
+    ></div>
+
+    <div class="side-pane-with-status-bar">
+      <div class="card">
+        <h5 class="card-header">Element informations</h5>
+        <div class="card-body" style="max-width: 30vw">
+          <!-- Result table -->
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <!-- <th scope="col">#</th> -->
+                <th scope="col">Name</th>
+                <th scope="col">Value</th>
+              </tr>
+            </thead>
+            <tbody id="results-body">
+              <tr>
+                <th scope="row" colspan="4">
+                  Click on the scene to inspect object properties
+                </th>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* activate popovers */
+      const popoverTriggerList = [].slice.call(
+        document.querySelectorAll('[data-bs-toggle="popover"]'),
+      );
+      popoverTriggerList.map(
+        // bootstrap is used as script in the template, disable warning about undef
+        // eslint-disable-next-line no-undef
+        (popoverTriggerEl) =>
+          new bootstrap.Popover(popoverTriggerEl, {
+            trigger: "hover",
+            placement: "left",
+            content: document.getElementById(
+              popoverTriggerEl.getAttribute("data-bs-content"),
+            ).innerHTML,
+            html: true,
+          }),
+      );
+    </script>
+  </body>
+</html>

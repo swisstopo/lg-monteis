@@ -1,0 +1,13 @@
+--- a../giro3d/.venv/lib/python3.12/site-packages/py3dtiles/tilers/ifc/ifc_tiler_worker.py
++++ b../giro3d/.venv/lib/python3.12/site-packages/py3dtiles/tilers/ifc/ifc_tiler_worker.py
+@@ -207,7 +207,9 @@
+                 
+                 primitives = []
+                 if f.mesh.materials:
+-                    material_ids = np.array(f.mesh.material_ids, dtype=np.uint32)
++                    # IFC meshes may use -1 as a sentinel for "no material".
++                    # Keep ids signed so numpy conversion does not overflow.
++                    material_ids = np.array(f.mesh.material_ids, dtype=np.int64)
+                     for mat_id in range(len(f.mesh.materials)):
+                         material = f.mesh.materials[mat_id].to_pygltflib_material()
+                         if f.mesh.geom.faces:
