@@ -172,20 +172,8 @@ services:
     volumes:
       - ./keycloak/realm:/realm:ro
       - kc_realm_out:/out
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        set -e
-        # jq-style targeted merge in yq: set SPA URLs + append local users.
-        # $$ escapes Compose interpolation so yq receives literal $base/$p variables.
-        yq -o=json eval-all '
-          select(fi==0) as $$base | select(fi==1) as $$p
-          | $$base
-          | .clients |= map(select(.clientId=="monteis-spa") .redirectUris = $$p.spa.redirectUris | .webOrigins = $$p.spa.webOrigins)
-          | .users = (($$base.users // []) + ($$p.users // []))
-        ' /realm/realm-base.json /realm/patch.local.json > /out/realm-local.json
-        echo "rendered /out/realm-local.json"
+    # Render logic lives in render.sh so Compose never interpolates the yq $vars.
+    entrypoint: ["/bin/sh", "/realm/render.sh"]
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.6.4
@@ -200,7 +188,7 @@ services:
       KC_HTTP_RELATIVE_PATH: /auth
     command: [ "start-dev", "--import-realm" ]
     ports:
-      - "8081:8080" # 8080 taken by kafka-connect host mapping elsewhere; Keycloak on 8081
+      - "8081:8080"
     volumes:
       - kc_realm_out:/opt/keycloak/data/import:ro
     healthcheck:
