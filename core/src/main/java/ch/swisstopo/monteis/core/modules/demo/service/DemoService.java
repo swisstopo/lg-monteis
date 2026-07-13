@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.modules.demo.service;
 
-import ch.swisstopo.monteis.core.infrastructure.exception.BusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.modules.demo.jooq.DemoRepository;
 import ch.swisstopo.monteis.core.modules.demo.web.dto.ReadSimpleMetric;
 import java.util.List;
@@ -42,7 +42,7 @@ public class DemoService {
     List<ReadSimpleMetric> results = repository.fetchRecentMetrics(1);
     ReadSimpleMetric finalResult = results.getFirst();
     if (testError) {
-      throw new BusinessValidationException("age", 15, "sensor.age.too.low", Map.of("min", 18));
+      throw new ObjectBusinessValidationException("sensor.age.too.not.valid", Map.of("min", 18));
     }
     return finalResult;
   }

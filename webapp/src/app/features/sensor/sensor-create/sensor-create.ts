@@ -11,12 +11,12 @@ import { WorkbenchView } from '@scion/workbench';
 import { startWith } from 'rxjs';
 
 import {
-  CreateFormulaDto,
-  CreateSensorDto,
-  ErrorDTO,
+  ErrorDto,
   FormulaResponseDto,
   SensorControllerService,
   SensorResponseDto,
+  WriteFormulaDto,
+  WriteSensorDto,
 } from '../../../core/generated';
 
 @Component({
@@ -49,7 +49,7 @@ export default class SensorCreate {
 
   // --- STRICTLY TYPED JSON DUMP SIGNALS ---
   protected serverResponse = signal<SensorResponseDto | null>(null);
-  protected serverError = signal<ErrorDTO | null>(null);
+  protected serverError = signal<ErrorDto | null>(null);
   protected status = signal<number | null>(null);
 
   private formulasResource = rxResource({
@@ -113,16 +113,16 @@ export default class SensorCreate {
         this.status.set(err.status);
 
         // Safely typed extraction since your backend advice guarantees this shape!
-        const backendError = err.error as ErrorDTO;
+        const backendError = err.error as ErrorDto;
         this.serverError.set(backendError);
       },
     });
   }
 
-  private mapFormToPayload(formValue: typeof this.sensorForm.value): CreateSensorDto {
+  private mapFormToPayload(formValue: typeof this.sensorForm.value): WriteSensorDto {
     const rawFormulaValue = formValue.formulaControl;
 
-    const formulaPayload: CreateFormulaDto | undefined =
+    const formulaPayload: WriteFormulaDto | undefined =
       typeof rawFormulaValue === 'object' && rawFormulaValue
         ? { ...rawFormulaValue, expression: rawFormulaValue.expression ?? '' }
         : typeof rawFormulaValue === 'string' && rawFormulaValue.trim()

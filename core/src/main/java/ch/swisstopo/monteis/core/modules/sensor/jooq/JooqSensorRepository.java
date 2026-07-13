@@ -23,33 +23,33 @@ public class JooqSensorRepository implements SensorRepository {
   }
 
   @Override
-  @Transactional // Ensures the formula find/create + sensor insert happen in a single transaction
+  @Transactional
   public Sensor save(Sensor sensor) {
     Formula inboundFormula = sensor.getFormula();
     FormulasRecord formulaRecord = null;
 
-    // 1. Look up by ID (Primary key is guaranteed unique, so fetchOne() is safe here)
+    // Try lookup supposedly existing formula
     if (inboundFormula.getId() != null) {
       formulaRecord =
           dsl.selectFrom(FORMULAS).where(FORMULAS.ID.eq(inboundFormula.getId())).fetchOne();
     }
 
-    // 2. Look up by Expression string
+    // Find already existing duplicate
     if (formulaRecord == null) {
       formulaRecord =
           dsl.selectFrom(FORMULAS)
               .where(FORMULAS.EXPRESSION.eq(inboundFormula.getExpression()))
-              .fetchAny(); // FIX: Safely handles duplicate "x" rows in the DB
+              .fetchAny();
     }
 
-    // 3. Insert if completely missing
+    // Insert if and only if not exists
     if (formulaRecord == null) {
       formulaRecord = dsl.newRecord(FORMULAS);
       formulaRecord.setExpression(inboundFormula.getExpression());
       formulaRecord.insert();
     }
 
-    // Bind and store the sensor
+    // Create the sensor
     sensor.setFormula(mapper.toDomain(formulaRecord));
 
     SensorsRecord sensorRecord = mapper.toRecord(sensor);

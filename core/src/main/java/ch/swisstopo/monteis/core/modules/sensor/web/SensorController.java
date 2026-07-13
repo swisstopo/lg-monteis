@@ -1,15 +1,16 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
+import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor.CreateSensorDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor.SensorResponseDto;
-import jakarta.validation.Valid;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor.WriteSensorDto;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,18 +27,12 @@ public class SensorController {
   @PostMapping(
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<SensorResponseDto> createSensor(@Valid @RequestBody CreateSensorDto dto) {
+  public ResponseEntity<SensorResponseDto> createSensor(
+      @Validated(Create.class) @RequestBody WriteSensorDto dto) {
 
-    // 1. Map inbound JSON to Domain Model
     Sensor sensorToCreate = mapper.toDomain(dto);
-
-    // 2. Execute business logic & insert (returns hydrated Domain Model)
     Sensor createdSensor = service.createSensor(sensorToCreate);
-
-    // 3. Map the hydrated Domain Model back to JSON-friendly Response DTO
     SensorResponseDto responseBody = mapper.toDto(createdSensor);
-
-    // 4. Return the full object to the client
     return ResponseEntity.status(HttpStatus.CREATED).body(responseBody);
   }
 

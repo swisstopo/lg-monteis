@@ -157,7 +157,7 @@ Die Validierung ist in zwei Schichten unterteilt und wird über einen zentralen 
 
 ** Wo: Im Service Layer.
 
-** Wie: Der Service prüft fachliche Regeln (z.B. "Darf dieser Sensor hier platziert werden?"). Schlägt dies fehl, wirft der Service eine eigene, massgeschneiderte Exception (z.B. `BusinessValidationException`), welche das betroffene Feld und den Message-Key enthält.
+** Wie: Der Service prüft fachliche Regeln (z.B. "Darf dieser Sensor hier platziert werden?"). Schlägt dies fehl, wirft der Service eine eigene, massgeschneiderte Exception (z.B. `ObjectBusinessValidationException`), welche das betroffene Feld und den Message-Key enthält.
 
 * Der Magische `@RestControllerAdvice` (Zentraler Exception Handler):
 

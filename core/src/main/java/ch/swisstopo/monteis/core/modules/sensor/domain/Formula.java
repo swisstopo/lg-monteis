@@ -1,6 +1,8 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
+import java.util.Map;
 
 public class Formula {
   private Long id;
@@ -14,6 +16,7 @@ public class Formula {
    */
   @Default
   public Formula(String expression) {
+    validateExpression(expression);
     this.expression = expression;
   }
 
@@ -21,6 +24,7 @@ public class Formula {
    * Constructor for REBUILDING an existing Formula from the database (jOOQ).
    */
   public Formula(Long id, String expression, Integer version) {
+    validateExpression(expression);
     this.id = id;
     this.expression = expression;
     this.version = version;
@@ -28,6 +32,16 @@ public class Formula {
 
   public Formula() {
     this.expression = DEFAULT_EXPRESSION; // Default fallback initialization
+  }
+
+  private void validateExpression(String expr) {
+    if (expr == null || !expr.contains(DEFAULT_EXPRESSION)) {
+      throw new FieldBusinessValidationException(
+          "formulaControl", // should match frontend control
+          expr,
+          "validation.formula.malformed",
+          Map.of("requiredVariable", "x"));
+    }
   }
 
   // --- Getters and Setters ---
