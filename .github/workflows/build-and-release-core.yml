@@ -2,7 +2,7 @@ name: Build and Push Core API Image
 on:
   push:
     branches:
-      - mon-93-docker-build
+      - main
     paths:
       - 'core/**/*.java'
       - 'core/**/*.xml'

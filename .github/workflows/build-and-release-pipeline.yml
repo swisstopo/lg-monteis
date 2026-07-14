@@ -3,7 +3,7 @@ name: Build and Push Pipeline Image
 on:
   push:
     branches:
-      - mon-93-docker-build
+      - main
     paths:
       - 'pipeline/**/*.java'
       - 'pipeline/**/*.xml'

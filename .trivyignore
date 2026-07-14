@@ -1,4 +1,5 @@
 # A list of security issues only relevant for Image scanning!
+# It is prohibited to ignore CVEs from source code dependencies, use with caution!
 
 # Waiting for Paketo buildpacks to update Go to 1.26.5
 CVE-2026-39822
