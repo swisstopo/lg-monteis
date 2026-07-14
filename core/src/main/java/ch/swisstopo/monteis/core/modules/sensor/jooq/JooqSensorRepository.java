@@ -2,13 +2,16 @@ package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.FORMULAS;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.FormulasRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorsRecord;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import java.util.List;
+import java.util.Map;
 import org.jooq.DSLContext;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,8 +57,14 @@ public class JooqSensorRepository implements SensorRepository {
 
     SensorsRecord sensorRecord = mapper.toRecord(sensor);
     sensorRecord.attach(dsl.configuration());
-    sensorRecord.store();
 
+    // handle unique constraint for user feedback
+    try {
+      sensorRecord.store();
+    } catch (DuplicateKeyException e) {
+      throw new FieldBusinessValidationException(
+          "code", sensor.getCode(), "validation.unique", Map.of());
+    }
     return mapper.toDomain(sensorRecord, formulaRecord);
   }
 
