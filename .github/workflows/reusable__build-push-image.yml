@@ -96,6 +96,7 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore'
 
       - name: "[PUSH]: Tag and push docker image to Amazon ECR"
         env:
