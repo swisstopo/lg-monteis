@@ -1,9 +1,15 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
+import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
+import org.javers.core.metamodel.annotation.Id;
+import org.javers.core.metamodel.annotation.TypeName;
 
-public class Sensor {
-  private Long id;
+@TypeName(Sensor.JAVERS_TYPE)
+public class Sensor implements Auditable {
+  public static final String JAVERS_TYPE = "Sensor";
+
+  @Id private Long id;
   private String code;
   private String name;
   private Bounds bounds;

@@ -6,6 +6,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface SensorJooqMapper {
@@ -23,6 +24,10 @@ public interface SensorJooqMapper {
   @Mapping(target = "upperBound", source = "bounds.upper")
   @Mapping(target = "formulaId", source = "formula.id")
   SensorsRecord toRecord(Sensor domain);
+
+  @Mapping(target = "lowerBound", source = "bounds.lower")
+  @Mapping(target = "upperBound", source = "bounds.upper")
+  void updateRecordFromDomain(Sensor sensor, @MappingTarget SensorsRecord record);
 
   // --- Embedded Formula Sub-Object Mappings ---
   Formula toDomain(FormulasRecord record);

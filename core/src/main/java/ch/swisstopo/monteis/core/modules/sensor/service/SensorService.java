@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.service;
 
+import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
@@ -18,6 +19,11 @@ public class SensorService {
   @Transactional
   public Sensor createSensor(Sensor sensor) {
     return repository.save(sensor);
+  }
+
+  @AuditChanges
+  public Sensor updateSensor(Sensor sensor) {
+    return repository.update(sensor);
   }
 
   public List<Formula> findAllFormulas() {

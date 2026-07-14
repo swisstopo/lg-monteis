@@ -40,31 +40,31 @@ public class DemoRepository {
   //    }
   //  }
   //
-  //  private @NonNull WriteSensorDto updateSensorWithFormula(WriteSensorDto dto) {
-  //    var sensorRecord = dsl.selectFrom(SENSORS).where(SENSORS.ID.eq(dto.id())).fetchOne();
-  //    var formulaRecord =
-  // dsl.selectFrom(FORMULAS).where(FORMULAS.SENSOR_ID.eq(dto.id())).fetchOne();
+  //    private @NonNull WriteSensorDto updateSensorWithFormula(WriteSensorDto dto) {
+  //      var sensorRecord = dsl.selectFrom(SENSORS).where(SENSORS.ID.eq(dto.id())).fetchOne();
+  //      var formulaRecord =
+  //   dsl.selectFrom(FORMULAS).where(FORMULAS.SENSOR_ID.eq(dto.id())).fetchOne();
   //
-  //    if (sensorRecord == null || formulaRecord == null) {
-  //      throw new DataChangedException("Record no longer exists.");
+  //      if (sensorRecord == null || formulaRecord == null) {
+  //        throw new DataChangedException("Record no longer exists.");
+  //      }
+  //
+  //      // 1. Rewind versions for Optimistic Locking
+  //      sensorRecord.setVersion(dto.version());
+  //      formulaRecord.setVersion(dto.formulaVersion());
+  //
+  //      // 2. Apply the data
+  //      sensorRecord.setCode(dto.code());
+  //      sensorRecord.setUpperBound(dto.upperBound());
+  //      sensorRecord.setLowerBound(dto.lowerBound());
+  //      formulaRecord.setExpression(dto.expression());
+  //
+  //      // 3. Update
+  //      sensorRecord.update();
+  //      formulaRecord.update();
+  //
+  //      return toDto(sensorRecord, formulaRecord);
   //    }
-  //
-  //    // 1. Rewind versions for Optimistic Locking
-  //    sensorRecord.setVersion(dto.version());
-  //    formulaRecord.setVersion(dto.formulaVersion());
-  //
-  //    // 2. Apply the data
-  //    sensorRecord.setCode(dto.code());
-  //    sensorRecord.setUpperBound(dto.upperBound());
-  //    sensorRecord.setLowerBound(dto.lowerBound());
-  //    formulaRecord.setExpression(dto.expression());
-  //
-  //    // 3. Update
-  //    sensorRecord.update();
-  //    formulaRecord.update();
-  //
-  //    return toDto(sensorRecord, formulaRecord);
-  //  }
   //
   //  private @NonNull WriteSensorDto insertSensorWithFormula(WriteSensorDto dto) {
   //    var sensorRecord = dsl.newRecord(SENSORS);
