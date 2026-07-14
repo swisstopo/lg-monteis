@@ -3,7 +3,7 @@ name: Build and Push Backend Images
 on:
   push:
     branches:
-      - main
+      - mon-93-docker-build
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
