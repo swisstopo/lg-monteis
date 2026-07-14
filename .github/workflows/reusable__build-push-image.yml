@@ -12,7 +12,7 @@ env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION }}
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
   NODE_VERSION: ${{ vars.NODE_VERSION }}
-# todo: remove me
+
 jobs:
   evaluate-version:
     name: Evaluate Tag for ${{ inputs.service }}
@@ -38,7 +38,7 @@ jobs:
         uses: paulhatch/semantic-version@v6.0.2
         with:
           tag_prefix: "${{ env.SERVICE }}-v"
-          change_path: "${{ env.SERVICE }}/"
+          change_path: "${{ env.SERVICE }}/ pom.xml"
 
       - name: "[TAG]: Check if already tagged"
         run: |

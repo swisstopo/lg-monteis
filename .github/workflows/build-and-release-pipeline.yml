@@ -1,26 +1,19 @@
-name: Build and Push Backend Images
+name: Build and Push Pipeline Image
 
 on:
   push:
     branches:
       - mon-93-docker-build
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'webapp/**'
-      - 'LICENSE'
+    paths:
+      - 'pipeline/**/*.java'
+      - 'pipeline/**/*.xml'
+      - 'pom.xml'
 
 permissions:
   contents: write # required for: git push tag
   id-token: write # required for: aws-actions/amazon-ecr-login
 
 jobs:
-  build-core:
-    uses: ./.github/workflows/reusable__build-push-image.yml
-    with:
-      service: 'core'
-
   build-pipeline:
     uses: ./.github/workflows/reusable__build-push-image.yml
     with:
