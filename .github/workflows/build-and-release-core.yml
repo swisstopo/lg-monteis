@@ -1,0 +1,19 @@
+name: Build and Push Core API Image
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'core/**/*.java'
+      - 'core/**/*.xml'
+      - 'pom.xml'
+
+permissions:
+  contents: write # required for: git push tag
+  id-token: write # required for: aws-actions/amazon-ecr-login
+
+jobs:
+  build-core:
+    uses: ./.github/workflows/reusable__build-push-image.yml
+    with:
+      service: 'core'
