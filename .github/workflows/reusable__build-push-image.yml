@@ -20,6 +20,11 @@ jobs:
     # https://docs.github.com/en/actions/reference/security/secure-use#use-an-intermediate-environment-variable
     env:
       SERVICE: ${{ inputs.service }}
+    outputs:
+      is_tagged: ${{ steps.semver.outputs.is_tagged }}
+      changed: ${{ steps.semver.outputs.changed }}
+      version: ${{ steps.semver.outputs.version }}
+      version_tag: ${{ steps.semver.outputs.version_tag }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -73,7 +78,7 @@ jobs:
 
       - name: "[BUILD]: Build Spring Boot Image"
         env:
-          VERSION: ${{ steps.semver.outputs.version }}
+          VERSION: ${{ needs.evaluate-version.outputs.version }}
         run: |
           mvn -pl ${{ env.SERVICE }} spring-boot:build-image \
             -Dspring-boot.build-image.imageName=local-registry/${{ env.SERVICE }}:$VERSION \
@@ -82,7 +87,7 @@ jobs:
       - name: "[SECURITY]: Run Trivy Image Scan"
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: 'local-registry/${{ env.SERVICE }}:${{ steps.semver.outputs.version }}'
+          image-ref: 'local-registry/${{ env.SERVICE }}:${{ needs.evaluate-version.outputs.version }}'
           scan-type: 'image'
           format: 'table'
           exit-code: '1'
@@ -93,7 +98,7 @@ jobs:
         env:
           REGISTRY: ${{ vars.AWS_ECR_REGISTRY }}
           REPOSITORY: ${{ env.SERVICE }}
-          VERSION: ${{ steps.semver.outputs.version }}
+          VERSION: ${{ needs.evaluate-version.outputs.version }}
         run: |
           # Tag the locally built image with the ECR registry path + SemVer
           docker tag local-registry/${{ env.SERVICE }}:$VERSION ${REGISTRY}${REPOSITORY}:$VERSION
@@ -103,7 +108,7 @@ jobs:
 
       - name: "[TAG]: Push Git Tag to GitHub"
         env:
-          TAG: ${{ steps.semver.outputs.version_tag }}
+          TAG: ${{ needs.evaluate-version.outputs.version_tag }}
         run: |
           echo "[INFO]: Tagging commit with $TAG"
 
