@@ -330,14 +330,13 @@ jobs:
       - name: Generate Sources
         run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
 
-      - parallel:
-        - name: Install Node Modules and Playwright
-          working-directory: webapp
-          run: pnpm exec playwright install chromium firefox webkit --with-deps
+      - name: Install Node Modules and Playwright
+        working-directory: webapp
+        run: pnpm exec playwright install chromium firefox webkit --with-deps
 
-        - name: Generate API
-          working-directory: webapp
-          run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
+      - name: Generate API
+        working-directory: webapp
+        run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
 
       - name: Run all e2e tests
         working-directory: webapp
