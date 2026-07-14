@@ -105,10 +105,10 @@ jobs:
           VERSION: ${{ needs.evaluate-version.outputs.version }}
         run: |
           # Tag the locally built image with the ECR registry path + SemVer
-          docker tag local-registry/${{ env.SERVICE }}:$VERSION ${REGISTRY}${REPOSITORY}:$VERSION
+          docker tag local-registry/${{ env.SERVICE }}:$VERSION ${REGISTRY}/${REPOSITORY}:$VERSION
 
           # Push the tag to AWS ECR
-          docker push ${REGISTRY}${REPOSITORY}:$VERSION
+          docker push ${REGISTRY}/${REPOSITORY}:$VERSION
 
       - name: "[TAG]: Push Git Tag to GitHub"
         env:
