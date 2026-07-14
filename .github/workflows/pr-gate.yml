@@ -24,7 +24,7 @@ env:
   CORE_APP_META_DB_PWD: ${{ vars.CORE_APP_META_DB_PWD }}
 
   # Docker Image Versions
-  TEST_CONTAINER_IMAGE: 'testcontainers/ryuk:0.14.0'
+  TEST_CONTAINER_IMAGE: 'testcontainers/ryuk:0.12.0'
   TIMESCALE_DB_IMAGE: 'timescale/timescaledb:latest-pg18'
   POSTGRES_DB_IMAGE: 'postgres:18-alpine'
 
