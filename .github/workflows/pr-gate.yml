@@ -23,6 +23,11 @@ env:
   CORE_APP_META_DB_USER: ${{ vars.CORE_APP_META_DB_USER }}
   CORE_APP_META_DB_PWD: ${{ vars.CORE_APP_META_DB_PWD }}
 
+  # Docker Image Versions
+  TEST_CONTAINER_IMAGE: 'testcontainers/ryuk:0.14.0'
+  TIMESCALE_DB_IMAGE: 'timescale/timescaledb:2.28.2-pg18'
+  POSTGRES_DB_IMAGE: 'postgres:18-alpine'
+
 permissions: read-all
 
 concurrency:
@@ -241,15 +246,15 @@ jobs:
       - name: Load Postgres Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
-          image: 'postgres:18-alpine'
+          image: ${{ env.POSTGRES_DB_IMAGE }}
       - name: Load Test Containers Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
-          image: 'testcontainers/ryuk:0.12.0'
+          image: ${{ env.TEST_CONTAINER_IMAGE }}
       - name: Load TimeScaleDB Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
-          image: 'timescale/timescaledb:latest-pg18'
+          image: ${{ env.TIMESCALE_DB_IMAGE }}
 
       - name: Generate Sources
         run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
@@ -266,7 +271,7 @@ jobs:
         working-directory: webapp
         run: pnpm vitest --browser.headless=true
 
-  get-e2e-files:
+  prepare-e2e-tests:
     name: Get E2E test file to run
     if: contains(github.event.pull_request.labels.*.name, 'e2e-test')
     runs-on: ubuntu-24.04
@@ -296,7 +301,7 @@ jobs:
   run-e2e-tests:
     name: E2E file test
     if: contains(github.event.pull_request.labels.*.name, 'e2e-test')
-    needs: [warmup-caches, get-e2e-files]
+    needs: [warmup-caches, prepare-e2e-tests]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -315,17 +320,17 @@ jobs:
       - name: Load Test Containers Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
-          image: 'testcontainers/ryuk:0.12.0'
+          image: ${{ env.TEST_CONTAINER_IMAGE }}
 
       - name: Load TimeScaleDB Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
-          image: 'timescale/timescaledb:latest-pg18'
+          image: ${{ env.TIMESCALE_DB_IMAGE }}
 
       - name: Load Postgres Docker Cache
         uses: ./.github/actions/global-docker-cache
         with:
-          image: 'postgres:18-alpine'
+          image: ${{ env.POSTGRES_DB_IMAGE }}
 
       - name: Generate Sources
         run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
