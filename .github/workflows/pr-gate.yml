@@ -317,20 +317,20 @@ jobs:
           - name: Setup Node Environment (Hits Cache)
             uses: ./.github/actions/setup-node-pnpm
 
-          - name: Load Test Containers Docker Cache
-            uses: ./.github/actions/global-docker-cache
-            with:
-              image: ${{ env.TEST_CONTAINER_IMAGE }}
+      - name: Load Test Containers Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: ${{ env.TEST_CONTAINER_IMAGE }}
 
-          - name: Load TimeScaleDB Docker Cache
-            uses: ./.github/actions/global-docker-cache
-            with:
-              image: ${{ env.TIMESCALE_DB_IMAGE }}
+      - name: Load TimeScaleDB Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: ${{ env.TIMESCALE_DB_IMAGE }}
 
-          - name: Load Postgres Docker Cache
-            uses: ./.github/actions/global-docker-cache
-            with:
-              image: ${{ env.POSTGRES_DB_IMAGE }}
+      - name: Load Postgres Docker Cache
+        uses: ./.github/actions/global-docker-cache
+        with:
+          image: ${{ env.POSTGRES_DB_IMAGE }}
 
       - name: Generate Sources
         run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
