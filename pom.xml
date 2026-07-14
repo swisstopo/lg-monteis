@@ -96,7 +96,7 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
-
+  <!-- test commit..... todo: remove me-->
   <build>
     <pluginManagement>
       <plugins>
