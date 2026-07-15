@@ -6,7 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 
-import ch.swisstopo.monteis.core.modules.overview.jooq.OverviewRepository;
+import ch.swisstopo.monteis.core.modules.overview.jooq.OverviewQueryRepository;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class OverviewServiceTest {
 
-  @Mock private OverviewRepository repository;
+  @Mock private OverviewQueryRepository repository;
 
   @InjectMocks private OverviewService service;
 

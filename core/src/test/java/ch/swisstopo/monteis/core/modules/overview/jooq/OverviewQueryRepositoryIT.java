@@ -13,9 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @IT
-class OverviewRepositoryIT {
+class OverviewQueryRepositoryIT {
 
-  @Autowired private OverviewRepository repository;
+  @Autowired private OverviewQueryRepository repository;
 
   @Test
   void should_fetch_recent_metrics_ordered_desc_and_limited_from_seed() {

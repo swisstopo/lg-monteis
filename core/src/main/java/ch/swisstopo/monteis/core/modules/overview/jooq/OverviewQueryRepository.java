@@ -9,11 +9,11 @@ import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class OverviewRepository implements QueryInterface {
+public class OverviewQueryRepository implements QueryInterface {
 
   private final DSLContext dsl;
 
-  public OverviewRepository(DSLContext dsl) {
+  public OverviewQueryRepository(DSLContext dsl) {
     this.dsl = dsl;
   }
 
