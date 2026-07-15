@@ -2,10 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WorkbenchView } from '@scion/workbench';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
-import { DemoControllerService } from '../../../core/generated';
+import { OverviewControllerService } from '../../../core/generated';
 import AgMatTable from './ag-mat-table';
 
-const demoServiceMock = {
+const overviewServiceMock = {
   getMetrics: vi.fn().mockReturnValue(of([])),
 };
 
@@ -17,8 +17,8 @@ describe('AgMatTable', () => {
       imports: [AgMatTable],
       providers: [
         {
-          provide: DemoControllerService,
-          useValue: demoServiceMock,
+          provide: OverviewControllerService,
+          useValue: overviewServiceMock,
         },
         WorkbenchView,
       ],

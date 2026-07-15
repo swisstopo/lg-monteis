@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-export const DEMO_ROUTES: Routes = [
+export const OVERVIEW_ROUTES: Routes = [
   {
     path: 'overview',
     loadComponent: () => import('./overview/overview'),

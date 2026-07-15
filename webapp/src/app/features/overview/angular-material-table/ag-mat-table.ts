@@ -3,7 +3,7 @@ import { Component, effect, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { MatTableModule } from '@angular/material/table';
 import { WorkbenchView } from '@scion/workbench';
-import { DemoControllerService } from '../../../core/generated';
+import { OverviewControllerService } from '../../../core/generated';
 @Component({
   selector: 'app-ag-mat-table',
   imports: [DatePipe, MatTableModule],
@@ -11,9 +11,9 @@ import { DemoControllerService } from '../../../core/generated';
   styleUrl: './ag-mat-table.scss',
 })
 export default class AgMatTable {
-  protected demoService = inject(DemoControllerService);
+  protected overviewService = inject(OverviewControllerService);
   protected metricsResource = rxResource({
-    stream: () => this.demoService.getMetrics(15),
+    stream: () => this.overviewService.getMetrics(15),
   });
   protected displayedColumns = ['timestamp', 'normValue', 'rawValue'];
   constructor(view: WorkbenchView) {

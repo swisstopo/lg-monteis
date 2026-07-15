@@ -1,8 +1,8 @@
 import { DatePipe } from '@angular/common';
-import { ReadSimpleMetric } from '../../../core/generated';
+import { ReadSimpleMetricDto } from '../../../core/generated';
 import { TableColumn } from '../../../ui/table/table.types';
 
-export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetric>[] {
+export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetricDto>[] {
   return [
     {
       field: 'sensorId',

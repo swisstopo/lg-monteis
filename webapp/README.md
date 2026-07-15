@@ -76,8 +76,8 @@ src/
 │   └── auth/                       <-- Authentication infrastructure
 │
 ├── features/                       <-- Business features and pages
-│   └── demo/
-│       ├── demo.routes.ts
+│   └── overview/
+│       ├── overview.routes.ts
 │       ├── overview/
 │       ├── metrics-menu/
 │       └── ag-grid-record/

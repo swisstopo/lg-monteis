@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, effect, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { WorkbenchView } from '@scion/workbench';
-import { DemoControllerService, ReadSimpleMetric } from '../../../core/generated';
+import { OverviewControllerService, ReadSimpleMetricDto } from '../../../core/generated';
 import Table from '../../../ui/table/table';
 import { createColumns } from './columns';
 
@@ -14,11 +14,11 @@ import { createColumns } from './columns';
   styleUrl: './ag-grid-record.scss',
 })
 export default class AgGridRecord {
-  private datePipe = inject(DatePipe);
+  private readonly datePipe = inject(DatePipe);
 
-  protected demoService = inject(DemoControllerService);
+  protected overviewService = inject(OverviewControllerService);
   protected metricsResource = rxResource({
-    stream: () => this.demoService.getMetrics(50),
+    stream: () => this.overviewService.getMetrics(50),
   });
 
   protected wrappedCols = createColumns(this.datePipe);
@@ -30,7 +30,7 @@ export default class AgGridRecord {
     });
   }
 
-  onWrappedRow(row: ReadSimpleMetric) {
+  onWrappedRow(row: ReadSimpleMetricDto) {
     console.log(row);
   }
 }

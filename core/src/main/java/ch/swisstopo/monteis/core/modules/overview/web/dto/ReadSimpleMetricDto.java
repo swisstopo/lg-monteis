@@ -1,8 +1,8 @@
-package ch.swisstopo.monteis.core.modules.demo.web.dto;
+package ch.swisstopo.monteis.core.modules.overview.web.dto;
 
 import java.time.OffsetDateTime;
 
-public record ReadSimpleMetric(
+public record ReadSimpleMetricDto(
     OffsetDateTime timestamp,
     String sensorId,
     Double rawValue,
