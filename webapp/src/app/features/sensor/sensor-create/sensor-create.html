@@ -1,0 +1,72 @@
+<div class="sensor-create-container">
+  <h2>Create New Sensor Configuration</h2>
+
+  <form
+    [formGroup]="sensorForm"
+    #formDirective="ngForm"
+    (ngSubmit)="onSubmit(formDirective)"
+    class="form-layout"
+  >
+    <mat-form-field appearance="outline">
+      <mat-label>Sensor Code</mat-label>
+      <input matInput formControlName="code" placeholder="e.g., SN-TEMP-402" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Sensor Name</mat-label>
+      <input matInput formControlName="name" placeholder="e.g., Ventilation Intake Temp" />
+    </mat-form-field>
+
+    <div class="bounds-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Lower Bound</mat-label>
+        <input matInput type="number" formControlName="lowerBound" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Upper Bound</mat-label>
+        <input matInput type="number" formControlName="upperBound" />
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Formula Expression (Optional, defaults to 'x')</mat-label>
+      <input
+        type="text"
+        placeholder="Type a new formula or select an existing one..."
+        matInput
+        formControlName="formulaControl"
+        [matAutocomplete]="auto"
+      />
+      <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayFormulaFn">
+        @for (formula of filteredFormulas(); track formula.id) {
+          <mat-option [value]="formula">
+            {{ formula.expression }} <span class="version-badge">(v{{ formula.version }})</span>
+          </mat-option>
+        }
+      </mat-autocomplete>
+    </mat-form-field>
+
+    <div class="action-row">
+      <button mat-flat-button color="primary" type="submit" [disabled]="sensorForm.invalid">
+        Save Configuration
+      </button>
+    </div>
+  </form>
+
+  <ng-container>
+    @if (serverResponse()) {
+      <div class="response-viewer success-box">
+        <h3>Server Response Success (Status: {{ status() }})</h3>
+        <pre><code>{{ serverResponse() | json }}</code></pre>
+      </div>
+    }
+
+    @if (serverError()) {
+      <div class="response-viewer error-box">
+        <h3>Server Response Error (Status: {{ status() }})</h3>
+        <pre><code>{{ serverError() | json }}</code></pre>
+      </div>
+    }
+  </ng-container>
+</div>

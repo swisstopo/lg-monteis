@@ -5,7 +5,14 @@ export const workbenchConfig = provideWorkbench({
     factory
       .addPart(MAIN_AREA)
       .navigatePart(MAIN_AREA, ['overview'])
-      .addPart('metrics-menu', { dockTo: 'left-top' }, { label: 'Demo', icon: 'data_exploration' })
+      .addPart(
+        'metrics-menu',
+        { dockTo: 'left-top' },
+        { label: 'Overview', icon: 'data_exploration' },
+      )
       .navigatePart('metrics-menu', ['metrics-menu'])
-      .activatePart('metrics-menu'),
+      .activatePart('metrics-menu')
+      .addPart('sensor-menu', { dockTo: 'left-top' }, { label: 'Sensor', icon: 'build' })
+      .navigatePart('sensor-menu', ['sensor-menu'])
+      .activatePart('sensor-menu'),
 });

@@ -439,7 +439,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h1><span class="image"><img src="./images/arc42-logo.png" alt="arc42"></span> MONTEIS - Architektur</h1>
 <div class="details">
 <span id="revnumber">version 1.0.0-rc,</span>
-<span id="revdate">2026-05-20</span>
+<span id="revdate">2026-05-19</span>
 <br><span id="revremark">Draft</span>
 </div>
 <div id="toc" class="toc">
@@ -503,9 +503,10 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </li>
 <li><a href="#section-concepts">8. Querschnittliche Konzepte</a>
 <ul class="sectlevel2">
-<li><a href="#_core_api_datenzugriff_sicherheit">8.1. Core-API Datenzugriff &amp; Sicherheit</a></li>
-<li><a href="#_core_api_optimistic_locking_und_versionierungauditierung">8.2. Core-API Optimistic Locking und Versionierung/Auditierung</a></li>
-<li><a href="#_core_api_validierung_validation_error_handling">8.3. Core-API Validierung (Validation &amp; Error Handling)</a></li>
+<li><a href="#_architekturmuster_domain_driven_design_cqrs_lite_readwrite_flows">8.1. Architekturmuster: Domain-Driven Design &amp; CQRS-Lite (Read/Write Flows)</a></li>
+<li><a href="#_core_api_datenzugriff_sicherheit">8.2. Core-API Datenzugriff &amp; Sicherheit</a></li>
+<li><a href="#_core_api_optimistic_locking_und_versionierungauditierung">8.3. Core-API Optimistic Locking und Versionierung/Auditierung</a></li>
+<li><a href="#_core_api_validierung_validation_error_handling">8.4. Core-API Validierung (Validation &amp; Error Handling)</a></li>
 </ul>
 </li>
 <li><a href="#_architektur_und_skalierungskonzept_data_pipeline">9. Architektur- und Skalierungskonzept: Data Pipeline</a>
@@ -567,7 +568,7 @@ Creative Commons Attribution-ShareAlike 4.0 International
 Creative Commons Attribution-ShareAlike 4.0 International Lizenz bereitgestellt.</p>
 </div>
 <div class="paragraph">
-<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-05-20</p>
+<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-05-19</p>
 </div>
 <hr>
 <div style="page-break-after: always;"></div>
@@ -1914,7 +1915,96 @@ Ref: <a href="https://pcg.io/insights/vpc-endpoints-explanation-and-cost-compari
 <h2 id="section-concepts">8. Querschnittliche Konzepte</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_core_api_datenzugriff_sicherheit">8.1. Core-API Datenzugriff &amp; Sicherheit</h3>
+<h3 id="_architekturmuster_domain_driven_design_cqrs_lite_readwrite_flows">8.1. Architekturmuster: Domain-Driven Design &amp; CQRS-Lite (Read/Write Flows)</h3>
+<div class="paragraph">
+<p>Die Architektur der Applikation unterscheidet strikt zwischen schreibenden Operationen (Zustandsänderungen) und reinen Lese-Operationen (Datenaggregation und Views). Dieses Muster orientiert sich am CQRS-Prinzip (Command Query Responsibility Segregation) kombiniert mit Domain-Driven Design (DDD).</p>
+</div>
+<div class="paragraph">
+<p>Diese Trennung verhindert "Frankenstein"-Domänenmodelle, maximiert die Performance bei Lesezugriffen und schützt komplexe Geschäftsregeln bei Schreibzugriffen.</p>
+</div>
+<div class="sect3">
+<h4 id="_der_write_flow_commands_mutationen">8.1.1. Der Write-Flow (Commands &amp; Mutationen)</h4>
+<div class="paragraph">
+<p>Gilt für alle Endpunkte, die den Systemzustand verändern (<code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code>).</p>
+</div>
+<div class="paragraph">
+<p>Hierbei wird ein striktes Domain-Driven Design erzwungen. Das Ziel ist der Schutz der Geschäftslogik ("Always-Valid Domain Model").</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Ablauf:</strong> Web Request &#8594; <code>Controller</code> &#8594; <code>WriteDto</code> &#8594; <code>Mapper</code> &#8594; <strong><code>Domain Entity</code></strong> &#8594; <code>Service</code> &#8594; <code>Repository</code> (jOOQ) &#8594; <code>mapper</code> &#8594; <code>Datenbank</code>.</p>
+</li>
+<li>
+<p><strong>Regeln:</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p>DTOs werden vom Mapper in Rich-Domain-Objekte (z.B. <code>Sensor</code>, <code>Formula</code>) übersetzt.</p>
+</li>
+<li>
+<p>Validierungsregeln und Business-Logik leben ausschliesslich in der Domäne.</p>
+</li>
+<li>
+<p>Die Services und Repositories arbeiten ausschliesslich mit den Domänen-Objekten, niemals mit DTOs.</p>
+</li>
+<li>
+<p>Repositories sind für das Mapping von der Domäne in die Datenbankstruktur (via jOOQ) zuständig.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_der_read_only_flow_queries_dashboards">8.1.2. Der Read-Only Flow (Queries &amp; Dashboards)</h4>
+<div class="paragraph">
+<p>Gilt für Endpunkte, die rein lesend auf aggregierte Daten zugreifen (z.B. das <code>overview</code> Modul oder Tabellen-Ansichten über mehrere Fachbereiche hinweg).</p>
+</div>
+<div class="paragraph">
+<p>Hierbei wird die Domänenschicht <strong>bewusst übersprungen</strong>. Da bei reinen Leseoperationen kein Zustand geschützt werden muss, wäre die Instanziierung von Domänenobjekten reine Ressourcenverschwendung.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Ablauf:</strong> Web Request &#8594; <code>Controller</code> &#8594; <code>Service</code> &#8594; <code>QueryRepository</code> (jOOQ) &#8594; <strong><code>ReadDto</code></strong>.</p>
+</li>
+<li>
+<p><strong>Regeln:</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p>Es werden <strong>keine</strong> Domänen-Objekte (<code>Entities</code>) verwendet.</p>
+</li>
+<li>
+<p>Das Repository nutzt die volle Stärke von jOOQ, um hochoptimierte SQL-Joins (z.B. über Sensoren, Experimente und Boreholes) auszuführen.</p>
+</li>
+<li>
+<p>Module, die dieses Pattern nutzen, verwenden den Suffix <code>QueryRepository</code> (statt <code>Repository</code>), um visuell zu signalisieren, dass hier kein Aggregate-Root zurückgegeben wird.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_zusammenfassung_der_vorteile">8.1.3. Zusammenfassung der Vorteile</h4>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Performance:</strong> Native SQL-Joins direkt in DTOs ohne den Overhead von Objekt-Instanziierungen im Java-Speicher.</p>
+</li>
+<li>
+<p><strong>Saubere Domäne:</strong> Fachobjekte wie <code>Sensor</code> bleiben fokussiert auf ihre eigenen Business-Regeln und werden nicht mit UI-spezifischen Feldern (z.B. <code>experimentName</code>) verschmutzt.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_core_api_datenzugriff_sicherheit">8.2. Core-API Datenzugriff &amp; Sicherheit</h3>
 <div class="paragraph">
 <p>Das Ziel dieser Architektur ist es, den Business-Code (Service Layer) zu 100 % sauber von Berechtigungsprüfungen zu halten. Die Sicherheit wird stattdessen an den Rändern des Systems durchgesetzt.</p>
 </div>
@@ -1936,9 +2026,9 @@ Ref: <a href="https://pcg.io/insights/vpc-endpoints-explanation-and-cost-compari
 </div>
 </div>
 <div class="sect2">
-<h3 id="_core_api_optimistic_locking_und_versionierungauditierung">8.2. Core-API Optimistic Locking und Versionierung/Auditierung</h3>
+<h3 id="_core_api_optimistic_locking_und_versionierungauditierung">8.3. Core-API Optimistic Locking und Versionierung/Auditierung</h3>
 <div class="sect3">
-<h4 id="_1_technischer_hintergrund_optimistic_locking">8.2.1. 1. Technischer Hintergrund: Optimistic Locking</h4>
+<h4 id="_1_technischer_hintergrund_optimistic_locking">8.3.1. 1. Technischer Hintergrund: Optimistic Locking</h4>
 <div class="paragraph">
 <p>Im Gegensatz zum Pessimistic Locking (bei dem Datensätze explizit auf Datenbankebene über <code>SELECT &#8230;&#8203; FOR UPDATE</code> gesperrt werden), geht das Optimistic Locking davon aus, dass parallele Schreibzugriffe auf denselben Datensatz selten sind. Die Konflikterkennung wird bis zum eigentlichen Schreibvorgang verzögert.</p>
 </div>
@@ -1957,7 +2047,7 @@ Ref: <a href="https://pcg.io/insights/vpc-endpoints-explanation-and-cost-compari
 </div>
 </div>
 <div class="sect3">
-<h4 id="_2_architektur_und_trennung_der_zuständigkeiten">8.2.2. 2. Architektur und Trennung der Zuständigkeiten</h4>
+<h4 id="_2_architektur_und_trennung_der_zuständigkeiten">8.3.2. 2. Architektur und Trennung der Zuständigkeiten</h4>
 <div class="paragraph">
 <p>Die gewählte Schichtenarchitektur trennt das Concurrency Management (jOOQ) strikt vom Audit-Logging (JaVers).</p>
 </div>
@@ -1975,7 +2065,7 @@ Ref: <a href="https://pcg.io/insights/vpc-endpoints-explanation-and-cost-compari
 </div>
 </div>
 <div class="sect3">
-<h4 id="_3_erfolgs_und_fehlerfall">8.2.3. 3. Erfolgs- und Fehlerfall</h4>
+<h4 id="_3_erfolgs_und_fehlerfall">8.3.3. 3. Erfolgs- und Fehlerfall</h4>
 <div class="paragraph">
 <p>Das folgende Diagramm veranschaulicht den Datenfluss und das Zusammenspiel der Komponenten, insbesondere warum fehlgeschlagene Updates nicht zu fehlerhaften Audit-Einträgen führen.</p>
 </div>
@@ -1989,13 +2079,13 @@ Ref: <a href="https://pcg.io/insights/vpc-endpoints-explanation-and-cost-compari
 </div>
 </div>
 <div class="sect3">
-<h4 id="_4_aspekt_für_die_versionierung">8.2.4. 4. Aspekt für die Versionierung</h4>
+<h4 id="_4_aspekt_für_die_versionierung">8.3.4. 4. Aspekt für die Versionierung</h4>
 <div class="paragraph">
 <p>Damit die Service-Schicht nur minimale Kenntnisse von der Versionierung haben muss, wird ein Spring AOP Aspekt verwendet. Methoden werden lediglich mit einer eigenen Annotation versehen (<code>@AuditChanges</code>), damit das betroffene Objekt vom Aspekt aufgegriffen und sauber in den Versionstabellen von JaVers abgelegt wird. Hier gilt zu beachten, dass <code>@AfterReturning</code> verwendet wird, damit beim Einfügen eines neuen Objekts dessen eindeutige ID bereits gesetzt wurde. Hier ist ein Beispiel, wie der Aspekt aussehen könnte:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-JAVA" data-lang="JAVA">import org.aspectj.lang.annotation.AfterReturning;
+<pre class="highlight"><code class="language-java" data-lang="java">import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.javers.core.Javers;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -2012,7 +2102,7 @@ public class JaversAuditAspect {
   }
 
   @AfterReturning(pointcut = "@annotation(AuditChanges)", returning = "result")
-  public void auditReturnValue(Object result) {
+  public void auditReturnValue(Auditable result) {
 
     if (result == null) {
       return;
@@ -2051,7 +2141,7 @@ public class JaversAuditAspect {
 </div>
 </div>
 <div class="sect3">
-<h4 id="_entwickler_leitfaden_neue_entitäten_für_audit_locking_anbinden">8.2.5. Entwickler-Leitfaden: Neue Entitäten für Audit &amp; Locking anbinden</h4>
+<h4 id="_entwickler_leitfaden_neue_entitäten_für_audit_locking_anbinden">8.3.5. Entwickler-Leitfaden: Neue Entitäten für Audit &amp; Locking anbinden</h4>
 <div class="paragraph">
 <p>Wenn ein neues Fachobjekt (z. B. <code>Experiment</code>) in die Architektur integriert wird, müssen folgende Schritte zwingend eingehalten werden, damit Optimistic Locking (via jOOQ) und die Historisierung (via JaVers) reibungslos ineinandergreifen:</p>
 </div>
@@ -2077,7 +2167,10 @@ public class JaversAuditAspect {
 <div class="ulist">
 <ul>
 <li>
-<p><strong>JaVers-Annotationen:</strong> Das DTO <em>muss</em> die <code>@Id</code>-Annotation (aus <code>org.javers.core.metamodel.annotation.Id</code>) auf dem Primärschlüssel tragen, damit JaVers den Datensatz als eigenständige Entity trackt. Die Nutzung von <code>@TypeName("WunschName")</code> wird dringend empfohlen, um den Audit-Log von Java-Refactorings zu entkoppeln.</p>
+<p><strong>Marker Interface:</strong> Das DTO muss zwingend das Interface <code>Auditable</code> implementieren, damit der AOP-Aspekt es verarbeiten kann.</p>
+</li>
+<li>
+<p><strong>JaVers-Annotationen &amp; Konstanten:</strong> Das DTO <em>muss</em> die <code>@Id</code>-Annotation auf dem Primärschlüssel tragen. Die Nutzung von <code>@TypeName</code> wird zwingend vorgeschrieben, um den Audit-Log von Java-Refactorings zu entkoppeln. Der Wert für <code>@TypeName</code> muss als <code>public static final String</code> im Record definiert werden (z. B. <code>JAVERS_TYPE_NAME = "Sensor"</code>), damit Repositories bei nativen DB-Queries typsicher darauf zugreifen können.</p>
 </li>
 <li>
 <p><strong>State-Transport:</strong> Das DTO muss die Version(en) zwingend als Attribut enthalten (z. B. <code>version</code> und <code>formulaVersion</code>).</p>
@@ -2130,58 +2223,119 @@ public class JaversAuditAspect {
 </ul>
 </div>
 </div>
+<div class="sect3">
+<h4 id="_5_umgang_mit_initialen_daten_flyway_seeding_backfill">8.3.6. 5. Umgang mit initialen Daten (Flyway Seeding &amp; Backfill)</h4>
+<div class="paragraph">
+<p>Da initiale Test- oder Stamm-Daten oft via Flyway-SQL-Skripte direkt in die Datenbank (<code>INSERT INTO &#8230;&#8203;</code>) geschrieben werden, umgehen sie den Spring Service Layer und somit den JaVers AOP-Aspekt vollständig. Für JaVers existieren diese Datensätze nicht, was bedeutet, dass beim ersten regulären Update über die API die Historie des Ursprungszustands verloren geht.</p>
+</div>
+<div class="paragraph">
+<p>Um diesen "Blindspot" zu beheben, nutzt die Architektur einen <strong>Startup Backfill Service</strong>:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Event-Trigger:</strong> Ein <code>@EventListener(ApplicationReadyEvent.class)</code> prüft beim Hochfahren der Applikation auf un-auditierte Daten.</p>
+</li>
+<li>
+<p><strong>jOOQ Streaming &amp; NOT EXISTS:</strong> Um Out-Of-Memory (OOM) Fehler und das "N+1 Query"-Problem bei grossen Datenmengen (z.B. &gt;100.000 Sensoren) zu vermeiden, nutzt das Repository einen Datenbank-Cursor (<code>fetchStream()</code>). Über eine native <code>WHERE NOT EXISTS</code> Klausel direkt auf der JaVers-Tabelle (<code>jv_global_id</code>) wird die Filterung komplett in die Datenbank verlagert.</p>
+</li>
+<li>
+<p><strong>Dynamische Typisierung:</strong> Der Abgleich in jOOQ greift dabei sicher auf die statische Konstante des DTOs zurück (z. B. <code>WriteSensorDto.JAVERS_TYPE_NAME</code>).</p>
+</li>
+<li>
+<p><strong>Sicherer Commit:</strong> Gefundene unauditierte Datensätze werden vom Backfill-Service iterativ mit dem Autor <code>SYSTEM_SEEDER</code> in JaVers als <code>INITIAL</code> Snapshot committet.</p>
+</li>
+</ul>
+</div>
+</div>
 </div>
 <div class="sect2">
-<h3 id="_core_api_validierung_validation_error_handling">8.3. Core-API Validierung (Validation &amp; Error Handling)</h3>
+<h3 id="_core_api_validierung_validation_error_handling">8.4. Core-API Validierung (Validation &amp; Error Handling)</h3>
 <div class="paragraph">
-<p>Die Validierung ist in zwei Schichten unterteilt und wird über einen zentralen Mechanismus so verarbeitet, dass das Frontend (Angular) immer eine einheitliche, übersetzungsfertige Struktur erhält.</p>
+<p>Die Validierung ist streng in zwei Schichten unterteilt und wird über einen zentralen Mechanismus so verarbeitet, dass das Frontend (Angular) immer eine einheitliche, übersetzungsfertige Struktur erhält, während die Backend-Domäne kompromisslos geschützt bleibt.</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Syntaktische Validierung (Annotationen auf DTOs):</p>
+<p><strong>Syntaktische Validierung (Formale DTO-Prüfung):</strong></p>
 <div class="ulist">
 <ul>
 <li>
-<p>Wo: Im Interface Layer (Controller-Eingang).</p>
+<p><strong>Wo:</strong> Im Web Layer (Controller-Eingang) auf den Request DTOs.</p>
 </li>
 <li>
-<p>Wie: Mit Jakarta-Annotationen (z.B. @Min(18), @NotBlank) direkt auf den Java DTOs. Als message wird kein Text, sondern der Translation-Key (z.B. user.age.out_of_range) hinterlegt.</p>
+<p><strong>Wie:</strong> Mit Jakarta-Annotationen (z.B. <code>@Min</code>, <code>@NotBlank</code>) direkt auf den Feldern oder über massgeschneiderte Cross-Field Validatoren (z.B. <code>@ValidFormulaState</code>). Als Message wird kein Text, sondern ein flacher Translation-Key (z.B. <code>validation.required</code>) hinterlegt.</p>
 </li>
 <li>
-<p>Zweck: Fängt formale Fehler sofort ab (400 Bad Request), bevor sie die Business-Logik erreichen.</p>
+<p><strong>Zweck:</strong> Fängt formale Datenfehler ab, bevor sie gemappt werden. Resultiert in einem <strong>422 Unprocessable Content</strong>.</p>
+</li>
+<li>
+<p><strong>Hinweis zu Typen:</strong> Falsche Datentypen (z.B. String statt Zahl) werden bereits durch den Jackson-Deserializer vor der Validierung abgefangen. Dies resultiert aus Sicherheitsgründen ("Fail Secure") in einem <strong>400 Bad Request</strong> mit einer generischen Fehlermeldung und einer Trace-ID, um keine internen Details preiszugeben.</p>
 </li>
 </ul>
 </div>
 </li>
 <li>
-<p>Semantische Validierung (Business-Logik):</p>
+<p><strong>Semantische Validierung (Business-Logik &amp; Always-Valid Domain Model):</strong></p>
 <div class="ulist">
 <ul>
 <li>
-<p>Wo: Im Service Layer.</p>
+<p><strong>Wo:</strong> Direkt im Domain Model (Entities, z.B. im Konstruktor oder Setter der Klasse <code>Formula</code>).</p>
 </li>
 <li>
-<p>Wie: Der Service prüft fachliche Regeln (z.B. "Darf dieser Sensor hier platziert werden?"). Schlägt dies fehl, wirft der Service eine eigene, massgeschneiderte Exception (z.B. <code>BusinessValidationException</code>), welche das betroffene Feld und den Message-Key enthält.</p>
+<p><strong>Wie:</strong> Die Domäne prüft fachliche Regeln bei der Instanziierung. Ist ein Zustand ungültig (z.B. eine Formel enthält kein 'x'), wirft die Entität einen <code>ValidationError</code>. Es ist physisch unmöglich, ein ungültiges Domänenobjekt im Backend zu erzeugen.</p>
+</li>
+<li>
+<p><strong>Feld- vs. Objekt-Fehler (Cross-Field Validation):</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Field Errors:</strong> Verletzen Regeln eines einzelnen Attributs. Der Fehler wird mit dem exakten Feldnamen (z.B. <code>expression</code>) geworfen und im Frontend zielgenau unter dem entsprechenden Input-Feld angezeigt.</p>
+</li>
+<li>
+<p><strong>Object / Form Errors:</strong> Verletzen Regeln, die das Zusammenspiel mehrerer Attribute betreffen (z.B. "Wenn eine ID existiert, muss auch eine Version mitgegeben werden"). In diesem Fall wird der Fehler gezielt mit einem übergeordneten Identifier wie <code>form</code> geworfen. Der Frontend-Service fängt dies ab und weist den Fehler der gesamten <code>FormGroup</code> zu, sodass er als globaler Formularfehler dargestellt werden kann.</p>
 </li>
 </ul>
 </div>
 </li>
 <li>
-<p>Der Magische <code>@RestControllerAdvice</code> (Zentraler Exception Handler):</p>
+<p><strong>Zweck:</strong> Kapselung der Geschäftsregeln. Schlägt dies fehl, resultiert dies ebenfalls in einem <strong>422 Unprocessable Content</strong> mit dem betroffenen Formular-Feldnamen (oder dem übergeordneten <code>form</code> Identifier) und Message-Key.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>Der Magische <code>@RestControllerAdvice</code> (Zentraler Exception Handler):</strong></p>
 <div class="ulist">
 <ul>
 <li>
-<p>Dies ist das Herzstück. Er fängt sowohl die fehlgeschlagenen DTO-Annotationen als auch die Business-Exceptions ab.</p>
+<p>Dies ist das Herzstück der Fehlerbehandlung. Er erweitert den <code>ResponseEntityExceptionHandler</code>, um die nativen HTTP-Semantiken von Spring (wie 405 Method Not Allowed) beizubehalten, tauscht aber den Body gegen unser einheitliches <code>ErrorDTO</code> aus.</p>
 </li>
 <li>
-<p>Er extrahiert <strong>dynamisch</strong> den Namen des fehlerhaften Feldes (z.B. <code>age</code>) und weist diesem den aktuellen Eingabewert des Users zu.</p>
+<p>Er definiert globale <code>@ApiResponse</code>-Annotationen, wodurch Swagger/OpenAPI automatisch die TypeScript-Interfaces für das Frontend generiert.</p>
 </li>
 <li>
-<p>Er liest per Reflection alle Parameter aus den Annotationen (z.B. das <code>min</code> Limit aus <code>@Min</code>) komplett ohne hartcodierte Strings aus.</p>
+<p><strong>Für 422 Validierungsfehler:</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p>Er extrahiert <em>dynamisch</em> den Namen des fehlerhaften Feldes.</p>
 </li>
 <li>
-<p>Er formt all das in einen standardisierten JSON-Payload um und sendet ihn ans Frontend.</p>
+<p>Er liest alle Parameter aus den Annotationen (z.B. das <code>min</code> Limit aus <code>@Min</code>) komplett ohne hartcodierte Strings aus.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>Für 400 (Client Errors) und 500 (Server Crashes):</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p>Es gilt das Prinzip der "Information Hiding". Bei Jackson-Parsingfehlern oder NullPointern wird eine UUID (Trace-ID) generiert, geloggt und an das Frontend gesendet. Der Benutzer sieht nur eine generische Meldung (z.B. "System Error"), aber Entwickler können den Fehler anhand der Trace-ID sofort in den Logs finden.</p>
+</li>
+</ul>
+</div>
 </li>
 </ul>
 </div>
@@ -2192,21 +2346,44 @@ public class JaversAuditAspect {
 <p><strong>Das Resultat für das Frontend:</strong></p>
 </div>
 <div class="paragraph">
-<p>Egal ob eine DTO-Annotation fehlschlägt oder der Service eine Exception wirft, Angular erhält immer den gleichen Payload: Den Feldnamen, den Translation-Key und ein dynamisches Parameter-Objekt (z.B. <code>{ "age": 16, "min": 18 }</code>), welches direkt und dumm in die Frontend-Übersetzungs-Pipe geschleust werden kann.</p>
+<p>Egal ob eine DTO-Annotation fehlschlägt oder die Domäne eine Exception wirft, Angular erhält bei <strong>422-Fehlern</strong> immer den gleichen Payload: Den flachen Feldnamen, den Translation-Key und ein dynamisches Parameter-Objekt. Bei generischen Fehlern wird das Feld <code>global</code> verwendet.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">[
+  {
+    "field": "age",
+    "actualValue": 16,
+    "messageKey": "validation.min",
+    "params": {
+      "value": 18
+    }
+  },
+  {
+    "field": "global",
+    "actualValue": null,
+    "messageKey": "error.server.internal",
+    "params": {
+      "traceId": "123e4567-e89b-12d3-a456-426614174000"
+    }
+  }
+]</code></pre>
+</div>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Übersetzungsfile im Frontend:
-Im Angular Asset Folder werden die Übersetzungsfiles platziert. Sie enthalten dieselben Schlüssel, die das Backend verwendet (z.B. <code>user.age.out_of_range</code>).</p>
+<p><strong>Übersetzungsfile im Frontend:</strong><br>
+Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten dieselben Schlüssel, die das Backend verwendet, und binden die dynamischen Parameter über Interpolation ein.</p>
 </li>
 </ul>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-JSON" data-lang="JSON">{
-    "user.age.out_of_range": "Your current age is {{ age }}, but it must be at least {{ min }}.",
-    "validation.field.required": "This field cannot be empty."
+<pre class="highlight"><code class="language-json" data-lang="json">{
+    "validation.min": "Der aktuelle Wert ist {{ actualValue }}, er muss aber mindestens {{ value }} sein.",
+    "validation.required": "Dieses Feld darf nicht leer sein.",
+    "error.server.internal": "Ein unerwarteter Fehler ist aufgetreten. Bitte den Support mit der Referenznummer {{ traceId }} kontaktieren."
 }</code></pre>
 </div>
 </div>
@@ -3021,7 +3198,7 @@ components:
 <div id="footer">
 <div id="footer-text">
 Version 1.0.0-rc<br>
-Last updated 2026-05-20 11:35:20 UTC
+Last updated 2026-05-19 09:48:44 UTC
 </div>
 </div>
 </body>

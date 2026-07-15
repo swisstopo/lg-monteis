@@ -1,0 +1,15 @@
+{
+  "error": {
+    "system": {
+      "internal": "An unexpected system error occurred. Please try again later. If the problem persists, contact support and provide the error ID: {{errorId}}."
+    }
+  },
+  "sensor": {
+    "create": {
+      "success": "Created Sensor successfully"
+    },
+    "bounds": {
+      "invalid": "The upperbound must be higher than the lower bound. Currently you have upperbound: {{upper}} which is higher than lower bound: {{lower}}."
+    }
+  }
+}

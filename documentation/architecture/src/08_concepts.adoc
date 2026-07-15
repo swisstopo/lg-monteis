@@ -2,6 +2,38 @@ ifndef::imagesdir[:imagesdir: ../images]
 
 [[section-concepts]]
 == Querschnittliche Konzepte
+=== Architekturmuster: Domain-Driven Design & CQRS-Lite (Read/Write Flows)
+
+Die Architektur der Applikation unterscheidet strikt zwischen schreibenden Operationen (Zustandsänderungen) und reinen Lese-Operationen (Datenaggregation und Views). Dieses Muster orientiert sich am CQRS-Prinzip (Command Query Responsibility Segregation) kombiniert mit Domain-Driven Design (DDD).
+
+Diese Trennung verhindert "Frankenstein"-Domänenmodelle, maximiert die Performance bei Lesezugriffen und schützt komplexe Geschäftsregeln bei Schreibzugriffen.
+
+==== Der Write-Flow (Commands & Mutationen)
+Gilt für alle Endpunkte, die den Systemzustand verändern (`POST`, `PUT`, `PATCH`, `DELETE`).
+
+Hierbei wird ein striktes Domain-Driven Design erzwungen. Das Ziel ist der Schutz der Geschäftslogik ("Always-Valid Domain Model").
+
+* *Ablauf:* Web Request -> `Controller` -> `WriteDto` -> `Mapper` -> *`Domain Entity`* -> `Service` -> `Repository` (jOOQ) -> `mapper` -> `Datenbank`.
+* *Regeln:*
+** DTOs werden vom Mapper in Rich-Domain-Objekte (z.B. `Sensor`, `Formula`) übersetzt.
+** Validierungsregeln und Business-Logik leben ausschliesslich in der Domäne.
+** Die Services und Repositories arbeiten ausschliesslich mit den Domänen-Objekten, niemals mit DTOs.
+** Repositories sind für das Mapping von der Domäne in die Datenbankstruktur (via jOOQ) zuständig.
+
+==== Der Read-Only Flow (Queries & Dashboards)
+Gilt für Endpunkte, die rein lesend auf aggregierte Daten zugreifen (z.B. das `overview` Modul oder Tabellen-Ansichten über mehrere Fachbereiche hinweg).
+
+Hierbei wird die Domänenschicht *bewusst übersprungen*. Da bei reinen Leseoperationen kein Zustand geschützt werden muss, wäre die Instanziierung von Domänenobjekten reine Ressourcenverschwendung.
+
+* *Ablauf:* Web Request -> `Controller` -> `Service` -> `QueryRepository` (jOOQ) -> *`ReadDto`*.
+* *Regeln:*
+** Es werden *keine* Domänen-Objekte (`Entities`) verwendet.
+** Das Repository nutzt die volle Stärke von jOOQ, um hochoptimierte SQL-Joins (z.B. über Sensoren, Experimente und Boreholes) auszuführen.
+** Module, die dieses Pattern nutzen, verwenden den Suffix `QueryRepository` (statt `Repository`), um visuell zu signalisieren, dass hier kein Aggregate-Root zurückgegeben wird.
+
+==== Zusammenfassung der Vorteile
+* *Performance:* Native SQL-Joins direkt in DTOs ohne den Overhead von Objekt-Instanziierungen im Java-Speicher.
+* *Saubere Domäne:* Fachobjekte wie `Sensor` bleiben fokussiert auf ihre eigenen Business-Regeln und werden nicht mit UI-spezifischen Feldern (z.B. `experimentName`) verschmutzt.
 
 === Core-API Datenzugriff & Sicherheit
 Das Ziel dieser Architektur ist es, den Business-Code (Service Layer) zu 100 % sauber von Berechtigungsprüfungen zu halten. Die Sicherheit wird stattdessen an den Rändern des Systems durchgesetzt.
@@ -144,44 +176,68 @@ Um diesen "Blindspot" zu beheben, nutzt die Architektur einen **Startup Backfill
 * **Sicherer Commit:** Gefundene unauditierte Datensätze werden vom Backfill-Service iterativ mit dem Autor `SYSTEM_SEEDER` in JaVers als `INITIAL` Snapshot committet.
 
 === Core-API Validierung (Validation & Error Handling)
-Die Validierung ist in zwei Schichten unterteilt und wird über einen zentralen Mechanismus so verarbeitet, dass das Frontend (Angular) immer eine einheitliche, übersetzungsfertige Struktur erhält.
 
-* Syntaktische Validierung (Annotationen auf DTOs):
-** Wo: Im Interface Layer (Controller-Eingang).
+Die Validierung ist streng in zwei Schichten unterteilt und wird über einen zentralen Mechanismus so verarbeitet, dass das Frontend (Angular) immer eine einheitliche, übersetzungsfertige Struktur erhält, während die Backend-Domäne kompromisslos geschützt bleibt.
 
-** Wie: Mit Jakarta-Annotationen (z.B. @Min(18), @NotBlank) direkt auf den Java DTOs. Als message wird kein Text, sondern der Translation-Key (z.B. user.age.out_of_range) hinterlegt.
+* *Syntaktische Validierung (Formale DTO-Prüfung):*
+** *Wo:* Im Web Layer (Controller-Eingang) auf den Request DTOs.
+** *Wie:* Mit Jakarta-Annotationen (z.B. `@Min`, `@NotBlank`) direkt auf den Feldern oder über massgeschneiderte Cross-Field Validatoren (z.B. `@ValidFormulaState`). Als Message wird kein Text, sondern ein flacher Translation-Key (z.B. `validation.required`) hinterlegt.
+** *Zweck:* Fängt formale Datenfehler ab, bevor sie gemappt werden. Resultiert in einem *422 Unprocessable Content*.
+** *Hinweis zu Typen:* Falsche Datentypen (z.B. String statt Zahl) werden bereits durch den Jackson-Deserializer vor der Validierung abgefangen. Dies resultiert aus Sicherheitsgründen ("Fail Secure") in einem *400 Bad Request* mit einer generischen Fehlermeldung und einer Trace-ID, um keine internen Details preiszugeben.
 
-** Zweck: Fängt formale Fehler sofort ab (400 Bad Request), bevor sie die Business-Logik erreichen.
-
-* Semantische Validierung (Business-Logik):
-
-** Wo: Im Service Layer.
-
-** Wie: Der Service prüft fachliche Regeln (z.B. "Darf dieser Sensor hier platziert werden?"). Schlägt dies fehl, wirft der Service eine eigene, massgeschneiderte Exception (z.B. `BusinessValidationException`), welche das betroffene Feld und den Message-Key enthält.
-
-* Der Magische `@RestControllerAdvice` (Zentraler Exception Handler):
-
-** Dies ist das Herzstück. Er fängt sowohl die fehlgeschlagenen DTO-Annotationen als auch die Business-Exceptions ab.
-
-** Er extrahiert *dynamisch* den Namen des fehlerhaften Feldes (z.B. `age`) und weist diesem den aktuellen Eingabewert des Users zu.
-
-** Er liest per Reflection alle Parameter aus den Annotationen (z.B. das `min` Limit aus `@Min`) komplett ohne hartcodierte Strings aus.
-
-** Er formt all das in einen standardisierten JSON-Payload um und sendet ihn ans Frontend.
+* *Semantische Validierung (Business-Logik & Always-Valid Domain Model):*
+** *Wo:* Direkt im Domain Model (Entities, z.B. im Konstruktor oder Setter der Klasse `Formula`).
+** *Wie:* Die Domäne prüft fachliche Regeln bei der Instanziierung. Ist ein Zustand ungültig (z.B. eine Formel enthält kein 'x'), wirft die Entität einen `ValidationError`. Es ist physisch unmöglich, ein ungültiges Domänenobjekt im Backend zu erzeugen.
+** *Feld- vs. Objekt-Fehler (Cross-Field Validation):*
+*** *Field Errors:* Verletzen Regeln eines einzelnen Attributs. Der Fehler wird mit dem exakten Feldnamen (z.B. `expression`) geworfen und im Frontend zielgenau unter dem entsprechenden Input-Feld angezeigt.
+*** *Object / Form Errors:* Verletzen Regeln, die das Zusammenspiel mehrerer Attribute betreffen (z.B. "Wenn eine ID existiert, muss auch eine Version mitgegeben werden"). In diesem Fall wird der Fehler gezielt mit einem übergeordneten Identifier wie `form` geworfen. Der Frontend-Service fängt dies ab und weist den Fehler der gesamten `FormGroup` zu, sodass er als globaler Formularfehler dargestellt werden kann.
+** *Zweck:* Kapselung der Geschäftsregeln. Schlägt dies fehl, resultiert dies ebenfalls in einem *422 Unprocessable Content* mit dem betroffenen Formular-Feldnamen (oder dem übergeordneten `form` Identifier) und Message-Key.
+* *Der Magische `@RestControllerAdvice` (Zentraler Exception Handler):*
+** Dies ist das Herzstück der Fehlerbehandlung. Er erweitert den `ResponseEntityExceptionHandler`, um die nativen HTTP-Semantiken von Spring (wie 405 Method Not Allowed) beizubehalten, tauscht aber den Body gegen unser einheitliches `ErrorDTO` aus.
+** Er definiert globale `@ApiResponse`-Annotationen, wodurch Swagger/OpenAPI automatisch die TypeScript-Interfaces für das Frontend generiert.
+** *Für 422 Validierungsfehler:*
+*** Er extrahiert _dynamisch_ den Namen des fehlerhaften Feldes.
+*** Er liest alle Parameter aus den Annotationen (z.B. das `min` Limit aus `@Min`) komplett ohne hartcodierte Strings aus.
+** *Für 400 (Client Errors) und 500 (Server Crashes):*
+*** Es gilt das Prinzip der "Information Hiding". Bei Jackson-Parsingfehlern oder NullPointern wird eine UUID (Trace-ID) generiert, geloggt und an das Frontend gesendet. Der Benutzer sieht nur eine generische Meldung (z.B. "System Error"), aber Entwickler können den Fehler anhand der Trace-ID sofort in den Logs finden.
 
 *Das Resultat für das Frontend:*
 
-Egal ob eine DTO-Annotation fehlschlägt oder der Service eine Exception wirft, Angular erhält immer den gleichen Payload: Den Feldnamen, den Translation-Key und ein dynamisches Parameter-Objekt (z.B. `{ "age": 16, "min": 18 }`), welches direkt und dumm in die Frontend-Übersetzungs-Pipe geschleust werden kann.
+Egal ob eine DTO-Annotation fehlschlägt oder die Domäne eine Exception wirft, Angular erhält bei *422-Fehlern* immer den gleichen Payload: Den flachen Feldnamen, den Translation-Key und ein dynamisches Parameter-Objekt. Bei generischen Fehlern wird das Feld `global` verwendet.
 
-** Übersetzungsfile im Frontend:
-    Im Angular Asset Folder werden die Übersetzungsfiles platziert. Sie enthalten dieselben Schlüssel, die das Backend verwendet (z.B. `user.age.out_of_range`).
+[source,json]
+----
+[
+  {
+    "field": "age",
+    "actualValue": 16,
+    "messageKey": "validation.min",
+    "params": {
+      "value": 18
+    }
+  },
+  {
+    "field": "global",
+    "actualValue": null,
+    "messageKey": "error.server.internal",
+    "params": {
+      "traceId": "123e4567-e89b-12d3-a456-426614174000"
+    }
+  }
+]
+----
 
-```JSON
+* *Übersetzungsfile im Frontend:* +
+Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten dieselben Schlüssel, die das Backend verwendet, und binden die dynamischen Parameter über Interpolation ein.
+
+[source,json]
+----
 {
-    "user.age.out_of_range": "Your current age is {{ age }}, but it must be at least {{ min }}.",
-    "validation.field.required": "This field cannot be empty."
+    "validation.min": "Der aktuelle Wert ist {{ actualValue }}, er muss aber mindestens {{ value }} sein.",
+    "validation.required": "Dieses Feld darf nicht leer sein.",
+    "error.server.internal": "Ein unerwarteter Fehler ist aufgetreten. Bitte den Support mit der Referenznummer {{ traceId }} kontaktieren."
 }
-```
+----
 
 == Architektur- und Skalierungskonzept: Data Pipeline
 :toc:

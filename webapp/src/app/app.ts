@@ -9,4 +9,6 @@ import { WorkbenchComponent } from '@scion/workbench';
 })
 export class App {
   protected readonly title = signal('MONTEIS');
+
+  constructor() {}
 }
