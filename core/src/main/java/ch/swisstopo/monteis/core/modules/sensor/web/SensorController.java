@@ -56,7 +56,7 @@ public class SensorController {
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorResponseDto> updateSensor(
-      @Validated(Update.class) @RequestParam Long id, @RequestBody WriteSensorDto dto) {
+      @Validated(Update.class) @PathVariable Long id, @RequestBody WriteSensorDto dto) {
     Sensor updated = service.updateSensor(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated));
   }

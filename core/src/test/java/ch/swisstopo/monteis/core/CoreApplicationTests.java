@@ -1,11 +1,9 @@
 package ch.swisstopo.monteis.core;
 
+import ch.swisstopo.monteis.core.ITConfiguration.IT;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@IT
 class CoreApplicationTests {
 
   @Test
