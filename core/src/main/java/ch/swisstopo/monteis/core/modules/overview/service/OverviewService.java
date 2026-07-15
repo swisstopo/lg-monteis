@@ -23,7 +23,9 @@ public class OverviewService {
 
     if (!results.isEmpty()) {
       for (ReadSimpleMetricDto result : results) {
-        log.debug(result.normValue().toString());
+        if (log.isDebugEnabled()) {
+          log.debug("Fetched the following record: {}", result.normValue().toString());
+        }
       }
     } else {
       log.error("fetching worked but nothing found");
