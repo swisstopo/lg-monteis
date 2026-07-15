@@ -173,13 +173,10 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
   private Map<String, Object> extractConstraintParams(ObjectError error) {
 
     try {
-
       ConstraintViolation<?> violation = error.unwrap(ConstraintViolation.class);
-
       return violation.getConstraintDescriptor().getAttributes().entrySet().stream()
           .filter(e -> !INTERNAL_ANNOTATION_KEYS.contains(e.getKey()))
           .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
     } catch (RuntimeException _) {
       return Map.of();
     }

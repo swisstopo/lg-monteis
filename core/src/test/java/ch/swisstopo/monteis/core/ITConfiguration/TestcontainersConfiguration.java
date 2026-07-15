@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core;
+package ch.swisstopo.monteis.core.ITConfiguration;
 
 import java.util.Map;
 import org.flywaydb.core.Flyway;

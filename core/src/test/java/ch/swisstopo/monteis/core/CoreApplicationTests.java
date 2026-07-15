@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import ch.swisstopo.monteis.core.ITConfiguration.IT;
 import ch.swisstopo.monteis.core.modules.demo.jooq.DemoRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
