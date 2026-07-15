@@ -57,7 +57,7 @@ class SensorControllerTest {
     // when / then: Perform request and assert the actual JSON fields match our expected output DTO
     mockMvc
         .perform(
-            post("/api/v1/sensors")
+            post("/api/sensors")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
@@ -90,7 +90,7 @@ class SensorControllerTest {
     // when / then
     mockMvc
         .perform(
-            put("/api/v1/sensors")
+            put("/api/sensors/1")
                 .param("id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
@@ -120,7 +120,7 @@ class SensorControllerTest {
 
     // when / then
     mockMvc
-        .perform(get("/api/v1/sensors/formulas").contentType(MediaType.APPLICATION_JSON))
+        .perform(get("/api/sensors/formulas").contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(dto1.id()))
         .andExpect(jsonPath("$[0].expression").value(dto1.expression()))

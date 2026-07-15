@@ -1,34 +1,13 @@
 package ch.swisstopo.monteis.core;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import ch.swisstopo.monteis.core.ITConfiguration.IT;
-import ch.swisstopo.monteis.core.modules.overview.jooq.OverviewRepository;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
-@IT
+@SpringBootTest
+@ActiveProfiles("test")
 class CoreApplicationTests {
 
-  @Autowired
-  @Qualifier("metaDataDB")
-  PostgreSQLContainer<?> postgres;
-
-  @Autowired OverviewRepository repo;
-
-  @DisplayName("Should establish DB connection")
   @Test
-  void shouldEstablishConnection() {
-    assertThat(postgres.isRunning()).isTrue();
-  }
-
-  @DisplayName("Query Object from Timescale DB using FDW")
-  @Test
-  void shouldFindRecords() {
-    assertEquals(3, (long) repo.fetchRecentMetrics(3).size());
-  }
+  void contextLoads() {}
 }

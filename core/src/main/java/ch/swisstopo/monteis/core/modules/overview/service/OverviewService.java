@@ -12,7 +12,7 @@ public class OverviewService {
 
   private static final Logger log = LoggerFactory.getLogger(OverviewService.class);
 
-  private final OverviewRepository repository;
+  private final QueryInterface repository;
 
   public OverviewService(OverviewRepository repository) {
     this.repository = repository;

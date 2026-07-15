@@ -18,7 +18,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/sensors")
+@RequestMapping("/api/sensors")
 public class SensorController {
   private final SensorService service;
   private final SensorWebMapper mapper;
@@ -52,6 +52,7 @@ public class SensorController {
   @ApiResponses(
       value = {@ApiResponse(responseCode = "200", description = "Sensor successfully updated")})
   @PutMapping(
+      path = "{id}",
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorResponseDto> updateSensor(
