@@ -14,22 +14,29 @@ runs:
       shell: bash
       run: echo "dir_name=$(echo '${{ inputs.image }}' | tr '/:' '-')" >> "$GITHUB_OUTPUT"
 
-    - name: Access Global Cache
-      id: global-cache
-      uses: actions/cache@v6
+    - name: Restore from Global Cache
+      id: cache-restore
+      uses: actions/cache/restore@v6
       with:
         path: /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}
         key: docker-cache-${{ steps.vars.outputs.dir_name }}
 
     - name: Load from Global Cache
-      if: steps.global-cache.outputs.cache-hit == 'true'
+      if: steps.cache-restore.outputs.cache-hit == 'true'
       shell: bash
       run: docker load -i /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}/image.tar || true
 
-    - name: Pull and Upload to Global Cache
-      if: steps.global-cache.outputs.cache-hit != 'true'
+    - name: Pull and Save Image Locally
+      if: steps.cache-restore.outputs.cache-hit == 'false'
       shell: bash
       run: |
         mkdir -p /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}
         docker pull ${{ inputs.image }}
         docker save ${{ inputs.image }} -o /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}/image.tar
+
+    - name: Save to Global Cache
+      if: steps.cache-restore.outputs.cache-hit == 'false'
+      uses: actions/cache/save@v6
+      with:
+        path: /tmp/docker-cache/${{ steps.vars.outputs.dir_name }}
+        key: docker-cache-${{ steps.vars.outputs.dir_name }}
