@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.jooq.exception.DataChangedException;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +28,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-
-// TODO: add optimistic locking.
 
 /**
  * Global exception handler responsible for translating backend exceptions and
@@ -92,7 +91,7 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
       description = "Business validation failure on User Input",
       content = @Content(array = @ArraySchema(schema = @Schema(implementation = ErrorDto.class))))
   @Override
-  protected ResponseEntity<Object> handleMethodArgumentNotValid(
+  protected ResponseEntity<@NonNull Object> handleMethodArgumentNotValid(
       MethodArgumentNotValidException ex,
       @NonNull HttpHeaders headers,
       @NonNull HttpStatusCode status,
@@ -104,8 +103,18 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(errors);
   }
 
+  @ExceptionHandler(DataChangedException.class)
+  @ApiResponse(
+      responseCode = "409",
+      description = "Concurrent update of Entity happened",
+      content = @Content(array = @ArraySchema(schema = @Schema(implementation = ErrorDto.class))))
+  protected ResponseEntity<ErrorDto> handleOptimisticLocking(DataChangedException ex) {
+    ErrorDto payload = ErrorDto.form("optimistic.locking", Map.of());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(payload);
+  }
+
   @Override
-  protected ResponseEntity<Object> handleExceptionInternal(
+  protected ResponseEntity<@NonNull Object> handleExceptionInternal(
       Exception ex,
       Object body,
       @NonNull HttpHeaders headers,
@@ -171,7 +180,7 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
           .filter(e -> !INTERNAL_ANNOTATION_KEYS.contains(e.getKey()))
           .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-    } catch (RuntimeException ignored) {
+    } catch (RuntimeException _) {
       return Map.of();
     }
   }

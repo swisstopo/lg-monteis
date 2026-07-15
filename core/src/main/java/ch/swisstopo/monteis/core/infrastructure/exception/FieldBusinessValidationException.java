@@ -32,7 +32,7 @@ public class FieldBusinessValidationException extends RuntimeException implement
    * <p>This value is useful for logging, debugging, and reproducing invalid
    * states.
    */
-  private final Object actualValue;
+  private final transient Object actualValue;
 
   /**
    * The i18n key used by clients to resolve the localized validation message.
@@ -42,7 +42,7 @@ public class FieldBusinessValidationException extends RuntimeException implement
   /**
    * Additional values required to render the validation message.
    */
-  private final Map<String, Object> params;
+  private final transient Map<String, Object> params;
 
   public FieldBusinessValidationException(
       String field, Object actualValue, String messageKey, Map<String, Object> params) {

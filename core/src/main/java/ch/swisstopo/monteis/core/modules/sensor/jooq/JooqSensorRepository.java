@@ -12,8 +12,9 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.jooq.DSLContext;
-import org.jooq.exception.DataChangedException;
+import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,8 +31,7 @@ public class JooqSensorRepository implements SensorRepository {
 
   @Override
   @Transactional
-  // todo: rename to create....
-  public Sensor save(Sensor sensor) {
+  public Sensor create(Sensor sensor) {
     FormulasRecord formulaRecord =
         findOrCreateFormulaByExpression(sensor.getFormula().getExpression());
     SensorsRecord createdSensor = mapper.toRecord(sensor);
@@ -40,8 +40,7 @@ public class JooqSensorRepository implements SensorRepository {
 
     try {
       createdSensor.insert();
-    } catch (DuplicateKeyException e) {
-      // unique key violation --> todo: factor out to parser?
+    } catch (DuplicateKeyException _) {
       throw new FieldBusinessValidationException(
           "code", sensor.getCode(), "validation.unique", Map.of());
     }
@@ -77,9 +76,6 @@ public class JooqSensorRepository implements SensorRepository {
       // unique constraint
       throw new FieldBusinessValidationException(
           "code", sensor.getCode(), "validation.unique", Map.of());
-    } catch (DataChangedException ex) {
-      // optimistic locking todo: check if we can catch this globally
-      throw new ObjectBusinessValidationException("optimistic.locking", Map.of());
     }
 
     return mapper.toDomain(updatedRecord, formulaRecord);
@@ -96,21 +92,29 @@ public class JooqSensorRepository implements SensorRepository {
     // Now we can safely fetch it, knowing it definitively exists
     return dsl.selectFrom(FORMULAS).where(FORMULAS.EXPRESSION.eq(expression)).fetchOne();
   }
-  // todo: add for autition....
 
-  //      public Stream<Sensor> streamUnauditedSensors() {
-  //        return dsl.select(SENSORS.fields())
-  //            .select(FORMULAS.fields())
-  //            .from(SENSORS)
-  //            .join(FORMULAS)
-  //            .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
-  //            .whereNotExists(
-  //                dsl.selectOne()
-  //                    .from(DSL.table("jv_global_id"))
-  //                    // JaVers stores IDs as strings, so we cast it to match SENSORS.ID
-  //                    .where(DSL.field("local_id").cast(Long.class).eq(SENSORS.ID))
-  //                    // Ensure this matches your JaVers @TypeName or class name!
-  //                    .and(DSL.field("type_name").eq(Sensor.JAVERS_TYPE)))
-  //            .fetchStream(mapper::toDomain);
-  //  }
+  @Override
+  @Transactional
+  public Stream<Sensor> streamUnauditedSensors() {
+    return dsl.select(SENSORS.fields())
+        .select(FORMULAS.fields())
+        .from(SENSORS)
+        .join(FORMULAS)
+        .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
+        .whereNotExists(
+            dsl.selectOne()
+                .from(DSL.table("jv_global_id"))
+                // JaVers stores IDs as strings, so we cast it to match SENSORS.ID
+                .where(DSL.field("local_id").cast(Long.class).eq(SENSORS.ID))
+                // Ensure this matches your JaVers @TypeName or class name!
+                .and(DSL.field("type_name").eq(Sensor.JAVERS_TYPE)))
+        .fetchStream()
+        .map(
+            r -> {
+              SensorsRecord sensorsRecord = r.into(SENSORS);
+              FormulasRecord formulasRecord = r.into(FORMULAS);
+
+              return mapper.toDomain(sensorsRecord, formulasRecord);
+            });
+  }
 }
