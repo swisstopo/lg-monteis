@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core;
 
-import ch.swisstopo.monteis.core.ITConfiguration.TestcontainersConfiguration;
+import ch.swisstopo.monteis.core.itconfig.TestcontainersConfiguration;
 import org.springframework.boot.SpringApplication;
 
 public class E2ECoreApplication {
