@@ -41,15 +41,33 @@ This will compile your project and store the build artifacts in the `dist/` dire
 To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
 
 ```bash
-ng test
+pnpm run test
 ```
 
-## Running end-to-end tests
+## Running End-to-End (E2E) Tests
 
-For end-to-end (e2e) testing, run:
+Run tests with a visible browser:
 
 ```bash
-ng e2e
+pnpm run e2e:headed
+```
+
+Run tests in headless mode:
+
+```bash
+pnpm run e2e:headless
+```
+
+Open the latest test report:
+
+```bash
+pnpm run e2e:show-report
+```
+
+To generate a Playwright trace for debugging, run:
+
+```bash
+pnpm run e2e:headed --retries=1
 ```
 
 Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.

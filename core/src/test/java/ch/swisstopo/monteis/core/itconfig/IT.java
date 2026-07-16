@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.ITConfiguration;
+package ch.swisstopo.monteis.core.itconfig;
 
 import java.lang.annotation.*;
 import org.springframework.boot.test.context.SpringBootTest;

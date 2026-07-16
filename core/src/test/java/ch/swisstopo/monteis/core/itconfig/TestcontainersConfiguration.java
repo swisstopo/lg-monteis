@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.ITConfiguration;
+package ch.swisstopo.monteis.core.itconfig;
 
 import java.util.Map;
 import org.flywaydb.core.Flyway;
@@ -16,7 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+public class TestcontainersConfiguration {
 
   private static final Logger log = LoggerFactory.getLogger(TestcontainersConfiguration.class);
 

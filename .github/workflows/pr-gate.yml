@@ -2,7 +2,7 @@ name: PR Gate
 
 on:
   pull_request:
-    types: [ opened, edited, synchronize, reopened ]
+    types: [ opened, edited, synchronize, reopened, labeled ]
 
 env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION }}
@@ -22,6 +22,11 @@ env:
   PIPELINE_APP_TS_DB_PWD: ${{ vars.PIPELINE_APP_TS_DB_PWD }}
   CORE_APP_META_DB_USER: ${{ vars.CORE_APP_META_DB_USER }}
   CORE_APP_META_DB_PWD: ${{ vars.CORE_APP_META_DB_PWD }}
+
+  # Docker Image Versions
+  TEST_CONTAINER_IMAGE: 'testcontainers/ryuk:0.12.0'
+  TIMESCALE_DB_IMAGE: 'timescale/timescaledb:latest-pg18'
+  POSTGRES_DB_IMAGE: 'postgres:18-alpine'
 
 permissions: read-all
 
@@ -193,20 +198,28 @@ jobs:
       - name: Setup Java Environment (Hits Cache)
         uses: ./.github/actions/setup-java-maven
 
-      - name: Load Postgres Docker Cache
-        uses: ./.github/actions/global-docker-cache
+      - name: Warm up actions/cache download
+        uses: actions/cache/restore@v6
         with:
-          image: 'postgres:18-alpine'
+          path: /tmp/.warmup
+          key: warmup-noop
+          lookup-only: true
 
-      - name: Load Test Containers Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'testcontainers/ryuk:0.12.0'
+      - parallel:
+          - name: Load Postgres Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.POSTGRES_DB_IMAGE }}
 
-      - name: Load TimeScaleDB Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'timescale/timescaledb:latest-pg18'
+          - name: Load Test Containers Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TEST_CONTAINER_IMAGE }}
+
+          - name: Load TimeScaleDB Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TIMESCALE_DB_IMAGE }}
 
       - name: Generate Sources
         run: mvn -T 2C install -DskipTests
@@ -231,6 +244,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Warm up actions/cache download
+        uses: actions/cache/restore@v6
+        with:
+          path: /tmp/.warmup
+          key: warmup-noop
+          lookup-only: true
+
       - parallel:
         - name: Setup Java Environment (Hits Cache)
           uses: ./.github/actions/setup-java-maven
@@ -238,18 +258,18 @@ jobs:
         - name: Setup Node Environment (Hits Cache)
           uses: ./.github/actions/setup-node-pnpm
 
-      - name: Load Postgres Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'postgres:18-alpine'
-      - name: Load Test Containers Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'testcontainers/ryuk:0.12.0'
-      - name: Load TimeScaleDB Docker Cache
-        uses: ./.github/actions/global-docker-cache
-        with:
-          image: 'timescale/timescaledb:latest-pg18'
+        - name: Load Postgres Docker Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            image: ${{ env.POSTGRES_DB_IMAGE }}
+        - name: Load Test Containers Docker Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            image: ${{ env.TEST_CONTAINER_IMAGE }}
+        - name: Load TimeScaleDB Docker Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            image: ${{ env.TIMESCALE_DB_IMAGE }}
 
       - name: Generate Sources
         run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
@@ -265,3 +285,86 @@ jobs:
       - name: Run Webapp Tests
         working-directory: webapp
         run: pnpm vitest --browser.headless=true
+
+  prepare-e2e-tests:
+    name: Prepare E2E test file to run
+    if: contains(github.event.pull_request.labels.*.name, 'e2e-test')
+    runs-on: ubuntu-24.04
+    outputs:
+      file_list: ${{ steps.generate-file-list.outputs.file_list }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install jq (JSON processor)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Generate list of E2E test files
+        id: generate-file-list
+        env:
+          E2E_DIR: webapp/e2e
+        run: |
+          if [ -d "$E2E_DIR" ] && find "$E2E_DIR" -type f -print -quit | grep -q .; then
+            FILES=$(find "$E2E_DIR" -type f | jq -R . | jq -s . | jq -c)
+            echo "Found test files: $FILES"
+          else
+            echo "No test files found in $E2E_DIR or directory does not exist."
+            FILES="[]"
+          fi
+          echo "file_list=$FILES" >> $GITHUB_OUTPUT
+
+  # noinspection YAMLSchemaValidation
+  run-e2e-tests:
+    name: E2E file test
+    if: contains(github.event.pull_request.labels.*.name, 'e2e-test')
+    needs: [warmup-caches, prepare-e2e-tests]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        file: ${{ fromJSON(needs.prepare-e2e-tests.outputs.file_list) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Warm up actions/cache download
+        uses: actions/cache/restore@v6
+        with:
+          path: /tmp/.warmup
+          key: warmup-noop
+          lookup-only: true
+
+      - parallel:
+          - name: Setup Java Environment (Hits Cache)
+            uses: ./.github/actions/setup-java-maven
+
+          - name: Setup Node Environment (Hits Cache)
+            uses: ./.github/actions/setup-node-pnpm
+
+          - name: Load Test Containers Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TEST_CONTAINER_IMAGE }}
+
+          - name: Load TimeScaleDB Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TIMESCALE_DB_IMAGE }}
+
+          - name: Load Postgres Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.POSTGRES_DB_IMAGE }}
+
+      - name: Generate Sources
+        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
+
+      - name: Install Node Modules and Playwright
+        working-directory: webapp
+        run: pnpm exec playwright install chromium firefox webkit --with-deps
+
+      - name: Generate API
+        working-directory: webapp
+        run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
+
+      - name: Run all e2e tests
+        working-directory: webapp
+        run: pnpm run e2e:headless ${{ matrix.file }}
