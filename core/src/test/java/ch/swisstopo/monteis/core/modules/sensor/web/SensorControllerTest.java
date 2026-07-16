@@ -11,12 +11,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.infrastructure.SecurityConfig;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.formula.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor.SensorResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor.WriteSensorDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -36,6 +36,7 @@ class SensorControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @MockitoBean private SensorService service;
+  @MockitoBean private SensorQuery queryService;
 
   @MockitoBean private SensorWebMapper mapper;
 
@@ -108,15 +109,11 @@ class SensorControllerTest {
   @Test
   void should_route_find_formulas_and_return_json_array() throws Exception {
     // given
-    Formula mockFormula1 = mock(Formula.class);
-    Formula mockFormula2 = mock(Formula.class);
 
     FormulaResponseDto dto1 = new FormulaResponseDto(1L, "x * 2", 1);
     FormulaResponseDto dto2 = new FormulaResponseDto(2L, "y / 2", 1);
 
-    given(service.findAllFormulas()).willReturn(List.of(mockFormula1, mockFormula2));
-    given(mapper.toDto(mockFormula1)).willReturn(dto1);
-    given(mapper.toDto(mockFormula2)).willReturn(dto2);
+    given(queryService.findAllFormulas()).willReturn(List.of(dto1, dto2));
 
     // when / then
     mockMvc
@@ -127,8 +124,6 @@ class SensorControllerTest {
         .andExpect(jsonPath("$[1].id").value(dto2.id()))
         .andExpect(jsonPath("$[1].expression").value(dto2.expression()));
 
-    then(service).should().findAllFormulas();
-    then(mapper).should().toDto(mockFormula1);
-    then(mapper).should().toDto(mockFormula2);
+    then(queryService).should().findAllFormulas();
   }
 }

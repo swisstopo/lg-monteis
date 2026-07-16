@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.web.validation;
 
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.formula.WriteFormulaDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 

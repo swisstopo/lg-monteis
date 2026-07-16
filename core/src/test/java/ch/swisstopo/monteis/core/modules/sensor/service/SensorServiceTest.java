@@ -5,10 +5,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 
-import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
-import java.util.List;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.junit.jupiter.api.Test;
@@ -55,24 +53,6 @@ class SensorServiceTest {
     // then
     then(repository).should().update(inputSensor);
     assertEquals(expectedSensor, actualSensor);
-  }
-
-  @Test
-  void should_return_all_formulas_from_repository() {
-    // given
-    Formula f1 = mock(Formula.class);
-    Formula f2 = mock(Formula.class);
-
-    List<Formula> expectedFormulas = List.of(f1, f2);
-
-    given(repository.findAllFormulas()).willReturn(expectedFormulas);
-
-    // when
-    List<Formula> actualFormulas = service.findAllFormulas();
-
-    // then
-    then(repository).should().findAllFormulas();
-    assertEquals(expectedFormulas, actualFormulas);
   }
 
   @Test

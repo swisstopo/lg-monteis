@@ -29,8 +29,8 @@ FROM (
                       interval '5 minutes'
               ) AS gs(ts)
                   CROSS JOIN (VALUES
-                                  ('sensor-001', 0.0),
-                                  ('sensor-002', 2.1),
-                                  ('sensor-003', 4.2)
+                                  ('TEMP-001', 0.0),
+                                  ('PRESS-001', 2.1),
+                                  ('FLOW-001', 4.2)
          ) AS s(sensor_id, phase_shift)
      ) AS data;

@@ -3,13 +3,15 @@ package ch.swisstopo.monteis.core.modules.sensor.web;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.formula.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor.SensorResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor.WriteSensorDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,10 +24,12 @@ import org.springframework.web.bind.annotation.*;
 public class SensorController {
   private final SensorService service;
   private final SensorWebMapper mapper;
+  private final SensorQuery sensorQuery;
 
-  public SensorController(SensorService service, SensorWebMapper mapper) {
+  public SensorController(SensorService service, SensorWebMapper mapper, SensorQuery sensorQuery) {
     this.service = service;
     this.mapper = mapper;
+    this.sensorQuery = sensorQuery;
   }
 
   @Operation(
@@ -56,7 +60,7 @@ public class SensorController {
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorResponseDto> updateSensor(
-      @Validated(Update.class) @PathVariable Long id, @RequestBody WriteSensorDto dto) {
+      @Validated(Update.class) @PathVariable @Positive Long id, @RequestBody WriteSensorDto dto) {
     Sensor updated = service.updateSensor(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated));
   }
@@ -68,7 +72,6 @@ public class SensorController {
   @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
   @GetMapping(value = "/formulas", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<FormulaResponseDto>> findAllFormulas() {
-    return ResponseEntity.status(HttpStatus.OK)
-        .body(service.findAllFormulas().stream().map(mapper::toDto).toList());
+    return ResponseEntity.status(HttpStatus.OK).body(sensorQuery.findAllFormulas());
   }
 }

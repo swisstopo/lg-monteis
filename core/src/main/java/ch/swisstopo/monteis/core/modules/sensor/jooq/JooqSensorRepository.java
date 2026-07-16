@@ -7,9 +7,10 @@ import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidatio
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.FormulasRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorsRecord;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -20,7 +21,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-public class JooqSensorRepository implements SensorRepository {
+public class JooqSensorRepository implements SensorRepository, SensorQuery {
   private final DSLContext dsl;
   private final SensorJooqMapper mapper;
 
@@ -50,10 +51,10 @@ public class JooqSensorRepository implements SensorRepository {
 
   @Override
   @Transactional(readOnly = true)
-  public List<Formula> findAllFormulas() {
+  public List<FormulaResponseDto> findAllFormulas() {
     return dsl.selectFrom(FORMULAS)
         .orderBy(FORMULAS.EXPRESSION.asc()) // Clean alphabetical sorting for the UI
-        .fetch(mapper::toDomain); // Reuses the inner formula mapper method
+        .fetchInto(FormulaResponseDto.class);
   }
 
   @Override

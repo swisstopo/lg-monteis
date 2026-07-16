@@ -15,6 +15,7 @@ import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Bounds;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import java.util.List;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
@@ -171,12 +172,12 @@ class JooqSensorRepositoryIT {
     repository.create(createDummySensor("S-03", "C", "c * x"));
 
     // Act
-    List<Formula> formulas = repository.findAllFormulas();
+    List<FormulaResponseDto> formulas = repository.findAllFormulas();
 
     // Assert
-    assertEquals("a * x", formulas.get(0).getExpression());
-    assertEquals("b * x", formulas.get(1).getExpression());
-    assertEquals("c * x", formulas.get(2).getExpression());
+    assertEquals("a * x", formulas.get(0).expression());
+    assertEquals("b * x", formulas.get(1).expression());
+    assertEquals("c * x", formulas.get(2).expression());
   }
 
   @Test

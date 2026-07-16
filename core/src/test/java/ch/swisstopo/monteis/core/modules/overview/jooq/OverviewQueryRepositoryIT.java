@@ -37,8 +37,7 @@ class OverviewQueryRepositoryIT {
         () -> assertNotNull(topRecord.timestamp(), "Timestamp must exist"),
         () ->
             assertTrue(
-                topRecord.sensorId().startsWith("sensor-00"),
-                "Sensor ID must be from the seeded set"),
+                topRecord.sensorId().endsWith("-001"), "Sensor ID must be from the seeded set"),
         () -> assertNotNull(topRecord.rawValue(), "Raw value must be calculated"),
         () -> assertNotNull(topRecord.normValue(), "Norm value must be calculated"),
         () -> assertEquals((short) 0, topRecord.version(), "Seed script hardcodes version to 0"),

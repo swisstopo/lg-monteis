@@ -21,15 +21,24 @@ Hierbei wird ein striktes Domain-Driven Design erzwungen. Das Ziel ist der Schut
 ** Repositories sind für das Mapping von der Domäne in die Datenbankstruktur (via jOOQ) zuständig.
 
 ==== Der Read-Only Flow (Queries & Dashboards)
-Gilt für Endpunkte, die rein lesend auf aggregierte Daten zugreifen (z.B. das `overview` Modul oder Tabellen-Ansichten über mehrere Fachbereiche hinweg).
+Gilt für Endpunkte, die rein lesend auf aggregierte Daten zugreifen (z.B. das `overview` Modul, die Experiment-Detailansicht oder Tabellen-Ansichten über mehrere Fachbereiche hinweg).
 
 Hierbei wird die Domänenschicht *bewusst übersprungen*. Da bei reinen Leseoperationen kein Zustand geschützt werden muss, wäre die Instanziierung von Domänenobjekten reine Ressourcenverschwendung.
 
-* *Ablauf:* Web Request -> `Controller` -> `Service` -> `QueryRepository` (jOOQ) -> *`ReadDto`*.
-* *Regeln:*
+Es werden zwei Ablauf-Varianten unterschieden, abhängig davon, ob zusätzliche Logik zwischen Controller und Datenbank nötig ist:
+
+* *Direkter Ablauf (Standardfall):* Web Request -> `Controller` -> `QueryRepository` (jOOQ) -> *`ReadDto`*.
+** Gilt, wenn der Endpunkt eine einzelne Query 1:1 durchreicht, ohne zusätzliche Orchestrierung, Aggregation über mehrere Repositories oder fachliche Nachbearbeitung.
+** Der Controller injiziert das `QueryRepository`-Interface direkt und ruft es auf. Ein Service, der nur `return queryRepository.find(...)` macht, ist reine Indirektion ohne Mehrwert und wird bewusst weggelassen.
+** Beispiele: `SensorController#findAllFormulas` (nutzt `SensorQuery` direkt) und `ExperimentController#getMetrics` (nutzt `ExperimentQueryInterface` direkt).
+* *Ablauf mit Service (Ausnahmefall):* Web Request -> `Controller` -> `Service` -> `QueryRepository` (jOOQ) -> *`ReadDto`*.
+** Nur nötig, wenn der Read-Endpunkt echte Logik erfordert, die nicht ins Repository gehört, z.B. das Kombinieren mehrerer Query-Aufrufe, fachliche Berechnungen auf den gelesenen Daten oder Orchestrierung über mehrere Module hinweg.
+** Sobald ein solcher Service auf reine Delegation ohne jegliche Logik schrumpft, muss er entfernt und der Controller direkt auf das `QueryRepository` umgestellt werden.
+* *Regeln (für beide Varianten):*
 ** Es werden *keine* Domänen-Objekte (`Entities`) verwendet.
 ** Das Repository nutzt die volle Stärke von jOOQ, um hochoptimierte SQL-Joins (z.B. über Sensoren, Experimente und Boreholes) auszuführen.
 ** Module, die dieses Pattern nutzen, verwenden den Suffix `QueryRepository` (statt `Repository`), um visuell zu signalisieren, dass hier kein Aggregate-Root zurückgegeben wird.
+** Die Sicherheitsfilterung (Row-Level-Security) erfolgt unabhängig von dieser Entscheidung immer auf jOOQ-Ebene über den `VisitListener` (siehe Abschnitt "Core-API Datenzugriff & Sicherheit"), nie im Service. Das Weglassen des Service hat daher keinen Einfluss auf die Zugriffskontrolle.
 
 ==== Zusammenfassung der Vorteile
 * *Performance:* Native SQL-Joins direkt in DTOs ohne den Overhead von Objekt-Instanziierungen im Java-Speicher.
