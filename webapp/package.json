@@ -6,7 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": " pnpm vitest --browser.headless=true",
     "generate-api": "openapi-generator-cli generate",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
     "format:write": "prettier --write \"src/**/*.{ts,html,scss}\"",
