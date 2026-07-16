@@ -4,9 +4,9 @@ import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
+@Component
 public class SIStandardizer {
 
   private static final Logger log = LoggerFactory.getLogger(SIStandardizer.class);

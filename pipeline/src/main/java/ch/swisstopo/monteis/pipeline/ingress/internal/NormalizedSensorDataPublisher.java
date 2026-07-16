@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.pipeline.ingress.internal;
 
+import ch.swisstopo.monteis.pipeline.internal.model.NormalizedSensorData;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;

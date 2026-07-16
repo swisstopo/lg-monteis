@@ -16,13 +16,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.support.Acknowledgment;
 
 @ExtendWith(MockitoExtension.class)
-class SensorConfigMessageProcessorTest {
+class SensorConfigMessageHandlerTest {
 
   @Mock private Acknowledgment ack;
 
   @Mock private Consumer<SensorConfig> businessLogic;
 
-  @InjectMocks private SensorConfigMessageProcessor processor;
+  @InjectMocks private SensorConfigMessageHandler processor;
 
   @Test
   void should_acknowledge_and_skip_logic_when_payload_is_null_tombstone() {

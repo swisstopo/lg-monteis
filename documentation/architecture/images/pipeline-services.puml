@@ -28,10 +28,10 @@ package "Spring Boot Applications" {
 
   node "Pipeline Pod" {
     component "Adapter (Normalizer)\nSolExpertsRawSensorDataNormalizationService" as Adapter
-    component "Cache Hydrator\nSensorConfigCacheHydrator" as Hydrator
-    component "Processor\nSensorDataListener" as Processor
+    component "Cache Hydrator\nSensorConfigCacheHydrationListener" as Hydrator
+    component "Batch Listener\nSensorDataBatchListener" as Processor
     component "Transformation Orchestrator\n(Shared Logic)" as Orchestrator
-    component "Reprocessor\nSensorConfigReprocessingListener" as Reprocessor
+    component "Reprocessor\nSensorReprocessingOrchestrator" as Reprocessor
   }
 
 }

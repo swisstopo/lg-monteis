@@ -272,7 +272,7 @@ Da das externe Quell-Topic 6 Partitionen besitzt, ist die gesamte Pipeline auf m
 
 * **Kafka Connect (Ingestion):** Der MirrorSourceConnector ist mit `"tasks.max": "6"` konfiguriert. Kafka Connect baut exakt 6 parallele Threads auf, um das externe Topic ohne Bottlenecks abzusaugen.
 * **Ingress Adapter (`SolExpertsRawSensorDataNormalizationService`):** Übernimmt das Entpacken der herstellerspezifischen Payloads. Nutzt `@KafkaListener(concurrency = "6")`, um die Last optimal auf die Partitionen zu verteilen.
-* **Datenbank-Schicht (TimeScaleDB):** Um die Datenbank bei hohen Datenraten nicht zu überlasten, konsumiert der Processor (`SensorDataListener`) im **Batch-Modus** (`spring.kafka.listener.type=batch`, `max-poll-records=200`). Das Schreiben erfolgt über hochoptimierte jOOQ Batch-Inserts (`ctx.batchInsert()`).
+* **Datenbank-Schicht (TimeScaleDB):** Um die Datenbank bei hohen Datenraten nicht zu überlasten, konsumiert der Processor (`SensorDataBatchListener`) im **Batch-Modus** (`spring.kafka.listener.type=batch`, `max-poll-records=200`). Das Schreiben erfolgt im Batch-Modus über ein hochoptimiertes jOOQ Multi-Row-Insert mit nachgelagerter ON CONFLICT (timestamp, sensor_id) DO UPDATE-Logik, um maximale Idempotenz bei minimalem Verbindungs-Overhead zu gewährleisten.
 
 === 4. Datenintegrität & Zero-Data-Loss Architektur
 
@@ -283,28 +283,48 @@ Das Monteis-Pipeline-System verarbeitet Sensordaten über zwei primäre Datenstr
 Beide Flows stützen sich auf gemeinsame Komponenten und eine strikte Kafka-Konfiguration, die garantiert, dass keine Nachricht im Nirvana verschwindet.
 
 * **Shared Transformation Orchestrator:** Um mathematische Abweichungen zu verhindern, teilen sich der Ingestion-Flow und der Backfill-Flow exakt dieselbe Logik. Dies garantiert, dass Standardisierung und Validierungs-Flags systemweit identisch berechnet werden.
-* **Cache Broadcast Pattern:** Damit jeder Pipeline-Pod einen synchronen Metadaten-Cache besitzt, generiert der `SensorConfigCacheHydrator` beim Start eine zufällige UUID als Consumer Group (`cache-hydrator-#{UUID}`). Dadurch wird jedes Metadaten-Update an *jeden* laufenden Pod gebroadcastet.
+* **Cache Broadcast Pattern:** Damit jeder Pipeline-Pod einen synchronen Metadaten-Cache besitzt, generiert der `SensorConfigCacheHydrationListener` beim Start eine zufällige UUID als Consumer Group (`cache-hydrator-#{UUID}`). Dadurch wird jedes Metadaten-Update an *jeden* laufenden Pod gebroadcastet.
 * **Deaktiviertes Auto-Commit (`enable-auto-commit: false`):** Spring Boot darf Kafka-Offsets niemals im Hintergrund bestätigen. Das System verlässt sich ausschliesslich auf manuelle Bestätigungen (`ack-mode: manual`).
 * **Das Guarded Acknowledgment Pattern (At-Least-Once):** In allen Listenern wird der Kafka-Offset erst explizit committet (`ack.acknowledge()`), **nachdem** die Daten sicher in die nächste Schicht oder die TimeScaleDB persistiert wurden. Fällt ein Pod aus, pausiert Kafka und liefert das Event nach dem Neustart erneut aus.
+
+===== Explizite Separation of Concerns für Container-Factories
+
+Um das Risiko von hängenden Offsets oder Datenverlust bei zustandslosen @SendTo-Integrationen zu eliminieren, verwendet das System zwei spezialisierte Container-Factories:
+
+* manualAckFactory: Reserviert für rein infrastrukturseitige oder datenbanknahe Konsumenten (z. B. SensorConfigCacheHydrationListener oder SensorDataBatchListener). Sie erzwingt die manuelle Injektion von Acknowledgment und ein explizites ack.acknowledge() im Code.
+
+* forwardingMessageFactory: Speziell konzipiert für zustandslose EIP-Ingress-Adapter mit deklarativer @SendTo-Weiterleitung. Sie nutzt den AckMode.RECORD und stellt sicher, dass der Offset erst bestätigt wird, nachdem alle transformierten Datensätze vom Broker erfolgreich quittiert wurden.
 
 ==== 4.2. Echtzeit-Verarbeitung (Process-Flow)
 
 Dieser Flow verarbeitet neue, normalisierte Sensordaten, standardisiert sie und speichert sie in der TimeScaleDB.
 
 * **Kafka Batching:** Der Konsum erfolgt in Batches, um den Durchsatz zu maximieren.
-* **Idempotente UPSERTs:** Der `ProcessService` nutzt jOOQs `ON CONFLICT (timestamp, sensor_id) DO UPDATE`. Wenn Kafka einen Batch nach einem Absturz erneut sendet, überschreibt die Datenbank die Zeilen einfach mit exakt denselben, korrekten Daten. Es entstehen keine Duplikate.
-* **Poison Pill Handling (Batch-Rettung):** Wenn ein einzelner Datensatz innerhalb eines 200er-Batches fehlerhaft ist (z. B. unlesbarer Timestamp), fängt der `ProcessService` die `TransformationException` lokal ab, loggt den fehlerhaften Rohwert und überspringt ihn (`return null`). Die verbleibenden 199 validen Datensätze werden erfolgreich in der DB gespeichert, anstatt den gesamten Batch in eine Dead Letter Queue (DLQ) zu leiten.
+* **Idempotente UPSERTs:** Der `SensorDataBatchProcessor` nutzt jOOQs `ON CONFLICT (timestamp, sensor_id) DO UPDATE`. Wenn Kafka einen Batch nach einem Absturz erneut sendet, überschreibt die Datenbank die Zeilen einfach mit exakt denselben, korrekten Daten. Es entstehen keine Duplikate.
+* **Poison Pill Handling (Batch-Rettung):** Wenn ein einzelner Datensatz innerhalb eines 200er-Batches fehlerhaft ist (z. B. unlesbarer Timestamp), fängt der `SensorDataBatchProcessor` die `TransformationException` lokal ab, loggt den fehlerhaften Rohwert und überspringt ihn (`return null`). Die verbleibenden 199 validen Datensätze werden erfolgreich in der DB gespeichert, anstatt den gesamten Batch in eine Dead Letter Queue (DLQ) zu leiten.
 
 ==== 4.3. Historische Daten-Reprozessierung (Reprocess-Flow)
 
-Dieser Flow wird durch ein Sensor-Config-Update (`SensorConfig`) ausgelöst und muss potenziell Hunderttausende von Datensätzen aktualisieren, ohne den Speicher zu sprengen oder andere Prozesse zu blockieren. Die Logik ist in eine spezifische Orchestrator-und-Chunk-Architektur unterteilt.
+Dieser Flow wird durch ein Aktualisierungs-Event der Sensorkonfiguration (`SensorConfig`) getriggert und ist darauf ausgelegt, potenziell Hunderttausende historischer Zeitreihendaten rückwirkend an neue mathematische Formeln anzupassen. Die Architektur trennt dabei die Steuermechanismen strikt von den ressourcenintensiven Datenbankoperationen, um den Speicherbedarf konsistent niedrig zu halten und Deadlocks zu verhindern.
 
-* **High-Performance Guard:** Der `ReprocessService` führt zuerst eine `EXISTS`-Abfrage aus. Gibt es keine alten Versionen, wird der Prozess in Millisekunden beendet.
-* **Die AOP-Proxy-Falle & Transaktionsgrenzen:** Wenn im Spring Framework eine Methode mit der `@Transactional`-Annotation aus derselben Klasse heraus aufgerufen wird, wird der Proxy umgangen. Daher ist die Logik strikt aufgeteilt: Der **`ReprocessService`** steuert die Schleife (ohne Transaktion), während der extern aufgerufene **`ReprocessChunkService`** jeden einzelnen Chunk in einer isolierten Datenbanktransaktion ausführt.
-* **Iteratives Chunking (Speichersicherheit):** Eine `do-while`-Schleife ruft den Chunk-Service auf. Um JVM-OOM-Fehler zu vermeiden, erzwingt die jOOQ-Abfrage ein konfigurierbares `LIMIT` (z.B. 1000, gesteuert via `application.properties`). Die Schleife wiederholt sich, bis die Fetch-Size `0` erreicht.
-* **Poison Pill Handling (Die Endlosschleifen-Falle):** Tritt bei einem historischen Datensatz ein Fehler auf (z. B. Division durch Null), darf dieser *nicht* einfach übersprungen werden. Andernfalls würde die SQL-Abfrage ihn im nächsten Schleifendurchlauf erneut laden, was zu einer Endlosschleife führt.
+* **High-Performance Guard:** Der `SensorReprocessingOrchestrator` führt initial eine leichte `EXISTS`-Abfrage auf der Datenbank aus. Sind für die betroffene Formelversion keine veralteten Datensätze vorhanden, terminiert der Prozess ressourcenschonend innerhalb weniger Millisekunden.
+
+* **Feingranulare Transaktionsgrenzen via `TransactionTemplate`:**
+Um die Belegungsdauer wertvoller Datenbankverbindungen im HikariCP-Pool zu minimieren, wird im `HistoricalReadingChunkProcessor` bewusst auf eine deklarative Methodensperre via `@Transactional` verzichtet. Auch wenn die mathematische Auswertung der normalisierten Werte dank des hochperformanten Parsington-Expression-Cachings im Arbeitsspeicher nur wenige Millisekunden beansprucht, trennt die Architektur die Netzwerk-I/O-Phasen strikt voneinander:
+1. *Transaktionsfreies Lesen:* Die historischen Datensätze werden ohne aktive Schreibtransaktion über das Netzwerk geladen.
+2. *In-Memory-Transformation:* Die Auswertung der vorab geparsten Parsington-Formeln und das Stream-Mapping erfolgen vollständig im lokalen Arbeitsspeicher der JVM (ohne gebundene JDBC-Connection).
+3. *Programmatischer DB-Commit:* Erst für das abschließende Schreiben wird ein dediziertes Spring `TransactionTemplate` geöffnet. Dieses kapselt das jOOQ-Bulk-Update in eine extrem kurze, atomare Schreibtransaktion, was die Netzwerk-Lesezeiten komplett aus der Transaktionsdauer eliminiert und den Durchsatz bei parallelen Workflows maximiert.
+
+* **Schutz vor Race-Conditions (Partitioned Kafka Consumer Groups):**
+Da das Triggern der Reprozessierung ereignisgesteuert über das Topic `internal-sensor-config` erfolgt, greift auf Infrastrukturebene ein natürlicher Schutz vor Nebenläufigkeitskonflikten. Sämtliche Konfigurations-Updates werden zwingend mit der eindeutigen `sensor_id` als Kafka-Message-Key publiziert. Durch die intrinsischen Eigenschaften von Partitioned Kafka Consumer Groups garantiert der Broker, dass alle Events für einen spezifischen Sensor strikt sequenziell und stets von genau demselben Konsumenten-Thread verarbeitet werden. Parallele, kollidierende Reprocess-Flows für dieselben Zeitreihendaten (Write Skews oder Lost Updates über Pod-Grenzen hinweg) sind somit architektonisch ausgeschlossen, weshalb auf der Datenbankebene auf zusätzliche, aufwändige Sperrmechanismen (wie Pessimistic oder Optimistic DB-Locking) verzichtet wird.
+
+* **Iteratives Chunking (JVM-Speichersicherheit):**
+Um Out-Of-Memory-Fehler (OOM) auf den Kubernetes-Pods zu vermeiden, wird die Verarbeitung über eine dynamische `do-while`-Schleife im Orchestrator gesteuert. Jede Abfrage erzwingt ein striktes, über die `application.properties` konfigurierbares `LIMIT` (z. B. 1000 Datensätze pro Chunk). Die Schleife iteriert so lange, bis die Anzahl der geladenen Datensätze `0` erreicht.
+
+* **Poison Pill Handling (Die Endlosschleifen-Falle):**
+Schlägt die mathematische Transformation eines historischen Datensatzes fehl (z. B. durch eine Division durch Null aufgrund korrupter Rohwerte), darf dieser Datensatz unter keinen Umständen unmodifiziert übersprungen werden. Andernfalls würde die SQL-Abfrage dieselbe fehlerhafte Zeile im nächsten Chunk-Durchlauf erneut laden, was in einer Endlosschleife resultieren würde.
 +
-**Die Loop-Breaker Lösung:** Die Exception wird abgefangen, die `version` des fehlerhaften Datensatzes wird explizit hochgezählt und der `norm_value` wird auf `null` gesetzt. Dadurch wird die Endlosschleife gebrochen:
+**Die Loop-Breaker Lösung:** Die `TransformationException` wird gezielt abgefangen. Um die Schleife zu durchbrechen, wird die `version` des betroffenen Datensatzes explizit auf die aktuelle Zielversion angehoben und der `norm_value` auf `null` gesetzt:
 
 [source,java]
 ----
@@ -313,10 +333,10 @@ Dieser Flow wird durch ein Sensor-Config-Update (`SensorConfig`) ausgelöst und 
               "Raw Value: [{}]. Bumping version to bypass infinite loop. Reason: {}",
               reading.getSensorId(), reading.getRawValue(), ex.getMessage(), ex);
 
-    // 1. Version erzwingen zu inkrementieren, damit die DB-Abfrage den Datensatz beim nächsten Schleifendurchlauf ignoriert
+    // 1. Versions-Inkrement erzwingen: Verhindert das erneute Erfassen im nächsten Chunk-Durchlauf
     reading.setVersion(sensorConfig.getVersion().shortValue());
 
-    // 2. norm_value auf null setzen, um sicherzustellen, dass nachgelagerte Systeme keine falsch berechneten Daten anzeigen
+    // 2. norm_value auf null setzen: Verhindert die Auslieferung korrupter Berechnungen an nachgelagerte Systeme
     reading.setNormValue(null);
 
     return reading;
@@ -338,18 +358,91 @@ Um die Architektur strikt ereignisgesteuert (event-driven) zu halten, sollte die
 === 5.2. Raw Data Model definieren
 Analog zur `RawSolExpertsSensorData`-Klasse muss ein spezifisches Java-Record für die Payload der neuen Datenquelle erstellt werden (z. B. `RawFtpCsvSensorData`).
 
-=== 5.3. Normalization Service implementieren
-Die eigentliche Übersetzungslogik wird als dedizierter, isolierter Service innerhalb der Java-Applikation umgesetzt.
+=== 5.3. Normalizer Component implementieren (Strategy Pattern)
 
-* **Service-Erstellung:** Erstellen eines neuen Spring `@Service` (z. B. `RawFtpCsvSensorDataNormalizationService`).
-* **Komposition:** Injizieren des zentralen `NormalizedSensorDataPublisher` via Konstruktor-Injection.
-* **Event-Ingestion:** Hinzufügen eines `@KafkaListener`, der auf das neu erstellte Raw-Topic lauscht.
-* **Transformation:** Innerhalb der Listener-Methode die herstellerspezifischen Rohdaten parsen und in das kanonische Standardformat (`NormalizedSensorData`) umwandeln.
-* **Wichtig - Guarded Acknowledgment:** Um Datenverlust (At-Least-Once Delivery) bei Fehlern oder Pod-Crashes garantiert auszuschliessen, muss das Acknowledgment-Pattern exakt wie folgt implementiert werden:
-1. Für jeden extrahierten Sensorwert die Methode `publisher.publish(sensorId, canonicalPayload)` aufrufen.
-2. Die resultierenden asynchronen `CompletableFuture`-Objekte in einer Liste sammeln.
-3. Mittels `CompletableFuture.allOf(...).join()` blockierend darauf warten, dass der Kafka-Broker den Erhalt *aller* Nachrichten bestätigt hat.
-4. **Erst nach erfolgreicher Bestätigung aller Futures** darf der Offset des ursprünglichen Raw-Topics via `ack.acknowledge()` committet werden.
+Um das Messaging-Plumbing (Kafka) vollständig von der Datenübersetzung zu entkoppeln, setzt die Pipeline auf das **Strategy Pattern**. Für jede neue Datenquelle wird eine spezifische Implementierung des generischen Interfaces `VendorDataNormalizer<T>` als Spring `@Component` bereitgestellt.
+
+* **Zustandslose Transformation:** Der Normalizer nimmt das rohe Hersteller-Record entgegen und übersetzt es in eine Liste von standardisierten Spring `Message<NormalizedSensorData>`-Objekten.
+* **Kritisch – Kafka Partitioning Key (`KafkaHeaders.KEY`):** Damit die nachgelagerte Pipeline (insbesondere der `SensorDataBatchListener`) Messwerte desselben Sensors in strikter zeitlicher Reihenfolge und ohne Race-Conditions verarbeiten kann, muss beim Aufbau der ausgehenden Nachricht **zwingend** der Ziel-Gerätename als Kafka-Key gesetzt werden. Dies geschieht über den `MessageBuilder` mittels `.setHeader(KafkaHeaders.KEY, deviceName)`.
+
+**Beispiel-Implementierung des Normalizers:**
+
+[source,java]
+----
+@Component
+public class SolExpertsSensorDataNormalizer implements VendorDataNormalizer<RawSolExpertsSensorData> {
+
+    @Override
+    public List<Message<NormalizedSensorData>> normalizeToMessages(RawSolExpertsSensorData rawPayload) {
+        if (rawPayload == null || rawPayload.values() == null || rawPayload.values().isEmpty()) {
+            return List.of();
+        }
+
+        List<Message<NormalizedSensorData>> outboundMessages = new ArrayList<>();
+
+        for (Map.Entry<String, Double> entry : rawPayload.values().entrySet()) {
+            String newDeviceName = entry.getKey().equals("value")
+                    ? rawPayload.deviceName()
+                    : rawPayload.deviceName() + "_" + entry.getKey();
+
+            NormalizedSensorData canonicalPayload =
+                    new NormalizedSensorData(newDeviceName, rawPayload.ts(), entry.getValue());
+
+            // CRITICAL: Set Kafka partitioning key to guarantee ordering in downstream topics
+            Message<NormalizedSensorData> message = MessageBuilder
+                    .withPayload(canonicalPayload)
+                    .setHeader(KafkaHeaders.KEY, newDeviceName)
+                    .build();
+
+            outboundMessages.add(message);
+        }
+
+        return outboundMessages;
+    }
+}
+----
+
+=== 5.4. Ingress Listener implementieren (Deklarativer EIP-Adapter)
+
+Der eigentliche Konsument lauscht auf das Raw-Topic und agiert als leichtgewichtige, zustandslose Enterprise Integration Pattern (EIP) Pipe. Er delegiert die Übersetzung vollständig an den injizierten `VendorDataNormalizer`.
+
+* **Klassen-Namenskonvention & Stereotyp (ArchUnit-konform):** Da Konsumenten von Kafka-Nachrichten reine Infrastruktur-Komponenten und keine Domänen-Services sind, muss die Klasse zwingend mit `@Component` (niemals `@Service`!) annotiert sein und im Namen auf `Listener` enden (z. B. `RawSolExpertsSensorDataListener`). Dies wird durch die automatisierte ArchUnit-Testsuite strikt überwacht.
+* **Event-Ingestion & Factory-Anbindung:** Die Methode wird mit `@KafkaListener` annotiert und lauscht auf das Raw-Topic. Hierbei muss zwingend die auf Ingress-Routing spezialisierte Container-Factory angegeben werden: `containerFactory = "forwardingMessageFactory"`.
+* **Deklaratives Routing via `@SendTo`:** Statt Nachrichten manuell über einen Publisher zu versenden und asynchrone Futures zu verwalten, setzt die Pipeline auf deklaratives Routing. Die Listener-Methode wird mit `@SendTo("${app.kafka.topics.normalized}")` annotiert. Das Spring-Framework fängt die zurückgegebene `List<Message<NormalizedSensorData>>` ab, splittet sie und publiziert jede Nachricht einzeln in das Ziel-Topic.
+* **Guarded Acknowledgment (Zero-Data-Loss Garantie):** Das sichere Bestätigen der Offsets übernimmt die zugrundeliegende Infrastruktur vollautomatisch und atomar:
+1. Die `forwardingMessageFactory` empfängt die vom Normalizer generierte Nachrichtenliste.
+2. Sie leitet alle enthaltenen Nachrichten unter Beibehaltung der gesetzten `KafkaHeaders.KEY`-Header an das Ziel-Topic (`internal-normalized`) weiter.
+3. Da die Factory auf `AckMode.RECORD` konfiguriert ist, wird der Kafka-Offset des ursprünglichen Raw-Topics **erst und ausschließlich dann committet**, wenn der Kafka-Broker den erfolgreichen Erhalt und die Speicherung *aller* transformierten ausgehenden Nachrichten bestätigt hat. Stürzt der Pod während der Verarbeitung ab, erfolgt kein Commit und das Raw-Event wird nach dem Neustart sicher erneut verarbeitet.
+
+**Beispiel-Implementierung des Ingress-Listeners:**
+
+[source,java]
+----
+@Component
+public class RawSolExpertsSensorDataListener {
+
+    private static final Logger log = LoggerFactory.getLogger(RawSolExpertsSensorDataListener.class);
+
+    private final VendorDataNormalizer<RawSolExpertsSensorData> normalizer;
+
+    public RawSolExpertsSensorDataListener(VendorDataNormalizer<RawSolExpertsSensorData> normalizer) {
+        this.normalizer = normalizer;
+    }
+
+    @KafkaListener(
+            topics = "${app.kafka.topics.raw-solexperts}",
+            groupId = "solexperts-adapter-group",
+            concurrency = "${app.kafka.concurrency:6}",
+            containerFactory = "forwardingMessageFactory")
+    @SendTo("${app.kafka.topics.normalized}")
+    public List<Message<NormalizedSensorData>> processRawMessage(RawSolExpertsSensorData rawPayload) {
+        log.info("Received raw SolExperts message: {}", rawPayload);
+
+        // Delegation an den Normalizer: Spring Kafka übernimmt das Splitten und Routing der Liste
+        return normalizer.normalizeToMessages(rawPayload);
+    }
+}
+----
 
 === Alternative: Zero-Code Ingestion via Kafka Connect SMTs
 

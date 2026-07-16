@@ -1,14 +1,14 @@
-package ch.swisstopo.monteis.pipeline.egress.events;
+package ch.swisstopo.monteis.pipeline.egress;
 
-import ch.swisstopo.monteis.pipeline.transformation.events.SensorBoundBreachedEvent;
+import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
+@Component
 public class AlertPublisher {
   private static final Logger log = LoggerFactory.getLogger(AlertPublisher.class);
 

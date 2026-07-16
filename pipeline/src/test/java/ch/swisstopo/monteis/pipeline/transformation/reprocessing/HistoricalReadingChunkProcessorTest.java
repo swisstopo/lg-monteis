@@ -2,8 +2,7 @@ package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
@@ -16,6 +15,7 @@ import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,25 +23,43 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @ExtendWith(MockitoExtension.class)
-class ReprocessChunkServiceTest {
+class HistoricalReadingChunkProcessorTest {
 
   @Mock private SensorReadingRepository sensorReadingRepository;
 
   @Mock private TransformationOrchestrator transformationOrchestrator;
 
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private TransactionTemplate transactionTemplate;
+
   @Captor private ArgumentCaptor<List<SensorReadingRecord>> dbRecordsCaptor;
 
-  private ReprocessChunkService chunkService;
+  private HistoricalReadingChunkProcessor chunkService;
 
   private final int testChunkSize = 100;
 
   @BeforeEach
   void setUp() {
     chunkService =
-        new ReprocessChunkService(
-            sensorReadingRepository, transformationOrchestrator, testChunkSize);
+        new HistoricalReadingChunkProcessor(
+            sensorReadingRepository,
+            transformationOrchestrator,
+            transactionTemplate,
+            testChunkSize);
+
+    // Instruct the mocked TransactionTemplate to immediately execute the passed lambda!
+    willAnswer(
+            invocation -> {
+              Consumer<TransactionStatus> action = invocation.getArgument(0);
+              action.accept(null); // Pass null as TransactionStatus since we don't inspect it
+              return null;
+            })
+        .given(transactionTemplate)
+        .executeWithoutResult(any());
   }
 
   @Test

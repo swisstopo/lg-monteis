@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.then;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
-import ch.swisstopo.monteis.pipeline.transformation.events.SensorBoundBreachedEvent;
-import ch.swisstopo.monteis.pipeline.transformation.events.SensorBoundBreachedEvent.BoundType;
+import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent;
+import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent.BoundType;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;

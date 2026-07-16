@@ -6,7 +6,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
-import ch.swisstopo.monteis.pipeline.transformation.processing.SensorConfigMessageProcessor;
+import ch.swisstopo.monteis.pipeline.transformation.processing.SensorConfigMessageHandler;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,15 +16,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.support.Acknowledgment;
 
 @ExtendWith(MockitoExtension.class)
-class SensorConfigCacheHydratorTest {
+class SensorConfigCacheHydrationListenerTest {
 
   @Mock private SensorConfigCache cacheService;
 
-  @Mock private SensorConfigMessageProcessor messageProcessor;
+  @Mock private SensorConfigMessageHandler messageProcessor;
 
   @Mock private Acknowledgment ack;
 
-  @InjectMocks private SensorConfigCacheHydrator hydrator;
+  @InjectMocks private SensorConfigCacheHydrationListener hydrator;
 
   @Test
   void should_delegate_to_processor_and_update_cache() {

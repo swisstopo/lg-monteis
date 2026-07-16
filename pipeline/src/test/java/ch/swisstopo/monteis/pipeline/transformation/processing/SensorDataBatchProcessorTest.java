@@ -1,12 +1,12 @@
 package ch.swisstopo.monteis.pipeline.transformation.processing;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.mock;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
-import ch.swisstopo.monteis.pipeline.ingress.internal.NormalizedSensorData;
+import ch.swisstopo.monteis.pipeline.internal.model.NormalizedSensorData;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
@@ -14,6 +14,8 @@ import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.SensorConfigCache;
 import java.util.List;
+import java.util.function.Consumer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -22,9 +24,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @ExtendWith(MockitoExtension.class)
-class ProcessServiceTest {
+class SensorDataBatchProcessorTest {
 
   @Mock private SensorConfigCache sensorConfigCache;
 
@@ -32,11 +36,27 @@ class ProcessServiceTest {
 
   @Mock private SensorReadingRepository sensorReadingRepository;
 
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private TransactionTemplate transactionTemplate;
+
   @Mock private Acknowledgment ack;
 
-  @InjectMocks private ProcessService processService;
+  @InjectMocks private SensorDataBatchProcessor sensorDataBatchProcessor;
 
   @Captor private ArgumentCaptor<List<SensorReadingRecord>> dbRecordsCaptor;
+
+  @BeforeEach
+  void setUp() {
+    // Instruct the mocked TransactionTemplate to immediately execute the passed lambda!
+    willAnswer(
+            invocation -> {
+              Consumer<TransactionStatus> action = invocation.getArgument(0);
+              action.accept(null); // Pass null as TransactionStatus since we don't inspect it
+              return null;
+            })
+        .given(transactionTemplate)
+        .executeWithoutResult(any());
+  }
 
   @Test
   void should_process_and_persist_valid_batch_successfully() throws TransformationException {
@@ -62,7 +82,7 @@ class ProcessServiceTest {
         .willReturn(record2);
 
     // when
-    processService.processAndPersist(batch, ack);
+    sensorDataBatchProcessor.processAndPersist(batch, ack);
 
     // then
     then(sensorReadingRepository).should().upsertBatch(dbRecordsCaptor.capture());
@@ -101,7 +121,7 @@ class ProcessServiceTest {
         .willThrow(poisonException);
 
     // when
-    processService.processAndPersist(batch, ack);
+    sensorDataBatchProcessor.processAndPersist(batch, ack);
 
     // then
     then(sensorReadingRepository).should().upsertBatch(dbRecordsCaptor.capture());
@@ -129,7 +149,7 @@ class ProcessServiceTest {
         .willThrow(poisonException);
 
     // when
-    processService.processAndPersist(batch, ack);
+    sensorDataBatchProcessor.processAndPersist(batch, ack);
 
     // then
     then(sensorReadingRepository).should().upsertBatch(dbRecordsCaptor.capture());
