@@ -16,7 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+public class TestcontainersConfiguration {
 
   private static final Logger log = LoggerFactory.getLogger(TestcontainersConfiguration.class);
 
