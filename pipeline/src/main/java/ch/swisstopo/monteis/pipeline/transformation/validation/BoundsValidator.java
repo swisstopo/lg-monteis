@@ -1,13 +1,13 @@
 package ch.swisstopo.monteis.pipeline.transformation.validation;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
-import ch.swisstopo.monteis.pipeline.transformation.events.SensorBoundBreachedEvent;
+import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent;
 import java.time.Clock;
 import java.time.Instant;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
+@Component
 public class BoundsValidator {
 
   private final ApplicationEventPublisher eventPublisher;

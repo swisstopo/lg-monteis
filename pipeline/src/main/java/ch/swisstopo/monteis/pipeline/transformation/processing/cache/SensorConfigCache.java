@@ -3,9 +3,9 @@ package ch.swisstopo.monteis.pipeline.transformation.processing.cache;
 import ch.swisstopo.monteis.contracts.SensorConfig;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
+@Component
 public class SensorConfigCache {
 
   private final ConcurrentMap<String, ActiveSensorConfig> cache = new ConcurrentHashMap<>();

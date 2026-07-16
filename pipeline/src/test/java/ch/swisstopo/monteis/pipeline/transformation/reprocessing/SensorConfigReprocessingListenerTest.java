@@ -7,7 +7,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
-import ch.swisstopo.monteis.pipeline.transformation.processing.SensorConfigMessageProcessor;
+import ch.swisstopo.monteis.pipeline.transformation.processing.SensorConfigMessageHandler;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
@@ -22,9 +22,9 @@ import org.springframework.kafka.support.Acknowledgment;
 @ExtendWith(MockitoExtension.class)
 class SensorConfigReprocessingListenerTest {
 
-  @Mock private ReprocessService reprocessService;
+  @Mock private SensorReprocessingOrchestrator sensorReprocessingOrchestrator;
 
-  @Mock private SensorConfigMessageProcessor messageProcessor;
+  @Mock private SensorConfigMessageHandler messageProcessor;
 
   @Mock private Acknowledgment ack;
 
@@ -56,7 +56,9 @@ class SensorConfigReprocessingListenerTest {
     // then
     then(messageProcessor).should().processSafely(eq(config), eq(sensorId), eq(ack), any());
 
-    then(reprocessService).should().checkAndReprocessHistoricalData(activeConfigCaptor.capture());
+    then(sensorReprocessingOrchestrator)
+        .should()
+        .checkAndReprocessHistoricalData(activeConfigCaptor.capture());
     assertThat(activeConfigCaptor.getValue().getConfig()).isEqualTo(config);
   }
 }

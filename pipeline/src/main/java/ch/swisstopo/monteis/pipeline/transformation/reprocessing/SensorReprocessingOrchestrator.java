@@ -4,18 +4,19 @@ import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
-public class ReprocessService {
+@Component
+public class SensorReprocessingOrchestrator {
 
-  private static final Logger log = LoggerFactory.getLogger(ReprocessService.class);
+  private static final Logger log = LoggerFactory.getLogger(SensorReprocessingOrchestrator.class);
 
   private final SensorReadingRepository sensorReadingRepository;
-  private final ReprocessChunkService chunkService;
+  private final HistoricalReadingChunkProcessor chunkService;
 
-  public ReprocessService(
-      SensorReadingRepository sensorReadingRepository, ReprocessChunkService chunkService) {
+  public SensorReprocessingOrchestrator(
+      SensorReadingRepository sensorReadingRepository,
+      HistoricalReadingChunkProcessor chunkService) {
     this.sensorReadingRepository = sensorReadingRepository;
     this.chunkService = chunkService;
   }

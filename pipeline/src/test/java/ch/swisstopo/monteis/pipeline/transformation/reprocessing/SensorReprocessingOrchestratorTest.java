@@ -14,13 +14,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class ReprocessServiceTest {
+class SensorReprocessingOrchestratorTest {
 
   @Mock private SensorReadingRepository sensorReadingRepository;
 
-  @Mock private ReprocessChunkService chunkService;
+  @Mock private HistoricalReadingChunkProcessor chunkService;
 
-  @InjectMocks private ReprocessService reprocessService;
+  @InjectMocks private SensorReprocessingOrchestrator sensorReprocessingOrchestrator;
 
   @Test
   void should_skip_reprocessing_when_no_outdated_records_found() {
@@ -31,7 +31,7 @@ class ReprocessServiceTest {
     given(sensorReadingRepository.checkOldSensorData(config.getConfig())).willReturn(false);
 
     // when
-    reprocessService.checkAndReprocessHistoricalData(config);
+    sensorReprocessingOrchestrator.checkAndReprocessHistoricalData(config);
 
     // then
     then(sensorReadingRepository).should().checkOldSensorData(config.getConfig());
@@ -50,7 +50,7 @@ class ReprocessServiceTest {
     given(chunkService.processNextChunk(config)).willReturn(100, 50, 0);
 
     // when
-    reprocessService.checkAndReprocessHistoricalData(config);
+    sensorReprocessingOrchestrator.checkAndReprocessHistoricalData(config);
 
     // then
     then(sensorReadingRepository).should().checkOldSensorData(config.getConfig());

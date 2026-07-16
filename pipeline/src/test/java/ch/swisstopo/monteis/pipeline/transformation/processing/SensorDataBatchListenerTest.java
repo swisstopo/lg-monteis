@@ -2,7 +2,7 @@ package ch.swisstopo.monteis.pipeline.transformation.processing;
 
 import static org.mockito.BDDMockito.then;
 
-import ch.swisstopo.monteis.pipeline.ingress.internal.NormalizedSensorData;
+import ch.swisstopo.monteis.pipeline.internal.model.NormalizedSensorData;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,13 +12,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.support.Acknowledgment;
 
 @ExtendWith(MockitoExtension.class)
-class SensorDataListenerTest {
+class SensorDataBatchListenerTest {
 
-  @Mock private ProcessService processService;
+  @Mock private SensorDataBatchProcessor sensorDataBatchProcessor;
 
   @Mock private Acknowledgment ack;
 
-  @InjectMocks private SensorDataListener listener;
+  @InjectMocks private SensorDataBatchListener listener;
 
   @Test
   void should_delegate_batch_to_process_service() {
@@ -32,6 +32,6 @@ class SensorDataListenerTest {
     listener.consumeNormalizedSensorData(batch, ack);
 
     // then
-    then(processService).should().processAndPersist(batch, ack);
+    then(sensorDataBatchProcessor).should().processAndPersist(batch, ack);
   }
 }

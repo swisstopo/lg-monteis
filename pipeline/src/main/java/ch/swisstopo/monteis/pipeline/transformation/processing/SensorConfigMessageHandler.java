@@ -8,9 +8,9 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 @Component
-public class SensorConfigMessageProcessor {
+public class SensorConfigMessageHandler {
 
-  private static final Logger log = LoggerFactory.getLogger(SensorConfigMessageProcessor.class);
+  private static final Logger log = LoggerFactory.getLogger(SensorConfigMessageHandler.class);
 
   /**
    * Wraps the business logic with Kafka safety checks, tombstone handling, and poison pill protection.

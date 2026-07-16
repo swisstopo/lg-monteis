@@ -9,30 +9,33 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
-@Service
-public class ReprocessChunkService {
+@Component
+public class HistoricalReadingChunkProcessor {
 
-  private static final Logger log = LoggerFactory.getLogger(ReprocessChunkService.class);
+  private static final Logger log = LoggerFactory.getLogger(HistoricalReadingChunkProcessor.class);
 
   private final SensorReadingRepository sensorReadingRepository;
 
   private final TransformationOrchestrator transformationOrchestrator;
 
+  private final TransactionTemplate transactionTemplate;
+
   private final int chunkSize;
 
-  public ReprocessChunkService(
+  public HistoricalReadingChunkProcessor(
       SensorReadingRepository sensorReadingRepository,
       TransformationOrchestrator transformationOrchestrator,
+      TransactionTemplate transactionTemplate,
       @Value("${app.pipeline.reprocessing.chunk-size:1000}") int chunkSize) {
     this.sensorReadingRepository = sensorReadingRepository;
     this.transformationOrchestrator = transformationOrchestrator;
+    this.transactionTemplate = transactionTemplate;
     this.chunkSize = chunkSize;
   }
 
-  @Transactional
   public int processNextChunk(ActiveSensorConfig activeSensorConfig) {
     List<SensorReadingRecord> oldRecords =
         sensorReadingRepository.fetchOldSensorData(activeSensorConfig.getConfig(), chunkSize);
@@ -73,7 +76,8 @@ public class ReprocessChunkService {
                 })
             .toList();
 
-    sensorReadingRepository.bulkUpdate(updatedRecords);
+    transactionTemplate.executeWithoutResult(
+        status -> sensorReadingRepository.bulkUpdate(updatedRecords));
 
     return updatedRecords.size();
   }

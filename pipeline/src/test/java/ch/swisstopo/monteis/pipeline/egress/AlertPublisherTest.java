@@ -1,11 +1,11 @@
-package ch.swisstopo.monteis.pipeline.egress.events;
+package ch.swisstopo.monteis.pipeline.egress;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 
-import ch.swisstopo.monteis.pipeline.transformation.events.SensorBoundBreachedEvent;
-import ch.swisstopo.monteis.pipeline.transformation.events.SensorBoundBreachedEvent.BoundType;
+import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent;
+import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent.BoundType;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;

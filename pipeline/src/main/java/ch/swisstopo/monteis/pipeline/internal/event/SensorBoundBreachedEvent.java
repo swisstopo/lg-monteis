@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.pipeline.transformation.events;
+package ch.swisstopo.monteis.pipeline.internal.event;
 
 import java.time.Instant;
 
