@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import ch.swisstopo.monteis.core.ITConfiguration.IT;
-import ch.swisstopo.monteis.core.ITConfiguration.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.itconfig.IT;
+import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.time.OffsetDateTime;
 import java.util.List;

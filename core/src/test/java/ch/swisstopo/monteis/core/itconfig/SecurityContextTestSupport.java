@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.ITConfiguration;
+package ch.swisstopo.monteis.core.itconfig;
 
 import ch.swisstopo.monteis.core.infrastructure.security.AccessLevel;
 import ch.swisstopo.monteis.core.infrastructure.security.SecurityContext;

@@ -4,8 +4,8 @@ import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERI
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import ch.swisstopo.monteis.core.ITConfiguration.IT;
-import ch.swisstopo.monteis.core.ITConfiguration.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.itconfig.IT;
+import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.overview.jooq.OverviewQueryRepository;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.util.List;

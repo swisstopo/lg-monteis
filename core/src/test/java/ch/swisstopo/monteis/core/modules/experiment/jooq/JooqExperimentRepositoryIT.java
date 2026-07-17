@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import ch.swisstopo.monteis.core.ITConfiguration.IT;
-import ch.swisstopo.monteis.core.ITConfiguration.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.itconfig.IT;
+import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.ReadExperimentDetailsDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Bounds;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
