@@ -2,7 +2,7 @@ package ch.swisstopo.monteis.core.modules.overview.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
 
-import ch.swisstopo.monteis.core.modules.overview.service.QueryInterface;
+import ch.swisstopo.monteis.core.modules.overview.query.QueryInterface;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.util.List;
 import org.jooq.DSLContext;

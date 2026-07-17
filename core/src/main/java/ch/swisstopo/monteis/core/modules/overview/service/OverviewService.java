@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.modules.overview.service;
 
-import ch.swisstopo.monteis.core.modules.overview.jooq.OverviewQueryRepository;
+import ch.swisstopo.monteis.core.modules.overview.query.QueryInterface;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.util.List;
 import org.slf4j.Logger;
@@ -14,7 +14,7 @@ public class OverviewService {
 
   private final QueryInterface repository;
 
-  public OverviewService(OverviewQueryRepository repository) {
+  public OverviewService(QueryInterface repository) {
     this.repository = repository;
   }
 

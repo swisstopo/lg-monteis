@@ -30,7 +30,7 @@ public class MockAuthenticationFilter extends OncePerRequestFilter {
 
   // Edit these two lines by hand to change the mocked identity, then restart the app.
   private static final List<String> MOCK_ROLES = List.of(AccessLevel.ADMIN.toString());
-  private static final List<Long> MOCK_EXPERIMENT_IDS = List.of(1L);
+  private static final List<Long> MOCK_EXPERIMENT_IDS = List.of(1L, 2L, 3L);
 
   @Override
   protected void doFilterInternal(
