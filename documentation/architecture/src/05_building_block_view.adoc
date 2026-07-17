@@ -51,7 +51,7 @@ include::../images/core-api.puml[]
 // todo: wird noch angepasst
 Das Backend fungiert als Dreh- und Angelpunkt für jegliche synchrone Kommunikation. Es beinhaltet folgende logische Services:
 
-* **Security & Auth Filter:** Verarbeitet die vom externen Keycloak/eIAM empfangenen JWTs. Über den Spring `@Authenticated` Principal werden die in den Claims enthaltenen Rollen (z. B. `read_exp_a`) geparst und das RBAC (Role-Based Access Control) auf API-Ebene strikt durchgesetzt.
+* **Security & Auth Filter:** Zweistufige Filterkette: Ein Authentifizierungs-Filter verifiziert das Keycloak/eIAM-JWT und legt es im `SecurityContextHolder` ab; `SecurityContextFilter` bindet daraus Rolle und Experiment-IDs als `SecurityContext` in ein `ScopedValue`. Leseberechtigungen werden darüber transparent auf Datenbankebene per Row-Level-Security durchgesetzt, Schreibberechtigungen (RBAC) rollenbasiert auf Controller-Ebene (siehe Kap. 8 & 9).
 * **Query & Downsampling Service:** Ein dedizierter Service, der Leseanfragen an die TimeScaleDB richtet und intelligente Downsampling-Algorithmen anwendet, um die abgerufene Datenmenge vor der Auslieferung an das Frontend zu reduzieren.
 * **IFC Upload & Processing Service:** Nimmt hochgeladene 3D-Geometrie-Modelle (IFC-Dateien) entgegen und bereitet diese für das Rendering (via Giro3D/Three.js) im Frontend vor.
 * **Umsystem-Connectoren:** * *Fulcrum-Client:* Konsumiert die API von Fulcrum für die bidirektionale Synchronisation.
@@ -117,3 +117,5 @@ Die Durchsetzung der Datenintegrität und strikter Zugriffsverbote erfolgt nicht
 | **AWS Glue Jobs:** Exklusives Schreibrecht zur langfristigen Archivierung.
 | **Administratoren:** Exklusiver Lesezugriff, rein für die Notfall-Wiederherstellung (Disaster Recovery) von Originaldaten.
 |===
+
+Obwohl sämtliche Lesezugriffe des Backends auf PostgreSQL über dieselbe DB-Rolle (`core_app`) laufen, filtert eine zusätzliche Row-Level-Security-Schicht diese Zugriffe transparent pro Aufrufer nach Experiment-Zugehörigkeit — Admins sehen alles, reguläre Nutzer nur ihre eigenen Experimente. Details dazu in Kap. 8 ("Core-API Datenzugriff & Sicherheit") und `core/ROW_LEVEL_SECURITY.md`.

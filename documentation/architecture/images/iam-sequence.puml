@@ -8,30 +8,32 @@ participant "Angular Frontend" as UI
 control "Keycloak\n(Identity Broker)" as KC
 boundary "AGOV\n(IdP)" as AGOV
 participant "Core API (Backend)\n[Resource Server]" as Backend
-database "Datenbank\n(via jOOQ)" as DB
+database "PostgreSQL\n(Row-Level Security)" as DB
 
 == Login & Token Issuance ==
 User -> UI : Öffnet geschützten Bereich
 UI -> KC : Redirect Login (Auth Code Flow)
 KC -> AGOV : Delegiert Authentifizierung
 AGOV --> KC : Auth Success
-KC -> KC : Mappt User-Rollen in Token-Claims
-KC --> UI : Return JWT (Access Token inkl. Roles)
+KC -> KC : Mappt User-Rollen & Experiment-IDs\nin Token-Claims (realm_access.roles, experiment_ids)
+KC --> UI : Return JWT (Roles, Experiment-IDs)
 
-== API Request mit Data Filtering ==
+== API Request mit Row-Level Security ==
 User -> UI : Klickt auf Experiment-Dashboard
 UI -> Backend : GET /experiments/data\n(Header: Bearer JWT)
 activate Backend
 
 Backend -> Backend : Security Filter: JWT validieren\n(Signatur-Check via KC JWKS)
-Backend -> Backend : Claims parsen & in Security Context legen
+Backend -> Backend : SecurityContextFilter: Rollen &\nExperiment-IDs aus JWT lesen,\nals ScopedValue binden (SecurityContext)
 
-Backend -> DB : jOOQ Query ausführen\n(z.B. SELECT * WHERE exp_id IN [User-Roles])
+Backend -> DB : set_config('app.access_level', ...)\nset_config('app.user_experiment_ids', ...)\n(RlsConnectionProvider, transaktionslokal)
+Backend -> DB : jOOQ Query ausführen\n(unverändert, ohne manuelle\nBerechtigungs-WHERE-Klausel)
 activate DB
+DB -> DB : RLS-Policy wertet GUCs aus\nund filtert Zeilen serverseitig
 DB --> Backend : Return gefilterte Datensätze
 deactivate DB
 
-Backend --> UI : 200 OK (Autorisierte Daten)
+Backend --> UI : 200 OK (autorisierte Daten)
 deactivate Backend
 
 UI --> User : Dashboard wird gerendert

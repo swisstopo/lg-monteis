@@ -38,27 +38,29 @@ Es werden zwei Ablauf-Varianten unterschieden, abhängig davon, ob zusätzliche 
 ** Es werden *keine* Domänen-Objekte (`Entities`) verwendet.
 ** Das Repository nutzt die volle Stärke von jOOQ, um hochoptimierte SQL-Joins (z.B. über Sensoren, Experimente und Boreholes) auszuführen.
 ** Module, die dieses Pattern nutzen, verwenden den Suffix `QueryRepository` (statt `Repository`), um visuell zu signalisieren, dass hier kein Aggregate-Root zurückgegeben wird.
-** Die Sicherheitsfilterung (Row-Level-Security) erfolgt unabhängig von dieser Entscheidung immer auf jOOQ-Ebene über den `VisitListener` (siehe Abschnitt "Core-API Datenzugriff & Sicherheit"), nie im Service. Das Weglassen des Service hat daher keinen Einfluss auf die Zugriffskontrolle.
+** Die Sicherheitsfilterung (Row-Level-Security) erfolgt unabhängig von dieser Entscheidung immer auf Datenbankebene über native Postgres-RLS-Policies (siehe Abschnitt "Core-API Datenzugriff & Sicherheit"), nie im Service oder Repository. Das Weglassen des Service hat daher keinen Einfluss auf die Zugriffskontrolle.
 
 ==== Zusammenfassung der Vorteile
 * *Performance:* Native SQL-Joins direkt in DTOs ohne den Overhead von Objekt-Instanziierungen im Java-Speicher.
 * *Saubere Domäne:* Fachobjekte wie `Sensor` bleiben fokussiert auf ihre eigenen Business-Regeln und werden nicht mit UI-spezifischen Feldern (z.B. `experimentName`) verschmutzt.
 
 === Core-API Datenzugriff & Sicherheit
-Das Ziel dieser Architektur ist es, den Business-Code (Service Layer) zu 100 % sauber von Berechtigungsprüfungen zu halten. Die Sicherheit wird stattdessen an den Rändern des Systems durchgesetzt.
+Berechtigungsprüfungen finden nie im Service statt, sondern ausschliesslich an den Rändern des Systems (Filter) und in der Datenbank (Row-Level Security).
 
-- **Der Security Context (`ScopedValue`) & Access Levels:** Ein Spring-Filter fungiert als Trichter (Funnel). Er normalisiert die eingehende Authentifizierung – unabhängig davon, ob es sich um ein menschliches JWT oder einen Maschinen-API-Key (z.B. von der Data Pipeline) handelt – in einen systemweiten Zugriffslevel (`USER`, `ADMIN`, `DATA_PIPELINE`). Dieser Level sowie die für User extrahierten Entitäts-IDs (Lese- und Schreibrechte) werden in einem modernen, threadsicheren Java `ScopedValue` (dem Nachfolger von `ThreadLocal`) für die Dauer des Requests gespeichert.
+[plantuml, security-context-flow, format="svg"]
+....
+include::../images/security-context-flow.puml[]
+....
 
-- **Die "Master Security Lineage" View:** Um komplexe Hierarchien und M:N-Beziehungen in der Datenbank abzubilden, ohne den Java-Code aufzublähen, wird eine zentrale SQL-View erstellt. Diese View mappt alle Entitäten flach auf ihre jeweiligen "Root-Rollen-IDs".
+- **Security Context (`ScopedValue`):** Ein Auth-Filter validiert das JWT und legt es im `SecurityContextHolder` ab. `SecurityContextFilter` liest daraus Rolle und Experiment-IDs, leitet einen `AccessLevel` (`ADMIN`/`USER`/`NONE`) ab und bindet beides für die Dauer des Requests als `SecurityContext` in ein Java `ScopedValue`. Fehlt eine gültige Rolle, wird strikt auf `NONE` verengt (*fail closed*). Hintergrundjobs ohne Request (z. B. der Startup-Audit-Backfill) binden stattdessen explizit einen `SystemSecurityContext` mit Admin-Rechten.
 
-- **Der jOOQ `VisitListener` (Für Lese-/Änderungszugriffe):** Dieser jOOQ-Interceptor fängt automatisch jedes `SELECT`, `UPDATE` und `DELETE` ab, bevor es zur Datenbank geschickt wird. Er liest den Zugriffslevel und die IDs aus dem `ScopedValue` und trifft situationsbedingte Routing-Entscheidungen: `ADMIN`-Anfragen passieren ungefiltert, `DATA_PIPELINE`-Anfragen werden hart auf spezifizierte Tabellen (wie Sensordaten) isoliert, und bei regulären `USER`-Anfragen hängt er transparent eine `WHERE`-Bedingung an das SQL an, die auf Basis der Master-View filtert. Der Entwickler schreibt im Service nur `fetch()`, aber die Datenbank führt automatisch das korrekt gefilterte SQL aus.
+- **Leseberechtigungen (Row-Level Security):** `RlsConnectionProvider` schreibt den aktuellen `SecurityContext` bei jeder Connection-Beschaffung transaktionslokal auf die Verbindung. Native RLS-Policies auf `sensors`/`experiments` sowie eine security-barrier-View für die per FDW eingebundene TimescaleDB-Tabelle filtern Zeilen serverseitig danach — der jOOQ-Code selbst enthält keine Berechtigungslogik. Weil der Kontext transaktionslokal ist, muss jede RLS-relevante Repository-Methode innerhalb einer Spring-Transaktion laufen (`@Transactional(readOnly = true)`).
 
-- **Der jOOQ `RecordListener` (Für INSERTs):** Da `INSERT`-Statements keine `WHERE`-Klausel haben, greift hier ein zweiter Interceptor. Er prüft den Java-Payload direkt vor dem Speichern ab und wirft eine Exception, falls ein standard `USER` versucht, Daten für eine Entität anzulegen, für die er keine Schreibrechte besitzt.
-
+- **Schreibberechtigungen (RBAC):** Alle DB-Zugriffe laufen über dieselbe Rolle (`core_app`), RLS kann also keine nutzerspezifischen Schreibrechte abbilden. Schreibzugriffe bleiben auf DB-Ebene permissiv; die Autorisierung erfolgt stattdessen rollenbasiert auf Controller-Ebene (`@PreAuthorize`) — siehe ADRs in Kap. 9.
 
 === Core-API Optimistic Locking und Versionierung/Auditierung
 
-==== 1. Technischer Hintergrund: Optimistic Locking
+==== Technischer Hintergrund: Optimistic Locking
 
 Im Gegensatz zum Pessimistic Locking (bei dem Datensätze explizit auf Datenbankebene über `SELECT ... FOR UPDATE` gesperrt werden), geht das Optimistic Locking davon aus, dass parallele Schreibzugriffe auf denselben Datensatz selten sind. Die Konflikterkennung wird bis zum eigentlichen Schreibvorgang verzögert.
 
@@ -71,7 +73,7 @@ Der Schreibzugriff: Beim Speichern wird ein `UPDATE` abgesetzt, das die alte Ver
 
 Die Prüfung: Die Datenbank meldet zurück, wie viele Zeilen aktualisiert wurden (Rows Affected). Ist dieser Wert 0, bedeutet dies, dass ein anderer Prozess den Datensatz in der Zwischenzeit modifiziert hat. In diesem Fall wirft der ORM oder Query-Builder (hier jOOQ) eine Exception (z.B. `DataChangedException`), was in der Regel zu einem Rollback der Datenbanktransaktion führt.
 
-==== 2. Architektur und Trennung der Zuständigkeiten
+==== Architektur und Trennung der Zuständigkeiten
 
 Die gewählte Schichtenarchitektur trennt das Concurrency Management (jOOQ) strikt vom Audit-Logging (JaVers).
 
@@ -83,7 +85,7 @@ Persistenz-Schicht (jOOQ Records): Übernimmt das Mapping vom Domain Model auf d
 
 Audit-Schicht (JaVers): Arbeitet vollkommen passiv. Der AOP-Aspekt greift sich das resultierende Domain Model nur dann, wenn die Methode der Business-Schicht erfolgreich und ohne Exceptions beendet wurde, und committet den Status-Diff in die JaVers-Tabellen.
 
-==== 3. Erfolgs- und Fehlerfall
+==== Erfolgs- und Fehlerfall
 
 Das folgende Diagramm veranschaulicht den Datenfluss und das Zusammenspiel der Komponenten, insbesondere warum fehlgeschlagene Updates nicht zu fehlerhaften Audit-Einträgen führen.
 
@@ -94,7 +96,7 @@ include::../images/audit_optimistic_locking_flow.puml[]
 
 Wenn bei der Versionierung etwas schief geht, erfolgt ein Rollback der Übergeordneten Transaktion, damit die gespeicherten Daten und die zugehörige Versionierung konsistent bleiben (Wenn etwas gespeichert wird, ist es in der Versionierung ersichtlich).
 
-==== 4. Aspekt für die Versionierung
+==== Aspekt für die Versionierung
 Damit die Service-Schicht nur minimale Kenntnisse von der Versionierung haben muss, wird ein Spring AOP Aspekt verwendet. Methoden werden lediglich mit einer eigenen Annotation versehen (`@AuditChanges`), damit das betroffene Objekt vom Aspekt aufgegriffen und sauber in den Versionstabellen von JaVers abgelegt wird. Hier gilt zu beachten, dass `@AfterReturning` verwendet wird, damit beim Einfügen eines neuen Objekts dessen eindeutige ID bereits gesetzt wurde. Hier ist ein Beispiel, wie der Aspekt aussehen könnte:
 
 [source,java]
@@ -173,7 +175,7 @@ Wenn ein neues Fachobjekt (z. B. `Experiment`) in die Architektur integriert wir
 * **Trigger:** Die speichernde Service-Methode muss zwingend mit `@Transactional` und der eigenen Annotation `@AuditChanges` versehen werden.
 * **Rückgabewert (Kritisch!):** Die Methode _muss_ das frisch gespeicherte DTO zurückgeben. Der AOP-Aspekt auditiert exakt diesen Rückgabewert, um sicherzustellen, dass die aktualisierte Version und generierte ID korrekt im Audit-Log landen.
 
-==== 5. Umgang mit initialen Daten (Flyway Seeding & Backfill)
+==== Umgang mit initialen Daten (Flyway Seeding & Backfill)
 
 Da initiale Test- oder Stamm-Daten oft via Flyway-SQL-Skripte direkt in die Datenbank (`INSERT INTO ...`) geschrieben werden, umgehen sie den Spring Service Layer und somit den JaVers AOP-Aspekt vollständig. Für JaVers existieren diese Datensätze nicht, was bedeutet, dass beim ersten regulären Update über die API die Historie des Ursprungszustands verloren geht.
 
@@ -248,12 +250,10 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
 }
 ----
 
-== Architektur- und Skalierungskonzept: Data Pipeline
-:toc:
-:toc-title: Inhaltsverzeichnis
+=== Architektur- und Skalierungskonzept: Data Pipeline
 :icons: font
 
-=== 1. Architekturübersicht
+==== Architekturübersicht
 
 Das folgende Diagramm veranschaulicht den Datenfluss vom externen Partner bis zur TimeScaleDB. Es zeigt die physische Gruppierung in einen "Core Pod" und einen "Pipeline Pod" und verdeutlicht die Entkopplung von Ingress (Adapter), Verarbeitung (Processor), Cache-Befüllung und Reprocessing.
 
@@ -262,7 +262,7 @@ Das folgende Diagramm veranschaulicht den Datenfluss vom externen Partner bis zu
 include::../images/pipeline-services.puml[]
 ....
 
-=== 2. Übersicht der Kafka Topics
+==== Übersicht der Kafka Topics
 
 Die Architektur nutzt eine strikte Trennung der Topics, um die Verarbeitung zu entkoppeln und das Reprocessing zu ermöglichen.
 
@@ -275,7 +275,7 @@ Die Architektur nutzt eine strikte Trennung der Topics, um die Verarbeitung zu e
 | `internal-sensor-config` | Lokal (Compacted) | Wird von der Core API befüllt (`cleanup.policy=compact`). Dient als Source-of-Truth für den In-Memory-Cache der Worker (`SensorConfigCache`) und als Trigger für das Reprocessing.
 |===
 
-=== 3. Skalierungsstrategien (High Throughput)
+==== Skalierungsstrategien (High Throughput)
 
 Da das externe Quell-Topic 6 Partitionen besitzt, ist die gesamte Pipeline auf maximale Parallelität über genau diese 6 Partitionen ausgelegt.
 
@@ -283,11 +283,11 @@ Da das externe Quell-Topic 6 Partitionen besitzt, ist die gesamte Pipeline auf m
 * **Ingress Adapter (`SolExpertsRawSensorDataNormalizationService`):** Übernimmt das Entpacken der herstellerspezifischen Payloads. Nutzt `@KafkaListener(concurrency = "6")`, um die Last optimal auf die Partitionen zu verteilen.
 * **Datenbank-Schicht (TimeScaleDB):** Um die Datenbank bei hohen Datenraten nicht zu überlasten, konsumiert der Processor (`SensorDataBatchListener`) im **Batch-Modus** (`spring.kafka.listener.type=batch`, `max-poll-records=200`). Das Schreiben erfolgt im Batch-Modus über ein hochoptimiertes jOOQ Multi-Row-Insert mit nachgelagerter ON CONFLICT (timestamp, sensor_id) DO UPDATE-Logik, um maximale Idempotenz bei minimalem Verbindungs-Overhead zu gewährleisten.
 
-=== 4. Datenintegrität & Zero-Data-Loss Architektur
+==== Datenintegrität & Zero-Data-Loss Architektur
 
 Das Monteis-Pipeline-System verarbeitet Sensordaten über zwei primäre Datenströme: Den **Process-Flow** für Echtzeitdaten und den **Reprocess-Flow** für historische Datenkorrekturen. Ein zentrales Element dieser Architektur ist das Zusammenspiel aus manuellen Kafka-Acknowledgments, idempotenten Datenbank-Operationen und gezieltem Poison-Pill-Handling.
 
-==== 4.1. Gemeinsame Basis: Orchestrator & Kafka-Offsets
+===== Gemeinsame Basis: Orchestrator & Kafka-Offsets
 
 Beide Flows stützen sich auf gemeinsame Komponenten und eine strikte Kafka-Konfiguration, die garantiert, dass keine Nachricht im Nirvana verschwindet.
 
@@ -305,6 +305,7 @@ Um das Risiko von hängenden Offsets oder Datenverlust bei zustandslosen @SendTo
 * forwardingMessageFactory: Speziell konzipiert für zustandslose EIP-Ingress-Adapter mit deklarativer @SendTo-Weiterleitung. Sie nutzt den AckMode.RECORD und stellt sicher, dass der Offset erst bestätigt wird, nachdem alle transformierten Datensätze vom Broker erfolgreich quittiert wurden.
 
 ==== 4.2. Echtzeit-Verarbeitung (Process-Flow)
+===== Echtzeit-Verarbeitung (Process-Flow)
 
 Dieser Flow verarbeitet neue, normalisierte Sensordaten, standardisiert sie und speichert sie in der TimeScaleDB.
 
@@ -312,7 +313,7 @@ Dieser Flow verarbeitet neue, normalisierte Sensordaten, standardisiert sie und 
 * **Idempotente UPSERTs:** Der `SensorDataBatchProcessor` nutzt jOOQs `ON CONFLICT (timestamp, sensor_id) DO UPDATE`. Wenn Kafka einen Batch nach einem Absturz erneut sendet, überschreibt die Datenbank die Zeilen einfach mit exakt denselben, korrekten Daten. Es entstehen keine Duplikate.
 * **Poison Pill Handling (Batch-Rettung):** Wenn ein einzelner Datensatz innerhalb eines 200er-Batches fehlerhaft ist (z. B. unlesbarer Timestamp), fängt der `SensorDataBatchProcessor` die `TransformationException` lokal ab, loggt den fehlerhaften Rohwert und überspringt ihn (`return null`). Die verbleibenden 199 validen Datensätze werden erfolgreich in der DB gespeichert, anstatt den gesamten Batch in eine Dead Letter Queue (DLQ) zu leiten.
 
-==== 4.3. Historische Daten-Reprozessierung (Reprocess-Flow)
+===== Historische Daten-Reprozessierung (Reprocess-Flow)
 
 Dieser Flow wird durch ein Aktualisierungs-Event der Sensorkonfiguration (`SensorConfig`) getriggert und ist darauf ausgelegt, potenziell Hunderttausende historischer Zeitreihendaten rückwirkend an neue mathematische Formeln anzupassen. Die Architektur trennt dabei die Steuermechanismen strikt von den ressourcenintensiven Datenbankoperationen, um den Speicherbedarf konsistent niedrig zu halten und Deadlocks zu verhindern.
 
@@ -352,22 +353,22 @@ Schlägt die mathematische Transformation eines historischen Datensatzes fehl (z
 }
 ----
 
-== 5. Integration neuer externer Datenquellen
+=== Integration neuer externer Datenquellen
 
 Die Architektur verwendet das **Adapter-Pattern**, um neue Datenquellen nahtlos als eigenständige "Plug-and-Play"-Komponenten zu integrieren. Um eine maximale Entkopplung und Testbarkeit zu gewährleisten, setzt die Pipeline konsequent auf **Komposition statt Vererbung** (Composition over Inheritance). Die Kern-Pipeline (alles ab dem `internal-normalized` Topic) bleibt von der Herkunft und dem ursprünglichen Format der Daten vollständig isoliert.
 
 Wenn ein neues externes System angebunden werden soll (z. B. Sensordaten im CSV-Format auf einem FTP-Server), ist der folgende standardisierte Prozess durchzuführen:
 
-=== 5.1. Ingress Layer konfigurieren (Kafka Connect)
+==== Ingress Layer konfigurieren (Kafka Connect)
 Um die Architektur strikt ereignisgesteuert (event-driven) zu halten, sollte die Spring Boot Applikation externe Systeme nicht selbst aktiv pollen.
 
 * Konfiguration eines **Kafka Connect Source Connectors** (z. B. SFTP Plugin oder SpoolDir/FilePulse).
 * Der Connector pollt die externe Quelle und schreibt diese Rohdaten in ein neues, dediziertes Raw-Topic (z. B. `internal-raw-ftp-sensors`).
 
-=== 5.2. Raw Data Model definieren
+==== Raw Data Model definieren
 Analog zur `RawSolExpertsSensorData`-Klasse muss ein spezifisches Java-Record für die Payload der neuen Datenquelle erstellt werden (z. B. `RawFtpCsvSensorData`).
 
-=== 5.3. Normalizer Component implementieren (Strategy Pattern)
+==== Normalizer Component implementieren (Strategy Pattern)
 
 Um das Messaging-Plumbing (Kafka) vollständig von der Datenübersetzung zu entkoppeln, setzt die Pipeline auf das **Strategy Pattern**. Für jede neue Datenquelle wird eine spezifische Implementierung des generischen Interfaces `VendorDataNormalizer<T>` als Spring `@Component` bereitgestellt.
 
@@ -453,7 +454,7 @@ public class RawSolExpertsSensorDataListener {
 }
 ----
 
-=== Alternative: Zero-Code Ingestion via Kafka Connect SMTs
+==== Alternative: Zero-Code Ingestion via Kafka Connect SMTs
 
 Für einfache, flache Datenformate (wie standardisierte CSV-Dateien via FTP) wird ein **Zero-Code-Ansatz** bevorzugt:
 

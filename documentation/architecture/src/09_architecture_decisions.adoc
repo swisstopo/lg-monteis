@@ -36,3 +36,55 @@ Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Re
 | Konsequenzen
 | Schnelle CI-Pipelines und sofortiges Blockieren bei Lizenzverstößen. Erfordert als Trade-off die manuelle Pflege einer ignore-packages-Liste für fehlerhafte Lizenz-Strings oder interne CI-Tools.
 |===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: Durchsetzung der Leseberechtigungen (Row-Level Security) auf Datenbankebene statt in der Applikationsschicht
+
+| Datum
+| 17.07.2026
+
+| Status
+| entschieden
+
+| Kontext & Problem
+| Ein früheres Konzept sah einen jOOQ-seitigen `VisitListener`/`RecordListener` vor, der Queries abfängt und Berechtigungen im Code prüft. Nachteile: jeder neue Query-Pfad müsste ihn korrekt durchlaufen, die per Foreign Data Wrapper eingebundene TimescaleDB-Tabelle unterstützt ohnehin keine native RLS, und Berechtigungslogik im Code ist schwerer zu auditieren als deklarative DB-Policies.
+
+| Entscheidung
+| Leseberechtigungen werden über native PostgreSQL Row-Level-Security-Policies auf `sensors`/`experiments` sowie eine security-barrier-View (`sensor_reading_secured`) für die FDW-Tabelle durchgesetzt. Ein custom jOOQ `ConnectionProvider` (`RlsConnectionProvider`) schreibt dafür bei jeder Connection-Beschaffung den aktuellen `SecurityContext` transaktionslokal auf die Verbindung; die Policies lesen diesen Kontext serverseitig aus. Der `SecurityContext` selbst wird von `SecurityContextFilter` aus dem JWT befüllt und für die Dauer des Requests in ein `ScopedValue` gebunden.
+
+| Begründung
+| Enforcement in der Datenbank ist unabhängig vom Zugriffspfad (jOOQ, native SQL, künftige Tools) und lässt sich nicht durch einen vergessenen Code-Check umgehen. Der transaktionslokale Kontext verhindert ein Durchsickern zwischen Anfragen bei Connection-Pooling.
+
+| Konsequenzen
+| RLS-relevante Repository-Methoden müssen innerhalb einer Spring-Transaktion laufen (`@Transactional(readOnly = true)`), sonst wird der Kontext nie gesetzt bzw. gelesen. Schreiboperationen bleiben auf DB-Ebene permissiv, da alle Zugriffe dieselbe Rolle (`core_app`) nutzen — siehe folgende ADR zur Trennung von Read- und Write-Autorisierung.
+|===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: Trennung von Lese- und Schreibautorisierung — RLS für Reads, RBAC für Writes
+
+| Datum
+| 17.07.2026
+
+| Status
+| pending
+
+| Kontext & Problem
+| Alle DB-Zugriffe laufen über dieselbe Rolle (`core_app`); DB-Grants können daher nicht zwischen einzelnen Nutzern unterscheiden — sie eignen sich für die RLS-Lesefilterung, nicht aber für nutzerspezifische Schreibrechte.
+
+| Entscheidung
+| Lesen bleibt vollständig RLS-gefiltert (siehe vorherige ADR). Schreiben soll stattdessen klassisch rollenbasiert (RBAC) auf Applikationsebene erfolgen, z. B. via `@PreAuthorize("hasRole('ADMIN')")` auf den Controller-Methoden, basierend auf denselben Rollen, die auch der `SecurityContext` nutzt.
+
+| Begründung
+| Schreiben braucht meist nur ein einfaches rollenbasiertes Ja/Nein, während Lesen feingranular pro Experiment gefiltert werden muss. Das trennt die Verantwortlichkeiten klar: Datenbank filtert Daten, Applikation autorisiert Aktionen.
+
+| Konsequenzen
+| Mit dem Kunden ist noch offen, wie granular Schreibrechte pro Rolle/Experiment sein müssen — die konkrete `@PreAuthorize`-Ausprägung pro Endpunkt ist deshalb noch nicht final.
+|===

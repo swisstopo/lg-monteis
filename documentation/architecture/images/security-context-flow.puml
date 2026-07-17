@@ -1,0 +1,32 @@
+@startuml
+!theme plain
+autonumber
+skinparam maxMessageSize 150
+
+actor Client
+participant "Auth Filter" as AuthFilter
+participant "SecurityContextHolder" as Holder
+participant "SecurityContextFilter" as CtxFilter
+participant "ScopedValue<SecurityContext>" as Scoped
+participant "jOOQ Repository" as Repo
+participant "RlsConnectionProvider" as ConnProvider
+database "PostgreSQL\n(Row-Level Security)" as DB
+
+Client -> AuthFilter : Request (Header: Bearer JWT)
+AuthFilter -> AuthFilter : Signatur prüfen (JWKS)
+AuthFilter -> Holder : Jwt-Principal setzen
+
+CtxFilter -> Holder : Jwt lesen
+CtxFilter -> CtxFilter : Rolle -> AccessLevel,\nexperiment_ids -> Set<Long>
+CtxFilter -> Scoped : SecurityContext binden\n(für die Dauer des Requests)
+
+CtxFilter -> Repo : filterChain.doFilter(...)
+Repo -> ConnProvider : Connection anfordern
+ConnProvider -> Scoped : SecurityContext lesen
+ConnProvider -> DB : GUCs setzen (transaktionslokal)
+Repo -> DB : jOOQ Query (unverändert)
+DB -> DB : RLS-Policy filtert Zeilen
+DB --> Repo : gefilterte Datensätze
+Repo --> Client : Response
+
+@enduml
