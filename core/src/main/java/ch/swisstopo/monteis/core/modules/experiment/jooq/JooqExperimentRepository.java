@@ -13,6 +13,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponse
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class JooqExperimentRepository implements ExperimentQueryInterface {
@@ -24,6 +25,7 @@ public class JooqExperimentRepository implements ExperimentQueryInterface {
   }
 
   @Override
+  @Transactional(readOnly = true) // required for RLS
   public ReadExperimentDetailsDto getExperimentDetails(Long experimentId) {
     return dsl.select(
             EXPERIMENTS.ID,
@@ -39,16 +41,15 @@ public class JooqExperimentRepository implements ExperimentQueryInterface {
                             SENSORS.NAME,
                             SENSORS.LOWER_BOUND,
                             SENSORS.UPPER_BOUND,
-                            // Map the joined formula into your nested FormulaDto!
+                            // Map the joined formula into nested FormulaDto!
                             row(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
                                 .mapping(FormulaResponseDto::new),
-                            SENSORS.VERSION // <-- MOVED TO END
-                            )
+                            SENSORS.VERSION)
                         .from(SENSORS)
                         .join(EXPERIMENT_SENSOR)
                         .on(SENSORS.ID.eq(EXPERIMENT_SENSOR.SENSOR_ID))
                         .join(FORMULAS)
-                        .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID)) // Join Formula here
+                        .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
                         .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID)))
                 .as("sensors")
                 .convertFrom(r -> r.map(mapping(SensorResponseDto::new))))

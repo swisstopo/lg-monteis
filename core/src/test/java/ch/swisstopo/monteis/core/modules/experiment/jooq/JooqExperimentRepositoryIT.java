@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.swisstopo.monteis.core.ITConfiguration.IT;
+import ch.swisstopo.monteis.core.ITConfiguration.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.ReadExperimentDetailsDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Bounds;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
@@ -18,6 +19,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * All test bodies run as admin ({@link SecurityContextTestSupport#runAsAdmin}) so that
+ * {@code repository.getExperimentDetails(...)} isn't filtered by row-level security — these
+ * tests exercise the read/aggregation logic itself, not RLS. See {@code RowLevelSecurityIT} for
+ * user-scoped filtering coverage.
+ */
 @IT
 class JooqExperimentRepositoryIT {
   @Autowired private JooqExperimentRepository repository;
@@ -29,56 +36,69 @@ class JooqExperimentRepositoryIT {
   @Test
   @Transactional
   void should_return_experiment_details_without_sensors() {
-    // Arrange
-    Long experimentId = createExperiment("Experiment Without Sensors", "No sensors attached");
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Long experimentId = createExperiment("Experiment Without Sensors", "No sensors attached");
 
-    // Act
-    ReadExperimentDetailsDto details = repository.getExperimentDetails(experimentId);
+          // Act
+          ReadExperimentDetailsDto details = repository.getExperimentDetails(experimentId);
 
-    // Assert
-    assertEquals(experimentId, details.id());
-    assertEquals("Experiment Without Sensors", details.name());
-    assertEquals("No sensors attached", details.description());
-    assertEquals(1, details.version());
-    assertTrue(details.sensors().isEmpty(), "Sensors list should be empty");
+          // Assert
+          assertEquals(experimentId, details.id());
+          assertEquals("Experiment Without Sensors", details.name());
+          assertEquals("No sensors attached", details.description());
+          assertEquals(1, details.version());
+          assertTrue(details.sensors().isEmpty(), "Sensors list should be empty");
+        });
   }
 
   @Test
   @Transactional
   void should_return_experiment_details_with_linked_sensors_and_formulas() {
-    // Arrange
-    Long experimentId = createExperiment("Experiment With Sensors", "Has two sensors");
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Long experimentId = createExperiment("Experiment With Sensors", "Has two sensors");
 
-    Sensor sensor1 = createDummySensor("SENS-EXP-01", "Sensor One", "x * 2");
-    Sensor sensor2 = createDummySensor("SENS-EXP-02", "Sensor Two", "x + 5");
-    linkSensorToExperiment(experimentId, sensor1.getId());
-    linkSensorToExperiment(experimentId, sensor2.getId());
+          Sensor sensor1 = createDummySensor("SENS-EXP-01", "Sensor One", "x * 2");
+          Sensor sensor2 = createDummySensor("SENS-EXP-02", "Sensor Two", "x + 5");
+          linkSensorToExperiment(experimentId, sensor1.getId());
+          linkSensorToExperiment(experimentId, sensor2.getId());
 
-    // Act
-    ReadExperimentDetailsDto details = repository.getExperimentDetails(experimentId);
+          // Act
+          ReadExperimentDetailsDto details = repository.getExperimentDetails(experimentId);
 
-    // Assert
-    assertEquals(2, details.sensors().size());
-    assertTrue(
-        details.sensors().stream()
-            .anyMatch(
-                s -> s.code().equals("SENS-EXP-01") && s.formula().expression().equals("x * 2")),
-        "Sensor One with its formula should be present");
-    assertTrue(
-        details.sensors().stream()
-            .anyMatch(
-                s -> s.code().equals("SENS-EXP-02") && s.formula().expression().equals("x + 5")),
-        "Sensor Two with its formula should be present");
+          // Assert
+          assertEquals(2, details.sensors().size());
+          assertTrue(
+              details.sensors().stream()
+                  .anyMatch(
+                      s ->
+                          s.code().equals("SENS-EXP-01")
+                              && s.formula().expression().equals("x * 2")),
+              "Sensor One with its formula should be present");
+          assertTrue(
+              details.sensors().stream()
+                  .anyMatch(
+                      s ->
+                          s.code().equals("SENS-EXP-02")
+                              && s.formula().expression().equals("x + 5")),
+              "Sensor Two with its formula should be present");
+        });
   }
 
   @Test
   @Transactional
   void should_return_null_for_nonexistent_experiment() {
-    // Act
-    ReadExperimentDetailsDto details = repository.getExperimentDetails(999999L);
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Act
+          ReadExperimentDetailsDto details = repository.getExperimentDetails(999999L);
 
-    // Assert
-    assertNull(details, "Non-existent experiment should resolve to null");
+          // Assert
+          assertNull(details, "Non-existent experiment should resolve to null");
+        });
   }
 
   // --- Helper Methods ---

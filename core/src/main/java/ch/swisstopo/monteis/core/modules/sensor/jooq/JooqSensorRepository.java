@@ -50,7 +50,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
   }
 
   @Override
-  @Transactional(readOnly = true)
+  @Transactional(readOnly = true) // required for RLS
   public List<FormulaResponseDto> findAllFormulas() {
     return dsl.selectFrom(FORMULAS)
         .orderBy(FORMULAS.EXPRESSION.asc()) // Clean alphabetical sorting for the UI
