@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.formula.WriteFormulaDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import jakarta.validation.ConstraintValidatorContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,8 +1,7 @@
-package ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor;
+package ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound;
 
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.formula.WriteFormulaDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

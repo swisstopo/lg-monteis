@@ -1,6 +1,4 @@
-package ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor;
-
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.formula.FormulaResponseDto;
+package ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound;
 
 public record SensorResponseDto(
     Long id,

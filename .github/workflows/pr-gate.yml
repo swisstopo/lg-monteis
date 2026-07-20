@@ -94,6 +94,9 @@ jobs:
       - name: Setup Java Environment
         uses: ./.github/actions/setup-java-maven
 
+      - name: Populate local Maven repository
+        run: mvn -B -T2C dependency:go-offline
+
       - name: Execute Security Scan
         uses: ./.github/actions/trivy-scan
 

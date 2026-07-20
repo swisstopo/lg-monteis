@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.sensor.web.dto.formula;
+package ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound;
 
 import ch.swisstopo.monteis.core.modules.sensor.web.validation.ValidFormulaState;
 import jakarta.validation.constraints.NotBlank;

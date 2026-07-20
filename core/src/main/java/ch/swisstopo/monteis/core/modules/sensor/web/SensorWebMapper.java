@@ -1,10 +1,10 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.formula.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.formula.WriteFormulaDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor.SensorResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.sensor.WriteSensorDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

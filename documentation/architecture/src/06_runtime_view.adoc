@@ -90,18 +90,18 @@ Das Abfragen von Zeitreihen, die Jahre zurückreichen, ist hochgradig dateninten
 ....
 include::../images/downsampling-sequence.puml[]
 ....
-=== Szenario 6: SSO, Authentifizierung & Role-Based Data Filtering
+=== Szenario 6: Authentifizierung, Security Context & Row-Level Security
 
-Die Sicherheit und rollenbasierte Zugriffskontrolle (RBAC) ist eine Anforderung der Priorität 1. MONTEIS nutzt einen eigenen **Keycloak** als zentralen Identity Access Management (IAM) Server, welcher **AGOV** als Identity Provider (IdP) integriert. Das Spring Boot Backend fungiert als klassischer *Resource Server*.
+Die Sicherheit und rollenbasierte Zugriffskontrolle ist eine Anforderung der Priorität 1. MONTEIS nutzt einen eigenen **Keycloak** als zentralen Identity Access Management (IAM) Server, welcher **AGOV** als Identity Provider (IdP) integriert. Das Spring Boot Backend fungiert als klassischer *Resource Server*. Leseberechtigungen (welche Experimente/Sensoren/Messwerte ein Nutzer sehen darf) werden nicht auf API-Ebene, sondern transparent auf Datenbankebene per **Row-Level Security** durchgesetzt.
 
 **Ablauf:**
 
-1. Der Nutzer öffnet die Web-App und wird vom Angular Frontend an den Keycloak weitergeleitet (OIDC Authorization Code Flow).
-2. Der Nutzer authentifiziert sich (z. B. via AGOV). Keycloak mappt die vom Admin konfigurierten Rollen und Berechtigungen auf den User.
-3. Keycloak stellt ein JWT (JSON Web Token) aus, in dessen Claims die spezifischen Rollen (z. B. `read_experiment_A`) verankert sind.
-4. Das Frontend sendet dieses JWT bei jedem REST-Call im `Authorization: Bearer` Header mit.
-5. Ein Security-Filter im Spring Boot Backend fängt den Request ab, verifiziert die Signatur des Tokens (via JWKS von Keycloak) und parst die Claims in den Security Context.
-6. Die Core API nutzt diese extrahierten Rollen direkt bei den jOOQ-Datenbankabfragen als Filterkriterium (z. B. in der `WHERE`-Klausel), sodass der Nutzer ausschliesslich Daten erhält, für die er berechtigt ist.
+1. Der Nutzer öffnet die Web-App und wird vom Angular Frontend an Keycloak weitergeleitet (OIDC Authorization Code Flow) und authentifiziert sich (z. B. via AGOV). Keycloak stellt ein JWT aus, dessen Claims die Rollen (`realm_access.roles`, z. B. `ADMIN`/`USER`) sowie die Experiment-Zugehörigkeiten (`experiment_ids`-Claim) enthalten.
+2. Das Frontend sendet dieses JWT bei jedem REST-Call im `Authorization: Bearer`-Header mit.
+3. Ein Security-Filter im Spring Boot Backend fängt den Request ab, verifiziert die Signatur des Tokens (via JWKS von Keycloak) und legt es als Principal in den `SecurityContextHolder`.
+4. Ein `SecurityContextFilter` liest Rollen und Experiment-IDs aus diesem JWT und bindet sie für die Dauer des Requests als `SecurityContext` (Access Level + Experiment-IDs) in ein Java `ScopedValue`. Fehlt eine gültige Rolle, wird strikt auf "keine Rechte" verengt (*fail closed*).
+5. Bei jeder jOOQ-Datenbankverbindung schreibt ein custom `ConnectionProvider` (`RlsConnectionProvider`) den aktuellen `SecurityContext` transaktionslokal als Postgres-GUCs auf die Connection.
+6. Native **Row-Level-Security-Policies** auf `sensors`/`experiments` sowie eine `security_barrier`-View für die (per Foreign Data Wrapper eingebundenen) Sensormesswerte werten diese GUCs serverseitig aus und filtern Zeilen automatisch — der jOOQ-Code selbst enthält keine manuelle Berechtigungs-`WHERE`-Klausel. Admins sehen alles; reguläre Nutzer nur Daten aus Experimenten, denen sie zugeordnet sind.
 
 [plantuml, seq-login-sso, format="svg"]
 ....

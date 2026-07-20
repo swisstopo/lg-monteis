@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.overview.service;
+package ch.swisstopo.monteis.core.modules.overview.query;
 
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.util.List;
