@@ -371,3 +371,17 @@ jobs:
       - name: Run all e2e tests
         working-directory: webapp
         run: pnpm run e2e:headless ${{ matrix.file }}
+
+  quality-gate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+
+      - name: SonarCloud Scan
+        id: sonarqube-quality-gate-check
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
