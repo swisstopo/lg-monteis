@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.overview.web;
 
 import ch.swisstopo.monteis.core.modules.overview.service.OverviewService;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class OverviewController {
 
   @GetMapping(value = "/metrics", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<ReadSimpleMetricDto>> getMetrics(
-      @RequestParam(defaultValue = "5") int limit) {
+      @RequestParam(defaultValue = "5") @Positive int limit) {
 
     List<ReadSimpleMetricDto> result = overviewService.fetchRecentMetrics(limit);
     return ResponseEntity.ok(result);

@@ -53,7 +53,7 @@ public class SecurityContextFilter extends OncePerRequestFilter {
 
   private SecurityContext resolveSecurityContext() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (!(authentication != null && authentication.getPrincipal() instanceof Jwt jwt)) {
+    if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
       return SecurityContext.DENY_ALL;
     }
 
