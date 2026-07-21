@@ -373,12 +373,18 @@ jobs:
         run: pnpm run e2e:headless ${{ matrix.file }}
 
   quality-gate:
+    name: Sonar Quality Gate
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
+      - name: Setup Java Environment (Hits Cache)
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Build and run tests with JaCoCo
+        run: mvn clean test
 
       - name: SonarCloud Scan
         id: sonarqube-quality-gate-check

@@ -38,6 +38,7 @@
     <spring-boot-starter-aop.version>3.5.16</spring-boot-starter-aop.version>
     <org.mapstruct.version>1.6.3</org.mapstruct.version>
     <archunit-junit5.version>1.4.2</archunit-junit5.version>
+    <jacoco.version>0.8.15</jacoco.version>
     <testcontainers-keycloak.version>4.2.1</testcontainers-keycloak.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
@@ -318,7 +319,26 @@
             </execution>
           </executions>
         </plugin>
-
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>${jacoco.version}</version>
+          <executions>
+            <execution>
+              <id>prepare-agent</id>
+              <goals>
+                <goal>prepare-agent</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>report</id>
+              <goals>
+                <goal>report</goal>
+              </goals>
+              <phase>test</phase>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
