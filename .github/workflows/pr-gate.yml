@@ -384,7 +384,7 @@ jobs:
         uses: ./.github/actions/setup-java-maven
 
       - name: Build and run tests with JaCoCo
-        run: mvn clean test
+        run: mvn clean verify
 
       - name: SonarCloud Scan
         id: sonarqube-quality-gate-check
