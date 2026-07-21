@@ -383,11 +383,15 @@ jobs:
       - name: Setup Java Environment (Hits Cache)
         uses: ./.github/actions/setup-java-maven
 
-      - name: Build and run tests with JaCoCo
-        run: mvn clean verify
+      - name: Build and analyze
+        run: mvn clean verify sonar:sonar
+          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          -Dsonar.host.url=${{ vars.SONAR_HOST_URL }}
 
       - name: SonarCloud Scan
         id: sonarqube-quality-gate-check
-        uses: SonarSource/sonarqube-scan-action@v8
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        with:
+          scanMetadataReportFile: target/sonar/report-task.txt
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
