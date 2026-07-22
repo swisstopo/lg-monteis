@@ -30,7 +30,7 @@ public class ObjectBusinessValidationException extends RuntimeException implemen
    * <p>Parameters typically contain contextual information about the invalid
    * object state, especially when multiple values are involved.
    */
-  private final Map<String, Object> params;
+  private final transient Map<String, Object> params;
 
   public ObjectBusinessValidationException(String messageKey, Map<String, Object> params) {
     super(messageKey);

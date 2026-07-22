@@ -63,7 +63,7 @@ public class TestcontainersConfiguration {
   @Bean
   DynamicPropertyRegistrar dynamicPropertyRegistrar(
       @Qualifier("timescaleDB") PostgreSQLContainer<?> tsDb) {
-    return (registry) -> {
+    return registry -> {
       registry.add("spring.datasource.url", tsDb::getJdbcUrl);
     };
   }
