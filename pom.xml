@@ -331,11 +331,10 @@
               </goals>
             </execution>
             <execution>
-              <id>report</id>
+              <id>prepare-agent-integration</id>
               <goals>
-                <goal>report</goal>
+                <goal>prepare-agent-integration</goal>
               </goals>
-              <phase>verify</phase>
             </execution>
           </executions>
         </plugin>
