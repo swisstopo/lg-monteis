@@ -64,6 +64,47 @@
           }
         }
       ]
+    },
+    {
+      "name": "monteis-roles",
+      "description": "Adds the caller's realm roles (realm_access.roles) to access tokens. Part of the explicit clientScopes list for the same reason as monteis-oidc-basic.",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "monteis-experiment-access",
+      "description": "Adds the caller's experiment_ids user attribute to access tokens, so SecurityContextFilter can derive RLS-visible experiment ids directly from the JWT.",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "experiment-ids",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "experiment_ids",
+            "claim.name": "experiment_ids",
+            "jsonType.label": "long",
+            "multivalued": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "clients": [
@@ -79,7 +120,7 @@
       "attributes": { "pkce.code.challenge.method": "S256", "post.logout.redirect.uris": "+", "login_theme": "monteis" },
       "redirectUris": [],
       "webOrigins": [],
-      "defaultClientScopes": ["monteis-oidc-basic", "monteis-backend-audience"]
+      "defaultClientScopes": ["monteis-oidc-basic", "monteis-backend-audience", "monteis-roles", "monteis-experiment-access"]
     },
     {
       "clientId": "monteis-backend",

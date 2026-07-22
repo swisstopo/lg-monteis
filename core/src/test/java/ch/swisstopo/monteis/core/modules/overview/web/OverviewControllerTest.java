@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.overview.web;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -30,6 +32,10 @@ class OverviewControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @MockitoBean private OverviewService overviewService;
+
+  // Only used to satisfy SecurityConfig's oauth2ResourceServer bean requirement in this slice
+  // test; requests authenticate via the jwt() post-processor instead of a real decode.
+  @MockitoBean private JwtDecoder jwtDecoder;
 
   @Test
   void should_route_get_metrics_and_verify_output() throws Exception {
@@ -49,6 +55,7 @@ class OverviewControllerTest {
     mockMvc
         .perform(
             get("/api/overview/metrics")
+                .with(jwt())
                 .param("limit", String.valueOf(limit))
                 .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())

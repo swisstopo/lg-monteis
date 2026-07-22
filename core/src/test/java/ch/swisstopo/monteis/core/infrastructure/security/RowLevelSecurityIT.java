@@ -37,7 +37,7 @@ class RowLevelSecurityIT {
   @Transactional
   void user_scoped_to_experiment_one_sees_only_its_sensors_and_readings() {
     SecurityContextTestSupport.runAsUser(
-        Set.of(1L),
+        List.of(1L),
         () -> {
           assertEquals(2, dsl.fetchCount(SENSORS), "Experiment 1 has exactly 2 linked sensors");
           assertEquals(Set.of("TEMP-1", "PRESS-1&2"), fetchVisibleSensorCodes());
@@ -48,7 +48,7 @@ class RowLevelSecurityIT {
   @Transactional
   void user_scoped_to_experiment_two_sees_only_its_sensors_and_readings() {
     SecurityContextTestSupport.runAsUser(
-        Set.of(2L),
+        List.of(2L),
         () -> {
           assertEquals(3, dsl.fetchCount(SENSORS), "Experiment 2 has exactly 3 linked sensors");
           assertEquals(Set.of("PRESS-1&2", "DISP-2", "FLOW-2"), fetchVisibleSensorCodes());
@@ -59,7 +59,7 @@ class RowLevelSecurityIT {
   @Transactional
   void user_with_no_experiment_membership_sees_nothing() {
     SecurityContextTestSupport.runAsUser(
-        Set.of(),
+        List.of(),
         () -> {
           assertEquals(0, dsl.fetchCount(SENSORS));
           assertEquals(0, dsl.fetchCount(EXPERIMENTS));

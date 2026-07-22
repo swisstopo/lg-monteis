@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.error;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,7 +24,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,12 +45,16 @@ class GlobalErrorControllerAdviceTest {
 
   @Autowired private MockMvc mockMvc;
 
+  // Only used to satisfy SecurityConfig's oauth2ResourceServer bean requirement in this slice
+  // test; requests authenticate via the jwt() post-processor instead of a real decode.
+  @MockitoBean private JwtDecoder jwtDecoder;
+
   @Test
   void should_translate_object_business_validation_exception_return_422() throws Exception {
     // given a request to an endpoint that throws an ObjectBusinessValidationException
 
     // when
-    var response = mockMvc.perform(get("/dummy/object-error"));
+    var response = mockMvc.perform(get("/dummy/object-error").with(jwt()));
 
     // then
     response
@@ -63,7 +71,7 @@ class GlobalErrorControllerAdviceTest {
     // given a request to an endpoint that throws a FieldBusinessValidationException
 
     // when
-    var response = mockMvc.perform(get("/dummy/field-error"));
+    var response = mockMvc.perform(get("/dummy/field-error").with(jwt()));
 
     // then
     response
@@ -78,7 +86,7 @@ class GlobalErrorControllerAdviceTest {
     // given a request to an endpoint that throws a jOOQ DataChangedException (Optimistic Locking)
 
     // when
-    var response = mockMvc.perform(get("/dummy/optimistic-lock-error"));
+    var response = mockMvc.perform(get("/dummy/optimistic-lock-error").with(jwt()));
 
     // then
     response
@@ -91,7 +99,7 @@ class GlobalErrorControllerAdviceTest {
     // given a request to an endpoint that throws an unhandled RuntimeException
 
     // when
-    var response = mockMvc.perform(get("/dummy/unexpected-error"));
+    var response = mockMvc.perform(get("/dummy/unexpected-error").with(jwt()));
 
     // then
     response
@@ -106,7 +114,7 @@ class GlobalErrorControllerAdviceTest {
   void should_handle_404_no_resource_found() throws Exception {
     // when: We request an endpoint that does not exist at all
     mockMvc
-        .perform(get("/dummy/this-does-not-exist"))
+        .perform(get("/dummy/this-does-not-exist").with(jwt()))
         // then: Spring resolves it to 404 Not Found, and our advice intercepts it
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.params.errorId").exists());
@@ -123,7 +131,10 @@ class GlobalErrorControllerAdviceTest {
     // when / then: Spring catches the violation, the advice extracts min/max into the params map
     mockMvc
         .perform(
-            post("/dummy/validate").contentType(MediaType.APPLICATION_JSON).content(invalidJson))
+            post("/dummy/validate")
+                .with(jwt().authorities(new SimpleGrantedAuthority("api:write")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(invalidJson))
         .andExpect(status().isUnprocessableContent())
         .andExpect(jsonPath("$").isArray())
         .andExpect(jsonPath("$[?(@.field == 'name')].field").value("name"))
@@ -149,6 +160,7 @@ class GlobalErrorControllerAdviceTest {
     mockMvc
         .perform(
             post("/dummy/validate-global")
+                .with(jwt().authorities(new SimpleGrantedAuthority("api:write")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validJson))
         .andExpect(status().isUnprocessableContent())

@@ -52,6 +52,9 @@ importers:
       ag-grid-community:
         specifier: ^36.0.0
         version: 36.0.0
+      angular-oauth2-oidc:
+        specifier: ^22.0.2
+        version: 22.0.2(@angular/common@22.0.4(@angular/core@22.0.4(@angular/compiler@22.0.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.0.4(@angular/compiler@22.0.4)(rxjs@7.8.2))
       rxjs:
         specifier: ~7.8.2
         version: 7.8.2
@@ -3063,6 +3066,15 @@ packages:
         integrity: sha512-0ZzY9mjqV7gop/AH8pIBiAS8giXP7WcSiUfoFYIzYAK9QC5c37E4SIVtJVBMwlURc0/uNt2o4RcNRvdHa4CJ5w==,
       }
     engines: { node: '>= 14.0.0' }
+
+  angular-oauth2-oidc@22.0.2:
+    resolution:
+      {
+        integrity: sha512-MDzmf0quLVnsCzVp/G7Pr6YTSMoMMo62u8QFqJzM3madQmWV5JI4dMppvuTPswH+4V2gx4zPXdCjnn8ikVZX+A==,
+      }
+    peerDependencies:
+      '@angular/common': '>=22.0.0'
+      '@angular/core': '>=22.0.0'
 
   ansi-escapes@4.3.2:
     resolution:
@@ -7735,6 +7747,12 @@ snapshots:
       '@algolia/requester-browser-xhr': 5.52.0
       '@algolia/requester-fetch': 5.52.0
       '@algolia/requester-node-http': 5.52.0
+
+  angular-oauth2-oidc@22.0.2(@angular/common@22.0.4(@angular/core@22.0.4(@angular/compiler@22.0.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.0.4(@angular/compiler@22.0.4)(rxjs@7.8.2)):
+    dependencies:
+      '@angular/common': 22.0.4(@angular/core@22.0.4(@angular/compiler@22.0.4)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@angular/core': 22.0.4(@angular/compiler@22.0.4)(rxjs@7.8.2)
+      tslib: 2.8.1
 
   ansi-escapes@4.3.2:
     dependencies:

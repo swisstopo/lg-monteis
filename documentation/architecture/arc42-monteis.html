@@ -439,7 +439,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h1><span class="image"><img src="./images/arc42-logo.png" alt="arc42"></span> MONTEIS - Architektur</h1>
 <div class="details">
 <span id="revnumber">version 1.0.0-rc,</span>
-<span id="revdate">2026-06-02</span>
+<span id="revdate">2026-07-22</span>
 <br><span id="revremark">Draft</span>
 </div>
 <div id="toc" class="toc">
@@ -509,10 +509,11 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_core_api_validierung_validation_error_handling">8.4. Core-API Validierung (Validation &amp; Error Handling)</a></li>
 <li><a href="#_architektur_und_skalierungskonzept_data_pipeline">8.5. Architektur- und Skalierungskonzept: Data Pipeline</a></li>
 <li><a href="#_integration_neuer_externer_datenquellen">8.6. Integration neuer externer Datenquellen</a></li>
-<li><a href="#_datenbankschemata">8.7. Datenbankschemata</a></li>
-<li><a href="#_api_schnittstellen_contracts">8.8. API-Schnittstellen (Contracts)</a></li>
-<li><a href="#_teststrategie">8.9. Teststrategie</a></li>
-<li><a href="#_entwickler_workflow_cicd_pipeline">8.10. Entwickler-Workflow &amp; CI/CD Pipeline</a></li>
+<li><a href="#_5_4_ingress_listener_implementieren_deklarativer_eip_adapter">8.7. 5.4. Ingress Listener implementieren (Deklarativer EIP-Adapter)</a></li>
+<li><a href="#_datenbankschemata">8.8. Datenbankschemata</a></li>
+<li><a href="#_api_schnittstellen_contracts">8.9. API-Schnittstellen (Contracts)</a></li>
+<li><a href="#_teststrategie">8.10. Teststrategie</a></li>
+<li><a href="#_entwickler_workflow_cicd_pipeline">8.11. Entwickler-Workflow &amp; CI/CD Pipeline</a></li>
 </ul>
 </li>
 <li><a href="#section-design-decisions">9. Architekturentscheidungen</a></li>
@@ -554,7 +555,7 @@ Creative Commons Attribution-ShareAlike 4.0 International
 Creative Commons Attribution-ShareAlike 4.0 International Lizenz bereitgestellt.</p>
 </div>
 <div class="paragraph">
-<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-06-02</p>
+<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-07-22</p>
 </div>
 <hr>
 <div style="page-break-after: always;"></div>
@@ -1252,7 +1253,7 @@ Es wird prozessual (z. B. durch Lizenz-Scanning in der CI/CD-Pipeline) sicherges
 <div class="ulist">
 <ul>
 <li>
-<p><strong>Security &amp; Auth Filter:</strong> Zweistufige Filterkette: Ein Authentifizierungs-Filter verifiziert das Keycloak/eIAM-JWT und legt es im <code>SecurityContextHolder</code> ab; <code>SecurityContextFilter</code> bindet daraus Rolle und Experiment-IDs als <code>SecurityContext</code> in ein <code>ScopedValue</code>. Leseberechtigungen werden darüber transparent auf Datenbankebene per Row-Level-Security durchgesetzt, Schreibberechtigungen (RBAC) rollenbasiert auf Controller-Ebene (siehe Kap. 8 &amp; 9).</p>
+<p><strong>Security &amp; Auth Filter:</strong> Der Authentifizierungs-Filter von Spring Security&#8217;s OAuth2-Resource-Server verifiziert das Keycloak/eIAM-JWT und baut daraus über einen custom <code>Converter</code> in einem Schritt die vollständige <code>Authentication</code> auf: Rolle → <code>api:*</code>-Authorities, sowie Sub und Experiment-IDs als eigener <code>SecurityPrincipal</code>, abgelegt im Standard-<code>SecurityContextHolder</code>. Leseberechtigungen werden darüber transparent auf Datenbankebene per Row-Level-Security durchgesetzt, Schreibberechtigungen (RBAC) rollenbasiert auf Controller-Ebene (siehe Kap. 8 &amp; 9).</p>
 </li>
 <li>
 <p><strong>Query &amp; Downsampling Service:</strong> Ein dedizierter Service, der Leseanfragen an die TimeScaleDB richtet und intelligente Downsampling-Algorithmen anwendet, um die abgerufene Datenmenge vor der Auslieferung an das Frontend zu reduzieren.</p>
@@ -1585,18 +1586,18 @@ Es wird prozessual (z. B. durch Lizenz-Scanning in der CI/CD-Pipeline) sicherges
 <p>Das Frontend sendet dieses JWT bei jedem REST-Call im <code>Authorization: Bearer</code>-Header mit.</p>
 </li>
 <li>
-<p>Ein Security-Filter im Spring Boot Backend fängt den Request ab, verifiziert die Signatur des Tokens (via JWKS von Keycloak) und legt es als Principal in den <code>SecurityContextHolder</code>.</p>
+<p>Ein Security-Filter im Spring Boot Backend (OAuth2 Resource Server) fängt den Request ab, verifiziert die Signatur des Tokens (via JWKS von Keycloak) und übergibt es an einen custom <code>Converter</code> (<code>JwtSecurityAuthenticationConverter</code>), der daraus in einem Schritt die vollständige <code>Authentication</code> baut: Rollen → <code>api:read</code>/<code>api:write</code>/<code>api:read-all</code>-Authorities (via <code>RealmRoleAuthoritiesConverter</code>), sowie Sub und Experiment-IDs als eigener <code>SecurityPrincipal</code>. Diese <code>Authentication</code> landet im Standard-<code>SecurityContextHolder</code>. Fehlt eine gültige Rolle (keine <code>api:read</code>/<code>api:read-all</code>-Authority), werden Experiment-IDs strikt auf "keine Rechte" verengt (<strong>fail closed</strong>), selbst wenn der <code>experiment_ids</code>-Claim befüllt wäre.</p>
 </li>
 <li>
-<p>Ein <code>SecurityContextFilter</code> liest Rollen und Experiment-IDs aus diesem JWT und bindet sie für die Dauer des Requests als <code>SecurityContext</code> (Access Level + Experiment-IDs) in ein Java <code>ScopedValue</code>. Fehlt eine gültige Rolle, wird strikt auf "keine Rechte" verengt (<strong>fail closed</strong>).</p>
-</li>
-<li>
-<p>Bei jeder jOOQ-Datenbankverbindung schreibt ein custom <code>ConnectionProvider</code> (<code>RlsConnectionProvider</code>) den aktuellen <code>SecurityContext</code> transaktionslokal als Postgres-GUCs auf die Connection.</p>
+<p>Bei jeder jOOQ-Datenbankverbindung schreibt ein custom <code>ConnectionProvider</code> (<code>RlsConnectionProvider</code>) die aktuelle <code>Authentication</code> transaktionslokal als Postgres-GUCs auf die Connection (<code>app.read_all</code> aus den Authorities, <code>app.user_experiment_ids</code> aus dem <code>SecurityPrincipal</code>).</p>
 </li>
 <li>
 <p>Native <strong>Row-Level-Security-Policies</strong> auf <code>sensors</code>/<code>experiments</code> sowie eine <code>security_barrier</code>-View für die (per Foreign Data Wrapper eingebundenen) Sensormesswerte werten diese GUCs serverseitig aus und filtern Zeilen automatisch — der jOOQ-Code selbst enthält keine manuelle Berechtigungs-<code>WHERE</code>-Klausel. Admins sehen alles; reguläre Nutzer nur Daten aus Experimenten, denen sie zugeordnet sind.</p>
 </li>
 </ol>
+</div>
+<div class="paragraph">
+<p>Die Experiment-Zugehörigkeit wird aktuell bewusst als JWT-Claim geführt, gespeist aus einem Keycloak User-Attribut (<code>experiment_ids</code>) via Protocol Mapper. Das ist einfach zu betreiben, solange die Zugehörigkeitsmengen klein bleiben — in der Praxis meist ein einzelnes Experiment pro Nutzer. Sollte das nicht mehr skalieren (viele Experimente pro Nutzer, häufig wechselnde Zuordnungen, oder schlicht Token-Grössenlimits), ist die vorgesehene Ausweichlösung eine eigene <code>experiment_membership</code>-Tabelle (Schlüssel: <code>sub</code>), die der <code>JwtSecurityAuthenticationConverter</code> pro Request abfragt, statt die Zugehörigkeit aus dem Token zu lesen.</p>
 </div>
 <div class="imageblock">
 <div class="content">
@@ -2031,16 +2032,16 @@ Ref: <a href="https://pcg.io/insights/vpc-endpoints-explanation-and-cost-compari
 </div>
 <div class="imageblock">
 <div class="content">
-<img src="./images/security-context-flow.svg" alt="security context flow" width="1511" height="781">
+<img src="./images/security-context-flow.svg" alt="security context flow" width="1326" height="797">
 </div>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>Security Context (<code>ScopedValue</code>):</strong> Ein Auth-Filter validiert das JWT und legt es im <code>SecurityContextHolder</code> ab. <code>SecurityContextFilter</code> liest daraus Rolle und Experiment-IDs, leitet einen <code>AccessLevel</code> (<code>ADMIN</code>/<code>USER</code>/<code>NONE</code>) ab und bindet beides für die Dauer des Requests als <code>SecurityContext</code> in ein Java <code>ScopedValue</code>. Fehlt eine gültige Rolle, wird strikt auf <code>NONE</code> verengt (<strong>fail closed</strong>). Hintergrundjobs ohne Request (z. B. der Startup-Audit-Backfill) binden stattdessen explizit einen <code>SystemSecurityContext</code> mit Admin-Rechten.</p>
+<p><strong>Security Context (<code>SecurityContextHolder</code>):</strong> Ein Auth-Filter validiert das JWT und übergibt es an <code>JwtSecurityAuthenticationConverter</code>, der daraus Rolle → <code>api:read</code>/<code>api:write</code>/<code>api:read-all</code>-Authorities (via <code>RealmRoleAuthoritiesConverter</code>) sowie Sub und Experiment-IDs als <code>SecurityPrincipal</code> ableitet und beides als <code>Authentication</code> für die Dauer des Requests im Standard-<code>SecurityContextHolder</code> von Spring Security ablegt — kein eigener Propagierungsmechanismus. Fehlt eine gültige Rolle, werden Experiment-IDs strikt auf leer verengt (<strong>fail closed</strong>). Hintergrundjobs ohne Request (z. B. der Startup-Audit-Backfill) binden stattdessen explizit einen <code>SystemSecurityContext</code> mit Admin-Rechten (<code>api:read-all</code>).</p>
 </li>
 <li>
-<p><strong>Leseberechtigungen (Row-Level Security):</strong> <code>RlsConnectionProvider</code> schreibt den aktuellen <code>SecurityContext</code> bei jeder Connection-Beschaffung transaktionslokal auf die Verbindung. Native RLS-Policies auf <code>sensors</code>/<code>experiments</code> sowie eine security-barrier-View für die per FDW eingebundene TimescaleDB-Tabelle filtern Zeilen serverseitig danach — der jOOQ-Code selbst enthält keine Berechtigungslogik. Weil der Kontext transaktionslokal ist, muss jede RLS-relevante Repository-Methode innerhalb einer Spring-Transaktion laufen (<code>@Transactional(readOnly = true)</code>).</p>
+<p><strong>Leseberechtigungen (Row-Level Security):</strong> <code>RlsConnectionProvider</code> schreibt die aktuelle <code>Authentication</code> bei jeder Connection-Beschaffung transaktionslokal auf die Verbindung. Native RLS-Policies auf <code>sensors</code>/<code>experiments</code> sowie eine security-barrier-View für die per FDW eingebundene TimescaleDB-Tabelle filtern Zeilen serverseitig danach — der jOOQ-Code selbst enthält keine Berechtigungslogik. Weil der Kontext transaktionslokal ist, muss jede RLS-relevante Repository-Methode innerhalb einer Spring-Transaktion laufen (<code>@Transactional(readOnly = true)</code>).</p>
 </li>
 <li>
 <p><strong>Schreibberechtigungen (RBAC):</strong> Alle DB-Zugriffe laufen über dieselbe Rolle (<code>core_app</code>), RLS kann also keine nutzerspezifischen Schreibrechte abbilden. Schreibzugriffe bleiben auf DB-Ebene permissiv; die Autorisierung erfolgt stattdessen rollenbasiert auf Controller-Ebene (<code>@PreAuthorize</code>) — siehe ADRs in Kap. 9.</p>
@@ -2420,7 +2421,7 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
 </div>
 <div class="imageblock">
 <div class="content">
-<img src="./images/pipeline-services.svg" alt="pipeline services" width="1953" height="1164">
+<img src="./images/pipeline-services.svg" alt="pipeline services" width="1980" height="1164">
 </div>
 </div>
 </div>
@@ -2480,7 +2481,7 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
 <p><strong>Ingress Adapter (<code>SolExpertsRawSensorDataNormalizationService</code>):</strong> Übernimmt das Entpacken der herstellerspezifischen Payloads. Nutzt <code>@KafkaListener(concurrency = "6")</code>, um die Last optimal auf die Partitionen zu verteilen.</p>
 </li>
 <li>
-<p><strong>Datenbank-Schicht (TimeScaleDB):</strong> Um die Datenbank bei hohen Datenraten nicht zu überlasten, konsumiert der Processor (<code>SensorDataListener</code>) im <strong>Batch-Modus</strong> (<code>spring.kafka.listener.type=batch</code>, <code>max-poll-records=200</code>). Das Schreiben erfolgt über hochoptimierte jOOQ Batch-Inserts (<code>ctx.batchInsert()</code>).</p>
+<p><strong>Datenbank-Schicht (TimeScaleDB):</strong> Um die Datenbank bei hohen Datenraten nicht zu überlasten, konsumiert der Processor (<code>SensorDataBatchListener</code>) im <strong>Batch-Modus</strong> (<code>spring.kafka.listener.type=batch</code>, <code>max-poll-records=200</code>). Das Schreiben erfolgt im Batch-Modus über ein hochoptimiertes jOOQ Multi-Row-Insert mit nachgelagerter ON CONFLICT (timestamp, sensor_id) DO UPDATE-Logik, um maximale Idempotenz bei minimalem Verbindungs-Overhead zu gewährleisten.</p>
 </li>
 </ul>
 </div>
@@ -2501,7 +2502,7 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
 <p><strong>Shared Transformation Orchestrator:</strong> Um mathematische Abweichungen zu verhindern, teilen sich der Ingestion-Flow und der Backfill-Flow exakt dieselbe Logik. Dies garantiert, dass Standardisierung und Validierungs-Flags systemweit identisch berechnet werden.</p>
 </li>
 <li>
-<p><strong>Cache Broadcast Pattern:</strong> Damit jeder Pipeline-Pod einen synchronen Metadaten-Cache besitzt, generiert der <code>SensorConfigCacheHydrator</code> beim Start eine zufällige UUID als Consumer Group (<code>cache-hydrator-#{UUID}</code>). Dadurch wird jedes Metadaten-Update an <strong>jeden</strong> laufenden Pod gebroadcastet.</p>
+<p><strong>Cache Broadcast Pattern:</strong> Damit jeder Pipeline-Pod einen synchronen Metadaten-Cache besitzt, generiert der <code>SensorConfigCacheHydrationListener</code> beim Start eine zufällige UUID als Consumer Group (<code>cache-hydrator-#{UUID}</code>). Dadurch wird jedes Metadaten-Update an <strong>jeden</strong> laufenden Pod gebroadcastet.</p>
 </li>
 <li>
 <p><strong>Deaktiviertes Auto-Commit (<code>enable-auto-commit: false</code>):</strong> Spring Boot darf Kafka-Offsets niemals im Hintergrund bestätigen. Das System verlässt sich ausschliesslich auf manuelle Bestätigungen (<code>ack-mode: manual</code>).</p>
@@ -2513,6 +2514,25 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
 </div>
 </div>
 <div class="sect4">
+<h5 id="_explizite_separation_of_concerns_für_container_factories">Explizite Separation of Concerns für Container-Factories</h5>
+<div class="paragraph">
+<p>Um das Risiko von hängenden Offsets oder Datenverlust bei zustandslosen @SendTo-Integrationen zu eliminieren, verwendet das System zwei spezialisierte Container-Factories:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>manualAckFactory: Reserviert für rein infrastrukturseitige oder datenbanknahe Konsumenten (z. B. SensorConfigCacheHydrationListener oder SensorDataBatchListener). Sie erzwingt die manuelle Injektion von Acknowledgment und ein explizites ack.acknowledge() im Code.</p>
+</li>
+<li>
+<p>forwardingMessageFactory: Speziell konzipiert für zustandslose EIP-Ingress-Adapter mit deklarativer @SendTo-Weiterleitung. Sie nutzt den AckMode.RECORD und stellt sicher, dass der Offset erst bestätigt wird, nachdem alle transformierten Datensätze vom Broker erfolgreich quittiert wurden.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_4_2_echtzeit_verarbeitung_process_flow">8.5.5. 4.2. Echtzeit-Verarbeitung (Process-Flow)</h4>
+<div class="sect4">
 <h5 id="_echtzeit_verarbeitung_process_flow">Echtzeit-Verarbeitung (Process-Flow)</h5>
 <div class="paragraph">
 <p>Dieser Flow verarbeitet neue, normalisierte Sensordaten, standardisiert sie und speichert sie in der TimeScaleDB.</p>
@@ -2523,10 +2543,10 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
 <p><strong>Kafka Batching:</strong> Der Konsum erfolgt in Batches, um den Durchsatz zu maximieren.</p>
 </li>
 <li>
-<p><strong>Idempotente UPSERTs:</strong> Der <code>ProcessService</code> nutzt jOOQs <code>ON CONFLICT (timestamp, sensor_id) DO UPDATE</code>. Wenn Kafka einen Batch nach einem Absturz erneut sendet, überschreibt die Datenbank die Zeilen einfach mit exakt denselben, korrekten Daten. Es entstehen keine Duplikate.</p>
+<p><strong>Idempotente UPSERTs:</strong> Der <code>SensorDataBatchProcessor</code> nutzt jOOQs <code>ON CONFLICT (timestamp, sensor_id) DO UPDATE</code>. Wenn Kafka einen Batch nach einem Absturz erneut sendet, überschreibt die Datenbank die Zeilen einfach mit exakt denselben, korrekten Daten. Es entstehen keine Duplikate.</p>
 </li>
 <li>
-<p><strong>Poison Pill Handling (Batch-Rettung):</strong> Wenn ein einzelner Datensatz innerhalb eines 200er-Batches fehlerhaft ist (z. B. unlesbarer Timestamp), fängt der <code>ProcessService</code> die <code>TransformationException</code> lokal ab, loggt den fehlerhaften Rohwert und überspringt ihn (<code>return null</code>). Die verbleibenden 199 validen Datensätze werden erfolgreich in der DB gespeichert, anstatt den gesamten Batch in eine Dead Letter Queue (DLQ) zu leiten.</p>
+<p><strong>Poison Pill Handling (Batch-Rettung):</strong> Wenn ein einzelner Datensatz innerhalb eines 200er-Batches fehlerhaft ist (z. B. unlesbarer Timestamp), fängt der <code>SensorDataBatchProcessor</code> die <code>TransformationException</code> lokal ab, loggt den fehlerhaften Rohwert und überspringt ihn (<code>return null</code>). Die verbleibenden 199 validen Datensätze werden erfolgreich in der DB gespeichert, anstatt den gesamten Batch in eine Dead Letter Queue (DLQ) zu leiten.</p>
 </li>
 </ul>
 </div>
@@ -2534,23 +2554,43 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
 <div class="sect4">
 <h5 id="_historische_daten_reprozessierung_reprocess_flow">Historische Daten-Reprozessierung (Reprocess-Flow)</h5>
 <div class="paragraph">
-<p>Dieser Flow wird durch ein Sensor-Config-Update (<code>SensorConfig</code>) ausgelöst und muss potenziell Hunderttausende von Datensätzen aktualisieren, ohne den Speicher zu sprengen oder andere Prozesse zu blockieren. Die Logik ist in eine spezifische Orchestrator-und-Chunk-Architektur unterteilt.</p>
+<p>Dieser Flow wird durch ein Aktualisierungs-Event der Sensorkonfiguration (<code>SensorConfig</code>) getriggert und ist darauf ausgelegt, potenziell Hunderttausende historischer Zeitreihendaten rückwirkend an neue mathematische Formeln anzupassen. Die Architektur trennt dabei die Steuermechanismen strikt von den ressourcenintensiven Datenbankoperationen, um den Speicherbedarf konsistent niedrig zu halten und Deadlocks zu verhindern.</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>High-Performance Guard:</strong> Der <code>ReprocessService</code> führt zuerst eine <code>EXISTS</code>-Abfrage aus. Gibt es keine alten Versionen, wird der Prozess in Millisekunden beendet.</p>
+<p><strong>High-Performance Guard:</strong> Der <code>SensorReprocessingOrchestrator</code> führt initial eine leichte <code>EXISTS</code>-Abfrage auf der Datenbank aus. Sind für die betroffene Formelversion keine veralteten Datensätze vorhanden, terminiert der Prozess ressourcenschonend innerhalb weniger Millisekunden.</p>
 </li>
 <li>
-<p><strong>Die AOP-Proxy-Falle &amp; Transaktionsgrenzen:</strong> Wenn im Spring Framework eine Methode mit der <code>@Transactional</code>-Annotation aus derselben Klasse heraus aufgerufen wird, wird der Proxy umgangen. Daher ist die Logik strikt aufgeteilt: Der <strong><code>ReprocessService</code></strong> steuert die Schleife (ohne Transaktion), während der extern aufgerufene <strong><code>ReprocessChunkService</code></strong> jeden einzelnen Chunk in einer isolierten Datenbanktransaktion ausführt.</p>
+<p><strong>Feingranulare Transaktionsgrenzen via <code>TransactionTemplate</code>:</strong>
+Um die Belegungsdauer wertvoller Datenbankverbindungen im HikariCP-Pool zu minimieren, wird im <code>HistoricalReadingChunkProcessor</code> bewusst auf eine deklarative Methodensperre via <code>@Transactional</code> verzichtet. Auch wenn die mathematische Auswertung der normalisierten Werte dank des hochperformanten Parsington-Expression-Cachings im Arbeitsspeicher nur wenige Millisekunden beansprucht, trennt die Architektur die Netzwerk-I/O-Phasen strikt voneinander:</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Transaktionsfreies Lesen:</strong> Die historischen Datensätze werden ohne aktive Schreibtransaktion über das Netzwerk geladen.</p>
 </li>
 <li>
-<p><strong>Iteratives Chunking (Speichersicherheit):</strong> Eine <code>do-while</code>-Schleife ruft den Chunk-Service auf. Um JVM-OOM-Fehler zu vermeiden, erzwingt die jOOQ-Abfrage ein konfigurierbares <code>LIMIT</code> (z.B. 1000, gesteuert via <code>application.properties</code>). Die Schleife wiederholt sich, bis die Fetch-Size <code>0</code> erreicht.</p>
+<p><strong>In-Memory-Transformation:</strong> Die Auswertung der vorab geparsten Parsington-Formeln und das Stream-Mapping erfolgen vollständig im lokalen Arbeitsspeicher der JVM (ohne gebundene JDBC-Connection).</p>
 </li>
 <li>
-<p><strong>Poison Pill Handling (Die Endlosschleifen-Falle):</strong> Tritt bei einem historischen Datensatz ein Fehler auf (z. B. Division durch Null), darf dieser <strong>nicht</strong> einfach übersprungen werden. Andernfalls würde die SQL-Abfrage ihn im nächsten Schleifendurchlauf erneut laden, was zu einer Endlosschleife führt.</p>
+<p><strong>Programmatischer DB-Commit:</strong> Erst für das abschließende Schreiben wird ein dediziertes Spring <code>TransactionTemplate</code> geöffnet. Dieses kapselt das jOOQ-Bulk-Update in eine extrem kurze, atomare Schreibtransaktion, was die Netzwerk-Lesezeiten komplett aus der Transaktionsdauer eliminiert und den Durchsatz bei parallelen Workflows maximiert.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p><strong>Schutz vor Race-Conditions (Partitioned Kafka Consumer Groups):</strong>
+Da das Triggern der Reprozessierung ereignisgesteuert über das Topic <code>internal-sensor-config</code> erfolgt, greift auf Infrastrukturebene ein natürlicher Schutz vor Nebenläufigkeitskonflikten. Sämtliche Konfigurations-Updates werden zwingend mit der eindeutigen <code>sensor_id</code> als Kafka-Message-Key publiziert. Durch die intrinsischen Eigenschaften von Partitioned Kafka Consumer Groups garantiert der Broker, dass alle Events für einen spezifischen Sensor strikt sequenziell und stets von genau demselben Konsumenten-Thread verarbeitet werden. Parallele, kollidierende Reprocess-Flows für dieselben Zeitreihendaten (Write Skews oder Lost Updates über Pod-Grenzen hinweg) sind somit architektonisch ausgeschlossen, weshalb auf der Datenbankebene auf zusätzliche, aufwändige Sperrmechanismen (wie Pessimistic oder Optimistic DB-Locking) verzichtet wird.</p>
+</li>
+<li>
+<p><strong>Iteratives Chunking (JVM-Speichersicherheit):</strong>
+Um Out-Of-Memory-Fehler (OOM) auf den Kubernetes-Pods zu vermeiden, wird die Verarbeitung über eine dynamische <code>do-while</code>-Schleife im Orchestrator gesteuert. Jede Abfrage erzwingt ein striktes, über die <code>application.properties</code> konfigurierbares <code>LIMIT</code> (z. B. 1000 Datensätze pro Chunk). Die Schleife iteriert so lange, bis die Anzahl der geladenen Datensätze <code>0</code> erreicht.</p>
+</li>
+<li>
+<p><strong>Poison Pill Handling (Die Endlosschleifen-Falle):</strong>
+Schlägt die mathematische Transformation eines historischen Datensatzes fehl (z. B. durch eine Division durch Null aufgrund korrupter Rohwerte), darf dieser Datensatz unter keinen Umständen unmodifiziert übersprungen werden. Andernfalls würde die SQL-Abfrage dieselbe fehlerhafte Zeile im nächsten Chunk-Durchlauf erneut laden, was in einer Endlosschleife resultieren würde.</p>
 <div class="paragraph">
-<p><strong>Die Loop-Breaker Lösung:</strong> Die Exception wird abgefangen, die <code>version</code> des fehlerhaften Datensatzes wird explizit hochgezählt und der <code>norm_value</code> wird auf <code>null</code> gesetzt. Dadurch wird die Endlosschleife gebrochen:</p>
+<p><strong>Die Loop-Breaker Lösung:</strong> Die <code>TransformationException</code> wird gezielt abgefangen. Um die Schleife zu durchbrechen, wird die <code>version</code> des betroffenen Datensatzes explizit auf die aktuelle Zielversion angehoben und der <code>norm_value</code> auf <code>null</code> gesetzt:</p>
 </div>
 </li>
 </ul>
@@ -2562,10 +2602,10 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
               "Raw Value: [{}]. Bumping version to bypass infinite loop. Reason: {}",
               reading.getSensorId(), reading.getRawValue(), ex.getMessage(), ex);
 
-    // 1. Version erzwingen zu inkrementieren, damit die DB-Abfrage den Datensatz beim nächsten Schleifendurchlauf ignoriert
+    // 1. Versions-Inkrement erzwingen: Verhindert das erneute Erfassen im nächsten Chunk-Durchlauf
     reading.setVersion(sensorConfig.getVersion().shortValue());
 
-    // 2. norm_value auf null setzen, um sicherzustellen, dass nachgelagerte Systeme keine falsch berechneten Daten anzeigen
+    // 2. norm_value auf null setzen: Verhindert die Auslieferung korrupter Berechnungen an nachgelagerte Systeme
     reading.setNormValue(null);
 
     return reading;
@@ -2606,48 +2646,127 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
 </div>
 </div>
 <div class="sect3">
-<h4 id="_normalization_service_implementieren">8.6.3. Normalization Service implementieren</h4>
+<h4 id="_normalizer_component_implementieren_strategy_pattern">8.6.3. Normalizer Component implementieren (Strategy Pattern)</h4>
 <div class="paragraph">
-<p>Die eigentliche Übersetzungslogik wird als dedizierter, isolierter Service innerhalb der Java-Applikation umgesetzt.</p>
+<p>Um das Messaging-Plumbing (Kafka) vollständig von der Datenübersetzung zu entkoppeln, setzt die Pipeline auf das <strong>Strategy Pattern</strong>. Für jede neue Datenquelle wird eine spezifische Implementierung des generischen Interfaces <code>VendorDataNormalizer&lt;T&gt;</code> als Spring <code>@Component</code> bereitgestellt.</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>Service-Erstellung:</strong> Erstellen eines neuen Spring <code>@Service</code> (z. B. <code>RawFtpCsvSensorDataNormalizationService</code>).</p>
+<p><strong>Zustandslose Transformation:</strong> Der Normalizer nimmt das rohe Hersteller-Record entgegen und übersetzt es in eine Liste von standardisierten Spring <code>Message&lt;NormalizedSensorData&gt;</code>-Objekten.</p>
 </li>
 <li>
-<p><strong>Komposition:</strong> Injizieren des zentralen <code>NormalizedSensorDataPublisher</code> via Konstruktor-Injection.</p>
+<p><strong>Kritisch – Kafka Partitioning Key (<code>KafkaHeaders.KEY</code>):</strong> Damit die nachgelagerte Pipeline (insbesondere der <code>SensorDataBatchListener</code>) Messwerte desselben Sensors in strikter zeitlicher Reihenfolge und ohne Race-Conditions verarbeiten kann, muss beim Aufbau der ausgehenden Nachricht <strong>zwingend</strong> der Ziel-Gerätename als Kafka-Key gesetzt werden. Dies geschieht über den <code>MessageBuilder</code> mittels <code>.setHeader(KafkaHeaders.KEY, deviceName)</code>.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>Beispiel-Implementierung des Normalizers:</strong></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">@Component
+public class SolExpertsSensorDataNormalizer implements VendorDataNormalizer&lt;RawSolExpertsSensorData&gt; {
+
+    @Override
+    public List&lt;Message&lt;NormalizedSensorData&gt;&gt; normalizeToMessages(RawSolExpertsSensorData rawPayload) {
+        if (rawPayload == null || rawPayload.values() == null || rawPayload.values().isEmpty()) {
+            return List.of();
+        }
+
+        List&lt;Message&lt;NormalizedSensorData&gt;&gt; outboundMessages = new ArrayList&lt;&gt;();
+
+        for (Map.Entry&lt;String, Double&gt; entry : rawPayload.values().entrySet()) {
+            String newDeviceName = entry.getKey().equals("value")
+                    ? rawPayload.deviceName()
+                    : rawPayload.deviceName() + "_" + entry.getKey();
+
+            NormalizedSensorData canonicalPayload =
+                    new NormalizedSensorData(newDeviceName, rawPayload.ts(), entry.getValue());
+
+            // CRITICAL: Set Kafka partitioning key to guarantee ordering in downstream topics
+            Message&lt;NormalizedSensorData&gt; message = MessageBuilder
+                    .withPayload(canonicalPayload)
+                    .setHeader(KafkaHeaders.KEY, newDeviceName)
+                    .build();
+
+            outboundMessages.add(message);
+        }
+
+        return outboundMessages;
+    }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_5_4_ingress_listener_implementieren_deklarativer_eip_adapter">8.7. 5.4. Ingress Listener implementieren (Deklarativer EIP-Adapter)</h3>
+<div class="paragraph">
+<p>Der eigentliche Konsument lauscht auf das Raw-Topic und agiert als leichtgewichtige, zustandslose Enterprise Integration Pattern (EIP) Pipe. Er delegiert die Übersetzung vollständig an den injizierten <code>VendorDataNormalizer</code>.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Klassen-Namenskonvention &amp; Stereotyp (ArchUnit-konform):</strong> Da Konsumenten von Kafka-Nachrichten reine Infrastruktur-Komponenten und keine Domänen-Services sind, muss die Klasse zwingend mit <code>@Component</code> (niemals <code>@Service</code>!) annotiert sein und im Namen auf <code>Listener</code> enden (z. B. <code>RawSolExpertsSensorDataListener</code>). Dies wird durch die automatisierte ArchUnit-Testsuite strikt überwacht.</p>
 </li>
 <li>
-<p><strong>Event-Ingestion:</strong> Hinzufügen eines <code>@KafkaListener</code>, der auf das neu erstellte Raw-Topic lauscht.</p>
+<p><strong>Event-Ingestion &amp; Factory-Anbindung:</strong> Die Methode wird mit <code>@KafkaListener</code> annotiert und lauscht auf das Raw-Topic. Hierbei muss zwingend die auf Ingress-Routing spezialisierte Container-Factory angegeben werden: <code>containerFactory = "forwardingMessageFactory"</code>.</p>
 </li>
 <li>
-<p><strong>Transformation:</strong> Innerhalb der Listener-Methode die herstellerspezifischen Rohdaten parsen und in das kanonische Standardformat (<code>NormalizedSensorData</code>) umwandeln.</p>
+<p><strong>Deklaratives Routing via <code>@SendTo</code>:</strong> Statt Nachrichten manuell über einen Publisher zu versenden und asynchrone Futures zu verwalten, setzt die Pipeline auf deklaratives Routing. Die Listener-Methode wird mit <code>@SendTo("${app.kafka.topics.normalized}")</code> annotiert. Das Spring-Framework fängt die zurückgegebene <code>List&lt;Message&lt;NormalizedSensorData&gt;&gt;</code> ab, splittet sie und publiziert jede Nachricht einzeln in das Ziel-Topic.</p>
 </li>
 <li>
-<p><strong>Wichtig - Guarded Acknowledgment:</strong> Um Datenverlust (At-Least-Once Delivery) bei Fehlern oder Pod-Crashes garantiert auszuschliessen, muss das Acknowledgment-Pattern exakt wie folgt implementiert werden:</p>
+<p><strong>Guarded Acknowledgment (Zero-Data-Loss Garantie):</strong> Das sichere Bestätigen der Offsets übernimmt die zugrundeliegende Infrastruktur vollautomatisch und atomar:</p>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Für jeden extrahierten Sensorwert die Methode <code>publisher.publish(sensorId, canonicalPayload)</code> aufrufen.</p>
+<p>Die <code>forwardingMessageFactory</code> empfängt die vom Normalizer generierte Nachrichtenliste.</p>
 </li>
 <li>
-<p>Die resultierenden asynchronen <code>CompletableFuture</code>-Objekte in einer Liste sammeln.</p>
+<p>Sie leitet alle enthaltenen Nachrichten unter Beibehaltung der gesetzten <code>KafkaHeaders.KEY</code>-Header an das Ziel-Topic (<code>internal-normalized</code>) weiter.</p>
 </li>
 <li>
-<p>Mittels <code>CompletableFuture.allOf(&#8230;&#8203;).join()</code> blockierend darauf warten, dass der Kafka-Broker den Erhalt <strong>aller</strong> Nachrichten bestätigt hat.</p>
-</li>
-<li>
-<p><strong>Erst nach erfolgreicher Bestätigung aller Futures</strong> darf der Offset des ursprünglichen Raw-Topics via <code>ack.acknowledge()</code> committet werden.</p>
+<p>Da die Factory auf <code>AckMode.RECORD</code> konfiguriert ist, wird der Kafka-Offset des ursprünglichen Raw-Topics <strong>erst und ausschließlich dann committet</strong>, wenn der Kafka-Broker den erfolgreichen Erhalt und die Speicherung <strong>aller</strong> transformierten ausgehenden Nachrichten bestätigt hat. Stürzt der Pod während der Verarbeitung ab, erfolgt kein Commit und das Raw-Event wird nach dem Neustart sicher erneut verarbeitet.</p>
 </li>
 </ol>
 </div>
 </li>
 </ul>
 </div>
+<div class="paragraph">
+<p><strong>Beispiel-Implementierung des Ingress-Listeners:</strong></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">@Component
+public class RawSolExpertsSensorDataListener {
+
+    private static final Logger log = LoggerFactory.getLogger(RawSolExpertsSensorDataListener.class);
+
+    private final VendorDataNormalizer&lt;RawSolExpertsSensorData&gt; normalizer;
+
+    public RawSolExpertsSensorDataListener(VendorDataNormalizer&lt;RawSolExpertsSensorData&gt; normalizer) {
+        this.normalizer = normalizer;
+    }
+
+    @KafkaListener(
+            topics = "${app.kafka.topics.raw-solexperts}",
+            groupId = "solexperts-adapter-group",
+            concurrency = "${app.kafka.concurrency:6}",
+            containerFactory = "forwardingMessageFactory")
+    @SendTo("${app.kafka.topics.normalized}")
+    public List&lt;Message&lt;NormalizedSensorData&gt;&gt; processRawMessage(RawSolExpertsSensorData rawPayload) {
+        log.info("Received raw SolExperts message: {}", rawPayload);
+
+        // Delegation an den Normalizer: Spring Kafka übernimmt das Splitten und Routing der Liste
+        return normalizer.normalizeToMessages(rawPayload);
+    }
+}</code></pre>
+</div>
 </div>
 <div class="sect3">
-<h4 id="_alternative_zero_code_ingestion_via_kafka_connect_smts">8.6.4. Alternative: Zero-Code Ingestion via Kafka Connect SMTs</h4>
+<h4 id="_alternative_zero_code_ingestion_via_kafka_connect_smts">8.7.1. Alternative: Zero-Code Ingestion via Kafka Connect SMTs</h4>
 <div class="paragraph">
 <p>Für einfache, flache Datenformate (wie standardisierte CSV-Dateien via FTP) wird ein <strong>Zero-Code-Ansatz</strong> bevorzugt:</p>
 </div>
@@ -2670,7 +2789,7 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_datenbankschemata">8.7. Datenbankschemata</h3>
+<h3 id="_datenbankschemata">8.8. Datenbankschemata</h3>
 <div class="paragraph">
 <p>Im Folgenden ist das aktuelle logische und physische Datenbankschema dokumentiert. Wie in Kapitel 5 beschrieben, verwenden wir als primären Einstiegspunkt eine PostgreSQL-Datenbank mit der PostGIS-Erweiterung für die Verwaltung der Metadaten und Geoinformationen.</p>
 </div>
@@ -2680,7 +2799,7 @@ Im Angular Public Folder werden die Übersetzungsfiles platziert. Sie enthalten 
 </div>
 </div>
 <div class="sect3">
-<h4 id="_timescaledb_schema_zeitreihen_downsampling">8.7.1. TimeScaleDB Schema (Zeitreihen &amp; Downsampling)</h4>
+<h4 id="_timescaledb_schema_zeitreihen_downsampling">8.8.1. TimeScaleDB Schema (Zeitreihen &amp; Downsampling)</h4>
 <div class="paragraph">
 <p>Das Schema der TimeScaleDB für die hochfrequenten Zeitreihendaten umfasst neben der Hypertable auch die Continuous Aggregates (Downsampling-Buckets) und die Retention-Policies für das Daten-Lebenszyklus-Management.</p>
 </div>
@@ -2800,7 +2919,7 @@ SELECT add_continuous_aggregate_policy('sensor_reading_1d',
 </div>
 </div>
 <div class="sect2">
-<h3 id="_api_schnittstellen_contracts">8.8. API-Schnittstellen (Contracts)</h3>
+<h3 id="_api_schnittstellen_contracts">8.9. API-Schnittstellen (Contracts)</h3>
 <div class="paragraph">
 <p>Im folgenden Abschnitt sind die API-Endpoints als OpenAPI-Spezifikation (YAML) definiert. Diese Spezifikation dient während der aktiven Entwicklungsphase als fester Vertrag (Contract) zwischen dem Backend, dem Frontend und der Ingestion-Pipeline. Die YAML-Blöcke können direkt in Werkzeuge wie den Swagger Editor kopiert werden, um Mocks und Client-Code zu generieren.</p>
 </div>
@@ -2878,7 +2997,7 @@ components:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_teststrategie">8.9. Teststrategie</h3>
+<h3 id="_teststrategie">8.10. Teststrategie</h3>
 <div class="paragraph">
 <p>Um die Stabilität und Datenintegrität von MONTEIS zu gewährleisten, verfolgen wir eine schichtenbasierte Teststrategie. Der Fokus liegt darauf, die gesamte Funktionalität und das fachliche Verhalten der Applikation rigoros abzusichern, ohne durch fragile Layout-Tests unnötigen Wartungsaufwand zu erzeugen.</p>
 </div>
@@ -2886,7 +3005,7 @@ components:
 <p>Um eine konstant hohe Code-Qualität zu garantieren, wird systemübergreifend <strong>SonarQube</strong> eingesetzt. Eine Mindestabdeckung dient als Guardrail, wobei die Aussagekraft der Tests (fachliche Relevanz, Fehlererkennungsfähigkeit) höher gewichtet wird als die reine Prozentzahl.</p>
 </div>
 <div class="sect3">
-<h4 id="_frontend_testing">8.9.1. Frontend Testing</h4>
+<h4 id="_frontend_testing">8.10.1. Frontend Testing</h4>
 <div class="paragraph">
 <p>Im Angular-Frontend liegt der Fokus auf der Überprüfung der isolierten UI-Logik (z. B. State-Management, Filter-Logik, Datenaufbereitung für Charts).</p>
 </div>
@@ -2902,7 +3021,7 @@ components:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_backend_testing_spring_boot">8.9.2. Backend Testing (Spring Boot)</h4>
+<h4 id="_backend_testing_spring_boot">8.10.2. Backend Testing (Spring Boot)</h4>
 <div class="paragraph">
 <p>Das Backend wird strikt in verschiedene Test-Ebenen unterteilt (Test-Pyramide), um schnelle Feedback-Zyklen und realitätsnahe Datenbanktests optimal zu kombinieren. Als Basis dient hierbei die native <strong>Spring Boot Test Suite</strong>.</p>
 </div>
@@ -2931,7 +3050,7 @@ components:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_end_to_end_testing_e2e">8.9.3. End-to-End Testing (E2E)</h4>
+<h4 id="_end_to_end_testing_e2e">8.10.3. End-to-End Testing (E2E)</h4>
 <div class="paragraph">
 <p>Um die isolierten Komponenten-Tests zu komplementieren und das Zusammenspiel des gesamten Systems (Frontend + Backend + Datenbank) zu validieren, setzen wir ebenenübergreifende E2E-Tests ein.</p>
 </div>
@@ -2951,12 +3070,12 @@ components:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_entwickler_workflow_cicd_pipeline">8.10. Entwickler-Workflow &amp; CI/CD Pipeline</h3>
+<h3 id="_entwickler_workflow_cicd_pipeline">8.11. Entwickler-Workflow &amp; CI/CD Pipeline</h3>
 <div class="paragraph">
 <p>Um eine konsistente Code-Qualität zu garantieren, den Review-Prozess zu verschlanken und die Server-Ressourcen effizient zu nutzen, wird der Code-Lebenszyklus von lokalen Git-Hooks bis hin zu automatisierten GitHub Actions strikt orchestriert.</p>
 </div>
 <div class="sect3">
-<h4 id="_lokaler_workflow_git_hooks">8.10.1. Lokaler Workflow (Git Hooks)</h4>
+<h4 id="_lokaler_workflow_git_hooks">8.11.1. Lokaler Workflow (Git Hooks)</h4>
 <div class="paragraph">
 <p>Bevor Code in das Repository gepusht wird, greifen lokale Git-Hooks , um formelle Standards bereits auf dem Entwickler-Rechner zu erzwingen:</p>
 </div>
@@ -2982,7 +3101,7 @@ components:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_continuous_integration_pull_request_workflows">8.10.2. Continuous Integration (Pull Request Workflows)</h4>
+<h4 id="_continuous_integration_pull_request_workflows">8.11.2. Continuous Integration (Pull Request Workflows)</h4>
 <div class="paragraph">
 <p>Um die Ressourcen (und Kosten) der Pipeline zu schonen, werden ressourcenintensive CI-Jobs <strong>nicht bei jedem einzelnen Push</strong>, sondern ausschliesslich bei der Erstellung oder Aktualisierung von <strong>Pull Requests (PRs)</strong> ausgeführt.</p>
 </div>
@@ -3004,7 +3123,7 @@ components:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_continuous_deployment_release_workflows">8.10.3. Continuous Deployment &amp; Release-Workflows</h4>
+<h4 id="_continuous_deployment_release_workflows">8.11.3. Continuous Deployment &amp; Release-Workflows</h4>
 <div class="paragraph">
 <p>Sobald Code-Änderungen in den <code>main-branch</code> integriert werden oder offizielle Versionen anstehen, übernehmen automatisierte GitHub Actions das Deployment. Das Setup folgt strikt dem Build-Once-Prinzip für Produktions-Releases und einem GitOps-Ansatz für die Infrastruktur.</p>
 </div>
@@ -3178,7 +3297,7 @@ components:
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Entscheidung</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Leseberechtigungen werden über native PostgreSQL Row-Level-Security-Policies auf <code>sensors</code>/<code>experiments</code> sowie eine security-barrier-View (<code>sensor_reading_secured</code>) für die FDW-Tabelle durchgesetzt. Ein custom jOOQ <code>ConnectionProvider</code> (<code>RlsConnectionProvider</code>) schreibt dafür bei jeder Connection-Beschaffung den aktuellen <code>SecurityContext</code> transaktionslokal auf die Verbindung; die Policies lesen diesen Kontext serverseitig aus. Der <code>SecurityContext</code> selbst wird von <code>SecurityContextFilter</code> aus dem JWT befüllt und für die Dauer des Requests in ein <code>ScopedValue</code> gebunden.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Leseberechtigungen werden über native PostgreSQL Row-Level-Security-Policies auf <code>sensors</code>/<code>experiments</code> sowie eine security-barrier-View (<code>sensor_reading_secured</code>) für die FDW-Tabelle durchgesetzt. Ein custom jOOQ <code>ConnectionProvider</code> (<code>RlsConnectionProvider</code>) schreibt dafür bei jeder Connection-Beschaffung die aktuelle <code>Authentication</code> transaktionslokal auf die Verbindung; die Policies lesen diesen Kontext serverseitig aus. Die <code>Authentication</code> selbst wird von einem custom <code>Converter</code> (<code>JwtSecurityAuthenticationConverter</code>) aus dem JWT gebaut — Rollen werden zu <code>api:*</code>-Authorities (via <code>RealmRoleAuthoritiesConverter</code>), Sub und Experiment-IDs landen in einem eigenen <code>SecurityPrincipal</code> als Authentication-Principal — und liegt für die Dauer des Requests im Standard-<code>SecurityContextHolder</code> von Spring Security, ohne eigenen Propagierungsmechanismus.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Begründung</p></td>
@@ -3301,7 +3420,7 @@ components:
 <div id="footer">
 <div id="footer-text">
 Version 1.0.0-rc<br>
-Last updated 2026-06-02 18:54:17 UTC
+Last updated 2026-07-22 08:33:18 UTC
 </div>
 </div>
 </body>

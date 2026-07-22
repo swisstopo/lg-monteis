@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,6 +29,10 @@ class ExperimentControllerTest {
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private ExperimentQueryInterface queryRepository;
+
+  // Only used to satisfy SecurityConfig's oauth2ResourceServer bean requirement in this slice
+  // test; requests authenticate via the jwt() post-processor instead of a real decode.
+  @MockitoBean private JwtDecoder jwtDecoder;
 
   @Test
   void should_route_get_experiment_details_and_return_json() throws Exception {
@@ -41,7 +47,8 @@ class ExperimentControllerTest {
 
     // when / then
     mockMvc
-        .perform(get("/api/experiments/1/details").contentType(MediaType.APPLICATION_JSON))
+        .perform(
+            get("/api/experiments/1/details").with(jwt()).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(expectedDto.id()))
         .andExpect(jsonPath("$.name").value(expectedDto.name()))

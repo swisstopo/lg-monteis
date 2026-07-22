@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -24,6 +25,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -39,6 +42,10 @@ class SensorControllerTest {
   @MockitoBean private SensorQuery queryService;
 
   @MockitoBean private SensorWebMapper mapper;
+
+  // Only used to satisfy SecurityConfig's oauth2ResourceServer bean requirement in this slice
+  // test; requests authenticate via the jwt() post-processor instead of a real decode.
+  @MockitoBean private JwtDecoder jwtDecoder;
 
   @Test
   void should_route_create_sensor_and_verify_output() throws Exception {
@@ -59,6 +66,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             post("/api/sensors")
+                .with(jwt().authorities(new SimpleGrantedAuthority("api:write")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
@@ -92,6 +100,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             put("/api/sensors/1")
+                .with(jwt().authorities(new SimpleGrantedAuthority("api:write")))
                 .param("id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
@@ -117,7 +126,7 @@ class SensorControllerTest {
 
     // when / then
     mockMvc
-        .perform(get("/api/sensors/formulas").contentType(MediaType.APPLICATION_JSON))
+        .perform(get("/api/sensors/formulas").with(jwt()).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(dto1.id()))
         .andExpect(jsonPath("$[0].expression").value(dto1.expression()))
