@@ -228,20 +228,16 @@ jobs:
         run: mvn -T 2C install -DskipTests
       - parallel:
           - name: Run Core Unit Tests
-            run: mvn -T 2C test -pl core -Djooq.codegen.skip=true
+            run: mvn -T 2C test jacoco:report -pl core -Djooq.codegen.skip=true
 
           - name: Run Core Integration Tests
-            run: mvn -T 2C test-compile failsafe:integration-test -pl core -Djooq.codegen.skip=true
+            run: mvn -T 2C test-compile failsafe:integration-test jacoco:report-integration -pl core -Djooq.codegen.skip=true
 
           - name: Run Pipeline Unit Tests
-            run: mvn -T 2C test -pl pipeline -Djooq.codegen.skip=true
+            run: mvn -T 2C test jacoco:report -pl pipeline -Djooq.codegen.skip=true
 
           - name: Run Pipeline Integration Tests
-            run: mvn -T 2C test-compile failsafe:integration-test -pl pipeline -Djooq.codegen.skip=true
-
-      - name: Generate JaCoCo Reports
-        if: always()
-        run: mvn jacoco:report jacoco:report-integration -pl core,pipeline -Djooq.codegen.skip=true
+            run: mvn -T 2C test-compile failsafe:integration-test jacoco:report-integration -pl pipeline -Djooq.codegen.skip=true
 
       - name: Upload Build and Coverage Artifacts
         if: always()
@@ -406,3 +402,6 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true

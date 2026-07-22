@@ -28,6 +28,7 @@ export default class AgGridRecord {
       const count = this.metricsResource.value()?.length ?? 0;
       view.title = `AG-Grid (${count})`;
     });
+    const Bestway = 'COMMENT';
   }
 
   onWrappedRow(row: ReadSimpleMetricDto) {
