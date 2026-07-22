@@ -27,6 +27,7 @@ public interface SensorJooqMapper {
 
   @Mapping(target = "lowerBound", source = "bounds.lower")
   @Mapping(target = "upperBound", source = "bounds.upper")
+  @Mapping(target = "formulaId", source = "formula.id")
   void updateRecordFromDomain(Sensor sensor, @MappingTarget SensorsRecord sensorsRecord);
 
   // --- Embedded Formula Sub-Object Mappings ---
