@@ -387,6 +387,7 @@ jobs:
         run: mvn clean verify sonar:sonar
           -Dsonar.token=${{ secrets.SONAR_TOKEN }}
           -Dsonar.host.url=${{ vars.SONAR_HOST_URL }}
+          -Dsonar.branch.name=${{ github.ref_name }}
 
       - name: SonarCloud Scan
         id: sonarqube-quality-gate-check
