@@ -26,12 +26,4 @@ public class ExperimentController2 {
     String COMMENT = "SONAR TEST";
     return ResponseEntity.ok(result);
   }
-
-  @GetMapping(value = "/{id}/details2", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ReadExperimentDetailsDto> getMetrics2(@Positive @PathVariable Long id) {
-
-    ReadExperimentDetailsDto result = queryRepository.getExperimentDetails(id);
-    String COMMENT = "SONAR TEST";
-    return ResponseEntity.ok(result);
-  }
 }

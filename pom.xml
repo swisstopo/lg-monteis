@@ -166,6 +166,7 @@
             <systemPropertyVariables>
               <monteis.repo.root>${maven.multiModuleProjectDirectory}</monteis.repo.root>
             </systemPropertyVariables>
+            <argLine>@{argLine}</argLine>
           </configuration>
         </plugin>
 
@@ -325,16 +326,30 @@
           <version>${jacoco.version}</version>
           <executions>
             <execution>
-              <id>prepare-agent</id>
+              <id>pre-unit-tests</id>
               <goals>
                 <goal>prepare-agent</goal>
               </goals>
             </execution>
             <execution>
-              <id>prepare-agent-integration</id>
+              <id>post-unit-test</id>
+              <goals>
+                <goal>report</goal>
+              </goals>
+              <phase>test</phase>
+            </execution>
+            <execution>
+              <id>pre-integration-tests</id>
               <goals>
                 <goal>prepare-agent-integration</goal>
               </goals>
+            </execution>
+            <execution>
+              <id>post-integration-tests</id>
+              <goals>
+                <goal>report-integration</goal>
+              </goals>
+              <phase>post-integration-test</phase>
             </execution>
           </executions>
         </plugin>
@@ -350,7 +365,7 @@
             <goals>
               <goal>read-project-properties</goal>
             </goals>
-            <phase>clean</phase>
+            <phase>compile</phase>
             <inherited>false</inherited>
             <configuration>
               <files>

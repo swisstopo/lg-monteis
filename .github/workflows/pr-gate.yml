@@ -231,13 +231,13 @@ jobs:
             run: mvn -T 2C test jacoco:report -pl core -Djooq.codegen.skip=true
 
           - name: Run Core Integration Tests
-            run: mvn -T 2C test-compile failsafe:integration-test jacoco:report-integration -pl core -Djooq.codegen.skip=true
+            run: mvn -T 2C test-compile failsafe:integration-test jacoco:report-integration failsafe:verify -pl core -Djooq.codegen.skip=true
 
           - name: Run Pipeline Unit Tests
             run: mvn -T 2C test jacoco:report -pl pipeline -Djooq.codegen.skip=true
 
           - name: Run Pipeline Integration Tests
-            run: mvn -T 2C test-compile failsafe:integration-test jacoco:report-integration -pl pipeline -Djooq.codegen.skip=true
+            run: mvn -T 2C test-compile failsafe:integration-test jacoco:report-integration failsafe:verify -pl pipeline -Djooq.codegen.skip=true
 
       - name: Upload Build and Coverage Artifacts
         if: always()
@@ -245,9 +245,10 @@ jobs:
         with:
           name: backend-coverage-reports
           path: |
-            **/target/classes/
-            **/target/test-classes/
-            **/target/site/jacoco*/
+            **/target/classes/**
+            **/target/test-classes/**
+            **/target/site/jacoco/jacoco.xml
+            **/target/site/jacoco-it/jacoco.xml
           retention-days: 1
 
   # noinspection YAMLSchemaValidation
@@ -390,16 +391,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
       - name: Warm up actions/cache download
         uses: actions/cache/restore@v6
         with:
-          path: /tmp/.warmup
-          key: warmup-noop
-          lookup-only: true
-
+         path: /tmp/.warmup
+         key: warmup-noop
+         lookup-only: true
       - parallel:
           - name: Setup Java Environment (Hits Cache)
             uses: ./.github/actions/setup-java-maven
@@ -424,12 +422,12 @@ jobs:
             with:
               image: ${{ env.POSTGRES_DB_IMAGE }}
 
-      - name: Sonar Code Scan
-        run: |
-          mvn clean compile sonar:sonar 
-          -DskipTests
-          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
-          -Dsonar.host.url=${{ vars.SONAR_HOST_URL }}
+      - name: Build and analyze
+        run: | 
+          mvn compile sonar:sonar \
+          -DskipTests \
+          -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
+          -Dsonar.host.url=${{ vars.SONAR_HOST_URL }} 
 
       - name: SonarCloud Scan
         id: sonarqube-quality-gate-check
