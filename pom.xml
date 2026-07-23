@@ -324,6 +324,11 @@
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
           <version>${jacoco.version}</version>
+          <configuration>
+            <formats>
+              <format>XML</format>
+            </formats>
+          </configuration>
           <executions>
             <execution>
               <id>pre-unit-tests</id>
@@ -343,6 +348,7 @@
               <goals>
                 <goal>prepare-agent-integration</goal>
               </goals>
+              <phase>pre-integration-test</phase>
             </execution>
             <execution>
               <id>post-integration-tests</id>

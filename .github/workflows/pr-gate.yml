@@ -231,13 +231,13 @@ jobs:
             run: mvn -T 2C test jacoco:report -pl core -Djooq.codegen.skip=true
 
           - name: Run Core Integration Tests
-            run: mvn -T 2C test-compile failsafe:integration-test jacoco:report-integration failsafe:verify -pl core -Djooq.codegen.skip=true
+            run: mvn -T 2C test-compile jacoco:prepare-agent-integration failsafe:integration-test jacoco:report-integration failsafe:verify -pl core -Djooq.codegen.skip=true
 
           - name: Run Pipeline Unit Tests
             run: mvn -T 2C test jacoco:report -pl pipeline -Djooq.codegen.skip=true
 
           - name: Run Pipeline Integration Tests
-            run: mvn -T 2C test-compile failsafe:integration-test jacoco:report-integration failsafe:verify -pl pipeline -Djooq.codegen.skip=true
+            run: mvn -T 2C test-compile jacoco:prepare-agent-integration failsafe:integration-test jacoco:report-integration failsafe:verify -pl pipeline -Djooq.codegen.skip=true
 
       - name: Upload Build and Coverage Artifacts
         if: always()
@@ -395,9 +395,10 @@ jobs:
       - name: Warm up actions/cache download
         uses: actions/cache/restore@v6
         with:
-         path: /tmp/.warmup
-         key: warmup-noop
-         lookup-only: true
+          path: /tmp/.warmup
+          key: warmup-noop
+          lookup-only: true
+
       - parallel:
           - name: Setup Java Environment (Hits Cache)
             uses: ./.github/actions/setup-java-maven
