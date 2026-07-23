@@ -27,7 +27,8 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "public"
+                "input": "public",
+                "ignore": ["e2e/**"]
               }
             ],
             "styles": ["src/styles.scss"]
@@ -57,10 +58,15 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
-              "fileReplacements": [
+              "assets": [
                 {
-                  "replace": "src/app/core/auth/env-url.ts",
-                  "with": "src/app/core/auth/env-url.e2e.ts"
+                  "glob": "**/*",
+                  "input": "public",
+                  "ignore": ["e2e/**"]
+                },
+                {
+                  "glob": "env.json",
+                  "input": "public/e2e"
                 }
               ]
             }

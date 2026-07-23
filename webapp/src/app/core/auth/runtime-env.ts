@@ -1,14 +1,12 @@
-import { ENV_JSON_URL } from './env-url';
-
 export interface RuntimeEnv {
   keycloakIssuer: string;
   keycloakClientId: string;
 }
 
-// Fetched once at app startup (see provide-auth.ts) from one of two checked-in, hardcoded JSON
-// files (public/env.json for local dev, public/env.e2e.json for e2e), selected via
-// angular.json's `e2e` build configuration.
+// Fetched once at app startup (see provide-auth.ts) from public/env.json. Its content is
+// checked-in for local dev, and overridden at build time with public/e2e/env.json's content
+// by angular.json's `e2e` build configuration for e2e testing.
 export async function loadRuntimeEnv(): Promise<RuntimeEnv> {
-  const response = await fetch(ENV_JSON_URL);
+  const response = await fetch('/env.json');
   return response.json();
 }

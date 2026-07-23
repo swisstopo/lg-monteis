@@ -59,8 +59,8 @@ export default defineConfig({
       timeout: 180_000,
     },
     {
-      // Uses the `e2e` build configuration so it points at public/env.e2e.json (the
-      // Testcontainer Keycloak on a fixed port distinct from local dev's), not public/env.json.
+      // Uses the `e2e` build configuration, which serves public/e2e/env.json as env.json (the
+      // Testcontainer Keycloak on a fixed port distinct from local dev's).
       command: 'pnpm run start:e2e',
       cwd: '.',
       url: 'http://localhost:4200',
