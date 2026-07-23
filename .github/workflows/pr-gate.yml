@@ -383,6 +383,7 @@ jobs:
         working-directory: webapp
         run: pnpm run e2e:headless ${{ matrix.file }}
 
+  # noinspection YAMLSchemaValidation
   quality-gate:
     name: Sonar Quality Gate
     needs: run-backend-tests
@@ -392,16 +393,48 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download Build and Coverage Artifacts
-        uses: actions/download-artifact@v7
+      - name: Warm up actions/cache download
+        uses: actions/cache/restore@v6
         with:
-          name: backend-coverage-reports
+          path: /tmp/.warmup
+          key: warmup-noop
+          lookup-only: true
+
+      - parallel:
+          - name: Setup Java Environment (Hits Cache)
+            uses: ./.github/actions/setup-java-maven
+
+          - name: Download Build and Coverage Artifacts
+            uses: actions/download-artifact@v7
+            with:
+              name: backend-coverage-reports
+
+          - name: Load Test Containers Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TEST_CONTAINER_IMAGE }}
+
+          - name: Load TimeScaleDB Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TIMESCALE_DB_IMAGE }}
+
+          - name: Load Postgres Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.POSTGRES_DB_IMAGE }}
+
+      - name: Sonar Code Scan
+        run: |
+          mvn clean compile sonar:sonar 
+          -DskipTests
+          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          -Dsonar.host.url=${{ vars.SONAR_HOST_URL }}
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v8
+        id: sonarqube-quality-gate-check
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        with:
+          scanMetadataReportFile: target/sonar/report-task.txt
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
-        with:
-          args: >
-            -Dsonar.qualitygate.wait=true
