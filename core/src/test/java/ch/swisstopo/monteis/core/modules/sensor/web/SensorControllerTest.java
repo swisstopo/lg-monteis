@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -58,7 +59,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             post("/api/sensors")
-                .with(jwt().authorities(new SimpleGrantedAuthority("api:write")))
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
@@ -92,7 +93,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             put("/api/sensors/1")
-                .with(jwt().authorities(new SimpleGrantedAuthority("api:write")))
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
                 .param("id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))

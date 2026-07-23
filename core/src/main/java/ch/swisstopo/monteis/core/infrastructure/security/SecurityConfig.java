@@ -1,5 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -17,8 +19,6 @@ public class SecurityConfig {
   private static final String[] PUBLIC_ENDPOINTS = {
     "/actuator/**", "/actuator", "/swagger-ui/**", "/v3/api-docs/**"
   };
-
-  private static final String WRITE_AUTHORITY = "api:write";
 
   @Bean
   public SecurityFilterChain filterChain(

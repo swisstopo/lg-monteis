@@ -1,5 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.READ_ALL_AUTHORITY;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.READ_AUTHORITY;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,7 +67,7 @@ class MonteisJwtAuthenticationConverterTest {
     // then
     assertEquals(
         new MonteisPrincipal(subject, "alice", List.of(1L, 2L)), authentication.getPrincipal());
-    assertEquals(Set.of(new SimpleGrantedAuthority("api:read")), authoritiesOf(authentication));
+    assertEquals(Set.of(new SimpleGrantedAuthority(READ_AUTHORITY)), authoritiesOf(authentication));
   }
 
   @Test
@@ -79,7 +82,9 @@ class MonteisJwtAuthenticationConverterTest {
     // then
     assertEquals(new MonteisPrincipal(subject, "bob", List.of(5L)), authentication.getPrincipal());
     assertEquals(
-        Set.of(new SimpleGrantedAuthority("api:write"), new SimpleGrantedAuthority("api:read-all")),
+        Set.of(
+            new SimpleGrantedAuthority(WRITE_AUTHORITY),
+            new SimpleGrantedAuthority(READ_ALL_AUTHORITY)),
         authoritiesOf(authentication));
   }
 

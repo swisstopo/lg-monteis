@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.error;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -125,7 +126,7 @@ class GlobalErrorControllerAdviceTest {
     mockMvc
         .perform(
             post("/dummy/validate")
-                .with(jwt().authorities(new SimpleGrantedAuthority("api:write")))
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
         .andExpect(status().isUnprocessableContent())
@@ -153,7 +154,7 @@ class GlobalErrorControllerAdviceTest {
     mockMvc
         .perform(
             post("/dummy/validate-global")
-                .with(jwt().authorities(new SimpleGrantedAuthority("api:write")))
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validJson))
         .andExpect(status().isUnprocessableContent())
