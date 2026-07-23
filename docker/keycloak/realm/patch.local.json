@@ -20,7 +20,7 @@
       "lastName": "Example",
       "credentials": [{ "type": "password", "value": "alice", "temporary": false }],
       "realmRoles": ["user"],
-      "attributes": { "experiment_ids": ["1"] }
+      "attributes": { "experiment_ids": ["1", "3"] }
     },
     {
       "id": "22222222-2222-2222-2222-222222222222",

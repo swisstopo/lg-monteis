@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import ch.swisstopo.monteis.core.infrastructure.security.SecurityConfig;
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.overview.service.OverviewService;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,15 +15,11 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(OverviewController.class)
-@Import(SecurityConfig.class)
+@ControllerTest(OverviewController.class)
 class OverviewControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -32,10 +28,6 @@ class OverviewControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @MockitoBean private OverviewService overviewService;
-
-  // Only used to satisfy SecurityConfig's oauth2ResourceServer bean requirement in this slice
-  // test; requests authenticate via the jwt() post-processor instead of a real decode.
-  @MockitoBean private JwtDecoder jwtDecoder;
 
   @Test
   void should_route_get_metrics_and_verify_output() throws Exception {

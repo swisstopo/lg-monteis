@@ -6,7 +6,6 @@ import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.jooq.ConnectionProvider;
@@ -45,25 +44,29 @@ public class RlsConnectionProvider implements ConnectionProvider {
   private void applySecurityContext(Connection connection) {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    boolean readAll =
-        authentication != null
-            && authentication.getAuthorities().stream()
-                .anyMatch(a -> Objects.equals(a.getAuthority(), READ_ALL_AUTHORITY));
+    // safe defaults
+    boolean readAll = false;
+    String experimentIdsCsv = "";
 
-    setConfig(connection, "app.read_all", String.valueOf(readAll));
-
-    if (!readAll) {
-      List<Long> experimentIds =
-          authentication != null
-                  && authentication.getPrincipal() instanceof MonteisPrincipal principal
-              ? principal.experimentIds()
-              : List.of();
-      String experimentIdsCsv =
-          experimentIds.stream().map(String::valueOf).collect(Collectors.joining(","));
-      setConfig(connection, "app.user_experiment_ids", experimentIdsCsv);
+    // find authorities and experiments for current user
+    if (authentication != null) {
+      readAll =
+          authentication.getAuthorities().stream()
+              .anyMatch(a -> Objects.equals(a.getAuthority(), READ_ALL_AUTHORITY));
+      if (!readAll && authentication.getPrincipal() instanceof MonteisPrincipal principal) {
+        experimentIdsCsv =
+            principal.getExperimentIds().stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(","));
+      }
     }
+
+    // set config for current connection
+    setConfig(connection, "app.read_all", String.valueOf(readAll));
+    setConfig(connection, "app.user_experiment_ids", experimentIdsCsv);
   }
 
+  // IMPORTANT: use set_config in order to have config for the current transaction only!
   private void setConfig(Connection connection, String setting, String value) {
     try (PreparedStatement statement =
         connection.prepareStatement("SELECT set_config(?, ?, true)")) {

@@ -32,6 +32,8 @@ public class MonteisJwtAuthenticationConverter
   private static final String REALM_ACCESS = "realm_access";
   private static final String ROLE_CLAIM = "roles";
   private static final String EXPERIMENTS_CLAIM = "experiment_ids";
+  private static final Set<String> READ_AUTHORITIES_SET =
+      Set.of(READ_AUTHORITY, READ_ALL_AUTHORITY);
 
   @Override
   public AbstractAuthenticationToken convert(@NonNull Jwt source) {
@@ -40,7 +42,7 @@ public class MonteisJwtAuthenticationConverter
 
     // Fail closed: a caller with neither read authority must never leak a populated
     // experiment_ids claim through as if it were a legitimately scoped user.
-    boolean hasAnyReadAuthority = hasAuthority(authorities, READ_AUTHORITY, READ_ALL_AUTHORITY);
+    boolean hasAnyReadAuthority = hasAuthority(authorities);
     List<Long> experimentIds = hasAnyReadAuthority ? extractExperimentIds(source) : List.of();
 
     MonteisPrincipal principal =
@@ -52,7 +54,7 @@ public class MonteisJwtAuthenticationConverter
     return new MonteisAuthenticationToken(source, principal, authorities);
   }
 
-  private Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
+  private static Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
     Set<GrantedAuthority> authorities = new HashSet<>();
     for (String role : extractRoles(jwt)) {
       switch (role) {
@@ -68,9 +70,8 @@ public class MonteisJwtAuthenticationConverter
     return authorities;
   }
 
-  private static boolean hasAuthority(Collection<GrantedAuthority> authorities, String... anyOf) {
-    Set<String> wanted = Set.of(anyOf);
-    return authorities.stream().anyMatch(a -> wanted.contains(a.getAuthority()));
+  private static boolean hasAuthority(Collection<GrantedAuthority> authorities) {
+    return authorities.stream().anyMatch(a -> READ_AUTHORITIES_SET.contains(a.getAuthority()));
   }
 
   private static List<String> extractRoles(Jwt jwt) {

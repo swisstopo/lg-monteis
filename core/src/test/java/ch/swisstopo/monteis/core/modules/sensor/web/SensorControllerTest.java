@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import ch.swisstopo.monteis.core.infrastructure.security.SecurityConfig;
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
@@ -22,16 +22,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(SensorController.class)
-@Import(SecurityConfig.class)
+@ControllerTest(SensorController.class)
 class SensorControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -42,10 +38,6 @@ class SensorControllerTest {
   @MockitoBean private SensorQuery queryService;
 
   @MockitoBean private SensorWebMapper mapper;
-
-  // Only used to satisfy SecurityConfig's oauth2ResourceServer bean requirement in this slice
-  // test; requests authenticate via the jwt() post-processor instead of a real decode.
-  @MockitoBean private JwtDecoder jwtDecoder;
 
   @Test
   void should_route_create_sensor_and_verify_output() throws Exception {

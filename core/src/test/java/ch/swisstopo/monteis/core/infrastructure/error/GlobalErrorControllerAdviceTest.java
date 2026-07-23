@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.security.SecurityConfig;
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import jakarta.validation.Constraint;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -21,33 +21,26 @@ import java.util.Map;
 import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-@WebMvcTest
+@ControllerTest
 @ContextConfiguration(
     classes = {
       GlobalErrorControllerAdviceTest.DummyController.class,
       GlobalErrorControllerAdvice.class
     })
-@Import({GlobalErrorControllerAdvice.class, SecurityConfig.class})
+@Import(GlobalErrorControllerAdvice.class)
 class GlobalErrorControllerAdviceTest {
 
   @Autowired private MockMvc mockMvc;
-
-  // Only used to satisfy SecurityConfig's oauth2ResourceServer bean requirement in this slice
-  // test; requests authenticate via the jwt() post-processor instead of a real decode.
-  @MockitoBean private JwtDecoder jwtDecoder;
 
   @Test
   void should_translate_object_business_validation_exception_return_422() throws Exception {

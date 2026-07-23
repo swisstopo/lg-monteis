@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import ch.swisstopo.monteis.core.infrastructure.security.SecurityConfig;
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQueryInterface;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.ReadExperimentDetailsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
@@ -15,24 +15,16 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseD
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(ExperimentController.class)
-@Import(SecurityConfig.class)
+@ControllerTest(ExperimentController.class)
 class ExperimentControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private ExperimentQueryInterface queryRepository;
-
-  // Only used to satisfy SecurityConfig's oauth2ResourceServer bean requirement in this slice
-  // test; requests authenticate via the jwt() post-processor instead of a real decode.
-  @MockitoBean private JwtDecoder jwtDecoder;
 
   @Test
   void should_route_get_experiment_details_and_return_json() throws Exception {

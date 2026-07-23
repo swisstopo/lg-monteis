@@ -5,14 +5,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -29,9 +28,8 @@ import org.springframework.web.bind.annotation.RestController;
  * actually-configured {@link MonteisJwtAuthenticationConverter} bean — not Spring Security Test's
  * {@code jwt().authorities(...)} shortcut, which bypasses that wiring entirely.
  */
-@WebMvcTest
+@ControllerTest
 @ContextConfiguration(classes = {SecurityConfigAuthorizationTest.DummyController.class})
-@Import(SecurityConfig.class)
 class SecurityConfigAuthorizationTest {
 
   @Autowired private MockMvc mockMvc;
@@ -95,7 +93,7 @@ class SecurityConfigAuthorizationTest {
         Jwt.withTokenValue(token)
             .header("alg", "none")
             .claim("realm_access", Map.of("roles", List.of(realmRole)))
-            .claim("preferred_username", "asdf")
+            .claim("preferred_username", "test_user_name")
             .subject(UUID.randomUUID().toString())
             .issuedAt(now)
             .expiresAt(now.plusSeconds(60))
