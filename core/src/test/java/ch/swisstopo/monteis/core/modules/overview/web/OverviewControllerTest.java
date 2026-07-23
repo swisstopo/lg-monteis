@@ -2,11 +2,12 @@ package ch.swisstopo.monteis.core.modules.overview.web;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import ch.swisstopo.monteis.core.infrastructure.security.SecurityConfig;
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.overview.service.OverviewService;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,14 +15,11 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(OverviewController.class)
-@Import(SecurityConfig.class)
+@ControllerTest(OverviewController.class)
 class OverviewControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -49,6 +47,7 @@ class OverviewControllerTest {
     mockMvc
         .perform(
             get("/api/overview/metrics")
+                .with(jwt())
                 .param("limit", String.valueOf(limit))
                 .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())

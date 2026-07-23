@@ -1,43 +1,83 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 class SystemSecurityContextTest {
 
-  @Test
-  void should_bind_admin_access_level_while_action_runs() {
-    // given
-    AtomicReference<SecurityContext> captured = new AtomicReference<>();
-
-    // when
-    SystemSecurityContext.runAsSystem(() -> captured.set(SecurityContext.current()));
-
-    // then
-    assertEquals(AccessLevel.ADMIN, captured.get().accessLevel());
+  @AfterEach
+  void clearSecurityContextHolder() {
+    SecurityContextHolder.clearContext();
   }
 
   @Test
-  void should_bind_empty_experiment_ids_while_action_runs() {
+  void should_bind_read_all_authority_while_action_runs() {
     // given
-    AtomicReference<SecurityContext> captured = new AtomicReference<>();
+    AtomicReference<Authentication> captured = new AtomicReference<>();
 
     // when
-    SystemSecurityContext.runAsSystem(() -> captured.set(SecurityContext.current()));
+    SystemSecurityContext.runAsSystem(
+        () -> captured.set(SecurityContextHolder.getContext().getAuthentication()));
 
     // then
-    assertTrue(captured.get().experimentIds().isEmpty());
+    assertTrue(
+        captured.get().getAuthorities().stream()
+            .anyMatch(
+                a ->
+                    a.getAuthority().equals(MonteisJwtAuthenticationConverter.READ_ALL_AUTHORITY)));
   }
 
   @Test
-  void should_not_leave_context_bound_after_action_completes() {
-    // given / when
+  void should_bind_system_principal_with_empty_experiment_ids_while_action_runs() {
+    // given
+    AtomicReference<Authentication> captured = new AtomicReference<>();
+
+    // when
+    SystemSecurityContext.runAsSystem(
+        () -> captured.set(SecurityContextHolder.getContext().getAuthentication()));
+
+    // then
+    assertEquals(
+        new MonteisPrincipal(
+            UUID.fromString("00000000-0000-0000-0000-000000000000"), "SYSTEM", List.of()),
+        captured.get().getPrincipal());
+    assertEquals("SYSTEM", captured.get().getName());
+  }
+
+  @Test
+  void should_restore_previous_context_after_action_completes() {
+    // given
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            UsernamePasswordAuthenticationToken.authenticated("previous", null, List.of()));
+    Authentication before = SecurityContextHolder.getContext().getAuthentication();
+
+    // when
     SystemSecurityContext.runAsSystem(() -> {});
 
     // then
-    assertEquals(SecurityContext.DENY_ALL, SecurityContext.current());
+    assertEquals(before, SecurityContextHolder.getContext().getAuthentication());
+  }
+
+  @Test
+  void should_not_leave_context_bound_after_action_completes_when_previously_unbound() {
+    // given
+    SecurityContextHolder.clearContext();
+
+    // when
+    SystemSecurityContext.runAsSystem(() -> {});
+
+    // then
+    assertNull(SecurityContextHolder.getContext().getAuthentication());
   }
 }

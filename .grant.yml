@@ -79,6 +79,8 @@ ignore-packages: [
   "spring-boot-starter-kafka*",
   "spring-boot-starter-json*",
   "postgresql",
+  "@algolia/client-query-suggestions",
+  "@algolia/requester-browser-xhr",
 
   # --- Accepted Legacy / Transitive Risks ---
   # Ignored because it uses BSD-4-Clause (Advertising Clause),

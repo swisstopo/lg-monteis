@@ -2,3 +2,16 @@ wb-workbench {
   position: absolute;
   inset: 0;
 }
+
+.logout-button {
+  position: fixed;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  z-index: 1000;
+  background-color: var(--mat-sys-surface);
+
+  --mat-button-outlined-label-text-color: var(--mat-sys-tertiary);
+  --mat-button-outlined-outline-color: var(--mat-sys-tertiary);
+  --mat-button-outlined-state-layer-color: var(--mat-sys-tertiary);
+  --mat-button-outlined-ripple-color: var(--mat-sys-tertiary);
+}

@@ -5,24 +5,22 @@ skinparam maxMessageSize 150
 
 actor Client
 participant "Auth Filter" as AuthFilter
+participant "MonteisJwtAuthenticationConverter" as Converter
 participant "SecurityContextHolder" as Holder
-participant "SecurityContextFilter" as CtxFilter
-participant "ScopedValue<SecurityContext>" as Scoped
 participant "jOOQ Repository" as Repo
 participant "RlsConnectionProvider" as ConnProvider
 database "PostgreSQL\n(Row-Level Security)" as DB
 
 Client -> AuthFilter : Request (Header: Bearer JWT)
 AuthFilter -> AuthFilter : Signatur prüfen (JWKS)
-AuthFilter -> Holder : Jwt-Principal setzen
+AuthFilter -> Converter : Jwt konvertieren
 
-CtxFilter -> Holder : Jwt lesen
-CtxFilter -> CtxFilter : Rolle -> AccessLevel,\nexperiment_ids -> Set<Long>
-CtxFilter -> Scoped : SecurityContext binden\n(für die Dauer des Requests)
+Converter -> Converter : Rolle user -> api:read,\nRolle admin -> api:write + api:read-all,\nsub & experiment_ids -> MonteisPrincipal
+Converter -> Holder : Authentication ablegen\n(Principal + Authorities, für die Dauer des Requests)
 
-CtxFilter -> Repo : filterChain.doFilter(...)
+AuthFilter -> Repo : filterChain.doFilter(...)
 Repo -> ConnProvider : Connection anfordern
-ConnProvider -> Scoped : SecurityContext lesen
+ConnProvider -> Holder : Authentication lesen
 ConnProvider -> DB : GUCs setzen (transaktionslokal)
 Repo -> DB : jOOQ Query (unverändert)
 DB -> DB : RLS-Policy filtert Zeilen

@@ -37,6 +37,7 @@
     <spring-boot-starter-aop.version>3.5.16</spring-boot-starter-aop.version>
     <org.mapstruct.version>1.6.3</org.mapstruct.version>
     <archunit-junit5.version>1.4.2</archunit-junit5.version>
+    <testcontainers-keycloak.version>4.2.1</testcontainers-keycloak.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
   </properties>
@@ -114,6 +115,13 @@
         <groupId>com.tngtech.archunit</groupId>
         <artifactId>archunit-junit5</artifactId>
         <version>${archunit-junit5.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>com.github.dasniko</groupId>
+        <artifactId>testcontainers-keycloak</artifactId>
+        <version>${testcontainers-keycloak.version}</version>
         <scope>test</scope>
       </dependency>
     </dependencies>

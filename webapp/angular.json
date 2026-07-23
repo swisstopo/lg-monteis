@@ -27,12 +27,11 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "public"
+                "input": "public",
+                "ignore": ["e2e/**"]
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ]
+            "styles": ["src/styles.scss"]
           },
           "configurations": {
             "production": {
@@ -54,6 +53,22 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "e2e": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public",
+                  "ignore": ["e2e/**"]
+                },
+                {
+                  "glob": "env.json",
+                  "input": "public/e2e"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -66,6 +81,9 @@
             },
             "development": {
               "buildTarget": "webapp:build:development"
+            },
+            "e2e": {
+              "buildTarget": "webapp:build:e2e"
             }
           },
           "defaultConfiguration": "development",

@@ -55,7 +55,7 @@ class RowLevelSecurityTransactionTest {
         .should(ArchCondition.from(RUNS_INSIDE_A_SPRING_TRANSACTION))
         .because(
             "per arc42 ch. 8 'Core-API Datenzugriff & Sicherheit', RlsConnectionProvider writes"
-                + " the current SecurityContext onto the DB connection transaction-locally on"
+                + " the current Authentication onto the DB connection transaction-locally on"
                 + " every connection acquisition, and native Postgres RLS policies only ever see"
                 + " that context for the lifetime of a Spring transaction; every read query"
                 + " (a Query interface implementation) must therefore run inside one via"

@@ -2,11 +2,12 @@ package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import ch.swisstopo.monteis.core.infrastructure.security.SecurityConfig;
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQueryInterface;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.ReadExperimentDetailsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
@@ -14,14 +15,11 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseD
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(ExperimentController.class)
-@Import(SecurityConfig.class)
+@ControllerTest(ExperimentController.class)
 class ExperimentControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -41,7 +39,8 @@ class ExperimentControllerTest {
 
     // when / then
     mockMvc
-        .perform(get("/api/experiments/1/details").contentType(MediaType.APPLICATION_JSON))
+        .perform(
+            get("/api/experiments/1/details").with(jwt()).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(expectedDto.id()))
         .andExpect(jsonPath("$.name").value(expectedDto.name()))

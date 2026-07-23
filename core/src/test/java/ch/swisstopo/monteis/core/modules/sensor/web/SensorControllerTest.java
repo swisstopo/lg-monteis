@@ -1,16 +1,18 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import ch.swisstopo.monteis.core.infrastructure.security.SecurityConfig;
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
@@ -21,14 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(SensorController.class)
-@Import(SecurityConfig.class)
+@ControllerTest(SensorController.class)
 class SensorControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -59,6 +59,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             post("/api/sensors")
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
@@ -92,6 +93,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             put("/api/sensors/1")
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
                 .param("id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
@@ -117,7 +119,7 @@ class SensorControllerTest {
 
     // when / then
     mockMvc
-        .perform(get("/api/sensors/formulas").contentType(MediaType.APPLICATION_JSON))
+        .perform(get("/api/sensors/formulas").with(jwt()).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(dto1.id()))
         .andExpect(jsonPath("$[0].expression").value(dto1.expression()))

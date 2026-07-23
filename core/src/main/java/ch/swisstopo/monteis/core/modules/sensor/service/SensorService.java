@@ -37,7 +37,7 @@ public class SensorService {
   @Transactional
   public void backfillMissingSnapshots() {
     // No HTTP request/JWT exists at startup, so this explicitly opts into elevated DB
-    // access rather than relying on the fail-closed default for an unbound SecurityContext.
+    // access rather than relying on the fail-closed default for an unbound SecurityContextHolder.
     SystemSecurityContext.runAsSystem(
         () -> {
           try (Stream<Sensor> unauditedSensorsStream = repository.streamUnauditedSensors()) {

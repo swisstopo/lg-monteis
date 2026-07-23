@@ -1,5 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.error;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -7,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.security.SecurityConfig;
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import jakarta.validation.Constraint;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -20,9 +22,9 @@ import java.util.Map;
 import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,13 +32,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-@WebMvcTest
+@ControllerTest
 @ContextConfiguration(
     classes = {
       GlobalErrorControllerAdviceTest.DummyController.class,
       GlobalErrorControllerAdvice.class
     })
-@Import({GlobalErrorControllerAdvice.class, SecurityConfig.class})
+@Import(GlobalErrorControllerAdvice.class)
 class GlobalErrorControllerAdviceTest {
 
   @Autowired private MockMvc mockMvc;
@@ -46,7 +48,7 @@ class GlobalErrorControllerAdviceTest {
     // given a request to an endpoint that throws an ObjectBusinessValidationException
 
     // when
-    var response = mockMvc.perform(get("/dummy/object-error"));
+    var response = mockMvc.perform(get("/dummy/object-error").with(jwt()));
 
     // then
     response
@@ -63,7 +65,7 @@ class GlobalErrorControllerAdviceTest {
     // given a request to an endpoint that throws a FieldBusinessValidationException
 
     // when
-    var response = mockMvc.perform(get("/dummy/field-error"));
+    var response = mockMvc.perform(get("/dummy/field-error").with(jwt()));
 
     // then
     response
@@ -78,7 +80,7 @@ class GlobalErrorControllerAdviceTest {
     // given a request to an endpoint that throws a jOOQ DataChangedException (Optimistic Locking)
 
     // when
-    var response = mockMvc.perform(get("/dummy/optimistic-lock-error"));
+    var response = mockMvc.perform(get("/dummy/optimistic-lock-error").with(jwt()));
 
     // then
     response
@@ -91,7 +93,7 @@ class GlobalErrorControllerAdviceTest {
     // given a request to an endpoint that throws an unhandled RuntimeException
 
     // when
-    var response = mockMvc.perform(get("/dummy/unexpected-error"));
+    var response = mockMvc.perform(get("/dummy/unexpected-error").with(jwt()));
 
     // then
     response
@@ -106,7 +108,7 @@ class GlobalErrorControllerAdviceTest {
   void should_handle_404_no_resource_found() throws Exception {
     // when: We request an endpoint that does not exist at all
     mockMvc
-        .perform(get("/dummy/this-does-not-exist"))
+        .perform(get("/dummy/this-does-not-exist").with(jwt()))
         // then: Spring resolves it to 404 Not Found, and our advice intercepts it
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.params.errorId").exists());
@@ -123,7 +125,10 @@ class GlobalErrorControllerAdviceTest {
     // when / then: Spring catches the violation, the advice extracts min/max into the params map
     mockMvc
         .perform(
-            post("/dummy/validate").contentType(MediaType.APPLICATION_JSON).content(invalidJson))
+            post("/dummy/validate")
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(invalidJson))
         .andExpect(status().isUnprocessableContent())
         .andExpect(jsonPath("$").isArray())
         .andExpect(jsonPath("$[?(@.field == 'name')].field").value("name"))
@@ -149,6 +154,7 @@ class GlobalErrorControllerAdviceTest {
     mockMvc
         .perform(
             post("/dummy/validate-global")
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validJson))
         .andExpect(status().isUnprocessableContent())

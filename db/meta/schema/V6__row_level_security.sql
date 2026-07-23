@@ -2,13 +2,14 @@
 -- Row-Level Security (MON-111)
 --
 -- Read authorization is enforced by PostgreSQL. For each transaction the
--- application propagates the caller's security context (access level and visible
--- experiment IDs) into transaction-local GUCs. The helper functions below expose
--- that context to RLS policies and security views.
+-- application propagates whether the caller can read every row (from the
+-- api:read-all authority) and their visible experiment IDs into transaction-local
+-- GUCs. The helper functions below expose that context to RLS policies and
+-- security views.
 -- -----------------------------------------------------------------------------
 
-CREATE FUNCTION is_admin() RETURNS boolean AS $$
-    SELECT current_setting('app.access_level', true) = 'ADMIN'
+CREATE FUNCTION can_read_all() RETURNS boolean AS $$
+    SELECT current_setting('app.read_all', true) = 'true'
 $$ LANGUAGE sql STABLE;
 
 CREATE FUNCTION current_experiment_ids() RETURNS bigint[] AS $$
@@ -20,11 +21,11 @@ $$ LANGUAGE sql STABLE;
 
 -- Shared access predicates reused by RLS policies and security views.
 CREATE FUNCTION can_access_experiment(target_experiment_id bigint) RETURNS boolean AS $$
-    SELECT is_admin() OR target_experiment_id = ANY (current_experiment_ids())
+    SELECT can_read_all() OR target_experiment_id = ANY (current_experiment_ids())
 $$ LANGUAGE sql STABLE;
 
 CREATE FUNCTION can_access_sensor(target_sensor_id bigint) RETURNS boolean AS $$
-    SELECT is_admin() OR EXISTS (
+    SELECT can_read_all() OR EXISTS (
         SELECT 1 FROM experiment_sensor es
         WHERE es.sensor_id = target_sensor_id
           AND es.experiment_id = ANY (current_experiment_ids())

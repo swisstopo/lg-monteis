@@ -1,21 +1,25 @@
 package ch.swisstopo.monteis.core.infrastructure.jooq;
 
-import ch.swisstopo.monteis.core.infrastructure.security.SecurityContext;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.READ_ALL_AUTHORITY;
+
+import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.jooq.ConnectionProvider;
 import org.jooq.exception.DataAccessException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * Propagates the ambient {@link SecurityContext} into the database session on every connection
- * acquisition, via transaction-local Postgres GUCs ({@code set_config(..., true)}), so that
- * row-level security policies and the {@code sensor_reading_secured} view can read them through
- * {@code current_setting(...)}. Transaction-local (not session-scoped) so the values are
- * discarded automatically at COMMIT/ROLLBACK and can never leak to the next borrower of a pooled
- * connection — every RLS-relevant read must therefore run inside a Spring transaction (see
- * {@code @Transactional(readOnly = true)} on the relevant repository methods).
+ * Writes the current {@link Authentication} onto each jOOQ connection as transaction-local
+ * Postgres GUCs ({@code app.read_all}, {@code app.user_experiment_ids}), which RLS policies read
+ * via {@code current_setting(...)}. Transaction-local, not session-scoped, so values never leak to
+ * the next borrower of a pooled connection — callers must run inside a Spring transaction. An
+ * unbound or unrecognized {@code Authentication} fails closed (no read-all, no experiment ids)
+ * rather than throwing.
  */
 public class RlsConnectionProvider implements ConnectionProvider {
 
@@ -38,15 +42,31 @@ public class RlsConnectionProvider implements ConnectionProvider {
   }
 
   private void applySecurityContext(Connection connection) {
-    SecurityContext context = SecurityContext.current();
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    setConfig(connection, "app.access_level", context.accessLevel().name());
+    // safe defaults
+    boolean readAll = false;
+    String experimentIdsCsv = "";
 
-    String experimentIds =
-        context.experimentIds().stream().map(String::valueOf).collect(Collectors.joining(","));
-    setConfig(connection, "app.user_experiment_ids", experimentIds);
+    // find authorities and experiments for current user
+    if (authentication != null) {
+      readAll =
+          authentication.getAuthorities().stream()
+              .anyMatch(a -> Objects.equals(a.getAuthority(), READ_ALL_AUTHORITY));
+      if (!readAll && authentication.getPrincipal() instanceof MonteisPrincipal principal) {
+        experimentIdsCsv =
+            principal.getExperimentIds().stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(","));
+      }
+    }
+
+    // set config for current connection
+    setConfig(connection, "app.read_all", String.valueOf(readAll));
+    setConfig(connection, "app.user_experiment_ids", experimentIdsCsv);
   }
 
+  // IMPORTANT: use set_config in order to have config for the current transaction only!
   private void setConfig(Connection connection, String setting, String value) {
     try (PreparedStatement statement =
         connection.prepareStatement("SELECT set_config(?, ?, true)")) {
