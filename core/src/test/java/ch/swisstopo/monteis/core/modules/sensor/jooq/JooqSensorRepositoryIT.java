@@ -46,7 +46,6 @@ class JooqSensorRepositoryIT {
         () -> {
           // Arrange
           int initialSensorCount = dsl.fetchCount(SENSORS);
-          int initialSensorCount2 = dsl.fetchCount(SENSORS);
           int initialFormulaCount = dsl.fetchCount(FORMULAS);
           Sensor newSensor = createDummySensor("SENS-001", "Test Sensor", "x * 2");
 
