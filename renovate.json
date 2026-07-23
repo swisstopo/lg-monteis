@@ -3,11 +3,20 @@
   "extends": [
     "config:recommended"
   ],
+  "minimumReleaseAge": "3 days",
+
+  "labels": [
+    "renovate",
+    "e2e-tests"
+  ],
+
   "packageRules": [
     {
       "description": "Ignore internal Maven monorepo modules",
       "matchPackagePrefixes": ["ch.swisstopo.monteis"],
-      "enabled": false
+      "enabled": false,
+      "automerge": true,
+      "automergeType": "pr"
     },
     {
       "description": "CRITICAL: Sync all Angular (Core, CLI, Material, CDK) and Scion MAJOR bumps",
