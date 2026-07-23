@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { loginAsAdmin } from '../support/login';
 
 test('should create sensor', async ({ page }) => {
   await page.goto('http://localhost:4200/');
+  await loginAsAdmin(page);
 
   await page.getByRole('link', { name: 'Create Sensor' }).click();
 

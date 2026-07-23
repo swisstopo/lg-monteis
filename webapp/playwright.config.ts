@@ -49,12 +49,19 @@ export default defineConfig({
 
   webServer: [
     {
-      command: 'SPRING_PROFILES_ACTIVE=test mvn spring-boot:test-run',
+      command: 'SPRING_PROFILES_ACTIVE=e2e-test mvn spring-boot:test-run',
       cwd: '../core',
+      // Without this, Playwright has no way to detect readiness and starts running tests
+      // immediately, well before Postgres/Keycloak are actually up.
+      url: 'http://localhost:8080/actuator/health',
       reuseExistingServer: !process.env.CI,
+      // Booting Postgres + a JVM-based Keycloak Testcontainer is slower than a plain backend start.
+      timeout: 180_000,
     },
     {
-      command: 'pnpm run start',
+      // Uses the `e2e` build configuration so it points at public/env.e2e.json (the
+      // Testcontainer Keycloak on a fixed port distinct from local dev's), not public/env.json.
+      command: 'pnpm run start:e2e',
       cwd: '.',
       url: 'http://localhost:4200',
       reuseExistingServer: !process.env.CI,

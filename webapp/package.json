@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:e2e": "ng serve --configuration=e2e",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": " pnpm vitest --browser.headless=true",

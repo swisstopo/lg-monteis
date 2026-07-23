@@ -15,7 +15,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
   private static final String[] PUBLIC_ENDPOINTS = {
-    "/actuator/health", "/actuator/info", "/swagger-ui/**", "/v3/api-docs/**"
+    "/actuator/**", "/actuator", "/swagger-ui/**", "/v3/api-docs/**"
   };
 
   private static final String WRITE_AUTHORITY = "api:write";

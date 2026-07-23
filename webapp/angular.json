@@ -30,9 +30,7 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ]
+            "styles": ["src/styles.scss"]
           },
           "configurations": {
             "production": {
@@ -54,6 +52,17 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "e2e": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/app/core/auth/env-url.ts",
+                  "with": "src/app/core/auth/env-url.e2e.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -66,6 +75,9 @@
             },
             "development": {
               "buildTarget": "webapp:build:development"
+            },
+            "e2e": {
+              "buildTarget": "webapp:build:e2e"
             }
           },
           "defaultConfiguration": "development",
