@@ -12,7 +12,7 @@ database "PostgreSQL\n(Row-Level Security)" as DB
 
 == Login & Token Issuance ==
 User -> UI : Öffnet geschützten Bereich
-UI -> KC : Redirect Login (Auth Code Flow)
+UI -> KC : Redirect Login (Auth Code Flow + PKCE)
 KC -> AGOV : Delegiert Authentifizierung
 AGOV --> KC : Auth Success
 KC -> KC : Mappt User-Rollen & Experiment-IDs\nin Token-Claims (realm_access.roles, experiment_ids)
@@ -24,7 +24,7 @@ UI -> Backend : GET /experiments/data\n(Header: Bearer JWT)
 activate Backend
 
 Backend -> Backend : Security Filter: JWT validieren\n(Signatur-Check via KC JWKS)
-Backend -> Backend : JwtSecurityAuthenticationConverter: Rollen -> Authorities,\nSub & Experiment-IDs -> SecurityPrincipal,\nals Authentication im SecurityContextHolder ablegen
+Backend -> Backend : MonteisJwtAuthenticationConverter: Rolle user -> api:read,\nRolle admin -> api:write + api:read-all,\nSub & Experiment-IDs -> MonteisPrincipal,\nals Authentication im SecurityContextHolder ablegen
 
 Backend -> DB : set_config('app.read_all', ...)\nset_config('app.user_experiment_ids', ...)\n(RlsConnectionProvider, transaktionslokal)
 Backend -> DB : jOOQ Query ausführen\n(unverändert, ohne manuelle\nBerechtigungs-WHERE-Klausel)

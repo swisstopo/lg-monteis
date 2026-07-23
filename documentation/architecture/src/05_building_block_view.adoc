@@ -51,7 +51,7 @@ include::../images/core-api.puml[]
 // todo: wird noch angepasst
 Das Backend fungiert als Dreh- und Angelpunkt für jegliche synchrone Kommunikation. Es beinhaltet folgende logische Services:
 
-* **Security & Auth Filter:** Der Authentifizierungs-Filter von Spring Security's OAuth2-Resource-Server verifiziert das Keycloak/eIAM-JWT und baut daraus über einen custom `Converter` in einem Schritt die vollständige `Authentication` auf: Rolle → `api:*`-Authorities, sowie Sub und Experiment-IDs als eigener `SecurityPrincipal`, abgelegt im Standard-`SecurityContextHolder`. Leseberechtigungen werden darüber transparent auf Datenbankebene per Row-Level-Security durchgesetzt, Schreibberechtigungen (RBAC) rollenbasiert auf Controller-Ebene (siehe Kap. 8 & 9).
+* **Security & Auth Filter:** Der Authentifizierungs-Filter von Spring Security's OAuth2-Resource-Server verifiziert das Keycloak/eIAM-JWT und baut daraus über einen custom `Converter` (`MonteisJwtAuthenticationConverter`) in einem Schritt die vollständige `Authentication` auf: Rolle → `api:*`-Authorities, sowie Sub und Experiment-IDs als eigener `MonteisPrincipal`, abgelegt im Standard-`SecurityContextHolder`. Leseberechtigungen werden darüber transparent auf Datenbankebene per Row-Level-Security durchgesetzt, Schreibberechtigungen anhand der HTTP-Methode zentral im Filterchain (siehe Kap. 8 & 9).
 * **Query & Downsampling Service:** Ein dedizierter Service, der Leseanfragen an die TimeScaleDB richtet und intelligente Downsampling-Algorithmen anwendet, um die abgerufene Datenmenge vor der Auslieferung an das Frontend zu reduzieren.
 * **IFC Upload & Processing Service:** Nimmt hochgeladene 3D-Geometrie-Modelle (IFC-Dateien) entgegen und bereitet diese für das Rendering (via Giro3D/Three.js) im Frontend vor.
 * **Umsystem-Connectoren:** * *Fulcrum-Client:* Konsumiert die API von Fulcrum für die bidirektionale Synchronisation.
@@ -118,4 +118,4 @@ Die Durchsetzung der Datenintegrität und strikter Zugriffsverbote erfolgt nicht
 | **Administratoren:** Exklusiver Lesezugriff, rein für die Notfall-Wiederherstellung (Disaster Recovery) von Originaldaten.
 |===
 
-Obwohl sämtliche Lesezugriffe des Backends auf PostgreSQL über dieselbe DB-Rolle (`core_app`) laufen, filtert eine zusätzliche Row-Level-Security-Schicht diese Zugriffe transparent pro Aufrufer nach Experiment-Zugehörigkeit — Admins sehen alles, reguläre Nutzer nur ihre eigenen Experimente. Details dazu in Kap. 8 ("Core-API Datenzugriff & Sicherheit") und `core/ROW_LEVEL_SECURITY.md`.
+Obwohl sämtliche Lesezugriffe des Backends auf PostgreSQL über dieselbe DB-Rolle (`core_app`) laufen, filtert eine zusätzliche Row-Level-Security-Schicht diese Zugriffe transparent pro Aufrufer nach Experiment-Zugehörigkeit — Admins sehen alles, reguläre Nutzer nur ihre eigenen Experimente. Details dazu in Kap. 8 ("Core-API Datenzugriff & Sicherheit") und in der Migration `db/meta/schema/V6__row_level_security.sql`.

@@ -54,7 +54,7 @@ Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Re
 | Ein früheres Konzept sah einen jOOQ-seitigen `VisitListener`/`RecordListener` vor, der Queries abfängt und Berechtigungen im Code prüft. Nachteile: jeder neue Query-Pfad müsste ihn korrekt durchlaufen, die per Foreign Data Wrapper eingebundene TimescaleDB-Tabelle unterstützt ohnehin keine native RLS, und Berechtigungslogik im Code ist schwerer zu auditieren als deklarative DB-Policies.
 
 | Entscheidung
-| Leseberechtigungen werden über native PostgreSQL Row-Level-Security-Policies auf `sensors`/`experiments` sowie eine security-barrier-View (`sensor_reading_secured`) für die FDW-Tabelle durchgesetzt. Ein custom jOOQ `ConnectionProvider` (`RlsConnectionProvider`) schreibt dafür bei jeder Connection-Beschaffung die aktuelle `Authentication` transaktionslokal auf die Verbindung; die Policies lesen diesen Kontext serverseitig aus. Die `Authentication` selbst wird von einem custom `Converter` (`JwtSecurityAuthenticationConverter`) aus dem JWT gebaut — Rollen werden zu `api:*`-Authorities (via `RealmRoleAuthoritiesConverter`), Sub und Experiment-IDs landen in einem eigenen `SecurityPrincipal` als Authentication-Principal — und liegt für die Dauer des Requests im Standard-`SecurityContextHolder` von Spring Security, ohne eigenen Propagierungsmechanismus.
+| Leseberechtigungen werden über native PostgreSQL Row-Level-Security-Policies auf `sensors`/`experiments` sowie eine security-barrier-View (`sensor_reading_secured`) für die FDW-Tabelle durchgesetzt. Ein custom jOOQ `ConnectionProvider` (`RlsConnectionProvider`) schreibt dafür bei jeder Connection-Beschaffung die aktuelle `Authentication` transaktionslokal auf die Verbindung; die Policies lesen diesen Kontext serverseitig aus. Die `Authentication` selbst wird von einem custom `Converter` (`MonteisJwtAuthenticationConverter`) aus dem JWT gebaut — Rollen werden zu `api:*`-Authorities (Rolle `user` → `api:read`; Rolle `admin` → `api:write` + `api:read-all`), Sub und Experiment-IDs landen in einem eigenen `MonteisPrincipal` als Authentication-Principal — und liegt für die Dauer des Requests im Standard-`SecurityContextHolder` von Spring Security, ohne eigenen Propagierungsmechanismus.
 
 | Begründung
 | Enforcement in der Datenbank ist unabhängig vom Zugriffspfad (jOOQ, native SQL, künftige Tools) und lässt sich nicht durch einen vergessenen Code-Check umgehen. Der transaktionslokale Kontext verhindert ein Durchsickern zwischen Anfragen bei Connection-Pooling.
@@ -74,17 +74,17 @@ Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Re
 | 17.07.2026
 
 | Status
-| pending
+| offen
 
 | Kontext & Problem
 | Alle DB-Zugriffe laufen über dieselbe Rolle (`core_app`); DB-Grants können daher nicht zwischen einzelnen Nutzern unterscheiden — sie eignen sich für die RLS-Lesefilterung, nicht aber für nutzerspezifische Schreibrechte.
 
-| Entscheidung
-| Lesen bleibt vollständig RLS-gefiltert (siehe vorherige ADR). Schreiben soll stattdessen klassisch rollenbasiert (RBAC) auf Applikationsebene erfolgen, z. B. via `@PreAuthorize("hasRole('ADMIN')")` auf den Controller-Methoden, basierend auf denselben Rollen, die auch der `SecurityContext` nutzt.
+| Entscheidung (vorläuffig)
+| Lesen bleibt vollständig RLS-gefiltert (siehe vorherige ADR). Schreiben ist stattdessen klassisch rollenbasiert (RBAC) auf Applikationsebene geregelt: Im Spring-Security-Filterchain (`SecurityConfig`) erfordert jeder `POST`/`PUT`/`PATCH`/`DELETE`-Request global die `api:write`-Authority, welche nur die Rolle `admin` besitzt. `GET`-Requests bleiben für alle authentifizierten Nutzer offen (weiterhin RLS-gefiltert).
 
 | Begründung
-| Schreiben braucht meist nur ein einfaches rollenbasiertes Ja/Nein, während Lesen feingranular pro Experiment gefiltert werden muss. Das trennt die Verantwortlichkeiten klar: Datenbank filtert Daten, Applikation autorisiert Aktionen.
+| Schreiben braucht nur ein einfaches rollenbasiertes Ja/Nein, während Lesen feingranular pro Experiment gefiltert werden muss. Das trennt die Verantwortlichkeiten klar: Datenbank filtert Daten, Applikation autorisiert Aktionen. Eine einzige Regel auf HTTP-Methoden-Ebene genügt aktuell, da es keine differenzierten Schreibrollen gibt.
 
 | Konsequenzen
-| Mit dem Kunden ist noch offen, wie granular Schreibrechte pro Rolle/Experiment sein müssen — die konkrete `@PreAuthorize`-Ausprägung pro Endpunkt ist deshalb noch nicht final.
+| Schreibrechte sind aktuell global (jeder `admin` darf überall schreiben), nicht pro Rolle/Experiment granularisiert. Sollte künftig feingranularere Schreibrechte nötig werden, müsste dies pro Controller-Methode (z. B. via `@PreAuthorize`) statt zentral im Filterchain erfolgen.
 |===
