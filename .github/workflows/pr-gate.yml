@@ -406,7 +406,7 @@ jobs:
             uses: ./.github/actions/setup-java-maven
 
           - name: Download Build and Coverage Artifacts
-            uses: actions/download-artifact@v7
+            uses: actions/download-artifact@v8
             with:
               name: backend-coverage-reports
 
