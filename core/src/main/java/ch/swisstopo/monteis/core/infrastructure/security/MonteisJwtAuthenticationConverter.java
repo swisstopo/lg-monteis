@@ -54,6 +54,7 @@ public class MonteisJwtAuthenticationConverter
     return new MonteisAuthenticationToken(source, principal, authorities);
   }
 
+  @SuppressWarnings("java:S1301")
   private static Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
     Set<GrantedAuthority> authorities = new HashSet<>();
     for (String role : extractRoles(jwt)) {
@@ -63,6 +64,9 @@ public class MonteisJwtAuthenticationConverter
         case ADMIN_ROLE -> {
           authorities.add(new SimpleGrantedAuthority(WRITE_AUTHORITY));
           authorities.add(new SimpleGrantedAuthority(READ_ALL_AUTHORITY));
+        }
+        default -> {
+          /* Ignore unknown roles */
         }
       }
     }

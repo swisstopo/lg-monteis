@@ -371,7 +371,7 @@
             <goals>
               <goal>read-project-properties</goal>
             </goals>
-            <phase>verify</phase>
+            <phase>compile</phase>
             <inherited>false</inherited>
             <configuration>
               <files>

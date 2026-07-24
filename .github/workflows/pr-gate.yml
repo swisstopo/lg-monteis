@@ -391,6 +391,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Warm up actions/cache download
         uses: actions/cache/restore@v6
