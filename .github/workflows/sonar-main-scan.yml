@@ -1,0 +1,28 @@
+name: SonarQube Main Branch Analysis
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'core/src/main/java/**/*'
+      - 'pipeline/src/main/java/**/*'
+      - 'webapp/src/**/*'
+permissions:
+  contents: read
+
+jobs:
+  sonar-main-analysis:
+    name: SonarQube Main Branch Scan
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Run SonarQube analysis
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
