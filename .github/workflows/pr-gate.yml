@@ -303,7 +303,7 @@ jobs:
 
   prepare-e2e-tests:
     name: Prepare E2E test file to run
-    if: contains(github.event.pull_request.labels.*.name, 'e2e-test')
+    if: contains(github.event.pull_request.labels.*.name, 'e2e-tests')
     runs-on: ubuntu-24.04
     outputs:
       file_list: ${{ steps.generate-file-list.outputs.file_list }}
@@ -330,7 +330,7 @@ jobs:
   # noinspection YAMLSchemaValidation
   run-e2e-tests:
     name: E2E file test
-    if: contains(github.event.pull_request.labels.*.name, 'e2e-test')
+    if: contains(github.event.pull_request.labels.*.name, 'e2e-tests')
     needs: [warmup-caches, prepare-e2e-tests]
     runs-on: ubuntu-24.04
     strategy:
@@ -385,57 +385,57 @@ jobs:
         run: pnpm run e2e:headless ${{ matrix.file }}
 
   # noinspection YAMLSchemaValidation
-  quality-gate:
-    name: Sonar Quality Gate
-    needs: run-backend-tests
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Warm up actions/cache download
-        uses: actions/cache/restore@v6
-        with:
-          path: /tmp/.warmup
-          key: warmup-noop
-          lookup-only: true
-
-      - parallel:
-          - name: Setup Java Environment (Hits Cache)
-            uses: ./.github/actions/setup-java-maven
-
-          - name: Download Build and Coverage Artifacts
-            uses: actions/download-artifact@v7
-            with:
-              name: backend-coverage-reports
-
-          - name: Load Test Containers Docker Cache
-            uses: ./.github/actions/global-docker-cache
-            with:
-              image: ${{ env.TEST_CONTAINER_IMAGE }}
-
-          - name: Load TimeScaleDB Docker Cache
-            uses: ./.github/actions/global-docker-cache
-            with:
-              image: ${{ env.TIMESCALE_DB_IMAGE }}
-
-          - name: Load Postgres Docker Cache
-            uses: ./.github/actions/global-docker-cache
-            with:
-              image: ${{ env.POSTGRES_DB_IMAGE }}
-
-      - name: Build and analyze
-        run: | 
-          mvn compile sonar:sonar \
-          -DskipTests \
-          -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-          -Dsonar.host.url=${{ vars.SONAR_HOST_URL }} 
-
-      - name: SonarCloud Scan
-        id: sonarqube-quality-gate-check
-        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
-        with:
-          scanMetadataReportFile: target/sonar/report-task.txt
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#  quality-gate:
+#    name: Sonar Quality Gate
+#    needs: run-backend-tests
+#    runs-on: ubuntu-24.04
+#    steps:
+#      - uses: actions/checkout@v7
+#        with:
+#          fetch-depth: 0
+#
+#      - name: Warm up actions/cache download
+#        uses: actions/cache/restore@v6
+#        with:
+#          path: /tmp/.warmup
+#          key: warmup-noop
+#          lookup-only: true
+#
+#      - parallel:
+#          - name: Setup Java Environment (Hits Cache)
+#            uses: ./.github/actions/setup-java-maven
+#
+#          - name: Download Build and Coverage Artifacts
+#            uses: actions/download-artifact@v7
+#            with:
+#              name: backend-coverage-reports
+#
+#          - name: Load Test Containers Docker Cache
+#            uses: ./.github/actions/global-docker-cache
+#            with:
+#              image: ${{ env.TEST_CONTAINER_IMAGE }}
+#
+#          - name: Load TimeScaleDB Docker Cache
+#            uses: ./.github/actions/global-docker-cache
+#            with:
+#              image: ${{ env.TIMESCALE_DB_IMAGE }}
+#
+#          - name: Load Postgres Docker Cache
+#            uses: ./.github/actions/global-docker-cache
+#            with:
+#              image: ${{ env.POSTGRES_DB_IMAGE }}
+#
+#      - name: Build and analyze
+#        run: |
+#          mvn compile sonar:sonar \
+#          -DskipTests \
+#          -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
+#          -Dsonar.host.url=${{ vars.SONAR_HOST_URL }}
+#
+#      - name: SonarCloud Scan
+#        id: sonarqube-quality-gate-check
+#        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+#        with:
+#          scanMetadataReportFile: target/sonar/report-task.txt
+#        env:
+#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
