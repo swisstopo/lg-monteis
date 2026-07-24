@@ -16,7 +16,7 @@
     {
       "description": "Ignore internal Maven monorepo modules",
       "matchPackagePrefixes": ["ch.swisstopo.monteis"],
-      "enabled": false,
+      "enabled": true,
       "automerge": true,
       "automergeType": "pr"
     },

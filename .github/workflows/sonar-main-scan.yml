@@ -1,0 +1,63 @@
+name: SonarQube Main Branch Analysis
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'core/src/main/java/**/*'
+      - 'pipeline/src/main/java/**/*'
+      - 'webapp/src/**/*'
+
+permissions:
+  contents: read
+
+env:
+  TEST_CONTAINER_IMAGE: ${{ vars.TEST_CONTAINER_IMAGE }}
+  TIMESCALE_DB_IMAGE: ${{ vars.TIMESCALE_DB_IMAGE }}
+  POSTGRES_DB_IMAGE: ${{ vars.POSTGRES_DB_IMAGE }}
+  JAVA_VERSION: ${{ vars.JAVA_VERSION }}
+  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
+
+jobs:
+  # noinspection YAMLSchemaValidation
+  sonar-main-analysis:
+    name: SonarQube Main Branch Scan
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Warm up actions/cache download
+        uses: actions/cache/restore@v6
+        with:
+          path: /tmp/.warmup
+          key: warmup-noop
+          lookup-only: true
+
+      - parallel:
+          - name: Setup Java Environment (Hits Cache)
+            uses: ./.github/actions/setup-java-maven
+
+          - name: Load Test Containers Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TEST_CONTAINER_IMAGE }}
+
+          - name: Load TimeScaleDB Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TIMESCALE_DB_IMAGE }}
+
+          - name: Load Postgres Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.POSTGRES_DB_IMAGE }}
+
+      - name: Sonar Maven Scan
+        uses: ./.github/actions/sonarqube-maven-scan
+        with:
+          sonar_token: ${{ secrets.SONAR_TOKEN }}
+          sonar_host_url: ${{ vars.SONAR_HOST_URL }}
