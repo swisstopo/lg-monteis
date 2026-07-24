@@ -1,14 +1,13 @@
 name: SonarQube Main Branch Analysis
 on:
-  pull_request:
-    types: [ opened, edited, synchronize, reopened, labeled ]
-    #  push:
-#    branches:
-#      - main
-#    paths:
-#      - 'core/src/main/java/**/*'
-#      - 'pipeline/src/main/java/**/*'
-#      - 'webapp/src/**/*'
+  push:
+    branches:
+      - main
+    paths:
+      - 'core/src/main/java/**/*'
+      - 'pipeline/src/main/java/**/*'
+      - 'webapp/src/**/*'
+
 permissions:
   contents: read
 

@@ -385,48 +385,48 @@ jobs:
         run: pnpm run e2e:headless ${{ matrix.file }}
 
   # noinspection YAMLSchemaValidation
-#  quality-gate:
-#    name: Sonar Quality Gate
-#    needs: run-backend-tests
-#    runs-on: ubuntu-24.04
-#    steps:
-#      - uses: actions/checkout@v7
-#        with:
-#          fetch-depth: 0
-#
-#      - name: Warm up actions/cache download
-#        uses: actions/cache/restore@v4
-#        with:
-#          path: /tmp/.warmup
-#          key: warmup-noop
-#          lookup-only: true
-#
-#      - parallel:
-#          - name: Setup Java Environment (Hits Cache)
-#            uses: ./.github/actions/setup-java-maven
-#
-#          - name: Download Build and Coverage Artifacts
-#            uses: actions/download-artifact@v4
-#            with:
-#              name: backend-coverage-reports
-#
-#          - name: Load Test Containers Docker Cache
-#            uses: ./.github/actions/global-docker-cache
-#            with:
-#              image: ${{ env.test_container_image }}
-#
-#          - name: Load TimeScaleDB Docker Cache
-#            uses: ./.github/actions/global-docker-cache
-#            with:
-#              image: ${{ env.timescale_db_image }}
-#
-#          - name: Load Postgres Docker Cache
-#            uses: ./.github/actions/global-docker-cache
-#            with:
-#              image: ${{ env.postgres_db_image }}
-#
-#      - name: Sonar Maven Scan
-#        uses: ./.github/actions/sonarqube-maven-scan
-#        with:
-#          sonar_token: ${{ secrets.SONAR_TOKEN }}
-#          sonar_host_url: ${{ vars.SONAR_HOST_URL }}
+  quality-gate:
+    name: Sonar Quality Gate
+    needs: run-backend-tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Warm up actions/cache download
+        uses: actions/cache/restore@v6
+        with:
+          path: /tmp/.warmup
+          key: warmup-noop
+          lookup-only: true
+
+      - parallel:
+          - name: Setup Java Environment (Hits Cache)
+            uses: ./.github/actions/setup-java-maven
+
+          - name: Download Build and Coverage Artifacts
+            uses: actions/download-artifact@v7
+            with:
+              name: backend-coverage-reports
+
+          - name: Load Test Containers Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TEST_CONTAINER_IMAGE }}
+
+          - name: Load TimeScaleDB Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TIMESCALE_DB_IMAGE }}
+
+          - name: Load Postgres Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.POSTGRES_DB_IMAGE }}
+
+      - name: Sonar Maven Scan
+        uses: ./.github/actions/sonarqube-maven-scan
+        with:
+          sonar_token: ${{ secrets.SONAR_TOKEN }}
+          sonar_host_url: ${{ vars.SONAR_HOST_URL }}
