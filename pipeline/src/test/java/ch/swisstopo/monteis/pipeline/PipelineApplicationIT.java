@@ -6,6 +6,9 @@ import org.junit.jupiter.api.Test;
 @IT
 class PipelineApplicationIT {
 
+  @SuppressWarnings("java:S2699")
   @Test
-  void contextLoads() {}
+  void contextLoads() {
+    /* Context startup failure will still cause the test to fail */
+  }
 }

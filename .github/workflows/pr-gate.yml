@@ -228,16 +228,28 @@ jobs:
         run: mvn -T 2C install -DskipTests
       - parallel:
           - name: Run Core Unit Tests
-            run: mvn -T 2C test -pl core -Djooq.codegen.skip=true
+            run: mvn -T 2C test jacoco:report -pl core -Djooq.codegen.skip=true
 
           - name: Run Core Integration Tests
-            run: mvn -T 2C test-compile failsafe:integration-test -pl core -Djooq.codegen.skip=true
+            run: mvn -T 2C test-compile jacoco:prepare-agent-integration failsafe:integration-test jacoco:report-integration failsafe:verify -pl core -Djooq.codegen.skip=true
 
           - name: Run Pipeline Unit Tests
-            run: mvn -T 2C test -pl pipeline -Djooq.codegen.skip=true
+            run: mvn -T 2C test jacoco:report -pl pipeline -Djooq.codegen.skip=true
 
           - name: Run Pipeline Integration Tests
-            run: mvn -T 2C test-compile failsafe:integration-test -pl pipeline -Djooq.codegen.skip=true
+            run: mvn -T 2C test-compile jacoco:prepare-agent-integration failsafe:integration-test jacoco:report-integration failsafe:verify -pl pipeline -Djooq.codegen.skip=true
+
+      - name: Upload Build and Coverage Artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-coverage-reports
+          path: |
+            **/target/classes/**
+            **/target/test-classes/**
+            **/target/site/jacoco/jacoco.xml
+            **/target/site/jacoco-it/jacoco.xml
+          retention-days: 1
 
   # noinspection YAMLSchemaValidation
   run-frontend-unit-tests:
@@ -371,3 +383,59 @@ jobs:
       - name: Run all e2e tests
         working-directory: webapp
         run: pnpm run e2e:headless ${{ matrix.file }}
+
+  # noinspection YAMLSchemaValidation
+  quality-gate:
+    name: Sonar Quality Gate
+    needs: run-backend-tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Warm up actions/cache download
+        uses: actions/cache/restore@v6
+        with:
+          path: /tmp/.warmup
+          key: warmup-noop
+          lookup-only: true
+
+      - parallel:
+          - name: Setup Java Environment (Hits Cache)
+            uses: ./.github/actions/setup-java-maven
+
+          - name: Download Build and Coverage Artifacts
+            uses: actions/download-artifact@v7
+            with:
+              name: backend-coverage-reports
+
+          - name: Load Test Containers Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TEST_CONTAINER_IMAGE }}
+
+          - name: Load TimeScaleDB Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.TIMESCALE_DB_IMAGE }}
+
+          - name: Load Postgres Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.POSTGRES_DB_IMAGE }}
+
+      - name: Build and analyze
+        run: | 
+          mvn compile sonar:sonar \
+          -DskipTests \
+          -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
+          -Dsonar.host.url=${{ vars.SONAR_HOST_URL }} 
+
+      - name: SonarCloud Scan
+        id: sonarqube-quality-gate-check
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        with:
+          scanMetadataReportFile: target/sonar/report-task.txt
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

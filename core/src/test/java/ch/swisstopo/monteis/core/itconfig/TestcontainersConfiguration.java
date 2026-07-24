@@ -102,7 +102,7 @@ public class TestcontainersConfiguration {
   @Bean
   DynamicPropertyRegistrar dynamicPropertyRegistrar(
       @Qualifier("metaDataDB") PostgreSQLContainer<?> meta) {
-    return (registry) -> {
+    return registry -> {
       registry.add("spring.datasource.url", meta::getJdbcUrl);
     };
   }

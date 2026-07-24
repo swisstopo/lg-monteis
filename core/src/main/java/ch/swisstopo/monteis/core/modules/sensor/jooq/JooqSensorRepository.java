@@ -73,7 +73,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
     updatedRecord.setFormulaId(formulaRecord.getId());
     try {
       updatedRecord.update();
-    } catch (DuplicateKeyException ex) {
+    } catch (DuplicateKeyException _) {
       // unique constraint
       throw new FieldBusinessValidationException(
           "code", sensor.getCode(), "validation.unique", Map.of());

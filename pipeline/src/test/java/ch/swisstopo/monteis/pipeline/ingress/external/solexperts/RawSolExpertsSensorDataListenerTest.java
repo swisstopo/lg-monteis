@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.pipeline.ingress.external.solexperts;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 
 import ch.swisstopo.monteis.pipeline.ingress.external.VendorDataNormalizer;
 import ch.swisstopo.monteis.pipeline.internal.model.NormalizedSensorData;
@@ -29,8 +30,7 @@ class RawSolExpertsSensorDataListenerTest {
         new RawSolExpertsSensorData("deviceA", "2026-06-23T09:00:00Z", Collections.emptyMap());
 
     @SuppressWarnings("unchecked")
-    List<Message<NormalizedSensorData>> expectedMessages =
-        List.of(org.mockito.Mockito.mock(Message.class));
+    List<Message<NormalizedSensorData>> expectedMessages = List.of(mock(Message.class));
 
     given(normalizer.normalizeToMessages(payload)).willReturn(expectedMessages);
 

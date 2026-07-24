@@ -168,8 +168,7 @@ class SensorReadingRepositoryIT {
     var result = repo.fetchOldSensorData(config, 2);
 
     // then
-    assertThat(result).hasSize(2);
-    assertThat(result).allMatch(r -> r.getVersion() < 4);
+    assertThat(result).hasSize(2).allMatch(r -> r.getVersion() < 4);
   }
 
   @Test
