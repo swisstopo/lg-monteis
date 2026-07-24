@@ -4,6 +4,8 @@
     "config:recommended"
   ],
   "minimumReleaseAge": "3 days",
+  "rangeStrategy": "bump",
+  "rebaseWhen": "behind-base-branch",
 
   "labels": [
     "renovate",
