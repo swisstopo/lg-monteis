@@ -68,7 +68,7 @@ mvn clean install -DskipTests && mvn verify -Dopenapi.codegen.skip=false -DskipT
 This generates the model and service layer of the web application.
 
 ```bash
-cd webapp && pnpm install && pnpm openapi-generate && cd -
+cd webapp && pnpm install && pnpm generate-api && cd -
 
 ```
 
@@ -175,7 +175,7 @@ mvn verify
 ### Frontend
 
 The frontend utilizes [Vitest](https://vitest.dev/) for unit testing and [Playwright](https://playwright.dev/) for End-to-End (E2E) testing. All frontend test commands should be run from within the webapp directory.
-To move there use:
+To move there, use:
 
 ```bash
 cd webapp
@@ -214,11 +214,11 @@ pnpm run e2e:report
 When you are ready to make a change, please follow this standard workflow:
 
 1. **Branch off:** Create a new branch from `main` for your feature or bugfix.
-2. **Commit your changes:** We use [Conventional commits.](https://www.conventionalcommits.org/)
+2. **Commit your changes:** We use [Conventional Commits](https://www.conventionalcommits.org/).
 3. **Test locally:** Ensure your local development server runs properly and all existing linters and tests pass.
 4. **Update documentation:** If your changes affect the API, dependencies, or UI, update the relevant `README.md` or specifications.
 5. **Open a Pull Request:** Submit your PR against the `main` branch. Include a brief summary of your changes and link any relevant issue tickets.
-6. **E2E Tests Action** You need to add the E2E-Tests label to your PR to run them in the Pipeline.
+6. **E2E Tests Action:** You need to add the E2E-Tests label to your PR to run them in the Pipeline.
 7. **Code Review:** Wait for maintainers to review your code. Be open to feedback and ready to make requested adjustments.
 
 ---
