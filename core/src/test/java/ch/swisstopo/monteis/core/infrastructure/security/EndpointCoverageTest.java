@@ -73,7 +73,8 @@ class EndpointCoverageTest {
           "GET /api/measurements/charts/data",
           "GET /api/measurements/sensors/{id}",
           "GET /api/overview/metrics",
-          "GET /api/me");
+          "GET /api/me",
+          "POST /api/tiles");
 
   @Autowired private RequestMappingHandlerMapping handlerMapping;
 
