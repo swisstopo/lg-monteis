@@ -84,3 +84,8 @@ Desktop.ini
 
 # Security / Generated SBOMs
 sbom.spdx.json
+
+# =========================
+# Generated 3D Tiles (see core/src/main/java/.../modules/visualization)
+# =========================
+core/src/main/resources/tiles/

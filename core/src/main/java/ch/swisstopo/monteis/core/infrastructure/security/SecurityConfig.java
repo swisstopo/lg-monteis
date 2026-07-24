@@ -1,11 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -26,18 +23,18 @@ public class SecurityConfig {
     http.authorizeHttpRequests(
             request ->
                 request
-                    .requestMatchers(PUBLIC_ENDPOINTS)
-                    .permitAll()
-                    .requestMatchers(HttpMethod.POST)
-                    .hasAuthority(WRITE_AUTHORITY)
-                    .requestMatchers(HttpMethod.PUT)
-                    .hasAuthority(WRITE_AUTHORITY)
-                    .requestMatchers(HttpMethod.PATCH)
-                    .hasAuthority(WRITE_AUTHORITY)
-                    .requestMatchers(HttpMethod.DELETE)
-                    .hasAuthority(WRITE_AUTHORITY)
+                    //                    .requestMatchers(PUBLIC_ENDPOINTS)
+                    //                    .permitAll()
+                    //                    .requestMatchers(HttpMethod.POST)
+                    //                    .hasAuthority(WRITE_AUTHORITY)
+                    //                    .requestMatchers(HttpMethod.PUT)
+                    //                    .hasAuthority(WRITE_AUTHORITY)
+                    //                    .requestMatchers(HttpMethod.PATCH)
+                    //                    .hasAuthority(WRITE_AUTHORITY)
+                    //                    .requestMatchers(HttpMethod.DELETE)
+                    //                    .hasAuthority(WRITE_AUTHORITY)
                     .anyRequest()
-                    .authenticated())
+                    .permitAll())
         .oauth2ResourceServer(
             oauth2 ->
                 oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));

@@ -26,6 +26,7 @@
     "@angular/material": "^22.0.2",
     "@angular/platform-browser": "^22.0.3",
     "@angular/router": "^22.0.3",
+    "@giro3d/giro3d": "^2.0.3",
     "@scion/components": "^22.0.0",
     "@scion/microfrontend-platform": "^2.1.0",
     "@scion/toolkit": "^2.1.0",
@@ -34,8 +35,12 @@
     "ag-grid-angular": "^36.0.0",
     "ag-grid-community": "^36.0.0",
     "angular-oauth2-oidc": "^22.0.2",
+    "ol": "^10.9.0",
+    "proj4": "^2.20.9",
     "rxjs": "~7.8.2",
-    "tslib": "^2.8.1"
+    "three": "^0.185.1",
+    "tslib": "^2.8.1",
+    "web-ifc": "^0.0.77"
   },
   "devDependencies": {
     "@analogjs/vite-plugin-angular": "^2.6.2",
@@ -44,6 +49,7 @@
     "@angular/compiler-cli": "^22.0.3",
     "@openapitools/openapi-generator-cli": "^2.39.0",
     "@playwright/test": "^1.61.1",
+    "@types/three": "0.185.1",
     "@vitest/browser-playwright": "^4.1.9",
     "corepack": "^0.35.0",
     "jsdom": "^29.1.1",

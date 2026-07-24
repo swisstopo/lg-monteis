@@ -1,0 +1,15 @@
+<div class="giro3d-container" #container></div>
+
+<div class="upload-panel">
+  <label class="upload-button">
+    <input type="file" accept=".ifc" [disabled]="busy()" (change)="onFileSelected($event)" />
+    Upload IFC model
+  </label>
+
+  @if (statusMessage(); as message) {
+    <p class="status">{{ message }}</p>
+  }
+  @if (errorMessage(); as message) {
+    <p class="error">{{ message }}</p>
+  }
+</div>

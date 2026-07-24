@@ -14,5 +14,12 @@ export const workbenchConfig = provideWorkbench({
       .activatePart('metrics-menu')
       .addPart('sensor-menu', { dockTo: 'left-top' }, { label: 'Sensor', icon: 'build' })
       .navigatePart('sensor-menu', ['sensor-menu'])
-      .activatePart('sensor-menu'),
+      .activatePart('sensor-menu')
+      .addPart(
+        'visualization-menu',
+        { dockTo: 'left-top' },
+        { label: 'Digital Twin', icon: 'view_in_ar' },
+      )
+      .navigatePart('visualization-menu', ['visualization-menu'])
+      .activatePart('visualization-menu'),
 });
