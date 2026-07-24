@@ -35,7 +35,7 @@ jobs:
       # change_path guards unnecessary execution!
       - name: "[TAG]: Calculate Semantic Version"
         id: semver
-        uses: paulhatch/semantic-version@v6.0.2
+        uses: paulhatch/semantic-version@v6.0.3
         with:
           tag_prefix: "${{ env.SERVICE }}-v"
           change_path: "${{ env.SERVICE }}/ pom.xml"
