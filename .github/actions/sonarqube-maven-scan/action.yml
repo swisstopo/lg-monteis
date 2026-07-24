@@ -1,0 +1,29 @@
+name: 'Backend SonarQube Analysis'
+description: 'Checks out code, sets up Java, loads caches, and runs SonarQube analysis'
+
+inputs:
+  sonar_token:
+    description: 'Sonar token passed from workflow'
+    required: true
+  sonar_host_url:
+    description: 'Sonar host URL passed from workflow'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build and analyze
+      shell: bash
+      run: |
+        mvn compile sonar:sonar \
+        -DskipTests \
+        -Dsonar.token=${{ inputs.sonar_token }} \
+        -Dsonar.host.url=${{ inputs.sonar_host_url }}
+
+    - name: Sonar Quality Gate
+      id: sonarqube-quality-gate-check
+      uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+      with:
+        scanMetadataReportFile: target/sonar/report-task.txt
+      env:
+        SONAR_TOKEN: ${{ inputs.sonar_token }}

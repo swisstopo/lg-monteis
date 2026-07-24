@@ -24,9 +24,9 @@ env:
   CORE_APP_META_DB_PWD: ${{ vars.CORE_APP_META_DB_PWD }}
 
   # Docker Image Versions
-  TEST_CONTAINER_IMAGE: 'testcontainers/ryuk:0.12.0'
-  TIMESCALE_DB_IMAGE: 'timescale/timescaledb:latest-pg18'
-  POSTGRES_DB_IMAGE: 'postgres:18-alpine'
+  TEST_CONTAINER_IMAGE: ${{ vars.TEST_CONTAINER_IMAGE }}
+  TIMESCALE_DB_IMAGE: ${{ vars.TIMESCALE_DB_IMAGE }}
+  POSTGRES_DB_IMAGE: ${{ vars.POSTGRES_DB_IMAGE }}
 
 permissions: read-all
 
@@ -395,7 +395,7 @@ jobs:
 #          fetch-depth: 0
 #
 #      - name: Warm up actions/cache download
-#        uses: actions/cache/restore@v6
+#        uses: actions/cache/restore@v4
 #        with:
 #          path: /tmp/.warmup
 #          key: warmup-noop
@@ -406,36 +406,27 @@ jobs:
 #            uses: ./.github/actions/setup-java-maven
 #
 #          - name: Download Build and Coverage Artifacts
-#            uses: actions/download-artifact@v7
+#            uses: actions/download-artifact@v4
 #            with:
 #              name: backend-coverage-reports
 #
 #          - name: Load Test Containers Docker Cache
 #            uses: ./.github/actions/global-docker-cache
 #            with:
-#              image: ${{ env.TEST_CONTAINER_IMAGE }}
+#              image: ${{ env.test_container_image }}
 #
 #          - name: Load TimeScaleDB Docker Cache
 #            uses: ./.github/actions/global-docker-cache
 #            with:
-#              image: ${{ env.TIMESCALE_DB_IMAGE }}
+#              image: ${{ env.timescale_db_image }}
 #
 #          - name: Load Postgres Docker Cache
 #            uses: ./.github/actions/global-docker-cache
 #            with:
-#              image: ${{ env.POSTGRES_DB_IMAGE }}
+#              image: ${{ env.postgres_db_image }}
 #
-#      - name: Build and analyze
-#        run: |
-#          mvn compile sonar:sonar \
-#          -DskipTests \
-#          -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-#          -Dsonar.host.url=${{ vars.SONAR_HOST_URL }}
-#
-#      - name: SonarCloud Scan
-#        id: sonarqube-quality-gate-check
-#        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+#      - name: Sonar Maven Scan
+#        uses: ./.github/actions/sonarqube-maven-scan
 #        with:
-#          scanMetadataReportFile: target/sonar/report-task.txt
-#        env:
-#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#          sonar_token: ${{ secrets.SONAR_TOKEN }}
+#          sonar_host_url: ${{ vars.SONAR_HOST_URL }}
