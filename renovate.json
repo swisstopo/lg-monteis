@@ -12,13 +12,18 @@
     "e2e-tests"
   ],
 
+  "platformAutomerge": true,
+
   "packageRules": [
     {
       "description": "Ignore internal Maven monorepo modules",
       "matchPackagePrefixes": ["ch.swisstopo.monteis"],
-      "enabled": true,
-      "automerge": true,
-      "automergeType": "pr"
+      "enabled": false
+    },
+    {
+      "description": "Automerge all minor and patch updates globally",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
     },
     {
       "description": "CRITICAL: Sync all Angular (Core, CLI, Material, CDK) and Scion MAJOR bumps",
