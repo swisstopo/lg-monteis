@@ -35,7 +35,7 @@ jobs:
       # change_path guards unnecessary execution!
       - name: "[TAG]: Calculate Semantic Version"
         id: semver
-        uses: paulhatch/semantic-version@v6.0.2
+        uses: paulhatch/semantic-version@v6.0.3
         with:
           tag_prefix: "${{ env.SERVICE }}-v"
           change_path: "${{ env.SERVICE }}/ pom.xml"
@@ -58,7 +58,7 @@ jobs:
       SERVICE: ${{ inputs.service }}
     steps:
       - name: "[AWS]: Configure AWS Credentials"
-        uses: aws-actions/configure-aws-credentials@v6.2.2
+        uses: aws-actions/configure-aws-credentials@v6.2.3
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ECR_PUSH }}
           aws-region: ${{ vars.AWS_REGION }}
