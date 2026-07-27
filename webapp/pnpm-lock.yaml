@@ -48,10 +48,10 @@ importers:
         specifier: 1.0.0-beta.42
         version: 1.0.0-beta.42(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
       ag-grid-angular:
-        specifier: ^36.0.0
+        specifier: ^36.0.2
         version: 36.0.2(@angular/common@22.0.7(@angular/core@22.0.7(@angular/compiler@22.0.7)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.0.7(@angular/compiler@22.0.7)(rxjs@7.8.2))
       ag-grid-community:
-        specifier: ^36.0.0
+        specifier: ^36.0.2
         version: 36.0.2
       angular-oauth2-oidc:
         specifier: ^22.0.2
