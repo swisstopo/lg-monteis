@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class ActiveSensorConfigTest {
 
@@ -86,24 +88,31 @@ class ActiveSensorConfigTest {
     assertThat(exception.getMessage()).contains("Unresolved variables might exist");
   }
 
-  @ParameterizedTest(
-      name = "Given formula ''{0}'', evaluating to Infinity should throw IllegalArgumentException")
-  @ValueSource(
-      strings = {
-        "x / 0", // 10.0 / 0 evaluates to Infinity
-        "x * log(0)" // 10.0 * log(0) evaluates to -Infinity
-      })
-  void should_throw_illegal_argument_exception_on_infinite_results(String formula) {
+  private static Stream<Arguments> infiniteResultFormulas() {
+    return Stream.of(
+        Arguments.of(
+            "x / 0",
+            IllegalArgumentException.class,
+            "Formula did not evaluate to a clean numeric value. Unresolved variables might exist."
+                + " Result was: Infinity"),
+        Arguments.of(
+            "x * log(O)", UnsupportedOperationException.class, "function log was not found"));
+  }
+
+  @ParameterizedTest(name = "Given formula ''{0}'', evaluating to Infinity should throw ''{1}''")
+  @MethodSource("infiniteResultFormulas")
+  void should_throw_illegal_argument_exception_on_infinite_results(
+      String formula, Class<? extends Exception> expectedException, String message) {
     // given
     SensorConfig poisonPillConfig = new SensorConfig("deviceA", formula, 100.0, 0.0, 1);
     ActiveSensorConfig activeConfig = new ActiveSensorConfig(poisonPillConfig);
 
     // when & then
     // The !Double.isInfinite() check in ActiveSensorConfig forces this to throw
-    IllegalArgumentException exception =
-        assertThrows(IllegalArgumentException.class, () -> activeConfig.evaluate(10.0));
+    Exception exception = assertThrows(expectedException, () -> activeConfig.evaluate(10.0));
 
-    assertThat(exception.getMessage())
-        .contains("Formula did not evaluate to a clean numeric value");
+    System.out.println(exception.getMessage());
+
+    assertThat(exception.getMessage()).contains(message);
   }
 }
