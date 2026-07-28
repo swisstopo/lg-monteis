@@ -9,10 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.ReadExperimentDetailsDto;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Bounds;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
+import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import java.util.Objects;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
@@ -126,8 +123,19 @@ class JooqExperimentRepositoryIT {
   private Sensor createDummySensor(String code, String name, String formulaExpression) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
-    Bounds bounds = new Bounds(0.0, 100.0);
+    AlarmBounds alarmBounds = new AlarmBounds(0.0, 100.0);
+    Coordinates coordinates = new Coordinates(2400.0, -12007.0, -1600.0);
 
-    return sensorRepository.create(new Sensor(code, name, bounds, formula));
+    return sensorRepository.create(
+        new Sensor(
+            code,
+            name,
+            SensorType.OTHER,
+            Unit.METER,
+            null,
+            coordinates,
+            alarmBounds,
+            true,
+            formula));
   }
 }

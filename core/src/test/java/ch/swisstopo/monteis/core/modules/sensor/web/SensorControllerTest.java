@@ -14,6 +14,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
@@ -43,10 +45,39 @@ class SensorControllerTest {
   @Test
   void should_route_create_sensor_and_verify_output() throws Exception {
     // given: Instantiate DTOs for input and expected output
-    WriteSensorDto requestDto = new WriteSensorDto(null, "SENS-01", "Test", 0.0, 100.0, null, null);
+    WriteSensorDto requestDto =
+        new WriteSensorDto(
+            null,
+            "SENS-01",
+            "Test",
+            null,
+            Unit.METER,
+            SensorType.OTHER,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            100.0,
+            true,
+            null,
+            null);
 
     SensorResponseDto expectedResponseDto =
-        new SensorResponseDto(1L, "SENS-01", "Test", 0.0, 100.0, null, 1);
+        new SensorResponseDto(
+            1L,
+            "SENS-01",
+            "Test",
+            Unit.METER,
+            SensorType.OTHER,
+            null,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            100.0,
+            true,
+            null,
+            1);
 
     // Strictly mock the domain object
     Sensor mockDomain = mock(Sensor.class);
@@ -66,6 +97,14 @@ class SensorControllerTest {
         .andExpect(jsonPath("$.id").value(expectedResponseDto.id()))
         .andExpect(jsonPath("$.code").value(expectedResponseDto.code()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
+        .andExpect(jsonPath("$.unit").value(expectedResponseDto.unit().name()))
+        .andExpect(jsonPath("$.type").value(expectedResponseDto.type().name()))
+        .andExpect(jsonPath("$.xLocal").value(expectedResponseDto.xLocal()))
+        .andExpect(jsonPath("$.yLocal").value(expectedResponseDto.yLocal()))
+        .andExpect(jsonPath("$.zLocal").value(expectedResponseDto.zLocal()))
+        .andExpect(jsonPath("$.lowerAlarmBound").value(expectedResponseDto.lowerAlarmBound()))
+        .andExpect(jsonPath("$.upperAlarmBound").value(expectedResponseDto.upperAlarmBound()))
+        .andExpect(jsonPath("$.active").value(expectedResponseDto.active()))
         .andExpect(jsonPath("$.version").value(expectedResponseDto.version()));
 
     // Verify interaction sequence
@@ -78,10 +117,38 @@ class SensorControllerTest {
   void should_route_update_sensor_and_verify_output() throws Exception {
     // given
     WriteSensorDto requestDto =
-        new WriteSensorDto(1L, "SENS-01", "Updated Sensor", -10.0, 50.0, null, 1);
+        new WriteSensorDto(
+            1L,
+            "SENS-01",
+            "Updated Sensor",
+            null,
+            Unit.METER,
+            SensorType.OTHER,
+            0.0,
+            0.0,
+            0.0,
+            -10.0,
+            50.0,
+            true,
+            null,
+            1);
 
     SensorResponseDto expectedResponseDto =
-        new SensorResponseDto(1L, "SENS-01", "Updated Sensor", -10.0, 50.0, null, 2);
+        new SensorResponseDto(
+            1L,
+            "SENS-01",
+            "Updated Sensor",
+            Unit.METER,
+            SensorType.OTHER,
+            null,
+            0.0,
+            0.0,
+            0.0,
+            -10.0,
+            50.0,
+            true,
+            null,
+            2);
 
     Sensor mockDomain = mock(Sensor.class);
 
@@ -100,6 +167,15 @@ class SensorControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(expectedResponseDto.id()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
+        .andExpect(jsonPath("$.code").value(expectedResponseDto.code()))
+        .andExpect(jsonPath("$.unit").value(expectedResponseDto.unit().name()))
+        .andExpect(jsonPath("$.type").value(expectedResponseDto.type().name()))
+        .andExpect(jsonPath("$.xLocal").value(expectedResponseDto.xLocal()))
+        .andExpect(jsonPath("$.yLocal").value(expectedResponseDto.yLocal()))
+        .andExpect(jsonPath("$.zLocal").value(expectedResponseDto.zLocal()))
+        .andExpect(jsonPath("$.lowerAlarmBound").value(expectedResponseDto.lowerAlarmBound()))
+        .andExpect(jsonPath("$.upperAlarmBound").value(expectedResponseDto.upperAlarmBound()))
+        .andExpect(jsonPath("$.active").value(expectedResponseDto.active()))
         .andExpect(jsonPath("$.version").value(expectedResponseDto.version()));
 
     // Verify interaction sequence

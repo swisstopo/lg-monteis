@@ -299,6 +299,18 @@
               <generator>
                 <database>
                   <recordVersionFields>VERSION|version</recordVersionFields>
+                  <forcedTypes>
+                    <forcedType>
+                      <userType>ch.swisstopo.monteis.core.modules.sensor.domain.Unit</userType>
+                      <enumConverter>true</enumConverter>
+                      <includeExpression>(?i:sensors\.unit)</includeExpression>
+                    </forcedType>
+                    <forcedType>
+                      <userType>ch.swisstopo.monteis.core.modules.sensor.domain.SensorType</userType>
+                      <enumConverter>true</enumConverter>
+                      <includeExpression>(?i:sensors\.type)</includeExpression>
+                    </forcedType>
+                  </forcedTypes>
                 </database>
                 <target>
                   <packageName>ch.swisstopo.monteis.core.jooq.generated</packageName>

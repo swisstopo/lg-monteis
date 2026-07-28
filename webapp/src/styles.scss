@@ -77,12 +77,14 @@ body {
   margin: 0;
   height: 100%;
 }
+
 :root {
   --mat-sys-corner-large: 0px;
   --mat-sys-corner-extra-large: 0px;
   --mat-sys-corner-medium: 0px;
   --mat-sys-corner-small: 0px;
   --mat-sys-corner-extra-small: 0px;
+  --mat-dialog-headline-padding: 11px 16px 33px;
 
   @include mat.form-field-overrides(
     (
@@ -96,10 +98,21 @@ body {
       outlined-container-shape: 0px,
       text-container-shape: 0px,
       protected-container-shape: 0px,
+      tonal-container-shape: 0px,
     )
   );
 }
 
 .navigation-button {
   --mat-button-text-with-icon-horizontal-padding: 12px;
+}
+
+h2 {
+  margin-bottom: 20px;
+  font-weight: 500;
+  color: #1d1b20;
+}
+
+.mat-mdc-dialog-title {
+  padding: 0 16px;
 }

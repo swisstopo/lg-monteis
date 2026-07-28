@@ -2,11 +2,13 @@ import { Component, effect, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { MatRadioButton, MatRadioGroup } from '@angular/material/radio';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { WorkbenchView } from '@scion/workbench';
+import SensorCreate from '../../sensor/sensor-create/sensor-create';
 
 @Component({
   selector: 'app-dialog',
@@ -29,6 +31,7 @@ import { WorkbenchView } from '@scion/workbench';
 })
 export default class Dialog {
   private fb = inject(FormBuilder);
+  private dialog = inject(MatDialog);
 
   protected form = this.fb.nonNullable.group({
     checkbox1: [true],
@@ -59,6 +62,10 @@ export default class Dialog {
     if (fileList) {
       this.form.controls.files.setValue(Array.from(fileList));
     }
+  }
+
+  onDialogOpen() {
+    this.dialog.open(SensorCreate, { width: '60vw', maxWidth: '900px', autoFocus: false });
   }
 
   onSubmit() {

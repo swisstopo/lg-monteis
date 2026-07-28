@@ -1,72 +1,173 @@
-<div class="sensor-create-container">
-  <h2>Create New Sensor Configuration</h2>
+<h2 mat-dialog-title>Setup new Sensor</h2>
 
-  <form
-    [formGroup]="sensorForm"
-    #formDirective="ngForm"
-    (ngSubmit)="onSubmit(formDirective)"
-    class="form-layout"
-  >
-    <mat-form-field appearance="outline">
-      <mat-label>Sensor Code</mat-label>
-      <input matInput formControlName="code" placeholder="e.g., SN-TEMP-402" />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Sensor Name</mat-label>
-      <input matInput formControlName="name" placeholder="e.g., Ventilation Intake Temp" />
-    </mat-form-field>
-
-    <div class="bounds-row">
+<mat-dialog-content>
+  <form id="sensorCreateForm" class="form-layout" (submit)="onSubmit($event)" novalidate>
+    <div class="form-row">
       <mat-form-field appearance="outline">
-        <mat-label>Lower Bound</mat-label>
-        <input matInput type="number" formControlName="lowerBound" />
+        <mat-label>Sensor Code</mat-label>
+        <input matInput [formField]="sensorForm.code" placeholder="e.g., SN-TEMP-402" />
+        @if (sensorForm.code().touched() && sensorForm.code().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.code().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Upper Bound</mat-label>
-        <input matInput type="number" formControlName="upperBound" />
+        <mat-label>Sensor Name</mat-label>
+        <input matInput [formField]="sensorForm.name" placeholder="e.g., Ventilation Intake Temp" />
+        @if (sensorForm.name().touched() && sensorForm.name().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.name().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Active</mat-label>
+        <mat-select [formField]="sensorForm.active">
+          <mat-option [value]="true">Active</mat-option>
+          <mat-option [value]="false">Inactive</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Unit</mat-label>
+        <mat-select [formField]="sensorForm.unit">
+          <mat-option value="">Select a unit</mat-option>
+          @for (unit of unitValues; track unit) {
+            <mat-option [value]="unit"
+              >{{ unitMetadata[unit].label }} ({{ unitMetadata[unit].symbol }})
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Sensor Type</mat-label>
+        <mat-select [formField]="sensorForm.type" placeholder="Select a type">
+          @for (type of typeValues; track type) {
+            <mat-option [value]="type">{{ typeMetadata[type].label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Formula Expression (Optional, defaults to 'x')</mat-label>
+        <input
+          type="text"
+          placeholder="Type a new formula or select an existing one..."
+          matInput
+          [formField]="sensorForm.formula"
+          [matAutocomplete]="auto"
+        />
+        <mat-autocomplete #auto="matAutocomplete">
+          @for (formula of filteredFormulas(); track formula.id) {
+            <mat-option [value]="formula.expression" (onSelectionChange)="selectFormula(formula)">
+              {{ formula.expression }} <span class="version-badge">(v{{ formula.version }})</span>
+            </mat-option>
+          }
+        </mat-autocomplete>
       </mat-form-field>
     </div>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Formula Expression (Optional, defaults to 'x')</mat-label>
-      <input
-        type="text"
-        placeholder="Type a new formula or select an existing one..."
-        matInput
-        formControlName="formulaControl"
-        [matAutocomplete]="auto"
-      />
-      <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayFormulaFn">
-        @for (formula of filteredFormulas(); track formula.id) {
-          <mat-option [value]="formula">
-            {{ formula.expression }} <span class="version-badge">(v{{ formula.version }})</span>
-          </mat-option>
-        }
-      </mat-autocomplete>
+    <mat-form-field class="full-width" appearance="outline">
+      <mat-label>Comment</mat-label>
+      <textarea matInput [formField]="sensorForm.comment" rows="3"></textarea>
     </mat-form-field>
 
-    <div class="action-row">
-      <button mat-flat-button color="primary" type="submit" [disabled]="sensorForm.invalid">
-        Save Configuration
-      </button>
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>X Local</mat-label>
+        <input matInput type="number" [formField]="sensorForm.xLocal" />
+        @if (sensorForm.xLocal().touched() && sensorForm.xLocal().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.xLocal().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Y Local</mat-label>
+        <input matInput type="number" [formField]="sensorForm.yLocal" />
+        @if (sensorForm.yLocal().touched() && sensorForm.yLocal().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.yLocal().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Z Local</mat-label>
+        <input matInput type="number" [formField]="sensorForm.zLocal" />
+        @if (sensorForm.zLocal().touched() && sensorForm.zLocal().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.zLocal().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Alarm Limit From</mat-label>
+        <input matInput type="number" [formField]="sensorForm.lowerAlarmBound" />
+        @if (sensorForm.lowerAlarmBound().touched() && sensorForm.lowerAlarmBound().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.lowerAlarmBound().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Alarm Limit To</mat-label>
+        <input matInput type="number" [formField]="sensorForm.upperAlarmBound" />
+        @if (sensorForm.upperAlarmBound().touched() && sensorForm.upperAlarmBound().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.upperAlarmBound().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
     </div>
   </form>
 
-  <ng-container>
-    @if (serverResponse()) {
-      <div class="response-viewer success-box">
-        <h3>Server Response Success (Status: {{ status() }})</h3>
-        <pre><code>{{ serverResponse() | json }}</code></pre>
-      </div>
-    }
-
-    @if (serverError()) {
-      <div class="response-viewer error-box">
-        <h3>Server Response Error (Status: {{ status() }})</h3>
-        <pre><code>{{ serverError() | json }}</code></pre>
-      </div>
-    }
-  </ng-container>
-</div>
+  <mat-dialog-actions align="end">
+    <button matButton (click)="close()">
+      <mat-icon fontIcon="cancel"></mat-icon>
+      Cancel
+    </button>
+    <button
+      matButton="tonal"
+      [disabled]="sensorForm().submitting() || sensorForm().invalid()"
+      type="button"
+      (click)="saveAndCreate()"
+    >
+      <mat-icon fontIcon="save"></mat-icon>
+      Save and create new
+    </button>
+    <button
+      matButton="filled"
+      [disabled]="sensorForm().submitting() || sensorForm().invalid()"
+      type="submit"
+      form="sensorCreateForm"
+    >
+      <mat-icon fontIcon="save"></mat-icon>
+      Save
+    </button>
+  </mat-dialog-actions>
+</mat-dialog-content>

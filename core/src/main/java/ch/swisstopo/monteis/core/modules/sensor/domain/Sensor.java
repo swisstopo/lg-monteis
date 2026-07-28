@@ -12,7 +12,12 @@ public class Sensor implements Auditable {
   @Id private Long id;
   private String code;
   private String name;
-  private Bounds bounds;
+  private SensorType type;
+  private Unit unit;
+  private String comment;
+  private Coordinates coordinates;
+  private AlarmBounds alarmBounds;
+  private Boolean active;
   private Formula formula;
   private Integer version;
 
@@ -21,10 +26,24 @@ public class Sensor implements Auditable {
    * ID and Version are omitted as they are handled by the infrastructure layer.
    */
   @Default
-  public Sensor(String code, String name, Bounds bounds, Formula formula) {
+  public Sensor(
+      String code,
+      String name,
+      SensorType type,
+      Unit unit,
+      String comment,
+      Coordinates coordinates,
+      AlarmBounds alarmBounds,
+      Boolean active,
+      Formula formula) {
     this.code = code;
     this.name = name;
-    this.bounds = bounds;
+    this.type = type;
+    this.unit = unit;
+    this.comment = comment;
+    this.coordinates = coordinates;
+    this.alarmBounds = alarmBounds;
+    this.active = active;
     this.formula = formula != null ? formula : new Formula();
   }
 
@@ -32,11 +51,26 @@ public class Sensor implements Auditable {
    * Constructor for REBUILDING an existing Sensor from the database (jOOQ).
    */
   public Sensor(
-      Long id, String code, String name, Bounds bounds, Formula formula, Integer version) {
+      Long id,
+      String code,
+      String name,
+      SensorType type,
+      Unit unit,
+      String comment,
+      Coordinates coordinates,
+      AlarmBounds alarmBounds,
+      Boolean active,
+      Formula formula,
+      Integer version) {
     this.id = id;
     this.code = code;
     this.name = name;
-    this.bounds = bounds;
+    this.unit = unit;
+    this.type = type;
+    this.comment = comment;
+    this.coordinates = coordinates;
+    this.alarmBounds = alarmBounds;
+    this.active = active;
     this.formula = formula;
     this.version = version;
   }
@@ -67,12 +101,52 @@ public class Sensor implements Auditable {
     this.name = name;
   }
 
-  public Bounds getBounds() {
-    return bounds;
+  public SensorType getType() {
+    return type;
   }
 
-  public void setBounds(Bounds bounds) {
-    this.bounds = bounds;
+  public void setType(SensorType type) {
+    this.type = type;
+  }
+
+  public Unit getUnit() {
+    return unit;
+  }
+
+  public void setUnit(Unit unit) {
+    this.unit = unit;
+  }
+
+  public String getComment() {
+    return comment;
+  }
+
+  public void setComment(String comment) {
+    this.comment = comment;
+  }
+
+  public Coordinates getCoordinates() {
+    return coordinates;
+  }
+
+  public void setCoordinates(Coordinates coordinates) {
+    this.coordinates = coordinates;
+  }
+
+  public AlarmBounds getAlarmBounds() {
+    return alarmBounds;
+  }
+
+  public void setAlarmBounds(AlarmBounds alarmBounds) {
+    this.alarmBounds = alarmBounds;
+  }
+
+  public Boolean getActive() {
+    return active;
+  }
+
+  public void setActive(Boolean active) {
+    this.active = active;
   }
 
   public Formula getFormula() {

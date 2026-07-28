@@ -74,6 +74,7 @@ Session.vim
 Thumbs.db
 Desktop.ini
 .directory
+mise.toml
 
 # =========================
 # Global Logs / Temp

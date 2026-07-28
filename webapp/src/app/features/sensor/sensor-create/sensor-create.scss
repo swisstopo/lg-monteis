@@ -1,36 +1,28 @@
-.sensor-create-container {
-  padding: 32px;
-  max-width: 550px;
-  margin: 0 auto;
+.form-layout {
+  padding: 0.5rem 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 
-  h2 {
-    margin-bottom: 24px;
-    font-weight: 500;
-    color: #333;
+  mat-form-field {
+    width: 100%;
   }
+}
 
-  .form-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+.form-row {
+  display: contents;
+}
 
-  .bounds-row {
-    display: flex;
-    gap: 16px;
+.full-width {
+  grid-column: 1 / -1;
+}
 
-    mat-form-field {
-      flex: 1;
-    }
-  }
+.action-row {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
 
-  .action-row {
-    margin-top: 16px;
-    display: flex;
-    justify-content: flex-end;
-
-    button {
-      padding: 0 24px;
-    }
+  button {
+    padding: 0 24px;
   }
 }

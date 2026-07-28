@@ -31,6 +31,15 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
   }
 
   @Override
+  public Sensor get(Long id) {
+    return dsl.selectFrom(SENSORS)
+        .where(SENSORS.ID.eq(id))
+        .fetchOptional()
+        .map(r -> mapper.toDomain(r.into(SENSORS), r.into(FORMULAS)))
+        .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
+  }
+
+  @Override
   @Transactional
   public Sensor create(Sensor sensor) {
     FormulasRecord formulaRecord =

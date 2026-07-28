@@ -1,0 +1,16 @@
+<ng-template #toastTemplate let-data>
+  <div class="toast-content">
+    @if (data.icon) {
+      <mat-icon class="material-icons toast-icon">{{ data.icon }}</mat-icon>
+    }
+    <span class="toast-text" matSnackBarLabel>
+      @if (data.header) {
+        <strong class="toast-header">{{ data.header }}</strong>
+      }
+      {{ data.message }}
+    </span>
+    <span matSnackBarActions>
+      <button matMiniFab matSnackBarAction (click)="dismiss()">✕</button>
+    </span>
+  </div>
+</ng-template>

@@ -20,13 +20,22 @@ VALUES
 -- Naming convention: <TYPE>-<experiment membership>, so RLS visibility is obvious from the code
 -- alone — e.g. PRESS-1&2 is visible to users in experiment 1 OR 2, FLOW-Admin belongs to no
 -- experiment and is only ever visible to admins.
-INSERT INTO sensors (id, code, name, upper_bound, lower_bound, formula_id, version)
+INSERT INTO sensors (
+    id, code, name, "type", unit, comment,
+    x_local, y_local, z_local,
+    upper_alarm_bound, lower_alarm_bound, active, formula_id, version
+)
 VALUES
-    (1, 'TEMP-1', 'monteis-001', 100.0, -50.0, 1, 1),
-    (2, 'PRESS-1&2', 'monteis-002', 5000.0, 0.0, 2, 1),
-    (3, 'DISP-2', 'monteis-003', 50.0, -50.0, 3, 1),
-    (4, 'FLOW-2', 'monteis-004', 1500.0, 0.0, 4, 1),
-    (5, 'FLOW-Admin', 'ADMIN', 1500.0, 0.0, 4, 1);
+    (1, 'TEMP-1', 'monteis-001', 'TEMPERATURE', 'KELVIN', 'Air temperature sensor near ventilation intake',
+     100.0, 200.0, 300.0, 100.0, -50.0, true, 1, 1),
+    (2, 'PRESS-1&2', 'monteis-002', 'STRESS_RADIAL', 'KILOGRAM', 'Radial stress/pressure sensor',
+     110.0, 210.0, 310.0, 5000.0, 0.0, true, 2, 1),
+    (3, 'DISP-2', 'monteis-003', 'OTHER', 'METER', 'Displacement monitoring sensor',
+     120.0, 220.0, 320.0, 50.0, -50.0, true, 3, 1),
+    (4, 'FLOW-2', 'monteis-004', 'VOLUME', 'SECONDS', 'Flow/volume monitoring sensor',
+     130.0, 230.0, 330.0, 1500.0, 0.0, true, 4, 1),
+    (5, 'FLOW-Admin', 'ADMIN', 'OTHER', 'METER', 'Admin-only flow sensor',
+     140.0, 240.0, 340.0, 1500.0, 0.0, true, 4, 1);
 
 -- 3. Insert Experiments
 INSERT INTO experiments (id, name, description, version)
