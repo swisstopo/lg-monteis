@@ -15,6 +15,14 @@ import java.util.stream.Stream;
  */
 public interface SensorRepository {
   /**
+   * Retrieves a {@link Sensor} entity by its ID.
+   *
+   * @param id the ID of the sensor to retrieve
+   * @return the sensor instance
+   */
+  Sensor get(Long id);
+
+  /**
    * Persists a new {@link Sensor} entity.
    *
    * @param sensor the sensor to persist
