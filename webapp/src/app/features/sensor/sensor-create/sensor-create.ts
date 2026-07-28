@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { form, FormField, maxLength, min, minLength, required } from '@angular/forms/signals';
 import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatButton } from '@angular/material/button';
@@ -9,7 +9,6 @@ import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { MatSelect } from '@angular/material/select';
 import {
-  ErrorDto,
   FormulaResponseDto,
   SensorResponseDto,
   WriteFormulaDto,
@@ -56,39 +55,42 @@ interface SensorFormData {
   styleUrl: './sensor-create.scss',
 })
 export default class SensorCreate {
-  private sensorService = inject(SensorService);
-  private toastService = inject(ToastService);
+  private readonly sensorService = inject(SensorService);
+  private readonly toastService = inject(ToastService);
   readonly dialogRef = inject<MatDialogRef<SensorCreate>>(MatDialogRef, {
     optional: true,
   });
   sensorId = input<number | undefined>(undefined);
-  // --- STRICTLY TYPED JSON DUMP SIGNALS ---
-  serverResponse = signal<SensorResponseDto | null>(null);
-  serverError = signal<ErrorDto | null>(null);
-  status = signal<number | null>(null);
+
   readonly unitValues = Object.values(WriteSensorDto.UnitEnum) as Unit[];
   readonly typeValues = Object.values(WriteSensorDto.TypeEnum) as SensorType[];
-  protected readonly unitMetadata = UNIT_METADATA;
-  protected readonly typeMetadata = SENSOR_TYPE_METADATA;
+  readonly unitMetadata = UNIT_METADATA;
+  readonly typeMetadata = SENSOR_TYPE_METADATA;
   readonly allFormulas = this.sensorService.allFormulas;
   selectedFormula = signal<FormulaResponseDto | null>(null);
 
   saving = this.sensorService.saving;
   saveError = this.sensorService.saveError;
   submitted = signal(false);
-  sensorModel = signal<SensorFormData>({
-    code: '',
-    name: '',
-    unit: WriteSensorDto.UnitEnum.Ampere,
-    type: WriteSensorDto.TypeEnum.Other,
-    comment: '',
-    xLocal: 0,
-    yLocal: 0,
-    zLocal: 0,
-    lowerAlarmBound: 0,
-    upperAlarmBound: 100,
-    active: true,
-    formula: '',
+
+  sensorModel = signal<SensorFormData>(this.initSensorModel());
+
+  private readonly syncSelectedSensor = effect(() => {
+    this.sensorService.selectSensor(this.sensorId());
+  });
+
+  private readonly applyLoadedSensor = effect(() => {
+    try {
+      const sensor = this.sensorService.sensor.value();
+      if (sensor) {
+        this.sensorModel.set(this.mapSensorToFormData(sensor));
+      }
+    } catch {
+      const errors = this.saveError();
+      errors?.forEach((err) =>
+        this.toastService.error(err?.message ?? undefined, err?.title ?? 'Failed to load sensor!'),
+      );
+    }
   });
 
   protected close(): void {
@@ -154,6 +156,7 @@ export default class SensorCreate {
         this.dialogRef?.close();
       }
     } catch {
+      // TODO pipe errors to form fields
       const errors = this.saveError();
       errors?.forEach((err) =>
         this.toastService.error(err?.message ?? undefined, err?.title ?? 'Failed to save sensor!'),
@@ -163,7 +166,13 @@ export default class SensorCreate {
 
   private resetForm(): void {
     this.submitted.set(false);
-    this.sensorModel.set({
+    this.sensorModel.set(this.initSensorModel());
+    this.selectedFormula.set(null);
+    this.sensorForm().reset();
+  }
+
+  private initSensorModel() {
+    return {
       code: '',
       name: '',
       unit: WriteSensorDto.UnitEnum.Ampere,
@@ -176,18 +185,36 @@ export default class SensorCreate {
       upperAlarmBound: 100,
       active: true,
       formula: '',
-    });
-    this.selectedFormula.set(null);
-    this.sensorForm().reset();
+    };
+  }
+
+  private mapSensorToFormData(sensor: SensorResponseDto): SensorFormData {
+    this.selectedFormula.set(sensor.formula ?? null);
+
+    return {
+      code: sensor.code ?? '',
+      name: sensor.name ?? '',
+      unit: (sensor.unit ?? WriteSensorDto.UnitEnum.Ampere) as Unit,
+      type: (sensor.type ?? WriteSensorDto.TypeEnum.Other) as SensorType,
+      comment: sensor.comment ?? '',
+      xLocal: sensor.xLocal ?? 0,
+      yLocal: sensor.yLocal ?? 0,
+      zLocal: sensor.zLocal ?? 0,
+      lowerAlarmBound: sensor.lowerAlarmBound ?? 0,
+      upperAlarmBound: sensor.upperAlarmBound ?? 100,
+      active: sensor.active ?? true,
+      formula: sensor.formula?.expression ?? '',
+    };
   }
 
   private buildPayload(formData: SensorFormData): WriteSensorDto {
     return {
+      id: this.sensorId() ?? undefined,
       code: formData.code,
       name: formData.name,
       unit: formData.unit,
       type: formData.type,
-      comment: formData.comment ?? '',
+      comment: formData.comment,
       xLocal: Number(formData.xLocal),
       yLocal: Number(formData.yLocal),
       zLocal: Number(formData.zLocal),
@@ -198,14 +225,12 @@ export default class SensorCreate {
     };
   }
 
-  // Build formula payload from expression
-  // If the formula is already known, return the id and version
-  // otherwise, send the expression to create a new formula
+  // TODO only send expression
   private buildFormulaPayload(expression: string): WriteFormulaDto | undefined {
     if (!expression) return undefined;
 
     const selected = this.selectedFormula();
-    if (selected && selected.expression === expression) {
+    if (selected?.expression === expression) {
       return { id: selected.id, expression, version: selected.version };
     }
     return { expression };

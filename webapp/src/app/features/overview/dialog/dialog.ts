@@ -1,4 +1,4 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, effect, inject, inputBinding } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
@@ -65,7 +65,12 @@ export default class Dialog {
   }
 
   onDialogOpen() {
-    this.dialog.open(SensorCreate, { width: '60vw', maxWidth: '900px', autoFocus: false });
+    this.dialog.open(SensorCreate, {
+      width: '60vw',
+      maxWidth: '900px',
+      autoFocus: false,
+      bindings: [inputBinding('sensorId', () => 1)],
+    });
   }
 
   onSubmit() {
