@@ -17,7 +17,7 @@ import { DisplayError, toDisplayErrorFromUnknown } from '../models/api-error.mod
  *     return this.savingState.run(() => firstValueFrom(this.api.createSensor(sensor)));
  *   }
  * }
- */
+ */ // TODO make generic api state not only saving
 export function createSavingState() {
   const saving = signal(false);
   const error = signal<DisplayError[] | undefined>(undefined);

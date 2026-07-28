@@ -5,7 +5,7 @@ import { createSavingState } from '../../../shared/utils/saving-state';
 
 @Injectable({ providedIn: 'root' })
 export class SensorService {
-  private api = inject(SensorControllerService);
+  private readonly api = inject(SensorControllerService);
   private readonly selectedSensorId = signal<number | undefined>(undefined);
   private readonly savingState = createSavingState();
 
@@ -16,7 +16,7 @@ export class SensorService {
     params: () => this.selectedSensorId(),
     loader: ({ params: id }) => {
       if (!id) return Promise.reject(new Error('No sensor id'));
-      return firstValueFrom(this.api.getSensor(id));
+      return this.savingState.run(() => firstValueFrom(this.api.getSensor(id)));
     },
   });
 
