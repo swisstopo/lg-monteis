@@ -39,9 +39,16 @@ public class JooqExperimentRepository implements ExperimentQueryInterface {
                             SENSORS.ID,
                             SENSORS.CODE,
                             SENSORS.NAME,
-                            SENSORS.LOWER_BOUND,
-                            SENSORS.UPPER_BOUND,
-                            // Map the joined formula into nested FormulaDto!
+                            SENSORS.UNIT,
+                            SENSORS.TYPE,
+                            SENSORS.COMMENT,
+                            SENSORS.X_LOCAL,
+                            SENSORS.Y_LOCAL,
+                            SENSORS.Z_LOCAL,
+                            SENSORS.LOWER_ALARM_BOUND,
+                            SENSORS.UPPER_ALARM_BOUND,
+                            SENSORS.ACTIVE,
+                            // Map the joined formula into nested FormulaDto
                             row(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
                                 .mapping(FormulaResponseDto::new),
                             SENSORS.VERSION)

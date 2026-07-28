@@ -7,6 +7,7 @@
     "start:e2e": "ng serve --configuration=e2e",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "lint": "ng lint",
     "test": " pnpm vitest --browser.headless=true",
     "generate-api": "openapi-generator-cli generate",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
@@ -39,18 +40,24 @@
   },
   "devDependencies": {
     "@analogjs/vite-plugin-angular": "^2.6.4",
+    "@angular-eslint/builder": "22.1.0",
     "@angular/build": "^22.0.8",
     "@angular/cli": "^22.0.8",
     "@angular/compiler-cli": "^22.0.8",
+    "@eslint/js": "^10.0.1",
     "@openapitools/openapi-generator-cli": "^2.40.1",
     "@playwright/test": "^1.62.0",
     "@vitest/browser-playwright": "^4.1.10",
+    "angular-eslint": "22.1.0",
     "corepack": "^0.35.0",
+    "eslint": "^10.6.0",
     "jsdom": "^29.1.1",
     "playwright": "^1.62.0",
     "prettier": "^3.9.6",
     "prettier-plugin-organize-imports": "^4.3.0",
     "typescript": "~6.0.3",
     "vitest": "^4.1.10"
+    "typescript-eslint": "8.62.1",
+    "vitest": "^4.1.9"
   }
 }

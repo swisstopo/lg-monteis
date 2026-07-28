@@ -12,11 +12,21 @@ class SensorTest {
     // given
     String code = "SENS-01";
     String name = "Test Sensor";
-    Bounds bounds = new Bounds(0.0, 100.0);
+    AlarmBounds alarmBounds = new AlarmBounds(0.0, 100.0);
     Formula nullFormula = null;
 
     // when
-    Sensor sensor = new Sensor(code, name, bounds, nullFormula);
+    Sensor sensor =
+        new Sensor(
+            code,
+            name,
+            SensorType.OTHER,
+            Unit.METER,
+            null,
+            new Coordinates(2400.0, -12007.0, -1600.0),
+            alarmBounds,
+            true,
+            nullFormula);
 
     // then
     assertAll(
@@ -31,11 +41,21 @@ class SensorTest {
     // given
     String code = "SENS-02";
     String name = "Custom Sensor";
-    Bounds bounds = new Bounds(-50.0, 50.0);
+    AlarmBounds alarmBounds = new AlarmBounds(-50.0, 50.0);
     Formula providedFormula = new Formula("x * 10");
 
     // when
-    Sensor sensor = new Sensor(code, name, bounds, providedFormula);
+    Sensor sensor =
+        new Sensor(
+            code,
+            name,
+            SensorType.OTHER,
+            Unit.METER,
+            null,
+            new Coordinates(2400.0, -12007.0, -1600.0),
+            alarmBounds,
+            true,
+            providedFormula);
 
     // then
     assertAll(

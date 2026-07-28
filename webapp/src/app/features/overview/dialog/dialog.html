@@ -89,6 +89,7 @@
       ></textarea>
     </mat-form-field>
 
-    <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">Submit</button>
+    <button matButton="filled" (click)="onDialogOpen()">Dialog</button>
+    <button matButton="filled" type="submit" [disabled]="form.invalid">Submit</button>
   </form>
 </div>

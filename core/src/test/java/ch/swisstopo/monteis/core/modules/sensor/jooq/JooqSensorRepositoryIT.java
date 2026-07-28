@@ -13,9 +13,7 @@ import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidatio
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Bounds;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import java.util.List;
 import java.util.stream.Stream;
@@ -271,8 +269,10 @@ class JooqSensorRepositoryIT {
   private Sensor createDummySensor(String code, String name, String formulaExpression) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
-    Bounds bounds = new Bounds(0.0, 100.0);
+    AlarmBounds alarmBounds = new AlarmBounds(0.0, 100.0);
+    Coordinates coordinates = new Coordinates(2400.0, -12007.0, -1600.0);
 
-    return new Sensor(code, name, bounds, formula);
+    return new Sensor(
+        code, name, SensorType.OTHER, Unit.METER, null, coordinates, alarmBounds, true, formula);
   }
 }

@@ -32,6 +32,15 @@ public class SensorController {
     this.sensorQuery = sensorQuery;
   }
 
+  @Operation(summary = "Get a sensor by id", description = "Retrieves a sensor by id")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
+  @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<SensorResponseDto> getSensor(@PathVariable @Positive Long id) {
+
+    Sensor sensor = service.get(id);
+    return ResponseEntity.ok(mapper.toDto(sensor));
+  }
+
   @Operation(
       summary = "Create a new sensor",
       description =
