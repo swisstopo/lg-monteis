@@ -14,6 +14,7 @@ import {
   WriteFormulaDto,
   WriteSensorDto,
 } from '../../../core/generated';
+import { toErrorDtos } from '../../../shared/models/api-error.model';
 import { ToastService } from '../../../shared/services/toast.service';
 import { SENSOR_TYPE_METADATA, SensorType, Unit, UNIT_METADATA } from '../models/sensor.model';
 import { SensorService } from '../services/sensor.service';
@@ -69,11 +70,9 @@ export default class SensorCreate {
   readonly allFormulas = this.sensorService.allFormulas;
   selectedFormula = signal<FormulaResponseDto | null>(null);
 
-  saving = this.sensorService.saving;
-  saveError = this.sensorService.saveError;
+  saveError = this.sensorService.error;
   sensor = signal<SensorResponseDto | undefined>(undefined);
   title = signal('Setup new Sensor');
-
   sensorModel = signal<SensorFormData>(this.initSensorModel());
 
   private readonly syncSelectedSensor = effect(() => {
@@ -89,8 +88,8 @@ export default class SensorCreate {
         this.sensorForm().markAsTouched();
       }
     } catch {
-      const errors = this.saveError();
-      errors?.forEach((err) =>
+      const errors = toErrorDtos(this.sensorService.sensor.error());
+      errors.forEach((err) =>
         this.toastService.error(err?.messageKey ?? '', 'Failed to load sensor!'),
       );
     }
