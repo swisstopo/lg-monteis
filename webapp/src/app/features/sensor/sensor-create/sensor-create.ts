@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { form, FormField, maxLength, minLength, required } from '@angular/forms/signals';
+import { form, FormField, maxLength, minLength, required, submit } from '@angular/forms/signals';
 import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatButton } from '@angular/material/button';
 import { MatOption } from '@angular/material/core';
@@ -72,6 +72,7 @@ export default class SensorCreate {
   saving = this.sensorService.saving;
   saveError = this.sensorService.saveError;
   sensor = signal<SensorResponseDto | undefined>(undefined);
+  title = signal('Setup new Sensor');
 
   sensorModel = signal<SensorFormData>(this.initSensorModel());
 
@@ -84,12 +85,13 @@ export default class SensorCreate {
       this.sensor.set(this.sensorService.sensor.value());
       if (this.sensor() !== undefined) {
         this.setSensorModel(this.sensor()!);
+        this.title.set('Edit Sensor');
         this.sensorForm().markAsTouched();
       }
     } catch {
       const errors = this.saveError();
       errors?.forEach((err) =>
-        this.toastService.error(err?.message ?? undefined, err?.title ?? 'Failed to load sensor!'),
+        this.toastService.error(err?.messageKey ?? '', 'Failed to load sensor!'),
       );
     }
   });
@@ -145,42 +147,41 @@ export default class SensorCreate {
     this.selectedFormula.set(formula);
   }
 
-  async onSubmit(event: Event) {
+  async onSubmit(event: SubmitEvent) {
     event.preventDefault();
-    await this.doSave(false);
-  }
+    const submitter = event.submitter as HTMLButtonElement | null;
+    const resetAfter = submitter?.dataset['action'] === 'saveAndCreate';
 
-  protected async saveAndCreate(): Promise<void> {
-    await this.doSave(true);
-  }
-
-  private async doSave(resetAfter: boolean): Promise<void> {
     if (this.sensorForm().invalid()) {
       this.sensorForm().markAsTouched();
       return;
     }
+    await submit(this.sensorForm, async (field) => {
+      const sensor = this.buildPayload(this.sensorModel());
 
-    const sensor = this.buildPayload(this.sensorModel());
+      try {
+        await this.saveSensor(sensor);
 
-    try {
-      await this.saveSensor(sensor);
-      this.toastService.success('Sensor saved successfully.');
+        this.toastService.success('Sensor saved successfully.');
 
-      if (resetAfter) {
-        this.resetForm();
-      } else {
-        this.dialogRef?.close();
+        if (resetAfter) {
+          this.resetForm();
+        } else {
+          this.dialogRef?.close();
+        }
+        return;
+      } catch {
+        return this.saveError()?.map((err) => ({
+          kind: 'serverError',
+          message: err?.messageKey ?? '',
+          fieldTree: field[err?.field as keyof SensorFormData],
+        }));
       }
-    } catch {
-      // TODO pipe errors to form fields
-      const errors = this.saveError();
-      errors?.forEach((err) =>
-        this.toastService.error(err?.message ?? undefined, err?.title ?? 'Failed to save sensor!'),
-      );
-    }
+    });
   }
 
   private resetForm(): void {
+    this.title.set('Setup new Sensor');
     this.sensorModel.set(this.initSensorModel());
     this.sensorService.getSensor(undefined);
     this.selectedFormula.set(null);

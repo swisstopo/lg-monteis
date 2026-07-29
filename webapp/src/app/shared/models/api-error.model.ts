@@ -15,29 +15,3 @@ export function toErrorDtos(error: unknown): ErrorDto[] {
   }
   return [];
 }
-
-/**
- * Simplified error shape for display in the UI (e.g. a toast).
- */
-export interface DisplayError {
-  title: string;
-  message: string;
-}
-
-export function toDisplayError(errors: ErrorDto[]): DisplayError[] {
-  if (errors.length === 0) {
-    return [{ title: 'Error', message: 'An unknown error occurred.' }];
-  }
-
-  return errors.map((error: ErrorDto) => {
-    return {
-      title: error.messageKey ?? 'Error',
-      message: error.field ? `${error.target}.${error.field}: ${error.actualValue}` : '',
-    };
-  });
-}
-
-/** Convenience combining {@link toErrorDtos} and {@link toDisplayError}. */
-export function toDisplayErrorFromUnknown(error: unknown): DisplayError[] {
-  return toDisplayError(toErrorDtos(error));
-}

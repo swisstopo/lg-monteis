@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>Setup new Sensor</h2>
+<h2 mat-dialog-title>{{ title() }}</h2>
 
 <mat-dialog-content>
   <form id="sensorCreateForm" class="form-layout" (submit)="onSubmit($event)" novalidate>
@@ -154,8 +154,9 @@
     <button
       matButton="tonal"
       [disabled]="saving() || sensorForm().invalid()"
-      type="button"
-      (click)="saveAndCreate()"
+      type="submit"
+      form="sensorCreateForm"
+      data-action="saveAndCreate"
     >
       <mat-icon fontIcon="save"></mat-icon>
       Save and create new
