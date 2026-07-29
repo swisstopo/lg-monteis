@@ -11,6 +11,7 @@ import { workbenchConfig } from './config/workbench.config';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { provideAuth } from './core/auth/provide-auth';
 import { BASE_PATH } from './core/generated';
+import { restErrorInterceptor } from './shared/rest-error.interceptors';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -19,7 +20,7 @@ export const appConfig: ApplicationConfig = {
     workbenchConfig,
     provideRouter(APP_ROUTES, withComponentInputBinding()),
     provideAnimations(), // temporary: required until SCION Workbench drops the deprecated Angular animations dependency.
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, restErrorInterceptor])),
     provideAuth(),
     { provide: BASE_PATH, useValue: '' },
   ],
