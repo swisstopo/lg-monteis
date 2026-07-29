@@ -12,7 +12,7 @@ class SensorTest {
     // given
     String code = "SENS-01";
     String name = "Test Sensor";
-    AlarmBounds alarmBounds = new AlarmBounds(0.0, 100.0);
+    AlarmLimits alarmLimits = new AlarmLimits(0.0, 100.0);
     Formula nullFormula = null;
 
     // when
@@ -20,11 +20,11 @@ class SensorTest {
         new Sensor(
             code,
             name,
-            SensorType.OTHER,
+            new SensorType(null, "Other", null),
             Unit.METER,
             null,
-            new Coordinates(2400.0, -12007.0, -1600.0),
-            alarmBounds,
+            new Coordinates(2400, -12007, -1600),
+            alarmLimits,
             true,
             nullFormula);
 
@@ -41,7 +41,7 @@ class SensorTest {
     // given
     String code = "SENS-02";
     String name = "Custom Sensor";
-    AlarmBounds alarmBounds = new AlarmBounds(-50.0, 50.0);
+    AlarmLimits alarmLimits = new AlarmLimits(-50.0, 50.0);
     Formula providedFormula = new Formula("x * 10");
 
     // when
@@ -49,11 +49,11 @@ class SensorTest {
         new Sensor(
             code,
             name,
-            SensorType.OTHER,
+            new SensorType(null, "Other", null),
             Unit.METER,
             null,
-            new Coordinates(2400.0, -12007.0, -1600.0),
-            alarmBounds,
+            new Coordinates(2400, -12007, -1600),
+            alarmLimits,
             true,
             providedFormula);
 

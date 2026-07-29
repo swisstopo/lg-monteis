@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.query;
 
+import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import java.util.List;
 
@@ -14,6 +15,15 @@ import java.util.List;
  * where business invariant validation is not required.
  */
 public interface SensorQuery {
+
+  /**
+   * Retrieves a {@link Sensor} entity by its ID.
+   *
+   * @param id the ID of the sensor to retrieve
+   * @return the sensor instance
+   */
+  Sensor get(Long id);
+
   /**
    * Retrieves all formulas that are currently used by existing sensors.
    *

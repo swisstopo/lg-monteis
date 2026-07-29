@@ -92,7 +92,9 @@ class JooqSensorRepositoryIT {
           assertAll(
               () -> assertEquals("GET-001", found.getCode()),
               () -> assertNotNull(found.getFormula(), "Formula should be loaded"),
-              () -> assertEquals("x * 2", found.getFormula().getExpression()));
+              () -> assertEquals("x * 2", found.getFormula().getExpression()),
+              () -> assertNotNull(found.getType(), "Type should be loaded"),
+              () -> assertEquals("Other", found.getType().type()));
         });
   }
 
@@ -289,10 +291,18 @@ class JooqSensorRepositoryIT {
   private Sensor createDummySensor(String code, String name, String formulaExpression) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
-    AlarmBounds alarmBounds = new AlarmBounds(0.0, 100.0);
-    Coordinates coordinates = new Coordinates(2400.0, -12007.0, -1600.0);
+    AlarmLimits alarmLimits = new AlarmLimits(0.0, 100.0);
+    Coordinates coordinates = new Coordinates(2400, -12007, -1600);
 
     return new Sensor(
-        code, name, SensorType.OTHER, Unit.METER, null, coordinates, alarmBounds, true, formula);
+        code,
+        name,
+        new SensorType(null, "Other", null),
+        Unit.METER,
+        null,
+        coordinates,
+        alarmLimits,
+        true,
+        formula);
   }
 }

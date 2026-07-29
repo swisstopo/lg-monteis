@@ -1,4 +1,3 @@
-CREATE TYPE sensor_type AS ENUM ('WIND_SPEED', 'STRESS_RADIAL', 'TEMPERATURE', 'VOLUME', 'OTHER');
 CREATE TYPE unit AS ENUM ('SECONDS', 'METER', 'KILOGRAM', 'AMPERE', 'KELVIN', 'MOLE', 'CANDELA');
 
 CREATE TABLE sensors
@@ -6,13 +5,13 @@ CREATE TABLE sensors
     id          BIGSERIAL PRIMARY KEY,
     code        TEXT UNIQUE      NOT NULL,
     name        TEXT             NOT NULL,
-    type        sensor_type      NOT NULL,
+    type_id     BIGINT NOT NULL  REFERENCES sensor_types (id) ON DELETE RESTRICT,
     unit        unit             NOT NULL,
     lower_alarm_bound DOUBLE PRECISION NOT NULL,
     upper_alarm_bound DOUBLE PRECISION NOT NULL,
-    x_local     DOUBLE PRECISION NOT NULL,
-    y_local     DOUBLE PRECISION NOT NULL,
-    z_local     DOUBLE PRECISION NOT NULL,
+    x           INTEGER NOT NULL,
+    y     INTEGER NOT NULL,
+    z     INTEGER NOT NULL,
     active      BOOLEAN          NOT NULL DEFAULT true,
     comment     TEXT,
     formula_id     BIGINT NOT NULL REFERENCES formulas (id) ON DELETE RESTRICT,

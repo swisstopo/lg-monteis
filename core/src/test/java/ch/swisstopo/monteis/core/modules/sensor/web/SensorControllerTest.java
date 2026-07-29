@@ -14,13 +14,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -52,12 +55,9 @@ class SensorControllerTest {
             "Test",
             null,
             Unit.METER,
-            SensorType.OTHER,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            100.0,
+            new WriteSensorTypeDto("Other"),
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(0.0, 100.0),
             true,
             null,
             null);
@@ -68,13 +68,10 @@ class SensorControllerTest {
             "SENS-01",
             "Test",
             Unit.METER,
-            SensorType.OTHER,
+            new SensorTypeResponseDto(1L, "Other", 1),
             null,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            100.0,
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(0.0, 100.0),
             true,
             null,
             1);
@@ -98,12 +95,16 @@ class SensorControllerTest {
         .andExpect(jsonPath("$.code").value(expectedResponseDto.code()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
         .andExpect(jsonPath("$.unit").value(expectedResponseDto.unit().name()))
-        .andExpect(jsonPath("$.type").value(expectedResponseDto.type().name()))
-        .andExpect(jsonPath("$.xLocal").value(expectedResponseDto.xLocal()))
-        .andExpect(jsonPath("$.yLocal").value(expectedResponseDto.yLocal()))
-        .andExpect(jsonPath("$.zLocal").value(expectedResponseDto.zLocal()))
-        .andExpect(jsonPath("$.lowerAlarmBound").value(expectedResponseDto.lowerAlarmBound()))
-        .andExpect(jsonPath("$.upperAlarmBound").value(expectedResponseDto.upperAlarmBound()))
+        .andExpect(jsonPath("$.type.type").value(expectedResponseDto.type().type()))
+        .andExpect(jsonPath("$.coordinates.x").value(expectedResponseDto.coordinates().x()))
+        .andExpect(jsonPath("$.coordinates.y").value(expectedResponseDto.coordinates().y()))
+        .andExpect(jsonPath("$.coordinates.z").value(expectedResponseDto.coordinates().z()))
+        .andExpect(
+            jsonPath("$.alarmLimits.lowerBound")
+                .value(expectedResponseDto.alarmLimits().lowerBound()))
+        .andExpect(
+            jsonPath("$.alarmLimits.upperBound")
+                .value(expectedResponseDto.alarmLimits().upperBound()))
         .andExpect(jsonPath("$.active").value(expectedResponseDto.active()))
         .andExpect(jsonPath("$.version").value(expectedResponseDto.version()));
 
@@ -123,12 +124,9 @@ class SensorControllerTest {
             "Updated Sensor",
             null,
             Unit.METER,
-            SensorType.OTHER,
-            0.0,
-            0.0,
-            0.0,
-            -10.0,
-            50.0,
+            new WriteSensorTypeDto("Other"),
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(-10.0, 50.0),
             true,
             null,
             1);
@@ -139,13 +137,10 @@ class SensorControllerTest {
             "SENS-01",
             "Updated Sensor",
             Unit.METER,
-            SensorType.OTHER,
+            new SensorTypeResponseDto(1L, "Other", 1),
             null,
-            0.0,
-            0.0,
-            0.0,
-            -10.0,
-            50.0,
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(-10.0, 50.0),
             true,
             null,
             2);
@@ -169,12 +164,16 @@ class SensorControllerTest {
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
         .andExpect(jsonPath("$.code").value(expectedResponseDto.code()))
         .andExpect(jsonPath("$.unit").value(expectedResponseDto.unit().name()))
-        .andExpect(jsonPath("$.type").value(expectedResponseDto.type().name()))
-        .andExpect(jsonPath("$.xLocal").value(expectedResponseDto.xLocal()))
-        .andExpect(jsonPath("$.yLocal").value(expectedResponseDto.yLocal()))
-        .andExpect(jsonPath("$.zLocal").value(expectedResponseDto.zLocal()))
-        .andExpect(jsonPath("$.lowerAlarmBound").value(expectedResponseDto.lowerAlarmBound()))
-        .andExpect(jsonPath("$.upperAlarmBound").value(expectedResponseDto.upperAlarmBound()))
+        .andExpect(jsonPath("$.type.type").value(expectedResponseDto.type().type()))
+        .andExpect(jsonPath("$.coordinates.x").value(expectedResponseDto.coordinates().x()))
+        .andExpect(jsonPath("$.coordinates.y").value(expectedResponseDto.coordinates().y()))
+        .andExpect(jsonPath("$.coordinates.z").value(expectedResponseDto.coordinates().z()))
+        .andExpect(
+            jsonPath("$.alarmLimits.lowerBound")
+                .value(expectedResponseDto.alarmLimits().lowerBound()))
+        .andExpect(
+            jsonPath("$.alarmLimits.upperBound")
+                .value(expectedResponseDto.alarmLimits().upperBound()))
         .andExpect(jsonPath("$.active").value(expectedResponseDto.active()))
         .andExpect(jsonPath("$.version").value(expectedResponseDto.version()));
 
