@@ -78,6 +78,26 @@ class JooqSensorRepositoryIT {
 
   @Test
   @Transactional
+  void should_get_sensor_by_id() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Sensor savedSensor =
+              repository.create(createDummySensor("GET-001", "Get Sensor", "x * 2"));
+
+          // Act
+          Sensor found = repository.get(savedSensor.getId());
+
+          // Assert
+          assertAll(
+              () -> assertEquals("GET-001", found.getCode()),
+              () -> assertNotNull(found.getFormula(), "Formula should be loaded"),
+              () -> assertEquals("x * 2", found.getFormula().getExpression()));
+        });
+  }
+
+  @Test
+  @Transactional
   void should_reuse_existing_formula() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {

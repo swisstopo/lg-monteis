@@ -6,17 +6,17 @@ import { createSavingState } from '../../../shared/utils/saving-state';
 @Injectable({ providedIn: 'root' })
 export class SensorService {
   private readonly api = inject(SensorControllerService);
-  private readonly selectedSensorId = signal<number | undefined>(undefined);
+  private readonly sensorRequest = signal<{ id: number | undefined }>({ id: undefined });
   private readonly savingState = createSavingState();
 
   readonly saving = this.savingState.saving;
   readonly saveError = this.savingState.error;
 
   readonly sensor = resource({
-    params: () => this.selectedSensorId(),
-    loader: ({ params: id }) => {
-      if (!id) return Promise.reject(new Error('No sensor id'));
-      return this.savingState.run(() => firstValueFrom(this.api.getSensor(id)));
+    params: () => this.sensorRequest(),
+    loader: ({ params }) => {
+      if (!params.id) return Promise.reject(new Error('No sensor id'));
+      return this.savingState.run(() => firstValueFrom(this.api.getSensor(<number>params.id)));
     },
   });
 
@@ -24,8 +24,13 @@ export class SensorService {
     loader: () => firstValueFrom(this.api.findAllFormulas()),
   });
 
-  selectSensor(id: number | undefined) {
-    this.selectedSensorId.set(id);
+  // always set the sensor id to refetch the sensor
+  getSensor(id: number | undefined) {
+    if (id === undefined) {
+      this.sensor.value.set(undefined);
+      return;
+    }
+    this.sensorRequest.set({ id });
   }
 
   createSensor(sensor: WriteSensorDto) {

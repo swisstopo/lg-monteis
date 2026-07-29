@@ -3,10 +3,6 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-
-  mat-form-field {
-    width: 100%;
-  }
 }
 
 .form-row {
@@ -15,14 +11,4 @@
 
 .full-width {
   grid-column: 1 / -1;
-}
-
-.action-row {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
-
-  button {
-    padding: 0 24px;
-  }
 }

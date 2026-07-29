@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { form, FormField, maxLength, min, minLength, required } from '@angular/forms/signals';
+import { form, FormField, maxLength, minLength, required } from '@angular/forms/signals';
 import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatButton } from '@angular/material/button';
 import { MatOption } from '@angular/material/core';
@@ -71,19 +71,20 @@ export default class SensorCreate {
 
   saving = this.sensorService.saving;
   saveError = this.sensorService.saveError;
-  submitted = signal(false);
+  sensor = signal<SensorResponseDto | undefined>(undefined);
 
   sensorModel = signal<SensorFormData>(this.initSensorModel());
 
   private readonly syncSelectedSensor = effect(() => {
-    this.sensorService.selectSensor(this.sensorId());
+    this.sensorService.getSensor(this.sensorId());
   });
 
   private readonly applyLoadedSensor = effect(() => {
     try {
-      const sensor = this.sensorService.sensor.value();
-      if (sensor) {
-        this.sensorModel.set(this.mapSensorToFormData(sensor));
+      this.sensor.set(this.sensorService.sensor.value());
+      if (this.sensor() !== undefined) {
+        this.setSensorModel(this.sensor()!);
+        this.sensorForm().markAsTouched();
       }
     } catch {
       const errors = this.saveError();
@@ -97,18 +98,34 @@ export default class SensorCreate {
     this.dialogRef?.close();
   }
 
+  private initSensorModel() {
+    return {
+      code: '',
+      name: '',
+      unit: WriteSensorDto.UnitEnum.Ampere,
+      type: WriteSensorDto.TypeEnum.Other,
+      comment: '',
+      xLocal: 0,
+      yLocal: 0,
+      zLocal: 0,
+      lowerAlarmBound: 0,
+      upperAlarmBound: 100,
+      active: true,
+      formula: '',
+    };
+  }
+
   sensorForm = form(this.sensorModel, (schema) => {
     required(schema.code, { message: 'Sensor code is required' });
     required(schema.name, { message: 'Sensor name is required' });
-    minLength(schema.name, 2, { message: 'Sensor name must be at least 2 characters long' });
-    maxLength(schema.name, 10, { message: 'Sensor name must be at most 10 characters long' });
+    minLength(schema.name, 2, { message: 'Name must be at least 2 characters long' });
+    maxLength(schema.name, 10, { message: 'Name must be at most 10 characters long' });
     required(schema.unit);
     required(schema.type);
     required(schema.xLocal, { message: 'Sensor xLocal is required' });
     required(schema.yLocal, { message: 'Sensor yLocal is required' });
     required(schema.zLocal, { message: 'Sensor zLocal is required' });
     required(schema.lowerAlarmBound, { message: 'Alarm limit is required' });
-    min(schema.lowerAlarmBound, 0, { message: 'Minimal value is 0' });
     required(schema.upperAlarmBound, { message: 'Alarm limit is required' });
   });
 
@@ -138,9 +155,8 @@ export default class SensorCreate {
   }
 
   private async doSave(resetAfter: boolean): Promise<void> {
-    this.submitted.set(true);
-
     if (this.sensorForm().invalid()) {
+      this.sensorForm().markAsTouched();
       return;
     }
 
@@ -165,33 +181,16 @@ export default class SensorCreate {
   }
 
   private resetForm(): void {
-    this.submitted.set(false);
     this.sensorModel.set(this.initSensorModel());
+    this.sensorService.getSensor(undefined);
     this.selectedFormula.set(null);
     this.sensorForm().reset();
   }
 
-  private initSensorModel() {
-    return {
-      code: '',
-      name: '',
-      unit: WriteSensorDto.UnitEnum.Ampere,
-      type: WriteSensorDto.TypeEnum.Other,
-      comment: '',
-      xLocal: 0,
-      yLocal: 0,
-      zLocal: 0,
-      lowerAlarmBound: 0,
-      upperAlarmBound: 100,
-      active: true,
-      formula: '',
-    };
-  }
-
-  private mapSensorToFormData(sensor: SensorResponseDto): SensorFormData {
+  private setSensorModel(sensor: SensorResponseDto) {
     this.selectedFormula.set(sensor.formula ?? null);
 
-    return {
+    this.sensorModel.set({
       code: sensor.code ?? '',
       name: sensor.name ?? '',
       unit: (sensor.unit ?? WriteSensorDto.UnitEnum.Ampere) as Unit,
@@ -204,12 +203,12 @@ export default class SensorCreate {
       upperAlarmBound: sensor.upperAlarmBound ?? 100,
       active: sensor.active ?? true,
       formula: sensor.formula?.expression ?? '',
-    };
+    });
   }
 
   private buildPayload(formData: SensorFormData): WriteSensorDto {
     return {
-      id: this.sensorId() ?? undefined,
+      id: this.sensor()?.id ?? undefined,
       code: formData.code,
       name: formData.name,
       unit: formData.unit,
@@ -222,6 +221,7 @@ export default class SensorCreate {
       upperAlarmBound: Number(formData.upperAlarmBound),
       active: Boolean(formData.active),
       formula: this.buildFormulaPayload(formData.formula),
+      version: this.sensor()?.version ?? undefined,
     };
   }
 
