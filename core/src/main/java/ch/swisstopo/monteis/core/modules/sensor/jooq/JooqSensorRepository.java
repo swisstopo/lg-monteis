@@ -31,8 +31,13 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
   }
 
   @Override
+  @Transactional(readOnly = true)
   public Sensor get(Long id) {
-    return dsl.selectFrom(SENSORS)
+    return dsl.select(SENSORS.fields())
+        .select(FORMULAS.fields())
+        .from(SENSORS)
+        .join(FORMULAS)
+        .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
         .where(SENSORS.ID.eq(id))
         .fetchOptional()
         .map(r -> mapper.toDomain(r.into(SENSORS), r.into(FORMULAS)))
