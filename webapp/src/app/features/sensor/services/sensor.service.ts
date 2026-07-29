@@ -1,22 +1,19 @@
 import { Injectable, inject, resource, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { SensorControllerService, WriteSensorDto } from '../../../core/generated';
-import { createSavingState } from '../../../shared/utils/saving-state';
+import { ErrorDto, SensorControllerService, WriteSensorDto } from '../../../core/generated';
+import { toErrorDtos } from '../../../shared/models/api-error.model';
 
 @Injectable({ providedIn: 'root' })
 export class SensorService {
   private readonly api = inject(SensorControllerService);
   private readonly sensorRequest = signal<{ id: number | undefined }>({ id: undefined });
-  private readonly savingState = createSavingState();
-
-  readonly saving = this.savingState.saving;
-  readonly saveError = this.savingState.error;
+  readonly error = signal<ErrorDto[] | undefined>(undefined);
 
   readonly sensor = resource({
     params: () => this.sensorRequest(),
     loader: ({ params }) => {
       if (!params.id) return Promise.reject(new Error('No sensor id'));
-      return this.savingState.run(() => firstValueFrom(this.api.getSensor(<number>params.id)));
+      return firstValueFrom(this.api.getSensor(params.id));
     },
   });
 
@@ -33,11 +30,21 @@ export class SensorService {
     this.sensorRequest.set({ id });
   }
 
-  createSensor(sensor: WriteSensorDto) {
-    return this.savingState.run(() => firstValueFrom(this.api.createSensor(sensor)));
+  async createSensor(sensor: WriteSensorDto) {
+    try {
+      return await firstValueFrom(this.api.createSensor(sensor));
+    } catch (err) {
+      this.error.set(toErrorDtos(err));
+      throw err;
+    }
   }
 
-  updateSensor(id: number, sensor: WriteSensorDto) {
-    return this.savingState.run(() => firstValueFrom(this.api.updateSensor(id, sensor)));
+  async updateSensor(id: number, sensor: WriteSensorDto) {
+    try {
+      return await firstValueFrom(this.api.updateSensor(id, sensor));
+    } catch (err) {
+      this.error.set(toErrorDtos(err));
+      throw err;
+    }
   }
 }
