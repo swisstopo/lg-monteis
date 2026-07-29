@@ -26,6 +26,7 @@
     "@angular/material": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
+    "@ngx-translate/core": "^18.0.0",
     "@scion/components": "^22.0.0",
     "@scion/microfrontend-platform": "^2.1.0",
     "@scion/toolkit": "^2.1.0",

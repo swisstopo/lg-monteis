@@ -1,15 +1,155 @@
 {
+  "app": {
+    "logout": "Logout"
+  },
   "error": {
     "system": {
-      "internal": "An unexpected system error occurred. Please try again later. If the problem persists, contact support and provide the error ID: {{errorId}}."
+      "internal": {
+        "title": "Unexpected System Error occurred",
+        "message": "Please try again later. If the problem persists, contact support and provide the error ID: {{errorId}}."
+      }
     }
   },
   "sensor": {
-    "create": {
-      "success": "Created Sensor successfully"
+    "edit": {
+      "title": {
+        "create": "Setup new Sensor",
+        "edit": "Edit Sensor"
+      },
+      "label": {
+        "code": "Sensor Code",
+        "name": "Sensor Name",
+        "active": "Active",
+        "activeOption": "Active",
+        "inactiveOption": "Inactive",
+        "unit": "Unit",
+        "selectUnit": "Select a unit",
+        "type": "Sensor Type",
+        "selectType": "Select a type",
+        "formula": "Formula Expression (Optional, defaults to 'x')",
+        "comment": "Comment",
+        "xLocal": "X Local",
+        "yLocal": "Y Local",
+        "zLocal": "Z Local",
+        "alarmFrom": "Alarm Limit From",
+        "alarmTo": "Alarm Limit To"
+      },
+      "placeholder": {
+        "code": "e.g., SN-TEMP-402",
+        "name": "e.g., Ventilation Intake Temp",
+        "formula": "Type a new formula or select an existing one..."
+      },
+      "button": {
+        "cancel": "Cancel",
+        "saveAndCreate": "Save and create new",
+        "save": "Save"
+      },
+      "validation": {
+        "requiredCode": "Sensor code is required",
+        "requiredName": "Sensor name is required",
+        "minLengthName": "Name must be at least 2 characters long",
+        "maxLengthName": "Name must be at most 10 characters long",
+        "requiredXLocal": "Sensor xLocal is required",
+        "requiredYLocal": "Sensor yLocal is required",
+        "requiredZLocal": "Sensor zLocal is required",
+        "requiredAlarmLimit": "Alarm limit is required"
+      },
+      "success": "Sensor saved successfully.",
+      "error": {
+        "noId": "No sensor id provided",
+        "unspecified": {
+          "title": "Failed to load sensor!",
+          "message": "Please try again later. If the problem persists, contact support."
+        }
+      }
     },
-    "bounds": {
-      "invalid": "The upperbound must be higher than the lower bound. Currently you have upperbound: {{upper}} which is higher than lower bound: {{lower}}."
+    "unit": {
+      "seconds": "Seconds",
+      "meter": "Meter",
+      "kilogram": "Kilogram",
+      "ampere": "Ampere",
+      "kelvin": "Kelvin",
+      "mole": "Mole",
+      "candela": "Candela"
+    },
+    "type": {
+      "windSpeed": "Wind Speed",
+      "stressRadial": "Stress Radial",
+      "temperature": "Temperature",
+      "volume": "Volume",
+      "other": "Other"
     }
+  },
+  "bounds": {
+    "invalid": "The upperbound must be higher than the lower bound. Currently you have upperbound: {{upper}} which is higher than lower bound: {{lower}}."
+  },
+  "overview": {
+    "totalRecords": "Total Database Records",
+    "syncing": "Syncing...",
+    "offline": "Offline"
+  },
+  "agGrid": {
+    "heading": "AG Grid - Database Records",
+    "loading": "Streaming logs from database...",
+    "error": "Failed to connect to the backend server.",
+    "column": {
+      "sensorId": "Sensor ID",
+      "timestamp": "Timestamp",
+      "normValue": "Value (Normalized)",
+      "rawValue": "Value (Raw)"
+    }
+  },
+  "matTable": {
+    "heading": "Angular Materials - Database Records",
+    "loading": "Loading metrics...",
+    "error": "Failed to load metrics.",
+    "empty": "No metrics found in the database.",
+    "column": {
+      "timestamp": "Timestamp",
+      "normValue": "Value",
+      "rawValue": "Raw Value"
+    }
+  },
+  "dialog": {
+    "heading": "Material - Demo Dialog",
+    "checkboxHeading": "Checkbox heading",
+    "checkboxLabelChecked": "Checkbox label (Checked)",
+    "checkboxLabel": "Checkbox label",
+    "checkboxLabelDisabled": "Checkbox label (Disabled)",
+    "numberInput": "Number Input",
+    "fileUploader": "File Uploader",
+    "fileHint": "Max file size is 500 MB. Only .jpg files are supported.",
+    "addFile": "Add file",
+    "selectedFiles": "Selected: {{count}} file(s)",
+    "radioHeading": "Radio Button heading",
+    "radioStandard": "Standard Radio Button",
+    "radioDefaultSelected": "Default Selected Radio Button",
+    "radioBlue": "Blue Radio Button",
+    "radioDisabled": "Disabled Radio Button",
+    "search": "Search",
+    "select": "Select",
+    "selectPlaceholder": "Choose an Option",
+    "option1": "Option 1",
+    "option2": "Option 2",
+    "option3": "Option 3",
+    "textInput": "Text Input Label",
+    "textInputPlaceholder": "Placeholder text",
+    "password": "Password",
+    "passwordPattern": "Password must be at least 6 characters, contain 1 uppercase, 1 lowercase, and 1 number.",
+    "passwordRequired": "Password is required.",
+    "textArea": "Text Area label",
+    "textAreaPlaceholder": "Placeholder text",
+    "dialogButton": "Dialog",
+    "submitButton": "Submit",
+    "viewTitle": "Form preview"
+  },
+  "menu": {
+    "matTable": "Angular Material Table",
+    "agGrid": "AG-Grid Table",
+    "dialog": "Test Dialog"
+  },
+  "tab": {
+    "agGrid": "AG-Grid ({{count}})",
+    "matTable": "AG-Material-Table ({{count}})"
   }
 }
