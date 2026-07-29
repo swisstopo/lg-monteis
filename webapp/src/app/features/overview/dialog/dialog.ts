@@ -8,7 +8,7 @@ import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/in
 import { MatRadioButton, MatRadioGroup } from '@angular/material/radio';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { WorkbenchView } from '@scion/workbench';
-import SensorCreate from '../../sensor/sensor-create/sensor-create';
+import SensorEdit from '../../sensor/sensor-edit/sensor-edit';
 
 @Component({
   selector: 'app-dialog',
@@ -65,7 +65,7 @@ export default class Dialog {
   }
 
   onDialogOpen() {
-    this.dialog.open(SensorCreate, {
+    this.dialog.open(SensorEdit, {
       width: '60vw',
       maxWidth: '900px',
       autoFocus: false,

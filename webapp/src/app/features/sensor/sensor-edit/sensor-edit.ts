@@ -1,23 +1,24 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { form, FormField, maxLength, minLength, required, submit } from '@angular/forms/signals';
-import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
-import { MatButton } from '@angular/material/button';
-import { MatOption } from '@angular/material/core';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIcon } from '@angular/material/icon';
-import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
-import { MatSelect } from '@angular/material/select';
+import {Component, computed, effect, inject, input, signal} from '@angular/core';
+import {form, FormField, maxLength, minLength, required, submit} from '@angular/forms/signals';
+import {MatAutocomplete, MatAutocompleteTrigger} from '@angular/material/autocomplete';
+import {MatButton} from '@angular/material/button';
+import {MatOption} from '@angular/material/core';
+import {MatDialogModule, MatDialogRef} from '@angular/material/dialog';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatIcon} from '@angular/material/icon';
+import {MatError, MatFormField, MatInput, MatLabel} from '@angular/material/input';
+import {MatSelect} from '@angular/material/select';
 import {
   FormulaResponseDto,
   SensorResponseDto,
   WriteFormulaDto,
   WriteSensorDto,
 } from '../../../core/generated';
-import { toErrorDtos } from '../../../shared/models/api-error.model';
-import { ToastService } from '../../../shared/services/toast.service';
-import { SENSOR_TYPE_METADATA, SensorType, Unit, UNIT_METADATA } from '../models/sensor.model';
-import { SensorService } from '../services/sensor.service';
+import {toErrorDtos} from '../../../shared/models/api-error.model';
+import {ToastService} from '../../../shared/services/toast.service';
+import {SENSOR_TYPE_METADATA, SensorType, Unit, UNIT_METADATA} from '../models/sensor.model';
+import {SensorService} from '../services/sensor.service';
+import {translate, TranslatePipe} from '@ngx-translate/core';
 
 interface SensorFormData {
   code: string;
@@ -35,7 +36,7 @@ interface SensorFormData {
 }
 
 @Component({
-  selector: 'app-sensor-create',
+  selector: 'app-sensor-edit',
   standalone: true,
   imports: [
     MatError,
@@ -51,14 +52,15 @@ interface SensorFormData {
     MatIcon,
     MatAutocomplete,
     MatAutocompleteTrigger,
+    TranslatePipe,
   ],
-  templateUrl: './sensor-create.html',
-  styleUrl: './sensor-create.scss',
+  templateUrl: './sensor-edit.html',
+  styleUrl: './sensor-edit.scss',
 })
-export default class SensorCreate {
+export default class SensorEdit {
   private readonly sensorService = inject(SensorService);
   private readonly toastService = inject(ToastService);
-  readonly dialogRef = inject<MatDialogRef<SensorCreate>>(MatDialogRef, {
+  readonly dialogRef = inject<MatDialogRef<SensorEdit>>(MatDialogRef, {
     optional: true,
   });
   sensorId = input<number | undefined>(undefined);
@@ -72,7 +74,7 @@ export default class SensorCreate {
 
   saveError = this.sensorService.error;
   sensor = signal<SensorResponseDto | undefined>(undefined);
-  title = signal('Setup new Sensor');
+  title = signal(translate('sensor.edit.title.create')());
   sensorModel = signal<SensorFormData>(this.initSensorModel());
 
   private readonly syncSelectedSensor = effect(() => {
@@ -84,13 +86,13 @@ export default class SensorCreate {
       this.sensor.set(this.sensorService.sensor.value());
       if (this.sensor() !== undefined) {
         this.setSensorModel(this.sensor()!);
-        this.title.set('Edit Sensor');
+        this.title.set(translate('sensor.edit.title.edit')());
         this.sensorForm().markAsTouched();
       }
     } catch {
       const errors = toErrorDtos(this.sensorService.sensor.error());
       errors.forEach((err) =>
-        this.toastService.error(err?.messageKey ?? '', 'Failed to load sensor!'),
+        this.toastService.error(err?.messageKey ? translate(err.messageKey) : translate('sensor.edit.error.unspecified.message')(), translate('sensor.edit.error.unspecified.title')()),
       );
     }
   });
@@ -117,17 +119,17 @@ export default class SensorCreate {
   }
 
   sensorForm = form(this.sensorModel, (schema) => {
-    required(schema.code, { message: 'Sensor code is required' });
-    required(schema.name, { message: 'Sensor name is required' });
-    minLength(schema.name, 2, { message: 'Name must be at least 2 characters long' });
-    maxLength(schema.name, 10, { message: 'Name must be at most 10 characters long' });
+    required(schema.code, {message: translate('sensor.edit.validation.requiredCode')()});
+    required(schema.name, {message: translate('sensor.edit.validation.requiredName')()});
+    minLength(schema.name, 2, {message: translate('sensor.edit.validation.minLengthName')()});
+    maxLength(schema.name, 10, {message: translate('sensor.edit.validation.maxLengthName')()});
     required(schema.unit);
     required(schema.type);
-    required(schema.xLocal, { message: 'Sensor xLocal is required' });
-    required(schema.yLocal, { message: 'Sensor yLocal is required' });
-    required(schema.zLocal, { message: 'Sensor zLocal is required' });
-    required(schema.lowerAlarmBound, { message: 'Alarm limit is required' });
-    required(schema.upperAlarmBound, { message: 'Alarm limit is required' });
+    required(schema.xLocal, {message: translate('sensor.edit.validation.requiredXLocal')()});
+    required(schema.yLocal, {message: translate('sensor.edit.validation.requiredYLocal')()});
+    required(schema.zLocal, {message: translate('sensor.edit.validation.requiredZLocal')()});
+    required(schema.lowerAlarmBound, {message: translate('sensor.edit.validation.requiredAlarmLimit')()});
+    required(schema.upperAlarmBound, {message: translate('sensor.edit.validation.requiredAlarmLimit')()});
   });
 
   readonly filteredFormulas = computed(() => {
@@ -161,7 +163,7 @@ export default class SensorCreate {
       try {
         await this.saveSensor(sensor);
 
-        this.toastService.success('Sensor saved successfully.');
+        this.toastService.success(translate('sensor.edit.success')());
 
         if (resetAfter) {
           this.resetForm();
@@ -172,7 +174,7 @@ export default class SensorCreate {
       } catch {
         return this.saveError()?.map((err) => ({
           kind: 'serverError',
-          message: err?.messageKey ?? '',
+          message: err?.messageKey ? translate(err?.messageKey)() : '',
           fieldTree: field[err?.field as keyof SensorFormData],
         }));
       }
@@ -180,7 +182,7 @@ export default class SensorCreate {
   }
 
   private resetForm(): void {
-    this.title.set('Setup new Sensor');
+    this.title.set(translate('sensor.edit.title.create')());
     this.sensorModel.set(this.initSensorModel());
     this.sensorService.getSensor(undefined);
     this.selectedFormula.set(null);
@@ -231,9 +233,9 @@ export default class SensorCreate {
 
     const selected = this.selectedFormula();
     if (selected?.expression === expression) {
-      return { id: selected.id, expression, version: selected.version };
+      return {id: selected.id, expression, version: selected.version};
     }
-    return { expression };
+    return {expression};
   }
 
   private async saveSensor(sensor: WriteSensorDto) {

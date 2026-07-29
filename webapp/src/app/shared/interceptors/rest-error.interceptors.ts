@@ -1,9 +1,10 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
-import { ErrorDto } from '../core/generated';
-import { toErrorDtos } from './models/api-error.model';
-import { ToastService } from './services/toast.service';
+import { ErrorDto } from '../../core/generated';
+import { toErrorDtos } from '../models/api-error.model';
+import { ToastService } from '../services/toast.service';
+import {translate} from '@ngx-translate/core';
 
 /**
  * Shows a toast for every REST error with target `GLOBAL`, regardless of
@@ -23,12 +24,12 @@ export const restErrorInterceptor: HttpInterceptorFn = (req, next) => {
 
         if (globalErrors.length > 0) {
           globalErrors.forEach((err) =>
-            toastService.error(err.messageKey ?? 'An unknown error occurred.'),
+            toastService.error(err.messageKey ? translate(err.messageKey, { errorId: err.params?.['errorId'] })() : translate('error.system.internal.title')()),
           );
         } else if (error.status === 0 || error.status >= 500) {
           // Network failures or backend crashes that never reach our ErrorDto
           // contract (e.g. proxy/HTML error pages) still need to surface to the user.
-          toastService.error('An unknown error occurred.');
+          toastService.error(translate('error.system.internal.title')());
         }
       }
       return throwError(() => error);
