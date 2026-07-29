@@ -8,6 +8,7 @@ import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -69,7 +70,8 @@ public class SensorController {
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorResponseDto> updateSensor(
-      @Validated(Update.class) @PathVariable @Positive Long id, @RequestBody WriteSensorDto dto) {
+      @Validated(Update.class) @PathVariable @Positive Long id,
+      @RequestBody WriteSensorDto dto) { // todo: check id attribute
     Sensor updated = service.updateSensor(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated));
   }
@@ -82,5 +84,14 @@ public class SensorController {
   @GetMapping(value = "/formulas", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<FormulaResponseDto>> findAllFormulas() {
     return ResponseEntity.status(HttpStatus.OK).body(sensorQuery.findAllFormulas());
+  }
+
+  @Operation(
+      summary = "Get all types",
+      description = "Retrieves a list of all available types, sorted alphabetically by expression.")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved types")
+  @GetMapping(value = "/types", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<SensorTypeResponseDto>> findAllTypes() {
+    return ResponseEntity.status(HttpStatus.OK).body(sensorQuery.findAllTypes());
   }
 }

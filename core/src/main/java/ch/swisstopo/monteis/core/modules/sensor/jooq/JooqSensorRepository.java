@@ -13,6 +13,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -76,6 +77,14 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
     return dsl.selectFrom(FORMULAS)
         .orderBy(FORMULAS.EXPRESSION.asc()) // Clean alphabetical sorting for the UI
         .fetchInto(FormulaResponseDto.class);
+  }
+
+  @Override
+  @Transactional(readOnly = true) // required for RLS
+  public List<SensorTypeResponseDto> findAllTypes() {
+    return dsl.selectFrom(SENSOR_TYPES)
+        .orderBy(SENSOR_TYPES.TYPE.asc()) // Clean alphabetical sorting for the UI
+        .fetchInto(SensorTypeResponseDto.class);
   }
 
   @Override

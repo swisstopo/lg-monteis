@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.sensor.query;
 
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 
 /**
@@ -30,4 +31,11 @@ public interface SensorQuery {
    * @return a list of all formulas alphabetically sorted
    */
   List<FormulaResponseDto> findAllFormulas();
+
+  /**
+   * Retrieves all types that are currently used by existing sensors.
+   *
+   * @return a list of all types alphabetically sorted
+   */
+  List<SensorTypeResponseDto> findAllTypes();
 }
