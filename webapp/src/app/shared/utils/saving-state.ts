@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
-import { DisplayError, toDisplayErrorFromUnknown } from '../models/api-error.model';
+import { ErrorDto } from '../../core/generated';
+import { toErrorDtos } from '../models/api-error.model';
 
 /**
  * Reusable saving/error state for services performing API mutations
@@ -20,7 +21,7 @@ import { DisplayError, toDisplayErrorFromUnknown } from '../models/api-error.mod
  */ // TODO make generic api state not only saving
 export function createSavingState() {
   const saving = signal(false);
-  const error = signal<DisplayError[] | undefined>(undefined);
+  const error = signal<ErrorDto[] | undefined>(undefined);
 
   async function run<T>(action: () => Promise<T>): Promise<T> {
     saving.set(true);
@@ -28,7 +29,7 @@ export function createSavingState() {
     try {
       return await action();
     } catch (err) {
-      error.set(toDisplayErrorFromUnknown(err));
+      error.set(toErrorDtos(err));
       throw err;
     } finally {
       saving.set(false);
