@@ -3,18 +3,18 @@ import { WorkbenchView } from '@scion/workbench';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { OverviewControllerService } from '../../../core/generated';
-import AgMatTable from './ag-mat-table';
+import SensorTable from './sensor-table';
 
 const overviewServiceMock = {
   getMetrics: vi.fn().mockReturnValue(of([])),
 };
 
-describe('AgMatTable', () => {
-  let fixture: ComponentFixture<AgMatTable>;
+describe('SensorTable', () => {
+  let fixture: ComponentFixture<SensorTable>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AgMatTable],
+      imports: [SensorTable],
       providers: [
         {
           provide: OverviewControllerService,
@@ -24,7 +24,7 @@ describe('AgMatTable', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AgMatTable);
+    fixture = TestBed.createComponent(SensorTable);
     fixture.detectChanges();
   });
 

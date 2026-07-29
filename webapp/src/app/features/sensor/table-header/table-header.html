@@ -1,0 +1,21 @@
+<div class="table-header">
+  <mat-form-field class="search-field" appearance="fill" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput type="search" placeholder="Search" />
+  </mat-form-field>
+
+  <button matButton="text" (click)="onDownload()">
+    <mat-icon fontIcon="download"></mat-icon>
+    Download
+  </button>
+
+  <button matButton="tonal" (click)="onCreate()">
+    <mat-icon fontIcon="add"></mat-icon>
+    Create Sensor
+  </button>
+
+  <button matButton="filled" [disabled]="selectedSensorId() === undefined" (click)="onEdit()">
+    <mat-icon fontIcon="edit"></mat-icon>
+    Edit Sensor
+  </button>
+</div>

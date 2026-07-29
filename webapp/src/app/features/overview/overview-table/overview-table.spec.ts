@@ -3,18 +3,18 @@ import { WorkbenchView } from '@scion/workbench';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { OverviewControllerService } from '../../../core/generated';
-import AgGridRecord from './ag-grid-record';
+import OverviewTable from './overview-table';
 
 const overviewServiceMock = {
   getMetrics: vi.fn().mockReturnValue(of([])),
 };
 
-describe('AgGridRecord', () => {
-  let fixture: ComponentFixture<AgGridRecord>;
+describe('SensorTable', () => {
+  let fixture: ComponentFixture<OverviewTable>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AgGridRecord],
+      imports: [OverviewTable],
       providers: [
         {
           provide: OverviewControllerService,
@@ -24,7 +24,7 @@ describe('AgGridRecord', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AgGridRecord);
+    fixture = TestBed.createComponent(OverviewTable);
     fixture.detectChanges();
   });
 

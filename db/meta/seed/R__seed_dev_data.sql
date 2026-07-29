@@ -67,6 +67,37 @@ VALUES
     -- FLOW-Admin (Sensor ID 5) is intentionally linked to no experiment —
     -- only admins can see it.
 
+INSERT INTO sensors (
+    id, code, name, "type", unit, comment,
+    x_local, y_local, z_local,
+    upper_alarm_bound, lower_alarm_bound, active, formula_id, version
+)
+SELECT
+    i + 5,                                      -- id (starts at 6)
+    'BULK-' || i,                               -- code (e.g. BULK-1)
+    'bulk-sensor-' || i,                        -- name
+    1,                                          -- type
+    'METER',                                    -- unit
+    'Auto-generated load testing sensor ' || i, -- comment
+    random() * 100,                             -- random x_local
+    random() * 100,                             -- random y_local
+    random() * 100,                             -- random z_local
+    100.0,                                      -- upper_alarm_bound
+    -50.0,                                      -- lower_alarm_bound
+    true,                                       -- active
+    4,                                          -- formula_id (passthrough)
+    1                                           -- version
+-- CHANGE THE NUMBER 10000 BELOW TO GENERATE MORE OR FEWER SENSORS
+FROM generate_series(1, 10) AS i;
+
+-- Link those exact 10,000 new sensors (IDs 6 to 10005) to Experiment 1
+INSERT INTO experiment_sensor (experiment_id, sensor_id)
+SELECT
+    1,     -- experiment_id (Mont Terri Alpha)
+    i + 5  -- sensor_id (Matches the IDs generated above)
+FROM generate_series(1, 10) AS i;
+
+-- 5. Sync the sequences with the explicitly inserted IDs
 -- 6. Sync the sequences with the explicitly inserted IDs
 -- This ensures that the next time you omit the ID (e.g., during application usage),
 -- PostgreSQL knows to start generating IDs from the correct next number.

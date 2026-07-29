@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import { AgGridAngular } from 'ag-grid-angular';
-import { ColDef, GridOptions, themeBalham } from 'ag-grid-community';
+import { ColDef, GridOptions, SelectionChangedEvent, themeBalham } from 'ag-grid-community';
 import { TableColumn } from './table.types';
 
 @Component({
@@ -14,6 +14,7 @@ export default class Table<T = any> {
   columns = input<TableColumn<T>[]>([]);
 
   rowClicked = output<any>();
+  selectionChanged = output<T | undefined>();
 
   columnDefs = computed<ColDef[]>(() => this.mapColumns(this.columns()));
   protected theme = themeBalham;
@@ -44,6 +45,7 @@ export default class Table<T = any> {
   protected gridOptions: GridOptions = {
     suppressCellFocus: true,
     domLayout: 'autoHeight',
+    rowSelection: { mode: 'singleRow', checkboxes: false, enableClickSelection: true },
   };
 
   private toHeader(field: string): string {
@@ -52,5 +54,10 @@ export default class Table<T = any> {
 
   onRowClicked(event: any): void {
     this.rowClicked.emit(event.data);
+  }
+
+  onSelectionChanged(event: SelectionChangedEvent<T>): void {
+    const [row] = event.api.getSelectedRows();
+    this.selectionChanged.emit(row);
   }
 }

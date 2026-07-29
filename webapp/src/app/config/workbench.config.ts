@@ -12,7 +12,7 @@ export const workbenchConfig = provideWorkbench({
       )
       .navigatePart('metrics-menu', ['metrics-menu'])
       .activatePart('metrics-menu')
-      .addPart('sensor-menu', { dockTo: 'left-top' }, { label: 'Sensor', icon: 'build' })
+      .addPart('sensor-menu', { dockTo: 'left-top' }, { label: 'Setup', icon: 'settings' })
       .navigatePart('sensor-menu', ['sensor-menu'])
       .activatePart('sensor-menu'),
 });
