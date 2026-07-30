@@ -3,6 +3,8 @@ package ch.swisstopo.monteis.core.modules.sensor.jooq;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.FORMULAS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSORS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_TYPES;
+import static org.jooq.Records.mapping;
+import static org.jooq.impl.DSL.row;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
@@ -12,6 +14,8 @@ import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorsRecord;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
@@ -37,18 +41,53 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
   @Override
   @Transactional(readOnly = true)
   public SensorResponseDto getById(Long id) {
-    return dsl.select(SENSORS.fields())
-        .select(FORMULAS.fields())
-        .select(SENSOR_TYPES.fields())
+    return dsl.select(
+            SENSORS.ID,
+            SENSORS.CODE,
+            SENSORS.NAME,
+            SENSORS.UNIT,
+            row(SENSOR_TYPES.ID, SENSOR_TYPES.NAME, SENSOR_TYPES.VERSION)
+                .mapping(SensorTypeResponseDto::new),
+            SENSORS.COMMENT,
+            row(SENSORS.X, SENSORS.Y, SENSORS.Z).mapping(CoordinatesDto::new),
+            row(SENSORS.LOWER_ALARM_LIMIT, SENSORS.UPPER_ALARM_LIMIT).mapping(AlarmLimitsDto::new),
+            SENSORS.ACTIVE,
+            row(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
+                .mapping(FormulaResponseDto::new),
+            SENSORS.VERSION)
         .from(SENSORS)
         .join(FORMULAS)
         .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
         .join(SENSOR_TYPES)
         .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
         .where(SENSORS.ID.eq(id))
-        .fetchOptional()
-        .map(r -> mapper.toDto(r.into(SENSORS), r.into(FORMULAS), r.into(SENSOR_TYPES)))
+        .fetchOptional(mapping(SensorResponseDto::new))
         .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<SensorResponseDto> getAll() {
+    return dsl.select(
+            SENSORS.ID,
+            SENSORS.CODE,
+            SENSORS.NAME,
+            SENSORS.UNIT,
+            row(SENSOR_TYPES.ID, SENSOR_TYPES.NAME, SENSOR_TYPES.VERSION)
+                .mapping(SensorTypeResponseDto::new),
+            SENSORS.COMMENT,
+            row(SENSORS.X, SENSORS.Y, SENSORS.Z).mapping(CoordinatesDto::new),
+            row(SENSORS.LOWER_ALARM_LIMIT, SENSORS.UPPER_ALARM_LIMIT).mapping(AlarmLimitsDto::new),
+            SENSORS.ACTIVE,
+            row(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
+                .mapping(FormulaResponseDto::new),
+            SENSORS.VERSION)
+        .from(SENSORS)
+        .join(FORMULAS)
+        .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
+        .join(SENSOR_TYPES)
+        .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
+        .fetch(mapping(SensorResponseDto::new));
   }
 
   @Override

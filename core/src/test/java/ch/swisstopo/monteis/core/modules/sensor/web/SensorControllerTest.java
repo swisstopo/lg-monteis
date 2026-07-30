@@ -81,6 +81,55 @@ class SensorControllerTest {
   }
 
   @Test
+  void should_route_find_all_sensors_and_return_json_array() throws Exception {
+    // given
+    SensorResponseDto dto1 =
+        new SensorResponseDto(
+            1L,
+            "SENS-01",
+            "Test 1",
+            Unit.METER,
+            new SensorTypeResponseDto(1L, "Other", 1),
+            null,
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(0.0, 100.0),
+            true,
+            null,
+            1);
+    SensorResponseDto dto2 =
+        new SensorResponseDto(
+            2L,
+            "SENS-02",
+            "Test 2",
+            Unit.METER,
+            new SensorTypeResponseDto(2L, "Temperature", 1),
+            null,
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(0.0, 100.0),
+            true,
+            null,
+            1);
+
+    given(queryService.getAll()).willReturn(List.of(dto1, dto2));
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors").with(jwt()).contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(dto1.id()))
+        .andExpect(jsonPath("$[0].code").value(dto1.code()))
+        .andExpect(jsonPath("$[0].type.name").value(dto1.type().name()))
+        .andExpect(jsonPath("$[1].id").value(dto2.id()))
+        .andExpect(jsonPath("$[1].code").value(dto2.code()))
+        .andExpect(jsonPath("$[1].type.name").value(dto2.type().name()));
+
+    // Verify the read flow bypasses the service/mapper entirely
+    then(queryService).should().getAll();
+    then(service).shouldHaveNoInteractions();
+    then(mapper).shouldHaveNoInteractions();
+  }
+
+  @Test
   void should_route_create_sensor_and_verify_output() throws Exception {
     // given: Instantiate DTOs for input and expected output
     WriteSensorDto requestDto =

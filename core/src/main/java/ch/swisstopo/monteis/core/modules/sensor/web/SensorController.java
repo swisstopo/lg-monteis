@@ -99,4 +99,11 @@ public class SensorController {
   public ResponseEntity<List<SensorTypeResponseDto>> findAllTypes() {
     return ResponseEntity.status(HttpStatus.OK).body(sensorQuery.findAllTypes());
   }
+
+  @Operation(summary = "Get all sensors", description = "Retrieves a list of all sensors.")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved sensors")
+  @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<SensorResponseDto>> findAllSensors() {
+    return ResponseEntity.status(HttpStatus.OK).body(sensorQuery.getAll());
+  }
 }
