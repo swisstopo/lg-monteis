@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import { form, FormField, maxLength, minLength, required, submit } from '@angular/forms/signals';
 import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatButton } from '@angular/material/button';
@@ -33,6 +33,23 @@ interface SensorFormData {
   upperAlarmBound: number;
   active: boolean;
   formula: string;
+}
+
+function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData {
+  return {
+    active: domainModel.active ?? true,
+    code: domainModel.code ?? '',
+    comment: domainModel.comment ?? '',
+    formula: domainModel.formula?.expression ?? '',
+    lowerAlarmBound: domainModel.alarmLimits?.lower ?? 0,
+    name: domainModel.name ?? '',
+    type: domainModel.type?.name ?? '',
+    unit: domainModel.unit ?? WriteSensorDto.UnitEnum.Ampere,
+    upperAlarmBound: domainModel.alarmLimits?.upper ?? 100,
+    xLocal: domainModel.coordinates?.x ?? 0,
+    yLocal: domainModel.coordinates?.y ?? 0,
+    zLocal: domainModel.coordinates?.z ?? 0,
+  };
 }
 
 @Component({
@@ -80,7 +97,6 @@ export default class SensorEdit {
       ? translate('sensor.edit.title.edit')()
       : translate('sensor.edit.title.create')(),
   );
-  sensorModel = signal<SensorFormData>(this.initSensorModel());
 
   private readonly syncSelectedSensor = effect(() => {
     this.sensorService.getSensor(this.sensorId());
@@ -90,7 +106,7 @@ export default class SensorEdit {
     try {
       this.sensor.set(this.sensorService.sensor.value());
       if (this.sensor() !== undefined) {
-        this.setSensorModel(this.sensor()!);
+        this.domainModel.set(this.sensor()!);
         this.sensorForm().markAsTouched();
       }
     } catch {
@@ -107,8 +123,14 @@ export default class SensorEdit {
   protected close(): void {
     this.dialogRef?.close();
   }
+  readonly domainModel = signal<SensorResponseDto>({});
+  private readonly formModel = linkedSignal({
+    source: this.domainModel,
+    computation: (domainModel) =>
+      domainModel ? domainModelToFormModel(domainModel) : this.initSensorModel(),
+  });
 
-  private initSensorModel() {
+  private initSensorModel(): SensorFormData {
     return {
       code: '',
       name: '',
@@ -125,7 +147,7 @@ export default class SensorEdit {
     };
   }
 
-  readonly sensorForm = form(this.sensorModel, (schema) => {
+  readonly sensorForm = form(this.formModel, (schema) => {
     required(schema.code, { message: translate('sensor.edit.validation.requiredCode')() });
     required(schema.name, { message: translate('sensor.edit.validation.requiredName')() });
     minLength(schema.name, 2, { message: translate('sensor.edit.validation.minLengthName')() });
@@ -183,7 +205,7 @@ export default class SensorEdit {
       return;
     }
     await submit(this.sensorForm, async (field) => {
-      const sensor = this.buildPayload(this.sensorModel());
+      const sensor = this.buildPayload(this.formModel());
 
       try {
         await this.saveSensor(sensor);
@@ -201,7 +223,7 @@ export default class SensorEdit {
         return errors
           ?.map((err) => {
             const mappedField = err?.field
-              ? this.sensorForm[err.field as keyof SensorFormData]
+              ? this.sensorForm[err.field as keyof SensorFormData] // TODO map form field
               : undefined;
             if (mappedField) {
               return {
@@ -221,31 +243,11 @@ export default class SensorEdit {
   }
 
   private resetForm(): void {
-    this.sensorModel.set(this.initSensorModel());
+    this.domainModel.set({});
     this.sensorService.getSensor(undefined);
     this.selectedFormula.set(null);
     this.selectedType.set(null);
     this.sensorForm().reset();
-  }
-
-  private setSensorModel(sensor: SensorResponseDto) {
-    this.selectedFormula.set(sensor.formula ?? null);
-    this.selectedType.set(sensor.type ?? null);
-
-    this.sensorModel.set({
-      code: sensor.code ?? '',
-      name: sensor.name ?? '',
-      unit: (sensor.unit ?? WriteSensorDto.UnitEnum.Ampere) as Unit,
-      type: sensor.type?.name ?? '',
-      comment: sensor.comment ?? '',
-      xLocal: sensor.coordinates?.x ?? 0,
-      yLocal: sensor.coordinates?.y ?? 0,
-      zLocal: sensor.coordinates?.z ?? 0,
-      lowerAlarmBound: sensor.alarmLimits?.lower ?? 0,
-      upperAlarmBound: sensor.alarmLimits?.upper ?? 100,
-      active: sensor.active ?? true,
-      formula: sensor.formula?.expression ?? '',
-    });
   }
 
   private buildPayload(formData: SensorFormData): WriteSensorDto {

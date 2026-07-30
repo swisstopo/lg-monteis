@@ -65,9 +65,9 @@
           [placeholder]="'sensor.edit.placeholder.type' | translate"
           matInput
           [formField]="sensorForm.type"
-          [matAutocomplete]="auto"
+          [matAutocomplete]="autoType"
         />
-        <mat-autocomplete #auto="matAutocomplete">
+        <mat-autocomplete #autoType="matAutocomplete">
           @for (type of filteredTypes(); track type.id) {
             <mat-option [value]="type.name" (onSelectionChange)="selectType(type)">{{
               type.name
@@ -83,9 +83,9 @@
           [placeholder]="'sensor.edit.placeholder.formula' | translate"
           matInput
           [formField]="sensorForm.formula"
-          [matAutocomplete]="auto"
+          [matAutocomplete]="autoFormula"
         />
-        <mat-autocomplete #auto="matAutocomplete">
+        <mat-autocomplete #autoFormula="matAutocomplete">
           @for (formula of filteredFormulas(); track formula.id) {
             <mat-option [value]="formula.expression" (onSelectionChange)="selectFormula(formula)">
               {{ formula.expression }} <span class="version-badge">(v{{ formula.version }})</span>

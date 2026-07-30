@@ -10,7 +10,7 @@
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
   "validation": {
-    "required": "There is a validation error in the form. Please check the form and try again.",
+    "required": "There is a validation error in the form. Please check the field: {{field}}",
     "mustBeNull": "",
     "size": "",
     "pattern": "",
@@ -46,7 +46,8 @@
       "placeholder": {
         "code": "e.g., SN-TEMP-402",
         "name": "e.g., Ventilation Intake Temp",
-        "formula": "Type a new formula or select an existing one..."
+        "formula": "Type a new formula or select an existing one...",
+        "type": "Add a new type or select an existing one..."
       },
       "button": {
         "cancel": "Cancel",
