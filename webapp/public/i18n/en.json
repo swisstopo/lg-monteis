@@ -144,6 +144,21 @@
       "temperature": "Temperature",
       "volume": "Volume",
       "other": "Other"
+    },
+    "table": {
+      "column": {
+        "code": "Code",
+        "name": "Name",
+        "type": "Type",
+        "unit": "Unit",
+        "formula": "Formula",
+        "xLocal": "X (Local)",
+        "yLocal": "Y (Local)",
+        "zLocal": "Z (Local)",
+        "alarmLimits": "Alarm Limits",
+        "active": "Active",
+        "comment": "Comment"
+      }
     }
   },
   "overview": {
