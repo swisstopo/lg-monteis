@@ -14,13 +14,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -43,6 +47,40 @@ class SensorControllerTest {
   @MockitoBean private SensorWebMapper mapper;
 
   @Test
+  void should_route_get_sensor_and_verify_output() throws Exception {
+    // given
+    SensorResponseDto expectedResponseDto =
+        new SensorResponseDto(
+            1L,
+            "SENS-01",
+            "Test",
+            Unit.METER,
+            new SensorTypeResponseDto(1L, "Other", 1),
+            null,
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(0.0, 100.0),
+            true,
+            null,
+            1);
+
+    given(queryService.getById(1L)).willReturn(expectedResponseDto);
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors/1").with(jwt()).contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(expectedResponseDto.id()))
+        .andExpect(jsonPath("$.code").value(expectedResponseDto.code()))
+        .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
+        .andExpect(jsonPath("$.type.name").value(expectedResponseDto.type().name()));
+
+    // Verify the read flow bypasses the service/mapper entirely
+    then(queryService).should().getById(1L);
+    then(service).shouldHaveNoInteractions();
+    then(mapper).shouldHaveNoInteractions();
+  }
+
+  @Test
   void should_route_create_sensor_and_verify_output() throws Exception {
     // given: Instantiate DTOs for input and expected output
     WriteSensorDto requestDto =
@@ -52,12 +90,9 @@ class SensorControllerTest {
             "Test",
             null,
             Unit.METER,
-            SensorType.OTHER,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            100.0,
+            new WriteSensorTypeDto("Other"),
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(0.0, 100.0),
             true,
             null,
             null);
@@ -68,13 +103,10 @@ class SensorControllerTest {
             "SENS-01",
             "Test",
             Unit.METER,
-            SensorType.OTHER,
+            new SensorTypeResponseDto(1L, "Other", 1),
             null,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            100.0,
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(0.0, 100.0),
             true,
             null,
             1);
@@ -98,14 +130,70 @@ class SensorControllerTest {
         .andExpect(jsonPath("$.code").value(expectedResponseDto.code()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
         .andExpect(jsonPath("$.unit").value(expectedResponseDto.unit().name()))
-        .andExpect(jsonPath("$.type").value(expectedResponseDto.type().name()))
-        .andExpect(jsonPath("$.xLocal").value(expectedResponseDto.xLocal()))
-        .andExpect(jsonPath("$.yLocal").value(expectedResponseDto.yLocal()))
-        .andExpect(jsonPath("$.zLocal").value(expectedResponseDto.zLocal()))
-        .andExpect(jsonPath("$.lowerAlarmBound").value(expectedResponseDto.lowerAlarmBound()))
-        .andExpect(jsonPath("$.upperAlarmBound").value(expectedResponseDto.upperAlarmBound()))
+        .andExpect(jsonPath("$.type.name").value(expectedResponseDto.type().name()))
+        .andExpect(jsonPath("$.coordinates.x").value(expectedResponseDto.coordinates().x()))
+        .andExpect(jsonPath("$.coordinates.y").value(expectedResponseDto.coordinates().y()))
+        .andExpect(jsonPath("$.coordinates.z").value(expectedResponseDto.coordinates().z()))
+        .andExpect(jsonPath("$.alarmLimits.lower").value(expectedResponseDto.alarmLimits().lower()))
+        .andExpect(jsonPath("$.alarmLimits.upper").value(expectedResponseDto.alarmLimits().upper()))
         .andExpect(jsonPath("$.active").value(expectedResponseDto.active()))
         .andExpect(jsonPath("$.version").value(expectedResponseDto.version()));
+
+    // Verify interaction sequence
+    then(mapper).should().toDomain(any(WriteSensorDto.class));
+    then(service).should().createSensor(mockDomain);
+    then(mapper).should().toDto(mockDomain);
+  }
+
+  @Test
+  void should_route_create_sensor_with_formula_and_verify_output() throws Exception {
+    // given: request carries a WriteFormulaDto to exercise the nested formula mapping
+    WriteSensorDto requestDto =
+        new WriteSensorDto(
+            null,
+            "SENS-02",
+            "Formula",
+            null,
+            Unit.METER,
+            new WriteSensorTypeDto("Other"),
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(0.0, 100.0),
+            true,
+            new WriteFormulaDto("x * 2"),
+            null);
+
+    SensorResponseDto expectedResponseDto =
+        new SensorResponseDto(
+            1L,
+            "SENS-02",
+            "Formula",
+            Unit.METER,
+            new SensorTypeResponseDto(1L, "Other", 1),
+            null,
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(0.0, 100.0),
+            true,
+            new FormulaResponseDto(1L, "x * 2", 1),
+            1);
+
+    Sensor mockDomain = mock(Sensor.class);
+
+    given(mapper.toDomain(any(WriteSensorDto.class))).willReturn(mockDomain);
+    given(service.createSensor(mockDomain)).willReturn(mockDomain);
+    given(mapper.toDto(mockDomain)).willReturn(expectedResponseDto);
+
+    // when / then
+    mockMvc
+        .perform(
+            post("/api/sensors")
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestDto)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.formula.id").value(expectedResponseDto.formula().id()))
+        .andExpect(
+            jsonPath("$.formula.expression").value(expectedResponseDto.formula().expression()))
+        .andExpect(jsonPath("$.formula.version").value(expectedResponseDto.formula().version()));
 
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
@@ -120,15 +208,12 @@ class SensorControllerTest {
         new WriteSensorDto(
             1L,
             "SENS-01",
-            "Updated Sensor",
+            "Updated",
             null,
             Unit.METER,
-            SensorType.OTHER,
-            0.0,
-            0.0,
-            0.0,
-            -10.0,
-            50.0,
+            new WriteSensorTypeDto("Other"),
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(-10.0, 50.0),
             true,
             null,
             1);
@@ -137,15 +222,12 @@ class SensorControllerTest {
         new SensorResponseDto(
             1L,
             "SENS-01",
-            "Updated Sensor",
+            "Updated",
             Unit.METER,
-            SensorType.OTHER,
+            new SensorTypeResponseDto(1L, "Other", 1),
             null,
-            0.0,
-            0.0,
-            0.0,
-            -10.0,
-            50.0,
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(-10.0, 50.0),
             true,
             null,
             2);
@@ -161,7 +243,6 @@ class SensorControllerTest {
         .perform(
             put("/api/sensors/1")
                 .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
-                .param("id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isOk())
@@ -169,12 +250,12 @@ class SensorControllerTest {
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
         .andExpect(jsonPath("$.code").value(expectedResponseDto.code()))
         .andExpect(jsonPath("$.unit").value(expectedResponseDto.unit().name()))
-        .andExpect(jsonPath("$.type").value(expectedResponseDto.type().name()))
-        .andExpect(jsonPath("$.xLocal").value(expectedResponseDto.xLocal()))
-        .andExpect(jsonPath("$.yLocal").value(expectedResponseDto.yLocal()))
-        .andExpect(jsonPath("$.zLocal").value(expectedResponseDto.zLocal()))
-        .andExpect(jsonPath("$.lowerAlarmBound").value(expectedResponseDto.lowerAlarmBound()))
-        .andExpect(jsonPath("$.upperAlarmBound").value(expectedResponseDto.upperAlarmBound()))
+        .andExpect(jsonPath("$.type.name").value(expectedResponseDto.type().name()))
+        .andExpect(jsonPath("$.coordinates.x").value(expectedResponseDto.coordinates().x()))
+        .andExpect(jsonPath("$.coordinates.y").value(expectedResponseDto.coordinates().y()))
+        .andExpect(jsonPath("$.coordinates.z").value(expectedResponseDto.coordinates().z()))
+        .andExpect(jsonPath("$.alarmLimits.lower").value(expectedResponseDto.alarmLimits().lower()))
+        .andExpect(jsonPath("$.alarmLimits.upper").value(expectedResponseDto.alarmLimits().upper()))
         .andExpect(jsonPath("$.active").value(expectedResponseDto.active()))
         .andExpect(jsonPath("$.version").value(expectedResponseDto.version()));
 
@@ -182,6 +263,39 @@ class SensorControllerTest {
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().updateSensor(mockDomain);
     then(mapper).should().toDto(mockDomain);
+  }
+
+  @Test
+  void should_reject_update_when_path_id_does_not_match_body_id() throws Exception {
+    // given: path id (1) and body id (2) disagree
+    WriteSensorDto requestDto =
+        new WriteSensorDto(
+            2L,
+            "SENS-01",
+            "Updated",
+            null,
+            Unit.METER,
+            new WriteSensorTypeDto("Other"),
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(-10.0, 50.0),
+            true,
+            null,
+            1);
+
+    // when / then
+    mockMvc
+        .perform(
+            put("/api/sensors/1")
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestDto)))
+        .andExpect(status().isUnprocessableContent())
+        .andExpect(jsonPath("$.field").doesNotExist())
+        .andExpect(jsonPath("$.messageKey").value("id.validation.mismatch"));
+
+    // Verify the mismatch is caught before any domain/service work happens
+    then(mapper).shouldHaveNoInteractions();
+    then(service).shouldHaveNoInteractions();
   }
 
   @Test
@@ -203,5 +317,25 @@ class SensorControllerTest {
         .andExpect(jsonPath("$[1].expression").value(dto2.expression()));
 
     then(queryService).should().findAllFormulas();
+  }
+
+  @Test
+  void should_route_find_types_and_return_json_array() throws Exception {
+    // given
+    SensorTypeResponseDto dto1 = new SensorTypeResponseDto(1L, "Other", 1);
+    SensorTypeResponseDto dto2 = new SensorTypeResponseDto(2L, "Temperature", 1);
+
+    given(queryService.findAllTypes()).willReturn(List.of(dto1, dto2));
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors/types").with(jwt()).contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(dto1.id()))
+        .andExpect(jsonPath("$[0].name").value(dto1.name()))
+        .andExpect(jsonPath("$[1].id").value(dto2.id()))
+        .andExpect(jsonPath("$[1].name").value(dto2.name()));
+
+    then(queryService).should().findAllTypes();
   }
 }

@@ -16,7 +16,7 @@ public class Sensor implements Auditable {
   private Unit unit;
   private String comment;
   private Coordinates coordinates;
-  private AlarmBounds alarmBounds;
+  private AlarmLimits alarmLimits;
   private Boolean active;
   private Formula formula;
   private Integer version;
@@ -33,7 +33,7 @@ public class Sensor implements Auditable {
       Unit unit,
       String comment,
       Coordinates coordinates,
-      AlarmBounds alarmBounds,
+      AlarmLimits alarmLimits,
       Boolean active,
       Formula formula) {
     this.code = code;
@@ -42,7 +42,7 @@ public class Sensor implements Auditable {
     this.unit = unit;
     this.comment = comment;
     this.coordinates = coordinates;
-    this.alarmBounds = alarmBounds;
+    this.alarmLimits = alarmLimits;
     this.active = active;
     this.formula = formula != null ? formula : new Formula();
   }
@@ -58,7 +58,7 @@ public class Sensor implements Auditable {
       Unit unit,
       String comment,
       Coordinates coordinates,
-      AlarmBounds alarmBounds,
+      AlarmLimits alarmLimits,
       Boolean active,
       Formula formula,
       Integer version) {
@@ -69,7 +69,7 @@ public class Sensor implements Auditable {
     this.type = type;
     this.comment = comment;
     this.coordinates = coordinates;
-    this.alarmBounds = alarmBounds;
+    this.alarmLimits = alarmLimits;
     this.active = active;
     this.formula = formula;
     this.version = version;
@@ -133,12 +133,12 @@ public class Sensor implements Auditable {
     this.coordinates = coordinates;
   }
 
-  public AlarmBounds getAlarmBounds() {
-    return alarmBounds;
+  public AlarmLimits getAlarmLimits() {
+    return alarmLimits;
   }
 
-  public void setAlarmBounds(AlarmBounds alarmBounds) {
-    this.alarmBounds = alarmBounds;
+  public void setAlarmLimits(AlarmLimits alarmLimits) {
+    this.alarmLimits = alarmLimits;
   }
 
   public Boolean getActive() {

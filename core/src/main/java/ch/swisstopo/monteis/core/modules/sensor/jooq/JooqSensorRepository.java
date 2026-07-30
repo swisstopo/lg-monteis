@@ -2,15 +2,19 @@ package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.FORMULAS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSORS;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_TYPES;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.FormulasRecord;
+import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorTypesRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorsRecord;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -32,15 +36,18 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
 
   @Override
   @Transactional(readOnly = true)
-  public Sensor get(Long id) {
+  public SensorResponseDto getById(Long id) {
     return dsl.select(SENSORS.fields())
         .select(FORMULAS.fields())
+        .select(SENSOR_TYPES.fields())
         .from(SENSORS)
         .join(FORMULAS)
         .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
+        .join(SENSOR_TYPES)
+        .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
         .where(SENSORS.ID.eq(id))
         .fetchOptional()
-        .map(r -> mapper.toDomain(r.into(SENSORS), r.into(FORMULAS)))
+        .map(r -> mapper.toDto(r.into(SENSORS), r.into(FORMULAS), r.into(SENSOR_TYPES)))
         .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
   }
 
@@ -49,9 +56,11 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
   public Sensor create(Sensor sensor) {
     FormulasRecord formulaRecord =
         findOrCreateFormulaByExpression(sensor.getFormula().getExpression());
+    SensorTypesRecord typeRecord = findOrCreateSensorTypeByName(sensor.getType().name());
     SensorsRecord createdSensor = mapper.toRecord(sensor);
     dsl.attach(createdSensor);
     createdSensor.setFormulaId(formulaRecord.getId());
+    createdSensor.setTypeId(typeRecord.getId());
 
     try {
       createdSensor.insert();
@@ -60,7 +69,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
           "code", sensor.getCode(), "validation.unique", Map.of());
     }
 
-    return mapper.toDomain(createdSensor, formulaRecord);
+    return mapper.toDomain(createdSensor, formulaRecord, typeRecord);
   }
 
   @Override
@@ -72,10 +81,19 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
   }
 
   @Override
+  @Transactional(readOnly = true) // required for RLS
+  public List<SensorTypeResponseDto> findAllTypes() {
+    return dsl.selectFrom(SENSOR_TYPES)
+        .orderBy(SENSOR_TYPES.NAME.asc()) // Clean alphabetical sorting for the UI
+        .fetchInto(SensorTypeResponseDto.class);
+  }
+
+  @Override
   @Transactional
   public Sensor update(Sensor sensor) {
     FormulasRecord formulaRecord =
         findOrCreateFormulaByExpression(sensor.getFormula().getExpression());
+    SensorTypesRecord typeRecord = findOrCreateSensorTypeByName(sensor.getType().name());
     // fetch existing
     SensorsRecord updatedRecord =
         dsl.selectFrom(SENSORS).where(SENSORS.ID.eq(sensor.getId())).fetchOne();
@@ -85,6 +103,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
     // map new properties to existing
     mapper.updateRecordFromDomain(sensor, updatedRecord);
     updatedRecord.setFormulaId(formulaRecord.getId());
+    updatedRecord.setTypeId(typeRecord.getId());
     try {
       updatedRecord.update();
     } catch (DuplicateKeyException _) {
@@ -93,7 +112,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
           "code", sensor.getCode(), "validation.unique", Map.of());
     }
 
-    return mapper.toDomain(updatedRecord, formulaRecord);
+    return mapper.toDomain(updatedRecord, formulaRecord, typeRecord);
   }
 
   private FormulasRecord findOrCreateFormulaByExpression(String expression) {
@@ -108,14 +127,29 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
     return dsl.selectFrom(FORMULAS).where(FORMULAS.EXPRESSION.eq(expression)).fetchOne();
   }
 
+  private SensorTypesRecord findOrCreateSensorTypeByName(String name) {
+    // Attempt to insert. If it already exists, do nothing
+    dsl.insertInto(SENSOR_TYPES)
+        .set(SENSOR_TYPES.NAME, name)
+        .onConflict(SENSOR_TYPES.NAME) // Requires a UNIQUE constraint on the DB column
+        .doNothing()
+        .execute();
+
+    // Now we can safely fetch it, knowing it definitively exists
+    return dsl.selectFrom(SENSOR_TYPES).where(SENSOR_TYPES.NAME.eq(name)).fetchOne();
+  }
+
   @Override
   @Transactional
   public Stream<Sensor> streamUnauditedSensors() {
     return dsl.select(SENSORS.fields())
         .select(FORMULAS.fields())
+        .select(SENSOR_TYPES.fields())
         .from(SENSORS)
         .join(FORMULAS)
         .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
+        .join(SENSOR_TYPES)
+        .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
         .whereNotExists(
             dsl.selectOne()
                 .from(DSL.table("jv_global_id"))
@@ -128,8 +162,9 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
             r -> {
               SensorsRecord sensorsRecord = r.into(SENSORS);
               FormulasRecord formulasRecord = r.into(FORMULAS);
+              SensorTypesRecord typesRecord = r.into(SENSOR_TYPES);
 
-              return mapper.toDomain(sensorsRecord, formulasRecord);
+              return mapper.toDomain(sensorsRecord, formulasRecord, typesRecord);
             });
   }
 }

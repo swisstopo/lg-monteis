@@ -22,10 +22,6 @@ public class SensorService {
     this.javers = javers;
   }
 
-  public Sensor get(Long id) {
-    return repository.get(id);
-  }
-
   @AuditChanges
   public Sensor createSensor(Sensor sensor) {
     return repository.create(sensor);

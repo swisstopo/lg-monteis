@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
@@ -8,11 +9,13 @@ import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -37,8 +40,7 @@ public class SensorController {
   @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorResponseDto> getSensor(@PathVariable @Positive Long id) {
 
-    Sensor sensor = service.get(id);
-    return ResponseEntity.ok(mapper.toDto(sensor));
+    return ResponseEntity.ok(sensorQuery.getById(id));
   }
 
   @Operation(
@@ -69,7 +71,12 @@ public class SensorController {
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorResponseDto> updateSensor(
-      @Validated(Update.class) @PathVariable @Positive Long id, @RequestBody WriteSensorDto dto) {
+      @PathVariable @Positive Long id, @Validated(Update.class) @RequestBody WriteSensorDto dto) {
+    if (!id.equals(dto.id())) {
+      throw new ObjectBusinessValidationException(
+          "id.validation.mismatch", Map.of("pathId", id, "id", dto.id()));
+    }
+
     Sensor updated = service.updateSensor(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated));
   }
@@ -82,5 +89,14 @@ public class SensorController {
   @GetMapping(value = "/formulas", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<FormulaResponseDto>> findAllFormulas() {
     return ResponseEntity.status(HttpStatus.OK).body(sensorQuery.findAllFormulas());
+  }
+
+  @Operation(
+      summary = "Get all types",
+      description = "Retrieves a list of all available types, sorted alphabetically by expression.")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved types")
+  @GetMapping(value = "/types", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<SensorTypeResponseDto>> findAllTypes() {
+    return ResponseEntity.status(HttpStatus.OK).body(sensorQuery.findAllTypes());
   }
 }

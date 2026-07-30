@@ -123,18 +123,18 @@ class JooqExperimentRepositoryIT {
   private Sensor createDummySensor(String code, String name, String formulaExpression) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
-    AlarmBounds alarmBounds = new AlarmBounds(0.0, 100.0);
-    Coordinates coordinates = new Coordinates(2400.0, -12007.0, -1600.0);
+    AlarmLimits alarmLimits = new AlarmLimits(0.0, 100.0);
+    Coordinates coordinates = new Coordinates(2400, -12007, -1600);
 
     return sensorRepository.create(
         new Sensor(
             code,
             name,
-            SensorType.OTHER,
+            new SensorType(null, "Other", null),
             Unit.METER,
             null,
             coordinates,
-            alarmBounds,
+            alarmLimits,
             true,
             formula));
   }

@@ -15,6 +15,8 @@ import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
@@ -86,13 +88,15 @@ class JooqSensorRepositoryIT {
               repository.create(createDummySensor("GET-001", "Get Sensor", "x * 2"));
 
           // Act
-          Sensor found = repository.get(savedSensor.getId());
+          SensorResponseDto found = repository.getById(savedSensor.getId());
 
           // Assert
           assertAll(
-              () -> assertEquals("GET-001", found.getCode()),
-              () -> assertNotNull(found.getFormula(), "Formula should be loaded"),
-              () -> assertEquals("x * 2", found.getFormula().getExpression()));
+              () -> assertEquals("GET-001", found.code()),
+              () -> assertNotNull(found.formula(), "Formula should be loaded"),
+              () -> assertEquals("x * 2", found.formula().expression()),
+              () -> assertNotNull(found.type(), "Type should be loaded"),
+              () -> assertEquals("Other", found.type().name()));
         });
   }
 
@@ -236,6 +240,28 @@ class JooqSensorRepositoryIT {
 
   @Test
   @Transactional
+  void should_find_all_types_ordered() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange: use seeded values
+          //    (1, 'Temperature', 1),
+          //    (2, 'Stress Radial', 1),
+          //    (3, 'Other', 1),
+          //    (4, 'Volume', 1);
+
+          // Act
+          List<SensorTypeResponseDto> result = repository.findAllTypes();
+
+          // Assert
+          assertEquals("Other", result.get(0).name());
+          assertEquals("Stress Radial", result.get(1).name());
+          assertEquals("Temperature", result.get(2).name());
+          assertEquals("Volume", result.get(3).name());
+        });
+  }
+
+  @Test
+  @Transactional
   void should_stream_unaudited_sensors() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
@@ -289,10 +315,18 @@ class JooqSensorRepositoryIT {
   private Sensor createDummySensor(String code, String name, String formulaExpression) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
-    AlarmBounds alarmBounds = new AlarmBounds(0.0, 100.0);
-    Coordinates coordinates = new Coordinates(2400.0, -12007.0, -1600.0);
+    AlarmLimits alarmLimits = new AlarmLimits(0.0, 100.0);
+    Coordinates coordinates = new Coordinates(2400, -12007, -1600);
 
     return new Sensor(
-        code, name, SensorType.OTHER, Unit.METER, null, coordinates, alarmBounds, true, formula);
+        code,
+        name,
+        new SensorType(null, "Other", null),
+        Unit.METER,
+        null,
+        coordinates,
+        alarmLimits,
+        true,
+        formula);
   }
 }

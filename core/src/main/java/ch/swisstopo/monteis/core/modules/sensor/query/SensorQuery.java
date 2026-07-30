@@ -1,6 +1,8 @@
 package ch.swisstopo.monteis.core.modules.sensor.query;
 
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 
 /**
@@ -14,10 +16,26 @@ import java.util.List;
  * where business invariant validation is not required.
  */
 public interface SensorQuery {
+
+  /**
+   * Retrieves a sensor by its ID, projected straight into a {@link SensorResponseDto}.
+   *
+   * @param id the ID of the sensor to retrieve
+   * @return the sensor response DTO
+   */
+  SensorResponseDto getById(Long id);
+
   /**
    * Retrieves all formulas that are currently used by existing sensors.
    *
    * @return a list of all formulas alphabetically sorted
    */
   List<FormulaResponseDto> findAllFormulas();
+
+  /**
+   * Retrieves all types that are currently used by existing sensors.
+   *
+   * @return a list of all types alphabetically sorted
+   */
+  List<SensorTypeResponseDto> findAllTypes();
 }
