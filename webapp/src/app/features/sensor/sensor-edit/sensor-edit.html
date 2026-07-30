@@ -60,14 +60,20 @@
 
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.edit.label.type' | translate }}</mat-label>
-        <mat-select
+        <input
+          type="text"
+          [placeholder]="'sensor.edit.placeholder.type' | translate"
+          matInput
           [formField]="sensorForm.type"
-          [placeholder]="'sensor.edit.label.selectType' | translate"
-        >
-          @for (type of typeValues; track type) {
-            <mat-option [value]="type">{{ typeMetadata[type].labelKey | translate }}</mat-option>
+          [matAutocomplete]="auto"
+        />
+        <mat-autocomplete #auto="matAutocomplete">
+          @for (type of filteredTypes(); track type.id) {
+            <mat-option [value]="type.name" (onSelectionChange)="selectType(type)">{{
+              type.name
+            }}</mat-option>
           }
-        </mat-select>
+        </mat-autocomplete>
       </mat-form-field>
 
       <mat-form-field appearance="outline">

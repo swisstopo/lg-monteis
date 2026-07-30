@@ -13,19 +13,19 @@ import {
   ErrorDto,
   FormulaResponseDto,
   SensorResponseDto,
-  WriteFormulaDto,
+  SensorTypeResponseDto,
   WriteSensorDto,
 } from '../../../core/generated';
 import { toErrorDtos } from '../../../shared/models/api-error.model';
 import { ToastService } from '../../../shared/services/toast.service';
-import { SENSOR_TYPE_METADATA, SensorType, Unit, UNIT_METADATA } from '../models/sensor.model';
+import { Unit, UNIT_METADATA } from '../models/sensor.model';
 import { SensorService } from '../services/sensor.service';
 
 interface SensorFormData {
   code: string;
   name: string;
   unit: Unit;
-  type: SensorType;
+  type: string;
   comment: string;
   xLocal: number;
   yLocal: number;
@@ -65,18 +65,22 @@ export default class SensorEdit {
   readonly dialogRef = inject<MatDialogRef<SensorEdit>>(MatDialogRef, {
     optional: true,
   });
-  sensorId = input<number | undefined>(undefined);
+  readonly sensorId = input<number | undefined>(undefined);
 
   readonly unitValues = Object.values(WriteSensorDto.UnitEnum) as Unit[];
-  readonly typeValues = Object.values(WriteSensorDto.TypeEnum) as SensorType[];
   readonly unitMetadata = UNIT_METADATA;
-  readonly typeMetadata = SENSOR_TYPE_METADATA;
   readonly allFormulas = this.sensorService.allFormulas;
+  readonly allTypes = this.sensorService.allTypes;
   selectedFormula = signal<FormulaResponseDto | null>(null);
+  selectedType = signal<SensorTypeResponseDto | null>(null);
 
-  saveError = this.sensorService.error;
+  readonly saveError = this.sensorService.error;
   sensor = signal<SensorResponseDto | undefined>(undefined);
-  title = signal(translate('sensor.edit.title.create')());
+  title = signal(
+    this.sensorId()
+      ? translate('sensor.edit.title.edit')()
+      : translate('sensor.edit.title.create')(),
+  );
   sensorModel = signal<SensorFormData>(this.initSensorModel());
 
   private readonly syncSelectedSensor = effect(() => {
@@ -88,7 +92,6 @@ export default class SensorEdit {
       this.sensor.set(this.sensorService.sensor.value());
       if (this.sensor() !== undefined) {
         this.setSensorModel(this.sensor()!);
-        this.title.set(translate('sensor.edit.title.edit')());
         this.sensorForm().markAsTouched();
       }
     } catch {
@@ -111,7 +114,7 @@ export default class SensorEdit {
       code: '',
       name: '',
       unit: WriteSensorDto.UnitEnum.Ampere,
-      type: WriteSensorDto.TypeEnum.Other,
+      type: '',
       comment: '',
       xLocal: 0,
       yLocal: 0,
@@ -123,7 +126,7 @@ export default class SensorEdit {
     };
   }
 
-  sensorForm = form(this.sensorModel, (schema) => {
+  readonly sensorForm = form(this.sensorModel, (schema) => {
     required(schema.code, { message: translate('sensor.edit.validation.requiredCode')() });
     required(schema.name, { message: translate('sensor.edit.validation.requiredName')() });
     minLength(schema.name, 2, { message: translate('sensor.edit.validation.minLengthName')() });
@@ -157,6 +160,20 @@ export default class SensorEdit {
     this.selectedFormula.set(formula);
   }
 
+  readonly filteredTypes = computed(() => {
+    const search = this.sensorForm.type().value();
+    const list = this.allTypes.value() ?? [];
+
+    if (!search) return list;
+
+    return list.filter((type) => (type.name ?? '').toLowerCase().includes(search.toLowerCase()));
+  });
+
+  selectType(type: SensorTypeResponseDto): void {
+    this.sensorForm.type().value.set(type.name ?? '');
+    this.selectedType.set(type);
+  }
+
   async onSubmit(event: SubmitEvent) {
     event.preventDefault();
     const submitter = event.submitter as HTMLButtonElement | null;
@@ -182,7 +199,7 @@ export default class SensorEdit {
         return;
       } catch {
         const errors = this.saveError();
-        if (errors && errors[0].target === ErrorDto.TargetEnum.Form) {
+        if (errors?.[0].target === ErrorDto.TargetEnum.Form) {
           this.toastService.error(
             this.i18nService.instant(
               errors[0].messageKey ?? 'sensor.edit.error.unspecified.message',
@@ -190,37 +207,53 @@ export default class SensorEdit {
           );
         }
 
-        return errors?.map((err) => ({
-          kind: 'serverError',
-          message: err?.messageKey ? this.i18nService.instant(err.messageKey) : '',
-          fieldTree: field[err?.field as keyof SensorFormData],
-        }));
+        return errors
+          ?.map((err) => {
+            const mappedField = err?.field
+              ? this.sensorForm[err.field as keyof SensorFormData]
+              : undefined;
+            if (mappedField) {
+              return {
+                kind: 'serverError',
+                message: err?.messageKey ? this.i18nService.instant(err.messageKey) : '',
+                fieldTree: mappedField,
+              };
+            }
+            this.toastService.error(
+              this.i18nService.instant(
+                errors[0].messageKey ?? 'sensor.edit.error.unspecified.message',
+              ),
+            );
+            return undefined;
+          })
+          .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined);
       }
     });
   }
 
   private resetForm(): void {
-    this.title.set(this.i18nService.instant('sensor.edit.title.create'));
     this.sensorModel.set(this.initSensorModel());
     this.sensorService.getSensor(undefined);
     this.selectedFormula.set(null);
+    this.selectedType.set(null);
     this.sensorForm().reset();
   }
 
   private setSensorModel(sensor: SensorResponseDto) {
     this.selectedFormula.set(sensor.formula ?? null);
+    this.selectedType.set(sensor.type ?? null);
 
     this.sensorModel.set({
       code: sensor.code ?? '',
       name: sensor.name ?? '',
       unit: (sensor.unit ?? WriteSensorDto.UnitEnum.Ampere) as Unit,
-      type: (sensor.type ?? WriteSensorDto.TypeEnum.Other) as SensorType,
+      type: sensor.type?.name ?? '',
       comment: sensor.comment ?? '',
-      xLocal: sensor.xLocal ?? 0,
-      yLocal: sensor.yLocal ?? 0,
-      zLocal: sensor.zLocal ?? 0,
-      lowerAlarmBound: sensor.lowerAlarmBound ?? 0,
-      upperAlarmBound: sensor.upperAlarmBound ?? 100,
+      xLocal: sensor.coordinates?.x ?? 0,
+      yLocal: sensor.coordinates?.y ?? 0,
+      zLocal: sensor.coordinates?.z ?? 0,
+      lowerAlarmBound: sensor.alarmLimits?.lower ?? 0,
+      upperAlarmBound: sensor.alarmLimits?.upper ?? 100,
       active: sensor.active ?? true,
       formula: sensor.formula?.expression ?? '',
     });
@@ -232,28 +265,21 @@ export default class SensorEdit {
       code: formData.code,
       name: formData.name,
       unit: formData.unit,
-      type: formData.type,
+      type: { name: formData.type },
       comment: formData.comment,
-      xLocal: Number(formData.xLocal),
-      yLocal: Number(formData.yLocal),
-      zLocal: Number(formData.zLocal),
-      lowerAlarmBound: Number(formData.lowerAlarmBound),
-      upperAlarmBound: Number(formData.upperAlarmBound),
+      coordinates: {
+        x: Number(formData.xLocal),
+        y: Number(formData.yLocal),
+        z: Number(formData.zLocal),
+      },
+      alarmLimits: {
+        lower: Number(formData.lowerAlarmBound),
+        upper: Number(formData.upperAlarmBound),
+      },
       active: Boolean(formData.active),
-      formula: this.buildFormulaPayload(formData.formula),
+      formula: { expression: formData.formula },
       // version: this.sensor()?.version ?? undefined,
     };
-  }
-
-  // TODO only send expression
-  private buildFormulaPayload(expression: string): WriteFormulaDto | undefined {
-    if (!expression) return undefined;
-
-    const selected = this.selectedFormula();
-    if (selected?.expression === expression) {
-      return { id: selected.id, expression, version: selected.version };
-    }
-    return { expression };
   }
 
   private async saveSensor(sensor: WriteSensorDto) {

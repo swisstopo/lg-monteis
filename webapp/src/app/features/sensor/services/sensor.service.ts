@@ -22,6 +22,10 @@ export class SensorService {
     loader: () => firstValueFrom(this.api.findAllFormulas()),
   });
 
+  readonly allTypes = resource({
+    loader: () => firstValueFrom(this.api.findAllTypes()),
+  });
+
   // always set the sensor id to refetch the sensor
   getSensor(id: number | undefined) {
     if (id === undefined) {

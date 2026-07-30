@@ -4,12 +4,13 @@
   },
   "error": {
     "system": {
-      "internal": "Please try again later. If the problem persists, contact support and provide the error ID: {{errorId}}."
+      "internal": "Please try again later. If the problem persists, contact support and provide the error ID: {{errorId}}.",
+      "generic": "Please try again later. If the problem persists, contact support."
     }
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
   "validation": {
-    "required": "",
+    "required": "There is a validation error in the form. Please check the form and try again.",
     "mustBeNull": "",
     "size": "",
     "pattern": "",
