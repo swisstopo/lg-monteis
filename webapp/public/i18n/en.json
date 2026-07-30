@@ -10,6 +10,16 @@
       }
     }
   },
+  "validation": {
+    "required": "",
+    "mustBeNull": "",
+    "size": "",
+    "pattern": "",
+    "min": "",
+    "max": "",
+    "positive": "",
+    "unique": "An entity with the same {{field}} already exists"
+  },
   "sensor": {
     "edit": {
       "title": {
