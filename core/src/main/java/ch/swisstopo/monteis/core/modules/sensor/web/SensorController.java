@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
-import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
@@ -73,8 +73,8 @@ public class SensorController {
   public ResponseEntity<SensorResponseDto> updateSensor(
       @PathVariable @Positive Long id, @Validated(Update.class) @RequestBody WriteSensorDto dto) {
     if (!id.equals(dto.id())) {
-      throw new FieldBusinessValidationException(
-          "id", dto.id(), "validation.mismatch", Map.of("pathId", id));
+      throw new ObjectBusinessValidationException(
+          "id.validation.mismatch", Map.of("pathId", id, "id", dto.id()));
     }
 
     Sensor updated = service.updateSensor(mapper.toDomain(dto));

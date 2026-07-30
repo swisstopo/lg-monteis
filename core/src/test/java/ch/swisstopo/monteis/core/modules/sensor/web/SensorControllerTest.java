@@ -290,8 +290,8 @@ class SensorControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isUnprocessableContent())
-        .andExpect(jsonPath("$.field").value("id"))
-        .andExpect(jsonPath("$.messageKey").value("validation.mismatch"));
+        .andExpect(jsonPath("$.field").doesNotExist())
+        .andExpect(jsonPath("$.messageKey").value("id.validation.mismatch"));
 
     // Verify the mismatch is caught before any domain/service work happens
     then(mapper).shouldHaveNoInteractions();
