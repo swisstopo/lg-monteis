@@ -64,7 +64,7 @@
           type="text"
           [placeholder]="'sensor.edit.placeholder.type' | translate"
           matInput
-          [formField]="sensorForm.type"
+          [formField]="sensorForm.type.name"
           [matAutocomplete]="autoType"
         />
         <mat-autocomplete #autoType="matAutocomplete">
@@ -82,7 +82,7 @@
           type="text"
           [placeholder]="'sensor.edit.placeholder.formula' | translate"
           matInput
-          [formField]="sensorForm.formula"
+          [formField]="sensorForm.formula.expression"
           [matAutocomplete]="autoFormula"
         />
         <mat-autocomplete #autoFormula="matAutocomplete">
@@ -103,10 +103,10 @@
     <div class="form-row">
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.edit.label.xLocal' | translate }}</mat-label>
-        <input matInput type="number" [formField]="sensorForm.xLocal" />
-        @if (sensorForm.xLocal().touched() && sensorForm.xLocal().invalid()) {
+        <input matInput type="number" [formField]="sensorForm.coordinates.x" />
+        @if (sensorForm.coordinates.x().touched() && sensorForm.coordinates.x().invalid()) {
           <mat-error>
-            @for (error of sensorForm.xLocal().errors(); track error) {
+            @for (error of sensorForm.coordinates.x().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>
@@ -115,10 +115,10 @@
 
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.edit.label.yLocal' | translate }}</mat-label>
-        <input matInput type="number" [formField]="sensorForm.yLocal" />
-        @if (sensorForm.yLocal().touched() && sensorForm.yLocal().invalid()) {
+        <input matInput type="number" [formField]="sensorForm.coordinates.y" />
+        @if (sensorForm.coordinates.y().touched() && sensorForm.coordinates.y().invalid()) {
           <mat-error>
-            @for (error of sensorForm.yLocal().errors(); track error) {
+            @for (error of sensorForm.coordinates.y().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>
@@ -127,10 +127,10 @@
 
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.edit.label.zLocal' | translate }}</mat-label>
-        <input matInput type="number" [formField]="sensorForm.zLocal" />
-        @if (sensorForm.zLocal().touched() && sensorForm.zLocal().invalid()) {
+        <input matInput type="number" [formField]="sensorForm.coordinates.z" />
+        @if (sensorForm.coordinates.z().touched() && sensorForm.coordinates.z().invalid()) {
           <mat-error>
-            @for (error of sensorForm.zLocal().errors(); track error) {
+            @for (error of sensorForm.coordinates.z().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>
@@ -141,10 +141,10 @@
     <div class="form-row">
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.edit.label.alarmFrom' | translate }}</mat-label>
-        <input matInput type="number" [formField]="sensorForm.lowerAlarmBound" />
-        @if (sensorForm.lowerAlarmBound().touched() && sensorForm.lowerAlarmBound().invalid()) {
+        <input matInput type="number" [formField]="sensorForm.alarmLimits.lower" />
+        @if (sensorForm.alarmLimits.lower().touched() && sensorForm.alarmLimits.lower().invalid()) {
           <mat-error>
-            @for (error of sensorForm.lowerAlarmBound().errors(); track error) {
+            @for (error of sensorForm.alarmLimits.lower().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>
@@ -153,10 +153,10 @@
 
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.edit.label.alarmTo' | translate }}</mat-label>
-        <input matInput type="number" [formField]="sensorForm.upperAlarmBound" />
-        @if (sensorForm.upperAlarmBound().touched() && sensorForm.upperAlarmBound().invalid()) {
+        <input matInput type="number" [formField]="sensorForm.alarmLimits.upper" />
+        @if (sensorForm.alarmLimits.upper().touched() && sensorForm.alarmLimits.upper().invalid()) {
           <mat-error>
-            @for (error of sensorForm.upperAlarmBound().errors(); track error) {
+            @for (error of sensorForm.alarmLimits.upper().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>

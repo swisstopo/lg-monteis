@@ -24,31 +24,47 @@ interface SensorFormData {
   code: string;
   name: string;
   unit: Unit;
-  type: string;
+  type: {
+    name: string;
+  };
   comment: string;
-  xLocal: number;
-  yLocal: number;
-  zLocal: number;
-  lowerAlarmBound: number;
-  upperAlarmBound: number;
+  coordinates: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  alarmLimits: {
+    lower: number;
+    upper: number;
+  };
   active: boolean;
-  formula: string;
+  formula: {
+    expression: string;
+  };
 }
 
 function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData {
   return {
     active: domainModel.active ?? true,
     code: domainModel.code ?? '',
-    comment: domainModel.comment ?? '',
-    formula: domainModel.formula?.expression ?? '',
-    lowerAlarmBound: domainModel.alarmLimits?.lower ?? 0,
     name: domainModel.name ?? '',
-    type: domainModel.type?.name ?? '',
+    comment: domainModel.comment ?? '',
+    formula: {
+      expression: domainModel.formula?.expression ?? '',
+    },
+    alarmLimits: {
+      lower: domainModel.alarmLimits?.lower ?? 0,
+      upper: domainModel.alarmLimits?.upper ?? 100,
+    },
+    type: {
+      name: domainModel.type?.name ?? '',
+    },
     unit: domainModel.unit ?? WriteSensorDto.UnitEnum.Ampere,
-    upperAlarmBound: domainModel.alarmLimits?.upper ?? 100,
-    xLocal: domainModel.coordinates?.x ?? 0,
-    yLocal: domainModel.coordinates?.y ?? 0,
-    zLocal: domainModel.coordinates?.z ?? 0,
+    coordinates: {
+      x: domainModel.coordinates?.x ?? 0,
+      y: domainModel.coordinates?.y ?? 0,
+      z: domainModel.coordinates?.z ?? 0,
+    },
   };
 }
 
@@ -123,6 +139,7 @@ export default class SensorEdit {
   protected close(): void {
     this.dialogRef?.close();
   }
+
   readonly domainModel = signal<SensorResponseDto>({});
   private readonly formModel = linkedSignal({
     source: this.domainModel,
@@ -135,15 +152,23 @@ export default class SensorEdit {
       code: '',
       name: '',
       unit: WriteSensorDto.UnitEnum.Ampere,
-      type: '',
+      type: {
+        name: '',
+      },
       comment: '',
-      xLocal: 0,
-      yLocal: 0,
-      zLocal: 0,
-      lowerAlarmBound: 0,
-      upperAlarmBound: 100,
+      coordinates: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+      alarmLimits: {
+        lower: 0,
+        upper: 100,
+      },
       active: true,
-      formula: '',
+      formula: {
+        expression: '',
+      },
     };
   }
 
@@ -154,13 +179,19 @@ export default class SensorEdit {
     maxLength(schema.name, 10, { message: translate('sensor.edit.validation.maxLengthName')() });
     required(schema.unit);
     required(schema.type);
-    required(schema.xLocal, { message: translate('sensor.edit.validation.requiredXLocal')() });
-    required(schema.yLocal, { message: translate('sensor.edit.validation.requiredYLocal')() });
-    required(schema.zLocal, { message: translate('sensor.edit.validation.requiredZLocal')() });
-    required(schema.lowerAlarmBound, {
+    required(schema.coordinates.x, {
+      message: translate('sensor.edit.validation.requiredXLocal')(),
+    });
+    required(schema.coordinates.y, {
+      message: translate('sensor.edit.validation.requiredYLocal')(),
+    });
+    required(schema.coordinates.z, {
+      message: translate('sensor.edit.validation.requiredZLocal')(),
+    });
+    required(schema.alarmLimits.lower, {
       message: translate('sensor.edit.validation.requiredAlarmLimit')(),
     });
-    required(schema.upperAlarmBound, {
+    required(schema.alarmLimits.upper, {
       message: translate('sensor.edit.validation.requiredAlarmLimit')(),
     });
   });
@@ -172,12 +203,12 @@ export default class SensorEdit {
     if (!search) return list;
 
     return list.filter((formula) =>
-      (formula.expression ?? '').toLowerCase().includes(search.toLowerCase()),
+      (formula.expression ?? '').toLowerCase().includes(search.expression.toLowerCase()),
     );
   });
 
   selectFormula(formula: FormulaResponseDto): void {
-    this.sensorForm.formula().value.set(formula.expression ?? '');
+    this.sensorForm.formula.expression().value.set(formula.expression ?? '');
     this.selectedFormula.set(formula);
   }
 
@@ -187,11 +218,13 @@ export default class SensorEdit {
 
     if (!search) return list;
 
-    return list.filter((type) => (type.name ?? '').toLowerCase().includes(search.toLowerCase()));
+    return list.filter((type) =>
+      (type.name ?? '').toLowerCase().includes(search.name.toLowerCase()),
+    );
   });
 
   selectType(type: SensorTypeResponseDto): void {
-    this.sensorForm.type().value.set(type.name ?? '');
+    this.sensorForm.type.name().value.set(type.name ?? '');
     this.selectedType.set(type);
   }
 
@@ -256,19 +289,19 @@ export default class SensorEdit {
       code: formData.code,
       name: formData.name,
       unit: formData.unit,
-      type: { name: formData.type },
+      type: { name: formData.type.name },
       comment: formData.comment,
       coordinates: {
-        x: Number(formData.xLocal),
-        y: Number(formData.yLocal),
-        z: Number(formData.zLocal),
+        x: Number(formData.coordinates.x),
+        y: Number(formData.coordinates.y),
+        z: Number(formData.coordinates.z),
       },
       alarmLimits: {
-        lower: Number(formData.lowerAlarmBound),
-        upper: Number(formData.upperAlarmBound),
+        lower: Number(formData.alarmLimits.lower),
+        upper: Number(formData.alarmLimits.upper),
       },
       active: Boolean(formData.active),
-      formula: { expression: formData.formula },
+      formula: { expression: formData.formula.expression },
       version: this.sensor()?.version ?? undefined,
     };
   }
