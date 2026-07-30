@@ -1,15 +1,14 @@
 import { DatePipe } from '@angular/common';
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { WorkbenchView } from '@scion/workbench';
 import { OverviewControllerService, ReadSimpleMetricDto } from '../../../core/generated';
 import Table from '../../../ui/table/table';
 import { createColumns } from './columns';
-import {TableHeader} from '../../sensor/table-header/table-header';
 
 @Component({
-  selector: 'app-meausrements-overview', // todo:rename
-  imports: [Table, TableHeader],
+  selector: 'app-meausrements-overview',
+  imports: [Table],
   providers: [DatePipe],
   templateUrl: './overview-table.html',
   styleUrl: './overview-table.scss',

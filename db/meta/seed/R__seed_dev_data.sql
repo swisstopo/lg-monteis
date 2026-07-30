@@ -64,13 +64,13 @@ VALUES
     (2, 3),
     (2, 4);
 
-    -- FLOW-Admin (Sensor ID 5) is intentionally linked to no experiment —
-    -- only admins can see it.
+-- FLOW-Admin (Sensor ID 5) is intentionally linked to no experiment —
+-- only admins can see it.
 
 INSERT INTO sensors (
-    id, code, name, "type", unit, comment,
-    x_local, y_local, z_local,
-    upper_alarm_bound, lower_alarm_bound, active, formula_id, version
+    id, code, name, type_id, unit, comment,
+    x, y, z,
+    upper_alarm_limit, lower_alarm_limit, active, formula_id, version
 )
 SELECT
     i + 5,                                      -- id (starts at 6)
