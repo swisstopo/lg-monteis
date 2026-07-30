@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -38,8 +40,7 @@ public class SensorController {
   @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorResponseDto> getSensor(@PathVariable @Positive Long id) {
 
-    Sensor sensor = service.get(id);
-    return ResponseEntity.ok(mapper.toDto(sensor));
+    return ResponseEntity.ok(sensorQuery.getById(id));
   }
 
   @Operation(
@@ -70,8 +71,12 @@ public class SensorController {
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorResponseDto> updateSensor(
-      @Validated(Update.class) @PathVariable @Positive Long id,
-      @RequestBody WriteSensorDto dto) { // todo: check id attribute
+      @PathVariable @Positive Long id, @Validated(Update.class) @RequestBody WriteSensorDto dto) {
+    if (!id.equals(dto.id())) {
+      throw new FieldBusinessValidationException(
+          "id", dto.id(), "validation.mismatch", Map.of("pathId", id));
+    }
+
     Sensor updated = service.updateSensor(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated));
   }

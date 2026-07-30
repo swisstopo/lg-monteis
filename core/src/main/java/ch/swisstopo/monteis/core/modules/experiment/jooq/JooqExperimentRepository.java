@@ -44,11 +44,11 @@ public class JooqExperimentRepository implements ExperimentQueryInterface {
                             SENSORS.CODE,
                             SENSORS.NAME,
                             SENSORS.UNIT,
-                            row(SENSOR_TYPES.ID, SENSOR_TYPES.TYPE, SENSOR_TYPES.VERSION)
+                            row(SENSOR_TYPES.ID, SENSOR_TYPES.NAME, SENSOR_TYPES.VERSION)
                                 .mapping(SensorTypeResponseDto::new),
                             SENSORS.COMMENT,
                             row(SENSORS.X, SENSORS.Y, SENSORS.Z).mapping(CoordinatesDto::new),
-                            row(SENSORS.LOWER_ALARM_BOUND, SENSORS.UPPER_ALARM_BOUND)
+                            row(SENSORS.LOWER_ALARM_LIMIT, SENSORS.UPPER_ALARM_LIMIT)
                                 .mapping(AlarmLimitsDto::new),
                             SENSORS.ACTIVE,
                             // Map the joined formula into nested FormulaDto

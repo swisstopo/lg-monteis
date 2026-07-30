@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class AlarmLimitsTest {
   @Test
-  void should_create_alarmBounds_when_lower_is_less_than_upper() {
+  void should_create_alarmLimits_when_lower_is_less_than_upper() {
     // given
     Double lower = 10.5;
     Double upper = 50.0;
@@ -24,7 +24,7 @@ class AlarmLimitsTest {
   }
 
   @Test
-  void should_create_alarmBounds_when_lower_is_equal_to_upper() {
+  void should_create_alarmLimits_when_lower_is_equal_to_upper() {
     // given
     Double lower = 25.0;
     Double upper = 25.0;
@@ -50,7 +50,7 @@ class AlarmLimitsTest {
 
     // then
     assertAll(
-        () -> assertEquals("sensor.alarmBounds.invalid", exception.getMessageKey()),
+        () -> assertEquals("sensor.alarmLimits.invalid", exception.getMessageKey()),
         () -> assertEquals(lower, exception.getParams().get("lower")),
         () -> assertEquals(upper, exception.getParams().get("upper")));
   }

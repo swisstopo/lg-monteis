@@ -4,7 +4,6 @@ import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.security.SystemSecurityContext;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
-import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -16,17 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SensorService {
   private final SensorRepository repository;
-  private final SensorQuery query;
   private final Javers javers;
 
-  public SensorService(SensorRepository repository, SensorQuery query, Javers javers) {
+  public SensorService(SensorRepository repository, Javers javers) {
     this.repository = repository;
-    this.query = query;
     this.javers = javers;
-  }
-
-  public Sensor get(Long id) {
-    return query.get(id);
   }
 
   @AuditChanges

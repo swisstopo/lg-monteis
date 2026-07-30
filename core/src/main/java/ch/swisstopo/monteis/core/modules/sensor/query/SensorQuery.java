@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.query;
 
-import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 
@@ -18,12 +18,12 @@ import java.util.List;
 public interface SensorQuery {
 
   /**
-   * Retrieves a {@link Sensor} entity by its ID.
+   * Retrieves a sensor by its ID, projected straight into a {@link SensorResponseDto}.
    *
    * @param id the ID of the sensor to retrieve
-   * @return the sensor instance
+   * @return the sensor response DTO
    */
-  Sensor get(Long id);
+  SensorResponseDto getById(Long id);
 
   /**
    * Retrieves all formulas that are currently used by existing sensors.

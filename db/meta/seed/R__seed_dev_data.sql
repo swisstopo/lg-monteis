@@ -17,7 +17,7 @@ VALUES
     (4,  'x', 1);
 
 -- 2. Insert sensor types
-INSERT INTO sensor_types (id, type, version)
+INSERT INTO sensor_types (id, name, version)
 VALUES
     (1, 'Temperature', 1),
     (2, 'Stress Radial', 1),
@@ -31,7 +31,7 @@ VALUES
 INSERT INTO sensors (
     id, code, name, type_id, unit, comment,
     x, y, z,
-    upper_alarm_bound, lower_alarm_bound, active, formula_id, version
+    upper_alarm_limit, lower_alarm_limit, active, formula_id, version
 )
 VALUES
     (1, 'TEMP-1', 'monteis-001', 1, 'KELVIN', 'Air temperature sensor near ventilation intake',

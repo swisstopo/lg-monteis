@@ -7,7 +7,7 @@ public record AlarmLimits(Double lower, Double upper) {
   public AlarmLimits {
     if (lower > upper) {
       throw new ObjectBusinessValidationException(
-          "sensor.alarmBounds.invalid", Map.of("lower", lower, "upper", upper));
+          "sensor.alarmLimits.invalid", Map.of("lower", lower, "upper", upper));
     }
   }
 }

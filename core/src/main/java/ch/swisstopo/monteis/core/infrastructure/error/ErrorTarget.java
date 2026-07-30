@@ -26,8 +26,8 @@ public enum ErrorTarget {
    * from invalid relationships between multiple values or violations of
    * business rules. Clients typically display these errors above the form.
    *
-   * <p>Examples include invalid bounds where {@code lowerAlarmBound} is greater
-   * than {@code upperAlarmBound}, or inconsistent states involving multiple fields.
+   * <p>Examples include invalid limits where {@code lowerAlarmLimit} is greater
+   * than {@code upperAlarmLimit}, or inconsistent states involving multiple fields.
    */
   FORM,
 

@@ -36,6 +36,22 @@ class CqrsTaxonomyTest {
   }
 
   @Test
+  void query_interfaces_must_not_depend_on_domain_entities() {
+    noClasses()
+        .that()
+        .resideInAnyPackage("..query..")
+        .should()
+        .dependOnClassesThat()
+        .resideInAnyPackage("..domain..")
+        .because(
+            "the read flow's Query interface bypasses the Domain layer entirely and must return"
+                + " ReadDtos straight from the persistence adapter - a Query method returning (or"
+                + " accepting) a Domain Entity reintroduces the write flow's Domain <-> DTO"
+                + " round trip into what should be a direct jOOQ-record-to-DTO projection")
+        .check(importedClasses);
+  }
+
+  @Test
   void jooq_generated_records_must_stay_behind_the_persistence_adapter() {
     noClasses()
         .that()

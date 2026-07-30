@@ -13,6 +13,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
 
   @Override
   @Transactional(readOnly = true)
-  public Sensor get(Long id) {
+  public SensorResponseDto getById(Long id) {
     return dsl.select(SENSORS.fields())
         .select(FORMULAS.fields())
         .select(SENSOR_TYPES.fields())
@@ -46,7 +47,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
         .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
         .where(SENSORS.ID.eq(id))
         .fetchOptional()
-        .map(r -> mapper.toDomain(r.into(SENSORS), r.into(FORMULAS), r.into(SENSOR_TYPES)))
+        .map(r -> mapper.toDto(r.into(SENSORS), r.into(FORMULAS), r.into(SENSOR_TYPES)))
         .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
   }
 
@@ -55,7 +56,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
   public Sensor create(Sensor sensor) {
     FormulasRecord formulaRecord =
         findOrCreateFormulaByExpression(sensor.getFormula().getExpression());
-    SensorTypesRecord typeRecord = findOrCreateSensorTypeByType(sensor.getType().type());
+    SensorTypesRecord typeRecord = findOrCreateSensorTypeByName(sensor.getType().name());
     SensorsRecord createdSensor = mapper.toRecord(sensor);
     dsl.attach(createdSensor);
     createdSensor.setFormulaId(formulaRecord.getId());
@@ -83,7 +84,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
   @Transactional(readOnly = true) // required for RLS
   public List<SensorTypeResponseDto> findAllTypes() {
     return dsl.selectFrom(SENSOR_TYPES)
-        .orderBy(SENSOR_TYPES.TYPE.asc()) // Clean alphabetical sorting for the UI
+        .orderBy(SENSOR_TYPES.NAME.asc()) // Clean alphabetical sorting for the UI
         .fetchInto(SensorTypeResponseDto.class);
   }
 
@@ -92,7 +93,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
   public Sensor update(Sensor sensor) {
     FormulasRecord formulaRecord =
         findOrCreateFormulaByExpression(sensor.getFormula().getExpression());
-    SensorTypesRecord typeRecord = findOrCreateSensorTypeByType(sensor.getType().type());
+    SensorTypesRecord typeRecord = findOrCreateSensorTypeByName(sensor.getType().name());
     // fetch existing
     SensorsRecord updatedRecord =
         dsl.selectFrom(SENSORS).where(SENSORS.ID.eq(sensor.getId())).fetchOne();
@@ -126,16 +127,16 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
     return dsl.selectFrom(FORMULAS).where(FORMULAS.EXPRESSION.eq(expression)).fetchOne();
   }
 
-  private SensorTypesRecord findOrCreateSensorTypeByType(String type) {
+  private SensorTypesRecord findOrCreateSensorTypeByName(String name) {
     // Attempt to insert. If it already exists, do nothing
     dsl.insertInto(SENSOR_TYPES)
-        .set(SENSOR_TYPES.TYPE, type)
-        .onConflict(SENSOR_TYPES.TYPE) // Requires a UNIQUE constraint on the DB column
+        .set(SENSOR_TYPES.NAME, name)
+        .onConflict(SENSOR_TYPES.NAME) // Requires a UNIQUE constraint on the DB column
         .doNothing()
         .execute();
 
     // Now we can safely fetch it, knowing it definitively exists
-    return dsl.selectFrom(SENSOR_TYPES).where(SENSOR_TYPES.TYPE.eq(type)).fetchOne();
+    return dsl.selectFrom(SENSOR_TYPES).where(SENSOR_TYPES.NAME.eq(name)).fetchOne();
   }
 
   @Override
