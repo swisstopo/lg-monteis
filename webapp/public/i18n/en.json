@@ -4,12 +4,10 @@
   },
   "error": {
     "system": {
-      "internal": {
-        "title": "Unexpected System Error occurred",
-        "message": "Please try again later. If the problem persists, contact support and provide the error ID: {{errorId}}."
-      }
+      "internal": "Please try again later. If the problem persists, contact support and provide the error ID: {{errorId}}."
     }
   },
+  "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
   "validation": {
     "required": "",
     "mustBeNull": "",

@@ -26,13 +26,13 @@ export const restErrorInterceptor: HttpInterceptorFn = (req, next) => {
         if (globalErrors.length > 0) {
           globalErrors.forEach((err) =>
             toastService.error(
-              translateService.instant(err.messageKey ?? 'error.system.internal.title', err.params),
+              translateService.instant(err.messageKey ?? 'error.system.internal', err.params),
             ),
           );
         } else if (error.status === 0 || error.status >= 500) {
           // Network failures or backend crashes that never reach our ErrorDto
           // contract (e.g. proxy/HTML error pages) still need to surface to the user.
-          toastService.error(translateService.instant('error.system.internal.title'));
+          toastService.error(translateService.instant('error.system.internal'));
         }
       }
       return throwError(() => error);

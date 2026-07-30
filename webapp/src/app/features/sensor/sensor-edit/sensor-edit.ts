@@ -10,6 +10,7 @@ import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/in
 import { MatSelect } from '@angular/material/select';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
+  ErrorDto,
   FormulaResponseDto,
   SensorResponseDto,
   WriteFormulaDto,
@@ -180,7 +181,16 @@ export default class SensorEdit {
         }
         return;
       } catch {
-        return this.saveError()?.map((err) => ({
+        const errors = this.saveError();
+        if (errors && errors[0].target === ErrorDto.TargetEnum.Form) {
+          this.toastService.error(
+            this.i18nService.instant(
+              errors[0].messageKey ?? 'sensor.edit.error.unspecified.message',
+            ),
+          );
+        }
+
+        return errors?.map((err) => ({
           kind: 'serverError',
           message: err?.messageKey ? this.i18nService.instant(err.messageKey) : '',
           fieldTree: field[err?.field as keyof SensorFormData],
