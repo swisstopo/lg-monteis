@@ -5,7 +5,11 @@
     <div class="form-row">
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.edit.label.code' | translate }}</mat-label>
-        <input matInput [formField]="sensorForm.code" [placeholder]="'sensor.edit.placeholder.code' | translate" />
+        <input
+          matInput
+          [formField]="sensorForm.code"
+          [placeholder]="'sensor.edit.placeholder.code' | translate"
+        />
         @if (sensorForm.code().touched() && sensorForm.code().invalid()) {
           <mat-error>
             @for (error of sensorForm.code().errors(); track error) {
@@ -17,7 +21,11 @@
 
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.edit.label.name' | translate }}</mat-label>
-        <input matInput [formField]="sensorForm.name" [placeholder]="'sensor.edit.placeholder.name' | translate" />
+        <input
+          matInput
+          [formField]="sensorForm.name"
+          [placeholder]="'sensor.edit.placeholder.name' | translate"
+        />
         @if (sensorForm.name().touched() && sensorForm.name().invalid()) {
           <mat-error>
             @for (error of sensorForm.name().errors(); track error) {
@@ -31,7 +39,9 @@
         <mat-label>{{ 'sensor.edit.label.active' | translate }}</mat-label>
         <mat-select [formField]="sensorForm.active">
           <mat-option [value]="true">{{ 'sensor.edit.label.activeOption' | translate }}</mat-option>
-          <mat-option [value]="false">{{ 'sensor.edit.label.inactiveOption' | translate }}</mat-option>
+          <mat-option [value]="false">{{
+            'sensor.edit.label.inactiveOption' | translate
+          }}</mat-option>
         </mat-select>
       </mat-form-field>
     </div>
@@ -42,7 +52,7 @@
           <mat-option value="">{{ 'sensor.edit.label.selectUnit' | translate }}</mat-option>
           @for (unit of unitValues; track unit) {
             <mat-option [value]="unit"
-              >{{ unitMetadata[unit].label }} ({{ unitMetadata[unit].symbol }})
+              >{{ unitMetadata[unit].labelKey | translate }} ({{ unitMetadata[unit].symbol }})
             </mat-option>
           }
         </mat-select>
@@ -50,9 +60,12 @@
 
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.edit.label.type' | translate }}</mat-label>
-        <mat-select [formField]="sensorForm.type" [placeholder]="'sensor.edit.label.selectType' | translate">
+        <mat-select
+          [formField]="sensorForm.type"
+          [placeholder]="'sensor.edit.label.selectType' | translate"
+        >
           @for (type of typeValues; track type) {
-            <mat-option [value]="type">{{ typeMetadata[type].label }}</mat-option>
+            <mat-option [value]="type">{{ typeMetadata[type].labelKey | translate }}</mat-option>
           }
         </mat-select>
       </mat-form-field>

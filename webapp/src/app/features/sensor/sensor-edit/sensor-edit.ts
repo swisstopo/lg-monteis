@@ -1,24 +1,24 @@
-import {Component, computed, effect, inject, input, signal} from '@angular/core';
-import {form, FormField, maxLength, minLength, required, submit} from '@angular/forms/signals';
-import {MatAutocomplete, MatAutocompleteTrigger} from '@angular/material/autocomplete';
-import {MatButton} from '@angular/material/button';
-import {MatOption} from '@angular/material/core';
-import {MatDialogModule, MatDialogRef} from '@angular/material/dialog';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import {MatIcon} from '@angular/material/icon';
-import {MatError, MatFormField, MatInput, MatLabel} from '@angular/material/input';
-import {MatSelect} from '@angular/material/select';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { form, FormField, maxLength, minLength, required, submit } from '@angular/forms/signals';
+import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
+import { MatButton } from '@angular/material/button';
+import { MatOption } from '@angular/material/core';
+import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
+import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
+import { MatSelect } from '@angular/material/select';
+import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   FormulaResponseDto,
   SensorResponseDto,
   WriteFormulaDto,
   WriteSensorDto,
 } from '../../../core/generated';
-import {toErrorDtos} from '../../../shared/models/api-error.model';
-import {ToastService} from '../../../shared/services/toast.service';
-import {SENSOR_TYPE_METADATA, SensorType, Unit, UNIT_METADATA} from '../models/sensor.model';
-import {SensorService} from '../services/sensor.service';
-import {translate, TranslatePipe} from '@ngx-translate/core';
+import { toErrorDtos } from '../../../shared/models/api-error.model';
+import { ToastService } from '../../../shared/services/toast.service';
+import { SENSOR_TYPE_METADATA, SensorType, Unit, UNIT_METADATA } from '../models/sensor.model';
+import { SensorService } from '../services/sensor.service';
 
 interface SensorFormData {
   code: string;
@@ -60,6 +60,7 @@ interface SensorFormData {
 export default class SensorEdit {
   private readonly sensorService = inject(SensorService);
   private readonly toastService = inject(ToastService);
+  private readonly i18nService = inject(TranslateService);
   readonly dialogRef = inject<MatDialogRef<SensorEdit>>(MatDialogRef, {
     optional: true,
   });
@@ -92,7 +93,10 @@ export default class SensorEdit {
     } catch {
       const errors = toErrorDtos(this.sensorService.sensor.error());
       errors.forEach((err) =>
-        this.toastService.error(err?.messageKey ? translate(err.messageKey) : translate('sensor.edit.error.unspecified.message')(), translate('sensor.edit.error.unspecified.title')()),
+        this.toastService.error(
+          translate(err?.messageKey ?? 'sensor.edit.error.unspecified.message')(),
+          translate('sensor.edit.error.unspecified.title')(),
+        ),
       );
     }
   });
@@ -119,17 +123,21 @@ export default class SensorEdit {
   }
 
   sensorForm = form(this.sensorModel, (schema) => {
-    required(schema.code, {message: translate('sensor.edit.validation.requiredCode')()});
-    required(schema.name, {message: translate('sensor.edit.validation.requiredName')()});
-    minLength(schema.name, 2, {message: translate('sensor.edit.validation.minLengthName')()});
-    maxLength(schema.name, 10, {message: translate('sensor.edit.validation.maxLengthName')()});
+    required(schema.code, { message: translate('sensor.edit.validation.requiredCode')() });
+    required(schema.name, { message: translate('sensor.edit.validation.requiredName')() });
+    minLength(schema.name, 2, { message: translate('sensor.edit.validation.minLengthName')() });
+    maxLength(schema.name, 10, { message: translate('sensor.edit.validation.maxLengthName')() });
     required(schema.unit);
     required(schema.type);
-    required(schema.xLocal, {message: translate('sensor.edit.validation.requiredXLocal')()});
-    required(schema.yLocal, {message: translate('sensor.edit.validation.requiredYLocal')()});
-    required(schema.zLocal, {message: translate('sensor.edit.validation.requiredZLocal')()});
-    required(schema.lowerAlarmBound, {message: translate('sensor.edit.validation.requiredAlarmLimit')()});
-    required(schema.upperAlarmBound, {message: translate('sensor.edit.validation.requiredAlarmLimit')()});
+    required(schema.xLocal, { message: translate('sensor.edit.validation.requiredXLocal')() });
+    required(schema.yLocal, { message: translate('sensor.edit.validation.requiredYLocal')() });
+    required(schema.zLocal, { message: translate('sensor.edit.validation.requiredZLocal')() });
+    required(schema.lowerAlarmBound, {
+      message: translate('sensor.edit.validation.requiredAlarmLimit')(),
+    });
+    required(schema.upperAlarmBound, {
+      message: translate('sensor.edit.validation.requiredAlarmLimit')(),
+    });
   });
 
   readonly filteredFormulas = computed(() => {
@@ -163,7 +171,7 @@ export default class SensorEdit {
       try {
         await this.saveSensor(sensor);
 
-        this.toastService.success(translate('sensor.edit.success')());
+        this.toastService.success(this.i18nService.instant('sensor.edit.success'));
 
         if (resetAfter) {
           this.resetForm();
@@ -174,7 +182,7 @@ export default class SensorEdit {
       } catch {
         return this.saveError()?.map((err) => ({
           kind: 'serverError',
-          message: err?.messageKey ? translate(err?.messageKey)() : '',
+          message: err?.messageKey ? this.i18nService.instant(err.messageKey) : '',
           fieldTree: field[err?.field as keyof SensorFormData],
         }));
       }
@@ -182,7 +190,7 @@ export default class SensorEdit {
   }
 
   private resetForm(): void {
-    this.title.set(translate('sensor.edit.title.create')());
+    this.title.set(this.i18nService.instant('sensor.edit.title.create'));
     this.sensorModel.set(this.initSensorModel());
     this.sensorService.getSensor(undefined);
     this.selectedFormula.set(null);
@@ -223,7 +231,7 @@ export default class SensorEdit {
       upperAlarmBound: Number(formData.upperAlarmBound),
       active: Boolean(formData.active),
       formula: this.buildFormulaPayload(formData.formula),
-      version: this.sensor()?.version ?? undefined,
+      // version: this.sensor()?.version ?? undefined,
     };
   }
 
@@ -233,9 +241,9 @@ export default class SensorEdit {
 
     const selected = this.selectedFormula();
     if (selected?.expression === expression) {
-      return {id: selected.id, expression, version: selected.version};
+      return { id: selected.id, expression, version: selected.version };
     }
-    return {expression};
+    return { expression };
   }
 
   private async saveSensor(sensor: WriteSensorDto) {
