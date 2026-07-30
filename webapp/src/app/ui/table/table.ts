@@ -1,6 +1,13 @@
 import { Component, computed, input, output } from '@angular/core';
 import { AgGridAngular } from 'ag-grid-angular';
-import { ColDef, GridOptions, SelectionChangedEvent, themeBalham } from 'ag-grid-community';
+import {
+  ColDef,
+  GridOptions,
+  RowClickedEvent,
+  RowSelectionOptions,
+  SelectionChangedEvent,
+  themeBalham,
+} from 'ag-grid-community';
 import { TableColumn } from './table.types';
 
 @Component({
@@ -12,52 +19,56 @@ import { TableColumn } from './table.types';
 export default class Table<T = any> {
   rows = input<T[]>([]);
   columns = input<TableColumn<T>[]>([]);
+  // Whether to show row-selection checkboxes; independent per table instance.
+  checkboxes = input<boolean>(false);
+  // Whether more than one row can be selected at once; independent per table instance.
+  multiple = input<boolean>(false);
+  // Passthrough for grid-level ag-grid settings; merged on top of this component's defaults so
+  // any table can opt into/out of individual ag-grid options without changing this component.
+  gridOptions = input<GridOptions<T>>({});
 
-  rowClicked = output<any>();
-  selectionChanged = output<T | undefined>();
+  rowClicked = output<T>();
+  selectionChanged = output<T[]>();
 
-  columnDefs = computed<ColDef[]>(() => this.mapColumns(this.columns()));
   protected theme = themeBalham;
 
-  defaultColDef: ColDef = {
+  defaultColDef: ColDef<T> = {
     sortable: false,
     filter: true,
-    resizable: false,
+    // Always show the filter input under the header instead of requiring a click to open it.
+    floatingFilter: true,
+    resizable: true,
     flex: 1,
     minWidth: 120,
   };
 
-  private mapColumns(cols: TableColumn<T>[]): ColDef[] {
-    return cols.map((col) => ({
-      field: col.field as string,
-      type: col.type,
-      headerName: col.header ?? this.toHeader(col.field as string),
-      sortable: col.sortable,
-      filter: col.filter,
-      resizable: col.resizable,
+  protected mergedGridOptions = computed<GridOptions<T>>(() => {
+    const rowSelection: RowSelectionOptions<T> = this.multiple()
+      ? {
+          mode: 'multiRow',
+          checkboxes: this.checkboxes(),
+          headerCheckbox: this.checkboxes(),
+          enableClickSelection: true,
+        }
+      : {
+          mode: 'singleRow',
+          checkboxes: this.checkboxes(),
+          enableClickSelection: true,
+        };
 
-      width: col.width,
-      flex: col.flex,
-      valueFormatter: col.valueFormatter,
-    }));
-  }
+    return {
+      suppressCellFocus: true,
+      domLayout: 'autoHeight',
+      rowSelection,
+      ...this.gridOptions(),
+    };
+  });
 
-  protected gridOptions: GridOptions = {
-    suppressCellFocus: true,
-    domLayout: 'autoHeight',
-    rowSelection: { mode: 'singleRow', checkboxes: false, enableClickSelection: true },
-  };
-
-  private toHeader(field: string): string {
-    return field.replace(/([A-Z])/g, '$1').replace(/^./, (s) => s.toUpperCase());
-  }
-
-  onRowClicked(event: any): void {
-    this.rowClicked.emit(event.data);
+  onRowClicked(event: RowClickedEvent<T>): void {
+    if (event.data) this.rowClicked.emit(event.data);
   }
 
   onSelectionChanged(event: SelectionChangedEvent<T>): void {
-    const [row] = event.api.getSelectedRows();
-    this.selectionChanged.emit(row);
+    this.selectionChanged.emit(event.api.getSelectedRows());
   }
 }

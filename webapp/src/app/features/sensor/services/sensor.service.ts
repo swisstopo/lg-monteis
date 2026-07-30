@@ -22,6 +22,10 @@ export class SensorService {
     loader: () => firstValueFrom(this.api.findAllFormulas()),
   });
 
+  readonly allSensors = resource({
+    loader: () => firstValueFrom(this.api.findAllSensors()),
+  });
+
   readonly allTypes = resource({
     loader: () => firstValueFrom(this.api.findAllTypes()),
   });

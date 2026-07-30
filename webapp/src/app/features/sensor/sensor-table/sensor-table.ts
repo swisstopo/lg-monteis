@@ -1,43 +1,36 @@
-import { DatePipe } from '@angular/common';
 import { Component, effect, inject, signal } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
 import { WorkbenchView } from '@scion/workbench';
-import { OverviewControllerService, ReadSimpleMetricDto } from '../../../core/generated';
+import { SensorResponseDto } from '../../../core/generated';
 import Table from '../../../ui/table/table';
+import { SensorService } from '../services/sensor.service';
 import { TableHeader } from '../table-header/table-header';
 import { createColumns } from './columns';
 
 @Component({
   selector: 'app-sensor-table',
   imports: [Table, TableHeader],
-  providers: [DatePipe],
   templateUrl: './sensor-table.html',
   styleUrl: './sensor-table.scss',
 })
 export default class SensorTable {
-  private readonly datePipe = inject(DatePipe);
+  protected sensorService = inject(SensorService);
 
-  protected overviewService = inject(OverviewControllerService);
-  protected metricsResource = rxResource({
-    stream: () => this.overviewService.getMetrics(50),
-  });
-
-  protected wrappedCols = createColumns(this.datePipe);
+  protected wrappedCols = createColumns();
   protected selectedSensorId = signal<number | undefined>(undefined);
 
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
-      const count = this.metricsResource.value()?.length ?? 0;
-      view.title = `Setup Sensors`;
+      const count = this.sensorService.allSensors.value()?.length ?? 0;
+      view.title = `Setup Sensors (${count})`;
     });
   }
 
-  onWrappedRow(row: ReadSimpleMetricDto) {
+  onWrappedRow(row: SensorResponseDto) {
     console.log(row);
   }
 
-  onSelectionChanged(row: ReadSimpleMetricDto | undefined): void {
-    this.selectedSensorId.set(row?.sensorId !== undefined ? Number(row.sensorId) : undefined);
+  onSelectionChanged(rows: SensorResponseDto[]): void {
+    this.selectedSensorId.set(rows[0]?.id);
   }
 }

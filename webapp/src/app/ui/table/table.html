@@ -2,9 +2,9 @@
   class="app-table"
   [theme]="theme"
   [rowData]="rows()"
-  [columnDefs]="columnDefs()"
+  [columnDefs]="columns()"
   [defaultColDef]="defaultColDef"
+  [gridOptions]="mergedGridOptions()"
   (rowClicked)="onRowClicked($event)"
   (selectionChanged)="onSelectionChanged($event)"
-  [gridOptions]="gridOptions"
 ></ag-grid-angular>
