@@ -247,6 +247,9 @@ export default class SensorEdit {
       try {
         await this.saveSensor(sensor);
 
+        this.allFormulas.reload();
+        this.allTypes.reload();
+
         this.toastService.success(this.i18nService.instant('sensor.edit.success'));
 
         if (resetAfter) {
