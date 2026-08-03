@@ -18,7 +18,7 @@ public record WriteSensorDto(
         @NotNull(groups = Update.class)
         Long id,
     @NotBlank String code,
-    @NotBlank @Size(min = 2, max = 10) String name,
+    @NotBlank @Size(min = 2, max = 50) String name,
     String comment,
     @NotNull Unit unit,
     @NotNull @Valid WriteSensorTypeDto type,
