@@ -299,9 +299,9 @@ export default class SensorEdit {
   }
 
   private resetForm(): void {
-    this.domainModel.set({}); // init formModel
-    this.sensorService.getSensor(undefined); // clear sensor
-    this.sensorForm().reset(); // clear touched/invalid state
+    this.domainModel.set({});
+    this.sensorService.getSensor(undefined);
+    this.sensorForm().reset();
   }
 
   private buildPayload(formData: SensorFormData): WriteSensorDto {
