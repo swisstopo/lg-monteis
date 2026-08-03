@@ -49,17 +49,17 @@ public interface SensorJooqMapper {
   @Mapping(target = "z", source = "coordinates.z")
   @Mapping(target = "formulaId", source = "formula.id")
   @Mapping(target = "typeId", source = "type.id")
-  void updateRecordFromDomain(Sensor sensor, @MappingTarget SensorsRecord record);
+  void updateRecordFromDomain(Sensor sensor, @MappingTarget SensorsRecord sensorsRecord);
 
   // --- Embedded Formula and Type Sub-Object Mappings ---
-  Formula toDomain(FormulasRecord record);
+  Formula toDomain(FormulasRecord formulasRecord);
 
   @Mapping(target = "id", source = "id")
   @Mapping(target = "expression", source = "expression")
   @Mapping(target = "version", source = "version")
   FormulasRecord toRecord(Formula domain);
 
-  SensorType toDomain(SensorTypesRecord record);
+  SensorType toDomain(SensorTypesRecord typesRecord);
 
   SensorTypesRecord toRecord(SensorType domain);
 
@@ -79,7 +79,7 @@ public interface SensorJooqMapper {
   SensorResponseDto toDto(
       SensorsRecord sensorRecord, FormulasRecord formulaRecord, SensorTypesRecord typeRecord);
 
-  FormulaResponseDto toDto(FormulasRecord record);
+  FormulaResponseDto toDto(FormulasRecord formulasRecord);
 
-  SensorTypeResponseDto toDto(SensorTypesRecord record);
+  SensorTypeResponseDto toDto(SensorTypesRecord typesRecord);
 }
