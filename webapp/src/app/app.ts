@@ -13,8 +13,8 @@ import { ToastComponent } from './ui/toast/toast.component';
   styleUrl: './app.scss',
 })
 export class App {
-  private oauthService = inject(OAuthService);
-  private translate = inject(TranslateService);
+  private readonly oauthService = inject(OAuthService);
+  private readonly translate = inject(TranslateService);
   protected title = signal('MONTEIS');
 
   constructor() {

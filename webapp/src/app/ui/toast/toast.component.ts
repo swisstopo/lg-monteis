@@ -30,7 +30,7 @@ import { ToastInfo, ToastService } from '../../shared/services/toast.service';
   encapsulation: ViewEncapsulation.None,
 })
 export class ToastComponent {
-  private _snackBar = inject(MatSnackBar);
+  private readonly _snackBar = inject(MatSnackBar);
   toastService = inject(ToastService);
 
   @ViewChild('toastTemplate') toastTemplate!: TemplateRef<unknown>;

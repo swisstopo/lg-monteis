@@ -9,7 +9,7 @@ export interface ToastInfo {
 
 @Injectable({ providedIn: 'root' })
 export class ToastService {
-  private toastsSignal = signal<readonly ToastInfo[]>([]);
+  private readonly toastsSignal = signal<readonly ToastInfo[]>([]);
   toasts = this.toastsSignal.asReadonly();
 
   constructor() {}
