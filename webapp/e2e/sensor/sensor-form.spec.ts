@@ -1,30 +1,30 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from '../support/login';
 
-test('should create sensor', async ({ page }) => {
+test.beforeEach(async ({ page }) => {
   await page.goto('http://localhost:4200/');
   await loginAsAdmin(page);
 
-  await page.getByRole('link', { name: 'Create Sensor' }).click();
+  await page.getByRole('button', { name: 'data_exploration' }).click();
+  await page.getByRole('link', { name: 'Test Dialog' }).click();
+  await page.getByRole('button', { name: 'Dialog' }).click();
+});
 
-  await expect(
-    page.getByRole('heading', { name: 'Create New Sensor Configuration', level: 2 }),
-  ).toBeVisible();
+test('should update sensor', async ({ page }) => {
+  await expect(page.getByRole('heading', { name: 'Edit Sensor', level: 2 })).toBeVisible();
 
   const uniqueId = Date.now();
   // We need to make this ID unique due to the test running in parallel in different browsers.
   await page.getByLabel('Sensor Code').fill(`SN-TEMP-${uniqueId}`);
   await page.getByLabel('Sensor Name').fill('E2E TEST');
 
-  await page.getByLabel('Lower Bound').fill('10');
-  await page.getByLabel('Upper Bound').fill('100');
+  await page.getByLabel('Alarm Limit From').fill('10');
+  await page.getByLabel('Alarm Limit To').fill('100');
 
   await page.getByLabel("Formula Expression (Optional, defaults to 'x')").fill('x');
   await page.getByRole('option', { name: 'x * 1000 (v1)' }).click();
 
-  await page.getByRole('button', { name: 'Save Configuration' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
 
-  await expect(
-    page.getByRole('heading', { name: 'Server Response Success (Status: 201)', level: 3 }),
-  ).toBeVisible();
+  await expect(page.getByText('Sensor saved successfully.')).toBeVisible();
 });

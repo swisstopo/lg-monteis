@@ -16,6 +16,7 @@ import {
   WriteSensorDto,
 } from '../../../core/generated';
 import { toErrorDtos } from '../../../shared/models/api-error.model';
+import { FormErrorService } from '../../../shared/services/form-error.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { Unit, UNIT_METADATA } from '../models/sensor.model';
 import { SensorService } from '../services/sensor.service';
@@ -94,6 +95,7 @@ export default class SensorEdit {
   private readonly sensorService = inject(SensorService);
   private readonly toastService = inject(ToastService);
   private readonly i18nService = inject(TranslateService);
+  private readonly formErrorService = inject(FormErrorService);
   readonly dialogRef = inject<MatDialogRef<SensorEdit>>(MatDialogRef, {
     optional: true,
   });
@@ -178,7 +180,9 @@ export default class SensorEdit {
     minLength(schema.name, 2, { message: translate('sensor.edit.validation.minLengthName')() });
     maxLength(schema.name, 10, { message: translate('sensor.edit.validation.maxLengthName')() });
     required(schema.unit);
-    required(schema.type);
+    required(schema.type.name, {
+      message: translate('sensor.edit.validation.requiredType')(),
+    });
     required(schema.coordinates.x, {
       message: translate('sensor.edit.validation.requiredXLocal')(),
     });
@@ -252,25 +256,11 @@ export default class SensorEdit {
         }
         return;
       } catch {
-        const errors = this.saveError();
-        return errors
-          ?.map((err) => {
-            const mappedField = err?.field
-              ? this.sensorForm[err.field as keyof SensorFormData] // TODO map form field
-              : undefined;
-            if (mappedField) {
-              return {
-                kind: 'serverError',
-                message: err.messageKey ? this.i18nService.instant(err.messageKey) : '',
-                fieldTree: mappedField,
-              };
-            }
-            this.toastService.error(
-              this.i18nService.instant(err.messageKey ?? 'sensor.edit.error.unspecified.message'),
-            );
-            return undefined;
-          })
-          .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined);
+        return this.formErrorService.mapApiErrorsToFormErrors(
+          this.saveError(),
+          this.sensorForm,
+          'sensor.edit.error.unspecified.message',
+        );
       }
     });
   }
@@ -290,7 +280,7 @@ export default class SensorEdit {
       name: formData.name,
       unit: formData.unit,
       type: { name: formData.type.name },
-      comment: formData.comment,
+      comment: formData.comment ?? undefined,
       coordinates: {
         x: Number(formData.coordinates.x),
         y: Number(formData.coordinates.y),
@@ -301,7 +291,9 @@ export default class SensorEdit {
         upper: Number(formData.alarmLimits.upper),
       },
       active: Boolean(formData.active),
-      formula: { expression: formData.formula.expression },
+      formula: formData.formula.expression
+        ? { expression: formData.formula.expression }
+        : undefined,
       version: this.sensor()?.version ?? undefined,
     };
   }

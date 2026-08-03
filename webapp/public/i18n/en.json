@@ -10,14 +10,14 @@
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
   "validation": {
-    "required": "There is a validation error in the form. Please check the field: {{field}}",
+    "required": "There is a validation error with this field.",
     "mustBeNull": "",
     "size": "",
     "pattern": "",
     "min": "",
     "max": "",
     "positive": "",
-    "unique": "An entity with the same {{field}} already exists"
+    "unique": "An entity with the same code already exists"
   },
   "sensor": {
     "edit": {
@@ -57,6 +57,7 @@
       "validation": {
         "requiredCode": "Sensor code is required",
         "requiredName": "Sensor name is required",
+        "requiredType": "Sensor type is required",
         "minLengthName": "Name must be at least 2 characters long",
         "maxLengthName": "Name must be at most 10 characters long",
         "requiredXLocal": "Sensor xLocal is required",
@@ -66,11 +67,7 @@
       },
       "success": "Sensor saved successfully.",
       "error": {
-        "noId": "No sensor id provided",
-        "unspecified": {
-          "title": "Failed to load sensor!",
-          "message": "Please try again later. If the problem persists, contact support."
-        }
+        "noId": "No sensor id provided"
       }
     },
     "unit": {

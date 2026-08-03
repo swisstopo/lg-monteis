@@ -74,6 +74,13 @@
             }}</mat-option>
           }
         </mat-autocomplete>
+        @if (sensorForm.type.name().touched() && sensorForm.type.name().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.type.name().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -92,6 +99,15 @@
             </mat-option>
           }
         </mat-autocomplete>
+        @if (
+          sensorForm.formula.expression().touched() && sensorForm.formula.expression().invalid()
+        ) {
+          <mat-error>
+            @for (error of sensorForm.formula.expression().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
       </mat-form-field>
     </div>
 
