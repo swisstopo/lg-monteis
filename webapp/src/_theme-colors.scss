@@ -124,6 +124,47 @@ $_palettes: (
     99: #fffbff,
     100: #ffffff,
   ),
+  // NOTE: Angular Material's M3 baseline has no "success"/"warning" roles, so the
+  // `@angular/material:theme-color` schematic cannot generate these. The tonal scales below
+  // were hand-authored to follow the same 0-100 tonal structure as the palettes above, not
+  // derived from Google's HCT color algorithm. Re-generate via
+  // https://material-foundation.github.io/material-theme-builder/ if pixel-exact M3 tones are required.
+  success: (
+      0: #000000,
+      10: #002106,
+      20: #063a1a,
+      25: #0e4522,
+      30: #17512a,
+      35: #205d33,
+      40: #2a693c,
+      50: #3d8250,
+      60: #529c66,
+      70: #79b98a,
+      80: #a1d6ad,
+      90: #c7f3d0,
+      95: #e2f8e6,
+      98: #f2fdf3,
+      99: #f8fef8,
+      100: #ffffff,
+    ),
+  warning: (
+    0: #000000,
+    10: #2b1700,
+    20: #452a00,
+    25: #513300,
+    30: #5e3d00,
+    35: #6b4700,
+    40: #7a5200,
+    50: #976a00,
+    60: #b68400,
+    70: #d59f00,
+    80: #f4ba00,
+    90: #ffdf99,
+    95: #ffefcc,
+    98: #fff8ec,
+    99: #fffbf5,
+    100: #ffffff,
+  ),
 );
 
 $_rest: (
@@ -135,3 +176,7 @@ $_rest: (
 
 $primary-palette: map.merge(map.get($_palettes, primary), $_rest);
 $tertiary-palette: map.merge(map.get($_palettes, tertiary), $_rest);
+
+$error-palette: map.get($_palettes, error);
+$success-palette: map.get($_palettes, success);
+$warning-palette: map.get($_palettes, warning);

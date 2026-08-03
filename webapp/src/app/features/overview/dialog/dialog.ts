@@ -67,16 +67,16 @@ export default class Dialog {
   onCreateDialogOpen() {
     this.dialog.open(SensorEdit, {
       width: '60vw',
-      maxWidth: '900px',
-      autoFocus: false,
+      maxWidth: '1200px',
+      autoFocus: true,
     });
   }
 
   onDialogOpen() {
     this.dialog.open(SensorEdit, {
       width: '60vw',
-      maxWidth: '900px',
-      autoFocus: false,
+      maxWidth: '1200px',
+      autoFocus: true,
       bindings: [inputBinding('sensorId', () => 1)],
     });
   }
