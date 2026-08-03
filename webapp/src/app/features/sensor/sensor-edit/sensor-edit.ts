@@ -175,28 +175,28 @@ export default class SensorEdit {
   }
 
   readonly sensorForm = form(this.formModel, (schema) => {
-    required(schema.code, { message: translate('sensor.edit.validation.requiredCode')() });
-    required(schema.name, { message: translate('sensor.edit.validation.requiredName')() });
-    minLength(schema.name, 2, { message: translate('sensor.edit.validation.minLengthName')() });
-    maxLength(schema.name, 10, { message: translate('sensor.edit.validation.maxLengthName')() });
+    required(schema.code, { message: translate('sensor.edit.code.validation.required')() });
+    required(schema.name, { message: translate('sensor.edit.name.validation.required')() });
+    minLength(schema.name, 2, { message: translate('sensor.edit.name.validation.minLength')() });
+    maxLength(schema.name, 10, { message: translate('sensor.edit.name.validation.maxLength')() });
     required(schema.unit);
     required(schema.type.name, {
-      message: translate('sensor.edit.validation.requiredType')(),
+      message: translate('sensor.edit.type.validation.required')(),
     });
     required(schema.coordinates.x, {
-      message: translate('sensor.edit.validation.requiredXLocal')(),
+      message: translate('sensor.edit.xLocal.validation.required')(),
     });
     required(schema.coordinates.y, {
-      message: translate('sensor.edit.validation.requiredYLocal')(),
+      message: translate('sensor.edit.yLocal.validation.required')(),
     });
     required(schema.coordinates.z, {
-      message: translate('sensor.edit.validation.requiredZLocal')(),
+      message: translate('sensor.edit.zLocal.validation.required')(),
     });
     required(schema.alarmLimits.lower, {
-      message: translate('sensor.edit.validation.requiredAlarmLimit')(),
+      message: translate('sensor.edit.alarmFrom.validation.required')(),
     });
     required(schema.alarmLimits.upper, {
-      message: translate('sensor.edit.validation.requiredAlarmLimit')(),
+      message: translate('sensor.edit.alarmTo.validation.required')(),
     });
   });
 

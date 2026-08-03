@@ -25,45 +25,81 @@
         "create": "Setup new Sensor",
         "edit": "Edit Sensor"
       },
-      "label": {
-        "code": "Sensor Code",
-        "name": "Sensor Name",
-        "active": "Active",
-        "activeOption": "Active",
-        "inactiveOption": "Inactive",
-        "unit": "Unit",
-        "selectUnit": "Select a unit",
-        "type": "Sensor Type",
-        "selectType": "Select a type",
-        "formula": "Formula Expression (Optional, defaults to 'x')",
-        "comment": "Comment",
-        "xLocal": "X Local",
-        "yLocal": "Y Local",
-        "zLocal": "Z Local",
-        "alarmFrom": "Alarm Limit From",
-        "alarmTo": "Alarm Limit To"
+      "code": {
+        "label": "Sensor Code",
+        "placeholder": "e.g., SN-TEMP-402",
+        "validation": {
+          "required": "Sensor code is required"
+        }
       },
-      "placeholder": {
-        "code": "e.g., SN-TEMP-402",
-        "name": "e.g., Ventilation Intake Temp",
-        "formula": "Type a new formula or select an existing one...",
-        "type": "Add a new type or select an existing one..."
+      "name": {
+        "label": "Sensor Name",
+        "placeholder": "e.g., Ventilation Intake Temp",
+        "validation": {
+          "required": "Sensor name is required",
+          "minLength": "Name must be at least 2 characters long",
+          "maxLength": "Name must be at most 10 characters long"
+        }
+      },
+      "active": {
+        "label": "Active",
+        "option": {
+          "active": "Active",
+          "inactive": "Inactive"
+        }
+      },
+      "unit": {
+        "label": "Unit",
+        "placeholder": "Select a unit"
+      },
+      "type": {
+        "label": "Sensor Type",
+        "placeholder": "Add a new type or select an existing one...",
+        "validation": {
+          "required": "Sensor type is required"
+        }
+      },
+      "formula": {
+        "label": "Formula Expression (Optional, defaults to 'x')",
+        "placeholder": "Type a new formula or select an existing one..."
+      },
+      "comment": {
+        "label": "Comment"
+      },
+      "xLocal": {
+        "label": "X Local",
+        "validation": {
+          "required": "Sensor xLocal is required"
+        }
+      },
+      "yLocal": {
+        "label": "Y Local",
+        "validation": {
+          "required": "Sensor yLocal is required"
+        }
+      },
+      "zLocal": {
+        "label": "Z Local",
+        "validation": {
+          "required": "Sensor zLocal is required"
+        }
+      },
+      "alarmFrom": {
+        "label": "Alarm Limit From",
+        "validation": {
+          "required": "Alarm limit is required"
+        }
+      },
+      "alarmTo": {
+        "label": "Alarm Limit To",
+        "validation": {
+          "required": "Alarm limit is required"
+        }
       },
       "button": {
         "cancel": "Cancel",
         "saveAndCreate": "Save and create new",
         "save": "Save"
-      },
-      "validation": {
-        "requiredCode": "Sensor code is required",
-        "requiredName": "Sensor name is required",
-        "requiredType": "Sensor type is required",
-        "minLengthName": "Name must be at least 2 characters long",
-        "maxLengthName": "Name must be at most 10 characters long",
-        "requiredXLocal": "Sensor xLocal is required",
-        "requiredYLocal": "Sensor yLocal is required",
-        "requiredZLocal": "Sensor zLocal is required",
-        "requiredAlarmLimit": "Alarm limit is required"
       },
       "success": "Sensor saved successfully.",
       "error": {
@@ -71,13 +107,34 @@
       }
     },
     "unit": {
-      "seconds": "Seconds",
-      "meter": "Meter",
-      "kilogram": "Kilogram",
-      "ampere": "Ampere",
-      "kelvin": "Kelvin",
-      "mole": "Mole",
-      "candela": "Candela"
+      "seconds": {
+        "label": "Seconds",
+        "symbol": "s"
+      },
+      "meter": {
+        "label": "Meter",
+        "symbol": "m"
+      },
+      "kilogram": {
+        "label": "Kilogram",
+        "symbol": "kg"
+      },
+      "ampere": {
+        "label": "Ampere",
+        "symbol": "A"
+      },
+      "kelvin": {
+        "label": "Kelvin",
+        "symbol": "K"
+      },
+      "mole": {
+        "label": "Mole",
+        "symbol": "mol"
+      },
+      "candela": {
+        "label": "Candela",
+        "symbol": "cd"
+      }
     },
     "type": {
       "windSpeed": "Wind Speed",

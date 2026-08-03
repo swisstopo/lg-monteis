@@ -4,11 +4,11 @@
   <form id="sensorCreateForm" class="form-layout" (submit)="onSubmit($event)" novalidate>
     <div class="form-row">
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.code' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.code.label' | translate }}</mat-label>
         <input
           matInput
           [formField]="sensorForm.code"
-          [placeholder]="'sensor.edit.placeholder.code' | translate"
+          [placeholder]="'sensor.edit.code.placeholder' | translate"
         />
         @if (sensorForm.code().touched() && sensorForm.code().invalid()) {
           <mat-error>
@@ -20,11 +20,11 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.name' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.name.label' | translate }}</mat-label>
         <input
           matInput
           [formField]="sensorForm.name"
-          [placeholder]="'sensor.edit.placeholder.name' | translate"
+          [placeholder]="'sensor.edit.name.placeholder' | translate"
         />
         @if (sensorForm.name().touched() && sensorForm.name().invalid()) {
           <mat-error>
@@ -36,20 +36,22 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.active' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.active.label' | translate }}</mat-label>
         <mat-select [formField]="sensorForm.active">
-          <mat-option [value]="true">{{ 'sensor.edit.label.activeOption' | translate }}</mat-option>
+          <mat-option [value]="true">{{
+            'sensor.edit.active.option.active' | translate
+          }}</mat-option>
           <mat-option [value]="false">{{
-            'sensor.edit.label.inactiveOption' | translate
+            'sensor.edit.active.option.inactive' | translate
           }}</mat-option>
         </mat-select>
       </mat-form-field>
     </div>
     <div class="form-row">
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.unit' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.unit.label' | translate }}</mat-label>
         <mat-select [formField]="sensorForm.unit">
-          <mat-option value="">{{ 'sensor.edit.label.selectUnit' | translate }}</mat-option>
+          <mat-option value="">{{ 'sensor.edit.unit.placeholder' | translate }}</mat-option>
           @for (unit of unitValues; track unit) {
             <mat-option [value]="unit"
               >{{ unitMetadata[unit].labelKey | translate }} ({{ unitMetadata[unit].symbol }})
@@ -59,10 +61,10 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.type' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.type.label' | translate }}</mat-label>
         <input
           type="text"
-          [placeholder]="'sensor.edit.placeholder.type' | translate"
+          [placeholder]="'sensor.edit.type.placeholder' | translate"
           matInput
           [formField]="sensorForm.type.name"
           [matAutocomplete]="autoType"
@@ -84,10 +86,10 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.formula' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.formula.label' | translate }}</mat-label>
         <input
           type="text"
-          [placeholder]="'sensor.edit.placeholder.formula' | translate"
+          [placeholder]="'sensor.edit.formula.placeholder' | translate"
           matInput
           [formField]="sensorForm.formula.expression"
           [matAutocomplete]="autoFormula"
@@ -112,13 +114,13 @@
     </div>
 
     <mat-form-field class="full-width" appearance="outline">
-      <mat-label>{{ 'sensor.edit.label.comment' | translate }}</mat-label>
+      <mat-label>{{ 'sensor.edit.comment.label' | translate }}</mat-label>
       <textarea matInput [formField]="sensorForm.comment" rows="3"></textarea>
     </mat-form-field>
 
     <div class="form-row">
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.xLocal' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.xLocal.label' | translate }}</mat-label>
         <input matInput type="number" [formField]="sensorForm.coordinates.x" />
         @if (sensorForm.coordinates.x().touched() && sensorForm.coordinates.x().invalid()) {
           <mat-error>
@@ -130,7 +132,7 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.yLocal' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.yLocal.label' | translate }}</mat-label>
         <input matInput type="number" [formField]="sensorForm.coordinates.y" />
         @if (sensorForm.coordinates.y().touched() && sensorForm.coordinates.y().invalid()) {
           <mat-error>
@@ -142,7 +144,7 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.zLocal' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.zLocal.label' | translate }}</mat-label>
         <input matInput type="number" [formField]="sensorForm.coordinates.z" />
         @if (sensorForm.coordinates.z().touched() && sensorForm.coordinates.z().invalid()) {
           <mat-error>
@@ -156,7 +158,7 @@
 
     <div class="form-row">
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.alarmFrom' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.alarmFrom.label' | translate }}</mat-label>
         <input matInput type="number" [formField]="sensorForm.alarmLimits.lower" />
         @if (sensorForm.alarmLimits.lower().touched() && sensorForm.alarmLimits.lower().invalid()) {
           <mat-error>
@@ -168,7 +170,7 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.edit.label.alarmTo' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.edit.alarmTo.label' | translate }}</mat-label>
         <input matInput type="number" [formField]="sensorForm.alarmLimits.upper" />
         @if (sensorForm.alarmLimits.upper().touched() && sensorForm.alarmLimits.upper().invalid()) {
           <mat-error>
