@@ -54,7 +54,9 @@
           <mat-option value="">{{ 'sensor.edit.unit.placeholder' | translate }}</mat-option>
           @for (unit of unitValues; track unit) {
             <mat-option [value]="unit"
-              >{{ unitMetadata[unit].labelKey | translate }} ({{ unitMetadata[unit].symbol }})
+              >{{ unitMetadata[unit].labelKey | translate }} ({{
+                unitMetadata[unit].symbol | translate
+              }})
             </mat-option>
           }
         </mat-select>

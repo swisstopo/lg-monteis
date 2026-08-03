@@ -1,5 +1,13 @@
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
-import { form, FormField, maxLength, minLength, required, submit } from '@angular/forms/signals';
+import {
+  form,
+  FormField,
+  maxLength,
+  minLength,
+  required,
+  submit,
+  validate,
+} from '@angular/forms/signals';
 import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatButton } from '@angular/material/button';
 import { MatOption } from '@angular/material/core';
@@ -178,7 +186,7 @@ export default class SensorEdit {
     required(schema.code, { message: translate('sensor.edit.code.validation.required')() });
     required(schema.name, { message: translate('sensor.edit.name.validation.required')() });
     minLength(schema.name, 2, { message: translate('sensor.edit.name.validation.minLength')() });
-    maxLength(schema.name, 10, { message: translate('sensor.edit.name.validation.maxLength')() });
+    maxLength(schema.name, 50, { message: translate('sensor.edit.name.validation.maxLength')() });
     required(schema.unit);
     required(schema.type.name, {
       message: translate('sensor.edit.type.validation.required')(),
@@ -197,6 +205,28 @@ export default class SensorEdit {
     });
     required(schema.alarmLimits.upper, {
       message: translate('sensor.edit.alarmTo.validation.required')(),
+    });
+    validate(schema.alarmLimits.lower, ({ value, valueOf }) => {
+      const lower = value();
+      const upper = valueOf(schema.alarmLimits.upper);
+      if (lower > upper) {
+        return {
+          kind: 'bounds',
+          message: this.i18nService.translate('sensor.edit.alarmFrom.validation.bounds')(),
+        };
+      }
+      return undefined;
+    });
+    validate(schema.alarmLimits.upper, ({ value, valueOf }) => {
+      const upper = value();
+      const lower = valueOf(schema.alarmLimits.lower);
+      if (upper < lower) {
+        return {
+          kind: 'bounds',
+          message: this.i18nService.translate('sensor.edit.alarmTo.validation.bounds')(),
+        };
+      }
+      return undefined;
     });
   });
 
@@ -269,11 +299,9 @@ export default class SensorEdit {
   }
 
   private resetForm(): void {
-    this.domainModel.set({});
-    this.sensorService.getSensor(undefined);
-    this.selectedFormula.set(null);
-    this.selectedType.set(null);
-    this.sensorForm().reset();
+    this.domainModel.set({}); // init formModel
+    this.sensorService.getSensor(undefined); // clear sensor
+    this.sensorForm().reset(); // clear touched/invalid state
   }
 
   private buildPayload(formData: SensorFormData): WriteSensorDto {

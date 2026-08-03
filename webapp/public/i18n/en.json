@@ -87,13 +87,15 @@
       "alarmFrom": {
         "label": "Alarm Limit From",
         "validation": {
-          "required": "Alarm limit is required"
+          "required": "Alarm limit is required",
+          "bounds": "This value must be lower than the upper limit"
         }
       },
       "alarmTo": {
         "label": "Alarm Limit To",
         "validation": {
-          "required": "Alarm limit is required"
+          "required": "Alarm limit is required",
+          "bounds": "This value must be higher than the lower limit"
         }
       },
       "button": {
@@ -143,9 +145,6 @@
       "volume": "Volume",
       "other": "Other"
     }
-  },
-  "bounds": {
-    "invalid": "The upperbound must be higher than the lower bound. Currently you have upperbound: {{upper}} which is higher than lower bound: {{lower}}."
   },
   "overview": {
     "totalRecords": "Total Database Records",
