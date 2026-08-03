@@ -110,10 +110,10 @@ export default class SensorEdit {
 
   readonly saveError = this.sensorService.error;
   sensor = signal<SensorResponseDto | undefined>(undefined);
-  title = signal(
+  title = computed(() =>
     this.sensorId()
-      ? translate('sensor.edit.title.edit')()
-      : translate('sensor.edit.title.create')(),
+      ? this.i18nService.translate('sensor.edit.title.edit')()
+      : this.i18nService.translate('sensor.edit.title.create')(),
   );
 
   private readonly syncSelectedSensor = effect(() => {
