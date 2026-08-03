@@ -63,7 +63,7 @@ test('should fail to create existing sensor', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
 
   const uniqueId = crypto.randomUUID();
-  // We need to make this ID unique due to the test running in parallel in different browsers.
+
   await page.getByLabel('Sensor Code').fill(`SN-TEMP-${uniqueId}`);
   await page.getByLabel('Sensor Name').fill('E2E TEST');
 
@@ -121,13 +121,16 @@ test('should show required validation errors', async ({ page }) => {
 test('should reject invalid alarm limits', async ({ page }) => {
   await page.getByRole('button', { name: 'Create Sensor' }).click();
 
-  // fill all required fields ...
+  const uniqueId = crypto.randomUUID();
+
+  await page.getByLabel('Sensor Code').fill(`SN-TEMP-${uniqueId}`);
+  await page.getByLabel('Sensor Name').fill('E2E TEST');
+
   await page.getByLabel('Alarm Limit From').fill('100');
   await page.getByLabel('Alarm Limit To').fill('10');
   await page.getByLabel('Alarm Limit To').blur();
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
 
-  await expect(page.getByText('The upperbound must be higher than the lower bound')).toBeVisible();
+  await expect(page.getByText('This value must be higher than the lower limit')).toBeVisible();
 });
 
 test('should close dialog on cancel', async ({ page }) => {
