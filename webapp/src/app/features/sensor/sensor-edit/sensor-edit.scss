@@ -1,0 +1,14 @@
+.form-layout {
+  padding: 0.5rem 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-row {
+  display: contents;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}

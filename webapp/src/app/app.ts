@@ -1,22 +1,28 @@
 import { Component, inject, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchComponent } from '@scion/workbench';
 import { OAuthService } from 'angular-oauth2-oidc';
+import translationsEN from '../../public/i18n/en.json';
+import { ToastComponent } from './ui/toast/toast.component';
 
 @Component({
   selector: 'app-root',
-  imports: [WorkbenchComponent, MatButton],
+  imports: [WorkbenchComponent, MatButton, ToastComponent, TranslatePipe],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
 export class App {
-  protected readonly title = signal('MONTEIS');
-
   private readonly oauthService = inject(OAuthService);
+  private readonly translate = inject(TranslateService);
+  protected title = signal('MONTEIS');
 
-  constructor() {}
+  constructor() {
+    this.translate.setTranslation('en', translationsEN);
+    this.translate.setFallbackLang('en');
+  }
 
-  protected logout(): void {
+  logout(): void {
     this.oauthService.logOut();
   }
 }

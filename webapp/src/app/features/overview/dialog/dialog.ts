@@ -1,12 +1,14 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, effect, inject, inputBinding } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { MatRadioButton, MatRadioGroup } from '@angular/material/radio';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { WorkbenchView } from '@scion/workbench';
+import SensorEdit from '../../sensor/sensor-edit/sensor-edit';
 
 @Component({
   selector: 'app-dialog',
@@ -29,6 +31,7 @@ import { WorkbenchView } from '@scion/workbench';
 })
 export default class Dialog {
   private fb = inject(FormBuilder);
+  private dialog = inject(MatDialog);
 
   protected form = this.fb.nonNullable.group({
     checkbox1: [true],
@@ -59,6 +62,23 @@ export default class Dialog {
     if (fileList) {
       this.form.controls.files.setValue(Array.from(fileList));
     }
+  }
+
+  onCreateDialogOpen() {
+    this.dialog.open(SensorEdit, {
+      width: '60vw',
+      maxWidth: '1200px',
+      autoFocus: true,
+    });
+  }
+
+  onDialogOpen() {
+    this.dialog.open(SensorEdit, {
+      width: '60vw',
+      maxWidth: '1200px',
+      autoFocus: true,
+      bindings: [inputBinding('sensorId', () => 1)],
+    });
   }
 
   onSubmit() {

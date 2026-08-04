@@ -1,0 +1,213 @@
+<h2 mat-dialog-title>{{ title() }}</h2>
+
+<mat-dialog-content>
+  <form id="sensorCreateForm" class="form-layout" (submit)="onSubmit($event)" novalidate>
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.code.label' | translate }}</mat-label>
+        <input
+          matInput
+          [formField]="sensorForm.code"
+          [placeholder]="'sensor.edit.code.placeholder' | translate"
+        />
+        @if (sensorForm.code().touched() && sensorForm.code().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.code().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.name.label' | translate }}</mat-label>
+        <input
+          matInput
+          [formField]="sensorForm.name"
+          [placeholder]="'sensor.edit.name.placeholder' | translate"
+        />
+        @if (sensorForm.name().touched() && sensorForm.name().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.name().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.active.label' | translate }}</mat-label>
+        <mat-select [formField]="sensorForm.active">
+          <mat-option [value]="true">{{
+            'sensor.edit.active.option.active' | translate
+          }}</mat-option>
+          <mat-option [value]="false">{{
+            'sensor.edit.active.option.inactive' | translate
+          }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.unit.label' | translate }}</mat-label>
+        <mat-select [formField]="sensorForm.unit">
+          <mat-option value="">{{ 'sensor.edit.unit.placeholder' | translate }}</mat-option>
+          @for (unit of unitValues; track unit) {
+            <mat-option [value]="unit"
+              >{{ unitMetadata[unit].labelKey | translate }} ({{
+                unitMetadata[unit].symbol | translate
+              }})
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.type.label' | translate }}</mat-label>
+        <input
+          type="text"
+          [placeholder]="'sensor.edit.type.placeholder' | translate"
+          matInput
+          [formField]="sensorForm.type.name"
+          [matAutocomplete]="autoType"
+        />
+        <mat-autocomplete #autoType="matAutocomplete">
+          @for (type of filteredTypes(); track type.id) {
+            <mat-option [value]="type.name" (onSelectionChange)="selectType(type)">{{
+              type.name
+            }}</mat-option>
+          }
+        </mat-autocomplete>
+        @if (sensorForm.type.name().touched() && sensorForm.type.name().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.type.name().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.formula.label' | translate }}</mat-label>
+        <input
+          type="text"
+          [placeholder]="'sensor.edit.formula.placeholder' | translate"
+          matInput
+          [formField]="sensorForm.formula.expression"
+          [matAutocomplete]="autoFormula"
+        />
+        <mat-autocomplete #autoFormula="matAutocomplete">
+          @for (formula of filteredFormulas(); track formula.id) {
+            <mat-option [value]="formula.expression" (onSelectionChange)="selectFormula(formula)">
+              {{ formula.expression }} <span class="version-badge">(v{{ formula.version }})</span>
+            </mat-option>
+          }
+        </mat-autocomplete>
+        @if (
+          sensorForm.formula.expression().touched() && sensorForm.formula.expression().invalid()
+        ) {
+          <mat-error>
+            @for (error of sensorForm.formula.expression().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <mat-form-field class="full-width" appearance="outline">
+      <mat-label>{{ 'sensor.edit.comment.label' | translate }}</mat-label>
+      <textarea matInput [formField]="sensorForm.comment" rows="3"></textarea>
+    </mat-form-field>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.xLocal.label' | translate }}</mat-label>
+        <input matInput type="number" [formField]="sensorForm.coordinates.x" />
+        @if (sensorForm.coordinates.x().touched() && sensorForm.coordinates.x().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.coordinates.x().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.yLocal.label' | translate }}</mat-label>
+        <input matInput type="number" [formField]="sensorForm.coordinates.y" />
+        @if (sensorForm.coordinates.y().touched() && sensorForm.coordinates.y().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.coordinates.y().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.zLocal.label' | translate }}</mat-label>
+        <input matInput type="number" [formField]="sensorForm.coordinates.z" />
+        @if (sensorForm.coordinates.z().touched() && sensorForm.coordinates.z().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.coordinates.z().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.alarmFrom.label' | translate }}</mat-label>
+        <input matInput type="number" [formField]="sensorForm.alarmLimits.lower" />
+        @if (sensorForm.alarmLimits.lower().touched() && sensorForm.alarmLimits.lower().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.alarmLimits.lower().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.edit.alarmTo.label' | translate }}</mat-label>
+        <input matInput type="number" [formField]="sensorForm.alarmLimits.upper" />
+        @if (sensorForm.alarmLimits.upper().touched() && sensorForm.alarmLimits.upper().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.alarmLimits.upper().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+    </div>
+  </form>
+
+  <mat-dialog-actions align="end">
+    <button matButton (click)="close()">
+      <mat-icon fontIcon="cancel"></mat-icon>
+      {{ 'sensor.edit.button.cancel' | translate }}
+    </button>
+    <button
+      matButton="tonal"
+      [disabled]="sensorForm().submitting() || sensorForm().invalid()"
+      type="submit"
+      form="sensorCreateForm"
+      data-action="saveAndCreate"
+    >
+      <mat-icon fontIcon="save"></mat-icon>
+      {{ 'sensor.edit.button.saveAndCreate' | translate }}
+    </button>
+    <button
+      matButton="filled"
+      [disabled]="sensorForm().submitting() || sensorForm().invalid()"
+      type="submit"
+      form="sensorCreateForm"
+    >
+      <mat-icon fontIcon="save"></mat-icon>
+      {{ 'sensor.edit.button.save' | translate }}
+    </button>
+  </mat-dialog-actions>
+</mat-dialog-content>

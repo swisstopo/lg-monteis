@@ -1,2 +1,5 @@
-<button mat-stroked-button class="logout-button" type="button" (click)="logout()">Logout</button>
+<button mat-stroked-button class="logout-button" type="button" (click)="logout()">
+  {{ 'app.logout' | translate }}
+</button>
 <wb-workbench />
+<app-toast />

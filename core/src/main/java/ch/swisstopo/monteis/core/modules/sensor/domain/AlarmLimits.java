@@ -3,11 +3,11 @@ package ch.swisstopo.monteis.core.modules.sensor.domain;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import java.util.Map;
 
-public record Bounds(Double lower, Double upper) {
-  public Bounds {
+public record AlarmLimits(Double lower, Double upper) {
+  public AlarmLimits {
     if (lower > upper) {
       throw new ObjectBusinessValidationException(
-          "sensor.bounds.invalid", Map.of("lower", lower, "upper", upper));
+          "sensor.alarmLimits.invalid", Map.of("lower", lower, "upper", upper));
     }
   }
 }

@@ -42,6 +42,7 @@
   )
 );
 
+@use 'sass:map';
 @use '@angular/material' as mat;
 @use 'theme-colors' as theme;
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded');
@@ -77,12 +78,14 @@ body {
   margin: 0;
   height: 100%;
 }
+
 :root {
   --mat-sys-corner-large: 0px;
   --mat-sys-corner-extra-large: 0px;
   --mat-sys-corner-medium: 0px;
   --mat-sys-corner-small: 0px;
   --mat-sys-corner-extra-small: 0px;
+  --mat-dialog-headline-padding: 11px 23px 33px;
 
   @include mat.form-field-overrides(
     (
@@ -96,10 +99,54 @@ body {
       outlined-container-shape: 0px,
       text-container-shape: 0px,
       protected-container-shape: 0px,
+      tonal-container-shape: 0px,
     )
   );
 }
 
 .navigation-button {
   --mat-button-text-with-icon-horizontal-padding: 12px;
+}
+
+h2 {
+  margin-bottom: 20px;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+}
+
+.snackbar-success,
+.snackbar-error,
+.snackbar-warning {
+  .mat-mdc-snack-bar-action {
+    background-color: transparent;
+    color: var(--mat-sys-surface);
+    box-shadow: none;
+  }
+}
+
+.snackbar-success {
+  @include mat.snack-bar-overrides(
+    (
+      container-color: map.get(theme.$success-palette, 50),
+      button-color: map.get(theme.$success-palette, 100),
+    )
+  );
+}
+
+.snackbar-error {
+  @include mat.snack-bar-overrides(
+    (
+      container-color: map.get(theme.$error-palette, 50),
+      button-color: map.get(theme.$error-palette, 100),
+    )
+  );
+}
+
+.snackbar-warning {
+  @include mat.snack-bar-overrides(
+    (
+      container-color: map.get(theme.$warning-palette, 50),
+      button-color: map.get(theme.$warning-palette, 100),
+    )
+  );
 }

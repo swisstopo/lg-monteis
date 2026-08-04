@@ -10,8 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQueryInterface;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.ReadExperimentDetailsDto;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +35,18 @@ class ExperimentControllerTest {
     // given
     FormulaResponseDto formula = new FormulaResponseDto(1L, "x * 2", 1);
     SensorResponseDto sensor =
-        new SensorResponseDto(1L, "SENS-01", "Test Sensor", 0.0, 100.0, formula, 1);
+        new SensorResponseDto(
+            1L,
+            "SENS-01",
+            "Test Sensor",
+            Unit.METER,
+            new SensorTypeResponseDto(1L, "Other", 1),
+            "comment",
+            new CoordinatesDto(0, 0, 0),
+            new AlarmLimitsDto(0.0, 100.0),
+            true,
+            formula,
+            1);
     ReadExperimentDetailsDto expectedDto =
         new ReadExperimentDetailsDto(1L, "Experiment 1", "Description", 1, List.of(sensor));
 

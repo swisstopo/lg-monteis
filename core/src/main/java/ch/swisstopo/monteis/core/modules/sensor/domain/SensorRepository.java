@@ -14,7 +14,6 @@ import java.util.stream.Stream;
  * DTOs, see {@link ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery}.
  */
 public interface SensorRepository {
-
   /**
    * Persists a new {@link Sensor} entity.
    *
