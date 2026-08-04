@@ -6,7 +6,7 @@
     <app-table
       class="custom-grid"
       [checkboxes]="true"
-      [multiple]="true"
+      [multiple]="false"
       [rows]="sensorService.allSensors.value() ?? []"
       [columns]="wrappedCols"
       (rowClicked)="onWrappedRow($event)"
