@@ -1,5 +1,7 @@
 package ch.swisstopo.monteis.core.modules.experiment.domain;
 
+import java.util.stream.Stream;
+
 /**
  * Command-side repository for the {@link Experiment} aggregate root.
  * <p>
@@ -27,4 +29,11 @@ public interface ExperimentRepository {
    * @return the updated experiment instance including DB managed state such as version
    */
   Experiment update(Experiment experiment);
+
+  /**
+   * Retrieves all unaudited experiments
+   *
+   * @return a stream of all experiments which are not yet audited
+   */
+  Stream<Experiment> streamUnauditedExperiments();
 }

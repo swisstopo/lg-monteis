@@ -33,11 +33,11 @@ public class ExperimentController {
     this.experimentQuery = experimentQuery;
   }
 
-  @GetMapping(value = "/{id}/details", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ExperimentResponseDto> getMetrics(@Positive @PathVariable Long id) {
-
-    ExperimentResponseDto result = experimentQuery.getExperimentDetails(id);
-    return ResponseEntity.ok(result);
+  @Operation(summary = "Get a experiment by id", description = "Retrieves a experiment by id")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
+  @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<ExperimentResponseDto> getExperiment(@PathVariable @Positive Long id) {
+    return ResponseEntity.ok(experimentQuery.getById(id));
   }
 
   @Operation(

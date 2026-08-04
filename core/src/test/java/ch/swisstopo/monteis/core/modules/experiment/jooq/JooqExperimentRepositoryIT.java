@@ -38,7 +38,7 @@ class JooqExperimentRepositoryIT {
           Long experimentId = createExperiment("Experiment Without Sensors", "No sensors attached");
 
           // Act
-          ExperimentResponseDto details = repository.getExperimentDetails(experimentId);
+          ExperimentResponseDto details = repository.getById(experimentId);
 
           // Assert
           assertEquals(experimentId, details.id());
@@ -88,7 +88,7 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Act
-          ExperimentResponseDto details = repository.getExperimentDetails(999999L);
+          ExperimentResponseDto details = repository.getById(999999L);
 
           // Assert
           assertNull(details, "Non-existent experiment should resolve to null");
