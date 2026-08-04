@@ -5,8 +5,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('http://localhost:4200/');
   await loginAsAdmin(page);
 
-  await page.getByRole('button', { name: 'data_exploration' }).click();
-  await page.getByRole('link', { name: 'Test Dialog' }).click();
+  await page.getByRole('link', { name: 'Sensor' }).click();
 });
 
 test('should create sensor', async ({ page }) => {
@@ -18,7 +17,9 @@ test('should create sensor', async ({ page }) => {
   await page.getByLabel('Sensor Code').fill(`SN-TEMP-${uniqueId}`);
   await page.getByLabel('Sensor Name').fill('E2E TEST');
 
-  await page.getByLabel('Unit').click();
+  // Scoped to the dialog: the sensor table's "Unit" column filter input, now visible behind the
+  // dialog, also matches the generic getByLabel('Unit') substring match otherwise.
+  await page.getByRole('dialog').getByLabel('Unit').click();
   await page.getByRole('option', { name: 'Ampere (A)' }).click();
 
   await page.getByLabel('Sensor Type').fill('Temperature');
@@ -40,6 +41,8 @@ test('should create sensor', async ({ page }) => {
 });
 
 test('should update sensor', async ({ page }) => {
+  // "Edit Sensor" is only enabled once a row is selected.
+  await page.locator('.ag-row').first().click();
   await page.getByRole('button', { name: 'Edit Sensor' }).click();
   await expect(page.getByRole('heading', { name: 'Edit Sensor', level: 2 })).toBeVisible();
 
@@ -67,7 +70,9 @@ test('should fail to create existing sensor', async ({ page }) => {
   await page.getByLabel('Sensor Code').fill(`SN-TEMP-${uniqueId}`);
   await page.getByLabel('Sensor Name').fill('E2E TEST');
 
-  await page.getByLabel('Unit').click();
+  // Scoped to the dialog: the sensor table's "Unit" column filter input, now visible behind the
+  // dialog, also matches the generic getByLabel('Unit') substring match otherwise.
+  await page.getByRole('dialog').getByLabel('Unit').click();
   await page.getByRole('option', { name: 'Ampere (A)' }).click();
 
   await page.getByLabel('Sensor Type').fill('Temperature');
