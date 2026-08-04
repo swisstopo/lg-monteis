@@ -1,0 +1,15 @@
+<h2 mat-dialog-title>
+  {{ title() }}
+</h2>
+<mat-dialog-content>
+  <div class="chart-container">
+    <canvas #canvas></canvas>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions>
+  <button matButton mat-dialog-close>
+    <mat-icon fontIcon="cancel"></mat-icon>
+    {{ 'sensor.edit.button.cancel' | translate }}
+  </button>
+</mat-dialog-actions>

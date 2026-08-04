@@ -146,10 +146,6 @@ export default class SensorEdit {
     }
   });
 
-  protected close(): void {
-    this.dialogRef?.close();
-  }
-
   readonly domainModel = signal<SensorResponseDto>({});
   private readonly formModel = linkedSignal({
     source: this.domainModel,

@@ -187,6 +187,12 @@
     "setup": "Setup",
     "measurements": "Measurements"
   },
+  "chart": {
+    "title": "{{name}} | {{rangeFrom}} to {{rangeTo}}",
+    "button": {
+      "cancel": "Close"
+    }
+  },
   "tab": {
     "sensor": "Setup Sensors ({{count}})",
     "overview": "Measurements"
