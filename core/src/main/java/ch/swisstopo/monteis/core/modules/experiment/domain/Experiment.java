@@ -2,8 +2,6 @@ package ch.swisstopo.monteis.core.modules.experiment.domain;
 
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
-import ch.swisstopo.monteis.core.modules.sensor.domain.*;
-import java.time.LocalDate;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
 
@@ -14,10 +12,10 @@ public class Experiment implements Auditable {
   @Id private Long id;
   private String name;
   private String owner;
-  private LocalDate experimentStart;
-  private LocalDate experimentEnd;
+  private ExperimentDates experimentDates;
   private String description;
   private Status status;
+  private Integer version;
 
   /**
    * Constructor for creating a NEW Sensor from a web request.
@@ -28,14 +26,12 @@ public class Experiment implements Auditable {
   public Experiment(
       String name,
       String owner,
-      LocalDate experimentStart,
-      LocalDate experimentEnd,
+      ExperimentDates experimentDates,
       String description,
       Status status) {
     this.name = name;
     this.owner = owner;
-    this.experimentStart = experimentStart;
-    this.experimentEnd = experimentEnd;
+    this.experimentDates = experimentDates;
     this.description = description;
     this.status = status;
   }
@@ -48,17 +44,17 @@ public class Experiment implements Auditable {
       Long id,
       String name,
       String owner,
-      LocalDate experimentStart,
-      LocalDate experimentEnd,
+      ExperimentDates experimentDates,
       String description,
-      Status status) {
+      Status status,
+      Integer version) {
     this.id = id;
     this.name = name;
     this.owner = owner;
-    this.experimentStart = experimentStart;
-    this.experimentEnd = experimentEnd;
+    this.experimentDates = experimentDates;
     this.description = description;
     this.status = status;
+    this.version = version;
   }
 
   // --- Getters and Setters ---
@@ -87,20 +83,12 @@ public class Experiment implements Auditable {
     this.owner = owner;
   }
 
-  public LocalDate getExperimentStart() {
-    return experimentStart;
+  public ExperimentDates getExperimentDates() {
+    return experimentDates;
   }
 
-  public void setExperimentStart(LocalDate experimentStart) {
-    this.experimentStart = experimentStart;
-  }
-
-  public LocalDate getExperimentEnd() {
-    return experimentEnd;
-  }
-
-  public void setExperimentEnd(LocalDate experimentEnd) {
-    this.experimentEnd = experimentEnd;
+  public void setExperimentDates(ExperimentDates experimentDates) {
+    this.experimentDates = experimentDates;
   }
 
   public String getDescription() {
@@ -117,5 +105,13 @@ public class Experiment implements Auditable {
 
   public void setStatus(Status status) {
     this.status = status;
+  }
+
+  public Integer getVersion() {
+    return version;
+  }
+
+  public void setVersion(Integer version) {
+    this.version = version;
   }
 }

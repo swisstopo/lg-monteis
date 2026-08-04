@@ -22,21 +22,21 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/experiments")
 public class ExperimentController {
-  private final ExperimentQuery queryRepository;
+  private final ExperimentQuery experimentQuery;
   private final ExperimentService service;
   private final ExperimentWebMapper mapper;
 
   public ExperimentController(
-      ExperimentService service, ExperimentWebMapper mapper, ExperimentQuery queryRepository) {
+      ExperimentService service, ExperimentWebMapper mapper, ExperimentQuery experimentQuery) {
     this.service = service;
     this.mapper = mapper;
-    this.queryRepository = queryRepository;
+    this.experimentQuery = experimentQuery;
   }
 
   @GetMapping(value = "/{id}/details", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExperimentResponseDto> getMetrics(@Positive @PathVariable Long id) {
 
-    ExperimentResponseDto result = queryRepository.getExperimentDetails(id);
+    ExperimentResponseDto result = experimentQuery.getExperimentDetails(id);
     return ResponseEntity.ok(result);
   }
 
