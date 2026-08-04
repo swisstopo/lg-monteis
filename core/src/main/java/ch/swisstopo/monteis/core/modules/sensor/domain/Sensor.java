@@ -25,6 +25,7 @@ public class Sensor implements Auditable {
    * Constructor for creating a NEW Sensor from a web request.
    * ID and Version are omitted as they are handled by the infrastructure layer.
    */
+  @SuppressWarnings("java:S107")
   @Default
   public Sensor(
       String code,
@@ -50,6 +51,7 @@ public class Sensor implements Auditable {
   /**
    * Constructor for REBUILDING an existing Sensor from the database (jOOQ).
    */
+  @SuppressWarnings("java:S107")
   public Sensor(
       Long id,
       String code,
