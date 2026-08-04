@@ -279,6 +279,7 @@ export default class SensorEdit {
 
         this.allFormulas.reload();
         this.allTypes.reload();
+        this.sensorService.allSensors.reload();
 
         this.toastService.success(this.i18nService.instant('sensor.edit.success'));
 

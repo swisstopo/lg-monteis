@@ -1,9 +1,15 @@
 import { translate } from '@ngx-translate/core';
 import { SensorResponseDto } from '../../../core/generated';
 import { TableColumn } from '../../../ui/table/table.types';
-import { UNIT_METADATA } from '../models/sensor.model';
+import { Unit, UNIT_METADATA } from '../models/sensor.model';
 
 export function createColumns(): TableColumn<SensorResponseDto>[] {
+  // Must be resolved here, in an injection context, rather than inside valueFormatter, since
+  // translate() relies on inject() and ag-grid calls valueFormatter outside of one.
+  const unitSymbols = Object.fromEntries(
+    Object.entries(UNIT_METADATA).map(([unit, metadata]) => [unit, translate(metadata.symbol)]),
+  ) as Record<Unit, ReturnType<typeof translate>>;
+
   return [
     {
       field: 'code',
@@ -28,10 +34,9 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
       headerName: translate('sensor.table.column.unit')(),
       sortable: true,
       filter: true,
-      // Show the unit's shorthand symbol (e.g. "m", "kg") from the same metadata used elsewhere,
-      // instead of the raw enum value (e.g. "METER").
-      valueFormatter: (params) =>
-        UNIT_METADATA[params.value as SensorResponseDto.UnitEnum]?.symbol ?? '',
+      // Show the unit's translated shorthand symbol (e.g. "m", "kg") instead of the raw enum
+      // value (e.g. "METER").
+      valueFormatter: (params) => unitSymbols[params.value as SensorResponseDto.UnitEnum]?.() ?? '',
     },
     {
       field: 'formula.expression',

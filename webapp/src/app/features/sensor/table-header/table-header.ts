@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, inputBinding } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
@@ -17,7 +17,7 @@ export class TableHeader {
   selectedSensorId = input<number | undefined>(undefined);
 
   onCreate(): void {
-    this.dialog.open(SensorEdit, { width: '60vw', maxWidth: '900px', autoFocus: false });
+    this.dialog.open(SensorEdit, { width: '60vw', maxWidth: '1200px', autoFocus: true });
   }
 
   onEdit(): void {
@@ -26,10 +26,10 @@ export class TableHeader {
 
     this.dialog.open(SensorEdit, {
       width: '60vw',
-      maxWidth: '900px',
-      autoFocus: false,
+      maxWidth: '1200px',
+      autoFocus: true,
+      bindings: [inputBinding('sensorId', () => sensorId)],
     });
-    console.log(sensorId);
   }
 
   onDownload(): void {
