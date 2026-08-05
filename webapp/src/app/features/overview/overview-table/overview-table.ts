@@ -8,7 +8,7 @@ import Table from '../../../ui/table/table';
 import { createColumns } from './columns';
 
 @Component({
-  selector: 'app-meausrements-overview',
+  selector: 'app-measurements-overview',
   imports: [Table, TranslatePipe],
   providers: [DatePipe],
   templateUrl: './overview-table.html',
