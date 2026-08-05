@@ -50,9 +50,7 @@
           <mat-option value="">{{ 'sensor.unit.placeholder' | translate }}</mat-option>
           @for (unit of unitValues; track unit) {
             <mat-option [value]="unit"
-              >{{ unitMetadata[unit].labelKey | translate }} ({{
-                unitMetadata[unit].symbol | translate
-              }})
+              >{{ unitMetadata[unit].label() }} ({{ unitMetadata[unit].symbol() }})
             </mat-option>
           }
         </mat-select>
@@ -118,7 +116,7 @@
 
     <div class="form-row">
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.coordinate.x.label' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.coordinate.xLocal.label' | translate }}</mat-label>
         <input matInput type="number" [formField]="sensorForm.coordinates.x" />
         @if (sensorForm.coordinates.x().touched() && sensorForm.coordinates.x().invalid()) {
           <mat-error>
@@ -130,7 +128,7 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.coordinate.y.label' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.coordinate.yLocal.label' | translate }}</mat-label>
         <input matInput type="number" [formField]="sensorForm.coordinates.y" />
         @if (sensorForm.coordinates.y().touched() && sensorForm.coordinates.y().invalid()) {
           <mat-error>
@@ -142,7 +140,7 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.coordinate.z.label' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.coordinate.zLocal.label' | translate }}</mat-label>
         <input matInput type="number" [formField]="sensorForm.coordinates.z" />
         @if (sensorForm.coordinates.z().touched() && sensorForm.coordinates.z().invalid()) {
           <mat-error>

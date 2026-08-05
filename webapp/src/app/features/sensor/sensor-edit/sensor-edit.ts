@@ -26,7 +26,7 @@ import {
 import { toErrorDtos } from '../../../shared/models/api-error.model';
 import { FormErrorService } from '../../../shared/services/form-error.service';
 import { ToastService } from '../../../shared/services/toast.service';
-import { Unit, UNIT_METADATA } from '../models/sensor.model';
+import { getUnitMetadata, Unit } from '../models/sensor.model';
 import { SensorService } from '../services/sensor.service';
 
 interface SensorFormData {
@@ -110,7 +110,7 @@ export default class SensorEdit {
   readonly sensorId = input<number | undefined>(undefined);
 
   readonly unitValues = Object.values(WriteSensorDto.UnitEnum) as Unit[];
-  readonly unitMetadata = UNIT_METADATA;
+  readonly unitMetadata = getUnitMetadata();
   readonly allFormulas = this.sensorService.allFormulas;
   readonly allTypes = this.sensorService.allTypes;
   selectedFormula = signal<FormulaResponseDto | null>(null);
@@ -192,13 +192,13 @@ export default class SensorEdit {
       message: translate('sensor.type.validation.required')(),
     });
     required(schema.coordinates.x, {
-      message: translate('sensor.coordinate.x.validation.required')(),
+      message: translate('sensor.coordinate.xLocal.validation.required')(),
     });
     required(schema.coordinates.y, {
-      message: translate('sensor.coordinate.y.validation.required')(),
+      message: translate('sensor.coordinate.yLocal.validation.required')(),
     });
     required(schema.coordinates.z, {
-      message: translate('sensor.coordinate.z.validation.required')(),
+      message: translate('sensor.coordinate.zLocal.validation.required')(),
     });
     required(schema.alarmLimits.lower, {
       message: translate('sensor.alarmLimit.from.validation.required')(),

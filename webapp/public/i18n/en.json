@@ -47,6 +47,10 @@
       "option": {
         "active": "Active",
         "inactive": "Inactive"
+      },
+      "column": {
+        "yes": "Yes",
+        "no": "No"
       }
     },
     "unit": {
@@ -99,19 +103,19 @@
       "label": "Comment"
     },
     "coordinate": {
-      "x": {
+      "xLocal": {
         "label": "X (Local)",
         "validation": {
           "required": "Sensor xLocal is required"
         }
       },
-      "y": {
+      "yLocal": {
         "label": "Y (Local)",
         "validation": {
           "required": "Sensor yLocal is required"
         }
       },
-      "z": {
+      "zLocal": {
         "label": "Z (Local)",
         "validation": {
           "required": "Sensor zLocal is required"
@@ -133,7 +137,8 @@
           "bounds": "This value must be higher than the lower limit"
         }
       },
-      "column": "Alarm Limits"
+      "column": "Alarm Limits",
+      "display": "[{{lower}} to {{upper}}]"
     },
     "button": {
       "cancel": "Cancel",
