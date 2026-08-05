@@ -37,6 +37,12 @@ We enforce the API contract by generating it from the controllers using OpenAPI.
 mvn verify -Dopenapi.codegen.skip=false
 ```
 
+Or if the source is not built yet:
+
+```shell
+mvn clean install -DskipTests && mvn verify -Dopenapi.codegen.skip=false -DskipTests
+```
+
 ## Dev UP
 
 To start the Project you need to start the according compose setup first, this can be done using:

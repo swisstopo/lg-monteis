@@ -102,6 +102,42 @@ class JooqSensorRepositoryIT {
 
   @Test
   @Transactional
+  void should_get_all_sensors() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Sensor savedSensor1 =
+              repository.create(createDummySensor("ALL-001", "All Sensor 1", "x * 2"));
+          Sensor savedSensor2 =
+              repository.create(createDummySensor("ALL-002", "All Sensor 2", "x * 2"));
+
+          // Act
+          List<SensorResponseDto> found = repository.getAll();
+
+          // Assert: seed data also contributes sensors, so match on the ones created here
+          SensorResponseDto foundSensor1 =
+              found.stream()
+                  .filter(s -> s.id().equals(savedSensor1.getId()))
+                  .findFirst()
+                  .orElseThrow();
+          SensorResponseDto foundSensor2 =
+              found.stream()
+                  .filter(s -> s.id().equals(savedSensor2.getId()))
+                  .findFirst()
+                  .orElseThrow();
+
+          assertAll(
+              () -> assertEquals("ALL-001", foundSensor1.code()),
+              () -> assertNotNull(foundSensor1.formula(), "Formula should be loaded"),
+              () -> assertEquals("x * 2", foundSensor1.formula().expression()),
+              () -> assertNotNull(foundSensor1.type(), "Type should be loaded"),
+              () -> assertEquals("Other", foundSensor1.type().name()),
+              () -> assertEquals("ALL-002", foundSensor2.code()));
+        });
+  }
+
+  @Test
+  @Transactional
   void should_reuse_existing_formula() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {

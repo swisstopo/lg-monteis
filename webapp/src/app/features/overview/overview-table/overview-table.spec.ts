@@ -1,30 +1,32 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { OverviewControllerService } from '../../../core/generated';
-import AgMatTable from './ag-mat-table';
+import OverviewTable from './overview-table';
 
 const overviewServiceMock = {
   getMetrics: vi.fn().mockReturnValue(of([])),
 };
 
-describe('AgMatTable', () => {
-  let fixture: ComponentFixture<AgMatTable>;
+describe('SensorTable', () => {
+  let fixture: ComponentFixture<OverviewTable>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AgMatTable],
+      imports: [OverviewTable],
       providers: [
         {
           provide: OverviewControllerService,
           useValue: overviewServiceMock,
         },
         WorkbenchView,
+        provideTranslateService(),
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AgMatTable);
+    fixture = TestBed.createComponent(OverviewTable);
     fixture.detectChanges();
   });
 

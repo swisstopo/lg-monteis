@@ -1,0 +1,17 @@
+<div class="metrics-panel">
+  <app-table-header [selectedSensorId]="selectedSensorId()"></app-table-header>
+  @if (sensorService.error()) {
+    <p class="error-text">{{ 'sensor.error.connection' | translate }}</p>
+  } @else {
+    <app-table
+      class="custom-grid"
+      [checkboxes]="true"
+      [multiple]="false"
+      [rows]="sensorService.allSensors.value() ?? []"
+      [columns]="wrappedCols"
+      (rowClicked)="onWrappedRow($event)"
+      (selectionChanged)="onSelectionChanged($event)"
+    >
+    </app-table>
+  }
+</div>

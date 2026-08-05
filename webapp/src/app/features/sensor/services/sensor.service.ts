@@ -13,13 +13,17 @@ export class SensorService {
   readonly sensor = resource({
     params: () => this.sensorRequest(),
     loader: ({ params }) => {
-      if (!params.id) return Promise.reject(new Error(translate('sensor.edit.error.noId')()));
+      if (!params.id) return Promise.reject(new Error(translate('sensor.error.noId')()));
       return firstValueFrom(this.api.getSensor(params.id));
     },
   });
 
   readonly allFormulas = resource({
     loader: () => firstValueFrom(this.api.findAllFormulas()),
+  });
+
+  readonly allSensors = resource({
+    loader: () => firstValueFrom(this.api.findAllSensors()),
   });
 
   readonly allTypes = resource({

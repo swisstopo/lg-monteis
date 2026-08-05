@@ -26,6 +26,13 @@ public interface SensorQuery {
   SensorResponseDto getById(Long id);
 
   /**
+   * Retrieves all sensors, projected straight into {@link SensorResponseDto}s.
+   *
+   * @return a list of all sensors
+   */
+  List<SensorResponseDto> getAll();
+
+  /**
    * Retrieves all formulas that are currently used by existing sensors.
    *
    * @return a list of all formulas alphabetically sorted

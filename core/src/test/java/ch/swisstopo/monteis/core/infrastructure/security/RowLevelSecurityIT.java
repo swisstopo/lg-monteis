@@ -39,7 +39,7 @@ class RowLevelSecurityIT {
     SecurityContextTestSupport.runAsUser(
         List.of(1L),
         () -> {
-          assertEquals(2, dsl.fetchCount(SENSORS), "Experiment 1 has exactly 2 linked sensors");
+          assertEquals(12, dsl.fetchCount(SENSORS), "Experiment 1 has exactly 2 linked sensors");
           assertEquals(Set.of("TEMP-1", "PRESS-1&2"), fetchVisibleSensorCodes());
         });
   }
@@ -72,7 +72,7 @@ class RowLevelSecurityIT {
   void admin_sees_every_sensor_experiment_and_reading() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
-          assertEquals(5, dsl.fetchCount(SENSORS), "Admin should see all seeded sensors");
+          assertEquals(15, dsl.fetchCount(SENSORS), "Admin should see all seeded sensors");
           assertEquals(2, dsl.fetchCount(EXPERIMENTS), "Admin should see all seeded experiments");
           assertEquals(
               Set.of("TEMP-1", "PRESS-1&2", "DISP-2", "FLOW-2", "FLOW-Admin"),

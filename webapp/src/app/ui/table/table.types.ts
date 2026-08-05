@@ -1,15 +1,8 @@
-import { ValueFormatterFunc } from 'ag-grid-community';
+import { ColDef } from 'ag-grid-community';
 
-export interface TableColumn<T = any> {
-  field: keyof T | string;
-  type?: string | string[];
-  header?: string;
-
-  sortable?: boolean;
-  filter?: boolean;
-  resizable?: boolean;
-
-  width?: number;
-  flex?: number;
-  valueFormatter?: ValueFormatterFunc<T>;
-}
+/**
+ * Alias for ag-grid's own ColDef so every table's columns.ts gets full access to ag-grid's
+ * column API (wrapText, autoHeight, cellRenderer, pinned, comparator, ...) without this project
+ * re-declaring a subset of it.
+ */
+export type TableColumn<TData = any, TValue = any> = ColDef<TData, TValue>;
