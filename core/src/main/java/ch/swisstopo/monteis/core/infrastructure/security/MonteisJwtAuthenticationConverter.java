@@ -27,10 +27,11 @@ public class MonteisJwtAuthenticationConverter
   public static final String WRITE_AUTHORITY = "api:write";
 
   private static final String USERNAME_CLAIM = "preferred_username";
-  private static final String ADMIN_ROLE = "admin";
-  private static final String USER_ROLE = "user";
-  private static final String REALM_ACCESS = "realm_access";
-  private static final String ROLE_CLAIM = "roles";
+  private static final String CLIENT_ROLE_READ_ALL = "monteis-client:read-all";
+  private static final String CLIENT_ROLE_WRITE = "monteis-client:write";
+  private static final String CLIENT_ROLE_READ = "monteis-client:read";
+  private static final String CLIENT_ACCESS_CLAIM = "monteis_access";
+  private static final String CLIENT_ACCESS_CLAIM_NAME = "roles";
   private static final String EXPERIMENTS_CLAIM = "experiment_ids";
   private static final Set<String> READ_AUTHORITIES_SET =
       Set.of(READ_AUTHORITY, READ_ALL_AUTHORITY);
@@ -59,9 +60,14 @@ public class MonteisJwtAuthenticationConverter
     Set<GrantedAuthority> authorities = new HashSet<>();
     for (String role : extractRoles(jwt)) {
       switch (role) {
-        case USER_ROLE -> authorities.add(new SimpleGrantedAuthority(READ_AUTHORITY));
+        case CLIENT_ROLE_READ -> authorities.add(new SimpleGrantedAuthority(READ_AUTHORITY));
 
-        case ADMIN_ROLE -> {
+        case CLIENT_ROLE_READ_ALL ->
+            authorities.add(new SimpleGrantedAuthority(READ_ALL_AUTHORITY));
+
+        // Write implies read-all: it never makes sense to grant write without also being able
+        // to read everything you might write to.
+        case CLIENT_ROLE_WRITE -> {
           authorities.add(new SimpleGrantedAuthority(WRITE_AUTHORITY));
           authorities.add(new SimpleGrantedAuthority(READ_ALL_AUTHORITY));
         }
@@ -79,8 +85,9 @@ public class MonteisJwtAuthenticationConverter
   }
 
   private static List<String> extractRoles(Jwt jwt) {
-    Map<String, Object> realmAccess = jwt.getClaimAsMap(REALM_ACCESS);
-    if (realmAccess == null || !(realmAccess.get(ROLE_CLAIM) instanceof List<?> rawRoles)) {
+    Map<String, Object> claimAccess = jwt.getClaimAsMap(CLIENT_ACCESS_CLAIM);
+    if (claimAccess == null
+        || !(claimAccess.get(CLIENT_ACCESS_CLAIM_NAME) instanceof List<?> rawRoles)) {
       return List.of();
     }
     List<String> roles = new ArrayList<>(rawRoles.size());

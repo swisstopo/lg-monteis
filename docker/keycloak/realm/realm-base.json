@@ -13,7 +13,29 @@
     "realm": [
       { "name": "user", "description": "Standard MONTEIS user" },
       { "name": "admin", "description": "MONTEIS administrator" }
-    ]
+    ],
+    "client": {
+      "monteis-spa": [
+        {
+          "name": "monteis-client:read",
+          "description": "",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "monteis-client:read-all",
+          "description": "",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "monteis-client:write",
+          "description": "",
+          "composite": false,
+          "clientRole": true
+        }
+      ]
+    }
   },
   "clientScopes": [
     {
@@ -67,17 +89,17 @@
     },
     {
       "name": "monteis-roles",
-      "description": "Adds the caller's realm roles (realm_access.roles) to access tokens. Part of the explicit clientScopes list for the same reason as monteis-oidc-basic.",
+      "description": "Adds the users client roles to the JWT issued by Keycloak.",
       "protocol": "openid-connect",
       "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
       "protocolMappers": [
         {
-          "name": "realm-roles",
+          "name": "monteis-spa-roles",
           "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
           "consentRequired": false,
           "config": {
-            "claim.name": "realm_access.roles",
+            "claim.name": "monteis_access.roles",
             "jsonType.label": "String",
             "multivalued": "true",
             "access.token.claim": "true"
