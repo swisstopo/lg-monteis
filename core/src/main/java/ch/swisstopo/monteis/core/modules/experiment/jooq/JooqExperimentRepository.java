@@ -2,14 +2,21 @@ package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQuery;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,21 +40,53 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
   @Override
   @Transactional
   public Experiment create(Experiment experiment) {
+    String currentUser = getCurrentUser();
 
-    return experiment;
+    ExperimentsRecord createdExperiment = mapper.toRecord(experiment);
+    dsl.attach(createdExperiment);
+
+    createdExperiment.setOwner(currentUser);
+
+    try {
+      createdExperiment.insert();
+    } catch (DuplicateKeyException _) {
+      throw new FieldBusinessValidationException(
+          "name", experiment.getName(), "validation.unique", Map.of());
+    }
+
+    return mapper.toDomain(createdExperiment);
   }
 
   @Override
   @Transactional
   public Experiment update(Experiment experiment) {
+    String currentUser = getCurrentUser();
+    // fetch existing
+    ExperimentsRecord updatedRecord =
+        dsl.selectFrom(EXPERIMENTS).where(EXPERIMENTS.ID.eq(experiment.getId())).fetchOne();
+    if (updatedRecord == null) {
+      throw new ObjectBusinessValidationException("object.deleted", Map.of());
+    }
 
-    return experiment;
+    // map new properties to existing
+    mapper.updateRecordFromDomain(experiment, updatedRecord);
+    updatedRecord.setOwner(currentUser);
+
+    try {
+      updatedRecord.update();
+    } catch (DuplicateKeyException _) {
+      // unique constraint
+      throw new FieldBusinessValidationException(
+          "name", experiment.getName(), "validation.unique", Map.of());
+    }
+    return mapper.toDomain(updatedRecord);
   }
 
   @Override
   @Transactional
   public Stream<Experiment> streamUnauditedExperiments() {
     return dsl.select(EXPERIMENTS.fields())
+        .from(EXPERIMENTS)
         .whereNotExists(
             dsl.selectOne()
                 .from(DSL.table("jv_global_id"))
@@ -62,5 +101,14 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
 
               return mapper.toDomain(experimentsRecord);
             });
+  }
+
+  private String getCurrentUser() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication != null
+        && authentication.getPrincipal() instanceof MonteisPrincipal principal) {
+      return principal.getSubject().toString();
+    }
+    return null;
   }
 }

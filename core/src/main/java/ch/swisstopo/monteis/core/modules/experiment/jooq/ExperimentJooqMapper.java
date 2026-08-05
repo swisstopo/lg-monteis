@@ -14,14 +14,23 @@ public interface ExperimentJooqMapper {
 
   // MapStruct automatically maps id, name, owner, description, and status
   // because the field names match exactly between source and target.
+  @Mapping(target = "id", source = "id")
+  @Mapping(target = "name", source = "name")
+  @Mapping(target = "version", source = "version")
+  @Mapping(target = "description", source = "description")
+  @Mapping(target = "status", source = "status")
   @Mapping(target = "experimentDates.experimentStart", source = "experimentStart")
   @Mapping(target = "experimentDates.experimentEnd", source = "experimentEnd")
   Experiment toDomain(ExperimentsRecord experimentsRecord);
 
+  @Mapping(target = "description", source = "description")
+  @Mapping(target = "status", source = "status")
   @Mapping(target = "experimentStart", source = "experimentDates.experimentStart")
   @Mapping(target = "experimentEnd", source = "experimentDates.experimentEnd")
   ExperimentsRecord toRecord(Experiment domain);
 
+  @Mapping(target = "description", source = "description")
+  @Mapping(target = "status", source = "status")
   @Mapping(target = "experimentStart", source = "experimentDates.experimentStart")
   @Mapping(target = "experimentEnd", source = "experimentDates.experimentEnd")
   void updateRecordFromDomain(
@@ -30,6 +39,11 @@ public interface ExperimentJooqMapper {
   // --- Parent Experiment Graph Mapping (Read Flow) ---
   // Projects the joined jOOQ records straight into the response DTO, bypassing the Domain
   // entirely - the read flow never needs an Experiment instance.
+  @Mapping(target = "id", source = "id")
+  @Mapping(target = "name", source = "name")
+  @Mapping(target = "description", source = "description")
+  @Mapping(target = "status", source = "status")
+  @Mapping(target = "version", source = "version")
   @Mapping(target = "experimentDates.experimentStart", source = "experimentStart")
   @Mapping(target = "experimentDates.experimentEnd", source = "experimentEnd")
   ExperimentResponseDto toDto(ExperimentsRecord experimentsRecord);
