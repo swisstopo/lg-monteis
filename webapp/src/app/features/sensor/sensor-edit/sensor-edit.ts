@@ -139,8 +139,8 @@ export default class SensorEdit {
       const errors = toErrorDtos(this.sensorService.sensor.error());
       errors.forEach((err) =>
         this.toastService.error(
-          translate(err?.messageKey ?? 'sensor.edit.error.unspecified.message')(),
-          translate('sensor.edit.error.unspecified.title')(),
+          translate(err?.messageKey ?? 'sensor.error.unspecified.message')(),
+          translate('sensor.error.unspecified.title')(),
         ),
       );
     }
@@ -183,28 +183,28 @@ export default class SensorEdit {
   }
 
   readonly sensorForm = form(this.formModel, (schema) => {
-    required(schema.code, { message: translate('sensor.edit.code.validation.required')() });
-    required(schema.name, { message: translate('sensor.edit.name.validation.required')() });
-    minLength(schema.name, 2, { message: translate('sensor.edit.name.validation.minLength')() });
-    maxLength(schema.name, 50, { message: translate('sensor.edit.name.validation.maxLength')() });
+    required(schema.code, { message: translate('sensor.code.validation.required')() });
+    required(schema.name, { message: translate('sensor.name.validation.required')() });
+    minLength(schema.name, 2, { message: translate('sensor.name.validation.minLength')() });
+    maxLength(schema.name, 50, { message: translate('sensor.name.validation.maxLength')() });
     required(schema.unit);
     required(schema.type.name, {
-      message: translate('sensor.edit.type.validation.required')(),
+      message: translate('sensor.type.validation.required')(),
     });
     required(schema.coordinates.x, {
-      message: translate('sensor.edit.xLocal.validation.required')(),
+      message: translate('sensor.coordinate.x.validation.required')(),
     });
     required(schema.coordinates.y, {
-      message: translate('sensor.edit.yLocal.validation.required')(),
+      message: translate('sensor.coordinate.y.validation.required')(),
     });
     required(schema.coordinates.z, {
-      message: translate('sensor.edit.zLocal.validation.required')(),
+      message: translate('sensor.coordinate.z.validation.required')(),
     });
     required(schema.alarmLimits.lower, {
-      message: translate('sensor.edit.alarmFrom.validation.required')(),
+      message: translate('sensor.alarmLimit.from.validation.required')(),
     });
     required(schema.alarmLimits.upper, {
-      message: translate('sensor.edit.alarmTo.validation.required')(),
+      message: translate('sensor.alarmLimit.to.validation.required')(),
     });
     validate(schema.alarmLimits.lower, ({ value, valueOf }) => {
       const lower = value();
@@ -212,7 +212,7 @@ export default class SensorEdit {
       if (lower > upper) {
         return {
           kind: 'bounds',
-          message: this.i18nService.translate('sensor.edit.alarmFrom.validation.bounds')(),
+          message: this.i18nService.translate('sensor.alarmLimit.from.validation.bounds')(),
         };
       }
       return undefined;
@@ -223,7 +223,7 @@ export default class SensorEdit {
       if (upper < lower) {
         return {
           kind: 'bounds',
-          message: this.i18nService.translate('sensor.edit.alarmTo.validation.bounds')(),
+          message: this.i18nService.translate('sensor.alarmLimit.to.validation.bounds')(),
         };
       }
       return undefined;
@@ -281,7 +281,7 @@ export default class SensorEdit {
         this.allTypes.reload();
         this.sensorService.allSensors.reload();
 
-        this.toastService.success(this.i18nService.instant('sensor.edit.success'));
+        this.toastService.success(this.i18nService.instant('sensor.success'));
 
         if (resetAfter) {
           this.resetForm();
@@ -293,7 +293,7 @@ export default class SensorEdit {
         return this.formErrorService.mapApiErrorsToFormErrors(
           this.saveError(),
           this.sensorForm,
-          'sensor.edit.error.unspecified.message',
+          'sensor.error.unspecified.message',
         );
       }
     });

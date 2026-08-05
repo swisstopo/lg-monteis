@@ -13,25 +13,25 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
   return [
     {
       field: 'code',
-      headerName: translate('sensor.table.column.code')(),
+      headerName: translate('sensor.code.label')(),
       sortable: true,
       filter: true,
     },
     {
       field: 'name',
-      headerName: translate('sensor.table.column.name')(),
+      headerName: translate('sensor.name.label')(),
       sortable: true,
       filter: true,
     },
     {
       field: 'type.name',
-      headerName: translate('sensor.table.column.type')(),
+      headerName: translate('sensor.type.label')(),
       sortable: true,
       filter: true,
     },
     {
       field: 'unit',
-      headerName: translate('sensor.table.column.unit')(),
+      headerName: translate('sensor.unit.label')(),
       sortable: true,
       filter: true,
       // Show the unit's translated shorthand symbol (e.g. "m", "kg") instead of the raw enum
@@ -40,31 +40,31 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
     },
     {
       field: 'formula.expression',
-      headerName: translate('sensor.table.column.formula')(),
+      headerName: translate('sensor.formula.column')(),
       sortable: true,
       filter: true,
     },
     {
       field: 'coordinates.x',
-      headerName: translate('sensor.table.column.xLocal')(),
+      headerName: translate('sensor.coordinate.x.label')(),
       sortable: true,
       filter: true,
     },
     {
       field: 'coordinates.y',
-      headerName: translate('sensor.table.column.yLocal')(),
+      headerName: translate('sensor.coordinate.y.label')(),
       sortable: true,
       filter: true,
     },
     {
       field: 'coordinates.z',
-      headerName: translate('sensor.table.column.zLocal')(),
+      headerName: translate('sensor.coordinate.z.label')(),
       sortable: true,
       filter: true,
     },
     {
       field: 'alarmLimits',
-      headerName: translate('sensor.table.column.alarmLimits')(),
+      headerName: translate('sensor.alarmLimit.column')(),
       minWidth: 150,
       valueFormatter: (params) => {
         const alarmLimits = params.value;
@@ -73,7 +73,7 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
     },
     {
       field: 'active',
-      headerName: translate('sensor.table.column.active')(),
+      headerName: translate('sensor.active.label')(),
       sortable: true,
       filter: true,
       // Without this, ag-grid infers the boolean cell data type from the row data and renders a
@@ -83,7 +83,7 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
     },
     {
       field: 'comment',
-      headerName: translate('sensor.table.column.comment')(),
+      headerName: translate('sensor.comment.label')(),
       sortable: true,
       filter: true,
       wrapText: true,
