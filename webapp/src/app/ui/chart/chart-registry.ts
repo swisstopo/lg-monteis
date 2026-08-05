@@ -7,6 +7,8 @@ import {
   LineElement,
   PointElement,
   ScatterController,
+  SubTitle,
+  Title,
   Tooltip,
 } from 'chart.js';
 
@@ -25,6 +27,8 @@ export function registerChartJs(): void {
     LineElement,
     Tooltip,
     Legend,
+    Title,
+    SubTitle,
   );
   registered = true;
 }

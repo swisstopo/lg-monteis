@@ -10,11 +10,15 @@ export interface ChartDataset {
   label: string;
   data: ChartPoint[];
   color?: string;
+  yAxisId?: 'y' | 'y1';
 }
 
 export interface ChartOptions {
+  title?: string;
+  subtitle?: string;
   xAxisLabel?: string;
   yAxisLabel?: string;
+  secondaryYAxisLabel?: string;
   showLegend?: boolean;
   maintainAspectRatio?: boolean;
 }
