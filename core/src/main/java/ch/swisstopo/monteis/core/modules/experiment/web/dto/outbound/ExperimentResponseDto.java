@@ -6,7 +6,7 @@ import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.ExperimentDat
 public record ExperimentResponseDto(
     Long id,
     String name,
-    String owner,
     String description,
     ExperimentDatesDto experimentDates,
-    Status status) {}
+    Status status,
+    Integer version) {}

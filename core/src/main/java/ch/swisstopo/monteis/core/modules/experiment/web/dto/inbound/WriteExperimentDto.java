@@ -15,7 +15,10 @@ public record WriteExperimentDto(
         @NotNull(groups = Update.class)
         Long id,
     @NotNull String name,
-    @NotNull String owner,
     String description,
     @NotNull @Valid ExperimentDatesDto experimentDates,
-    Status status) {}
+    Status status,
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+        @Null(groups = Create.class)
+        @NotNull(groups = Update.class)
+        Integer version) {}
