@@ -1,7 +1,9 @@
 import { Component, effect, inject, signal } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { GridApi } from 'ag-grid-community';
 import { SensorResponseDto } from '../../../core/generated';
+import { createPagedDatasource } from '../../../ui/table/paged-datasource.factory';
 import Table from '../../../ui/table/table';
 import { SensorService } from '../services/sensor.service';
 import { TableHeader } from '../table-header/table-header';
@@ -19,13 +21,34 @@ export default class SensorTable {
 
   protected wrappedCols = createColumns();
   protected selectedSensorId = signal<number | undefined>(undefined);
+  protected totalCount = signal<number | undefined>(undefined);
+  protected loadError = signal(false);
+  private readonly gridApi = signal<GridApi | undefined>(undefined);
+
+  protected datasource = createPagedDatasource(
+    (params) => this.sensorService.getSensors(params),
+    this.totalCount,
+    this.loadError,
+  );
 
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
-      const count = this.sensorService.allSensors.value()?.length ?? 0;
+      const count = this.totalCount() ?? 0;
       view.title = this.i18nService.instant('tab.sensor', { count });
     });
+
+    // Re-fetch the currently visible pages whenever a sensor is created/updated elsewhere
+    // (e.g. via the edit dialog) - the infinite row model otherwise has no way to know.
+    effect(() => {
+      if (this.sensorService.sensorsChanged() > 0) {
+        this.gridApi()?.refreshInfiniteCache();
+      }
+    });
+  }
+
+  onGridReady(api: GridApi<SensorResponseDto>): void {
+    this.gridApi.set(api);
   }
 
   onWrappedRow(row: SensorResponseDto) {

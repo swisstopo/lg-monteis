@@ -2,8 +2,12 @@ import { Component, computed, input, output } from '@angular/core';
 import { AgGridAngular } from 'ag-grid-angular';
 import {
   ColDef,
+  GridApi,
   GridOptions,
+  GridReadyEvent,
+  IDatasource,
   RowClickedEvent,
+  RowModelType,
   RowSelectionOptions,
   SelectionChangedEvent,
   themeBalham,
@@ -23,12 +27,21 @@ export default class Table<T = any> {
   checkboxes = input<boolean>(false);
   // Whether more than one row can be selected at once; independent per table instance.
   multiple = input<boolean>(false);
+  // 'infinite' opts a table into ag-grid's Infinite Row Model, fetching rows in blocks from
+  // `datasource` instead of rendering the full `rows` array client-side.
+  rowModelType = input<RowModelType>('clientSide');
+  datasource = input<IDatasource | undefined>(undefined);
+  // Number of rows ag-grid requests per `datasource.getRows` call, in 'infinite' mode.
+  cacheBlockSize = input<number>(100);
   // Passthrough for grid-level ag-grid settings; merged on top of this component's defaults so
   // any table can opt into/out of individual ag-grid options without changing this component.
   gridOptions = input<GridOptions<T>>({});
 
   rowClicked = output<T>();
   selectionChanged = output<T[]>();
+  // Exposes the underlying ag-grid API so callers can drive it directly, e.g. to refresh an
+  // 'infinite' row model's cache after data changes elsewhere (ag-grid has no way to detect that).
+  gridReady = output<GridApi<T>>();
 
   protected theme = themeBalham;
 
@@ -70,5 +83,9 @@ export default class Table<T = any> {
 
   onSelectionChanged(event: SelectionChangedEvent<T>): void {
     this.selectionChanged.emit(event.api.getSelectedRows());
+  }
+
+  onGridReady(event: GridReadyEvent<T>): void {
+    this.gridReady.emit(event.api);
   }
 }

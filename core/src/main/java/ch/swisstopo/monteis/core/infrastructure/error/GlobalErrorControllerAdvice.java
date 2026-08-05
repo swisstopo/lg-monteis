@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.error;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -111,6 +112,17 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
   protected ResponseEntity<ErrorDto> handleOptimisticLocking(DataChangedException ex) {
     ErrorDto payload = ErrorDto.form("optimistic.locking", Map.of());
     return ResponseEntity.status(HttpStatus.CONFLICT).body(payload);
+  }
+
+  @ExceptionHandler(InvalidPagedRequestException.class)
+  @ApiResponse(
+      responseCode = "400",
+      description = "Malformed paging request (unparseable sort/filter model, or unknown column).",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  public ResponseEntity<ErrorDto> handleInvalidPagedRequest(InvalidPagedRequestException e) {
+    log.warn("Invalid paged request: {}", e.getMessage());
+    ErrorDto payload = ErrorDto.global("error.paging.invalid", Map.of());
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(payload);
   }
 
   @Override

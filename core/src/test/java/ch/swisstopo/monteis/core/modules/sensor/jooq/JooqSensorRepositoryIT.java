@@ -11,6 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.query.NumberFilterModel;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.infrastructure.query.SortDirection;
+import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
+import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
@@ -18,6 +24,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponse
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.jooq.DSLContext;
@@ -102,37 +109,83 @@ class JooqSensorRepositoryIT {
 
   @Test
   @Transactional
-  void should_get_all_sensors() {
+  void should_filter_paged_sensors_by_text_contains() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          Sensor savedSensor1 =
-              repository.create(createDummySensor("ALL-001", "All Sensor 1", "x * 2"));
-          Sensor savedSensor2 =
-              repository.create(createDummySensor("ALL-002", "All Sensor 2", "x * 2"));
+          repository.create(createDummySensor("TXT-FILTER-01", "UniqueTextFilterName", "x"));
+          repository.create(createDummySensor("TXT-FILTER-02", "Other Name", "x"));
+
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of("name", new TextFilterModel("contains", "uniquetextfilter", null)));
 
           // Act
-          List<SensorResponseDto> found = repository.getAll();
+          PagedResult<SensorResponseDto> result = repository.getSensors(request);
 
-          // Assert: seed data also contributes sensors, so match on the ones created here
-          SensorResponseDto foundSensor1 =
-              found.stream()
-                  .filter(s -> s.id().equals(savedSensor1.getId()))
-                  .findFirst()
-                  .orElseThrow();
-          SensorResponseDto foundSensor2 =
-              found.stream()
-                  .filter(s -> s.id().equals(savedSensor2.getId()))
-                  .findFirst()
-                  .orElseThrow();
+          // Assert
+          assertEquals(1, result.totalCount());
+          assertEquals("TXT-FILTER-01", result.rows().getFirst().code());
+        });
+  }
 
-          assertAll(
-              () -> assertEquals("ALL-001", foundSensor1.code()),
-              () -> assertNotNull(foundSensor1.formula(), "Formula should be loaded"),
-              () -> assertEquals("x * 2", foundSensor1.formula().expression()),
-              () -> assertNotNull(foundSensor1.type(), "Type should be loaded"),
-              () -> assertEquals("Other", foundSensor1.type().name()),
-              () -> assertEquals("ALL-002", foundSensor2.code()));
+  @Test
+  @Transactional
+  void should_sort_paged_sensors_by_text_column_descending() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          repository.create(createDummySensor("SORT-A", "AAA_SORT_TEST", "x"));
+          repository.create(createDummySensor("SORT-Z", "ZZZ_SORT_TEST", "x"));
+
+          // Scope to just our two sensors via a filter, so the sort assertion doesn't depend on
+          // how many other rows happen to be seeded ahead of a fixed-size page.
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(new SortModelItem("name", SortDirection.DESC)),
+                  Map.of("name", new TextFilterModel("contains", "_SORT_TEST", null)));
+
+          // Act
+          List<SensorResponseDto> rows = repository.getSensors(request).rows();
+
+          // Assert: among our two sensors, the Z one must come first in descending order
+          int indexOfZ = indexOfCode(rows, "SORT-Z");
+          int indexOfA = indexOfCode(rows, "SORT-A");
+          assertTrue(
+              indexOfZ < indexOfA, "ZZZ_SORT_TEST should sort before AAA_SORT_TEST in DESC order");
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_filter_paged_sensors_by_number_range() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange: coordinates.x is a jOOQ Integer field, filtered via a Double-typed
+          // NumberFilterModel - this exercises the numeric CAST rather than an unsafe cast.
+          repository.create(
+              createDummySensorWithCoordinates(
+                  "NUM-FILTER-01", "Number Filter Sensor", "x", new Coordinates(123456789, 0, 0)));
+
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "coordinates.x", new NumberFilterModel("inRange", 123456788.0, 123456790.0)));
+
+          // Act
+          PagedResult<SensorResponseDto> result = repository.getSensors(request);
+
+          // Assert
+          assertEquals(1, result.totalCount());
+          assertEquals("NUM-FILTER-01", result.rows().getFirst().code());
         });
   }
 
@@ -219,7 +272,7 @@ class JooqSensorRepositoryIT {
         () -> {
           // Arrange
           Sensor ghostSensor = createDummySensor("GHOST", "Ghost", "x");
-          ghostSensor.setId(9999L);
+          ghostSensor.setId(Long.MAX_VALUE);
 
           // Act & Assert
           ObjectBusinessValidationException exception =
@@ -349,10 +402,15 @@ class JooqSensorRepositoryIT {
    * Helper to quickly build a valid domain Sensor for testing.
    */
   private Sensor createDummySensor(String code, String name, String formulaExpression) {
+    return createDummySensorWithCoordinates(
+        code, name, formulaExpression, new Coordinates(2400, -12007, -1600));
+  }
+
+  private Sensor createDummySensorWithCoordinates(
+      String code, String name, String formulaExpression, Coordinates coordinates) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
     AlarmLimits alarmLimits = new AlarmLimits(0.0, 100.0);
-    Coordinates coordinates = new Coordinates(2400, -12007, -1600);
 
     return new Sensor(
         code,
@@ -364,5 +422,14 @@ class JooqSensorRepositoryIT {
         alarmLimits,
         true,
         formula);
+  }
+
+  private int indexOfCode(List<SensorResponseDto> rows, String code) {
+    for (int i = 0; i < rows.size(); i++) {
+      if (rows.get(i).code().equals(code)) {
+        return i;
+      }
+    }
+    throw new AssertionError("Expected to find sensor with code " + code);
   }
 }

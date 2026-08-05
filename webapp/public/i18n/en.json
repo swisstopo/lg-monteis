@@ -6,6 +6,9 @@
     "system": {
       "internal": "Please try again later. If the problem persists, contact support and provide the error ID: {{errorId}}.",
       "generic": "Please try again later. If the problem persists, contact support."
+    },
+    "paging": {
+      "invalid": "Invalid sorting or filtering was requested."
     }
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",

@@ -4,6 +4,11 @@ import { SensorResponseDto } from '../../../core/generated';
 import { TableColumn } from '../../../ui/table/table.types';
 import { getUnitMetadata } from '../models/sensor.model';
 
+// Only a single filter condition per column is supported by the paged backend endpoint, so
+// combined ("AND"/"OR") filters are disabled here to keep the filter model ag-grid sends in sync
+// with what the backend can translate.
+const SINGLE_CONDITION_FILTER_PARAMS = { maxNumConditions: 1 };
+
 export function createColumns(): TableColumn<SensorResponseDto>[] {
   const i18n = inject(TranslateService);
   const unitMetadata = getUnitMetadata();
@@ -13,25 +18,29 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
       field: 'code',
       headerName: i18n.translate('sensor.code.label')(),
       sortable: true,
-      filter: true,
+      filter: 'agTextColumnFilter',
+      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'name',
       headerName: i18n.translate('sensor.name.label')(),
       sortable: true,
-      filter: true,
+      filter: 'agTextColumnFilter',
+      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'type.name',
       headerName: i18n.translate('sensor.type.label')(),
       sortable: true,
-      filter: true,
+      filter: 'agTextColumnFilter',
+      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'unit',
       headerName: i18n.translate('sensor.unit.label')(),
       sortable: true,
-      filter: true,
+      // Not text-filterable: the backend column is a DB-level enum, not a plain string.
+      filter: false,
       // Show the unit's translated shorthand symbol (e.g. "m", "kg") instead of the raw enum
       // value (e.g. "METER").
       valueFormatter: (params) =>
@@ -41,30 +50,37 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
       field: 'formula.expression',
       headerName: i18n.translate('sensor.formula.column')(),
       sortable: true,
-      filter: true,
+      filter: 'agTextColumnFilter',
+      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'coordinates.x',
       headerName: i18n.translate('sensor.coordinate.xLocal.label')(),
       sortable: true,
-      filter: true,
+      filter: 'agNumberColumnFilter',
+      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'coordinates.y',
       headerName: i18n.translate('sensor.coordinate.yLocal.label')(),
       sortable: true,
-      filter: true,
+      filter: 'agNumberColumnFilter',
+      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'coordinates.z',
       headerName: i18n.translate('sensor.coordinate.zLocal.label')(),
       sortable: true,
-      filter: true,
+      filter: 'agNumberColumnFilter',
+      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'alarmLimits',
       headerName: i18n.translate('sensor.alarmLimit.column')(),
       minWidth: 150,
+      // No single natural sort/filter key: this is a composite of the lower/upper limit fields.
+      sortable: false,
+      filter: false,
       valueFormatter: (params) => {
         const alarmLimits = params.value;
         return alarmLimits
@@ -79,7 +95,9 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
       field: 'active',
       headerName: i18n.translate('sensor.active.label')(),
       sortable: true,
-      filter: true,
+      // Not filterable: a boolean Yes/No column would need agSetColumnFilter, a different
+      // filter-model shape the backend doesn't translate yet.
+      filter: false,
       // Without this, ag-grid infers the boolean cell data type from the row data and renders a
       // (valueFormatter-ignoring) checkbox instead of the Yes/No text below.
       cellDataType: false,
@@ -92,7 +110,8 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
       field: 'comment',
       headerName: i18n.translate('sensor.comment.label')(),
       sortable: true,
-      filter: true,
+      filter: 'agTextColumnFilter',
+      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
       wrapText: true,
       autoHeight: true,
       flex: 0,

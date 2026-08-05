@@ -1,5 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.query;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
@@ -26,11 +28,12 @@ public interface SensorQuery {
   SensorResponseDto getById(Long id);
 
   /**
-   * Retrieves all sensors, projected straight into {@link SensorResponseDto}s.
+   * Retrieves a page of sensors, projected straight into {@link SensorResponseDto}s.
    *
-   * @return a list of all sensors
+   * @param request the requested page, together with an optional sort/filter model
+   * @return the requested page of sensors together with the total row count
    */
-  List<SensorResponseDto> getAll();
+  PagedResult<SensorResponseDto> getSensors(PagedRequest request);
 
   /**
    * Retrieves all formulas that are currently used by existing sensors.

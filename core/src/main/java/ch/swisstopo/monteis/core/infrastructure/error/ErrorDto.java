@@ -56,7 +56,23 @@ public record ErrorDto(
    * @return a global system error DTO
    */
   public static ErrorDto global(Map<String, Object> params) {
-    return new ErrorDto(ErrorTarget.GLOBAL, null, null, "error.system.internal", params);
+    return global("error.system.internal", params);
+  }
+
+  /**
+   * Creates a global error with a custom message key.
+   *
+   * <p>Use this overload instead of {@link #global(Map)} when the failure is
+   * not an unexpected system error but is still not attributable to a
+   * specific field or form, for example a malformed request that could not
+   * be parsed at all.
+   *
+   * @param messageKey the i18n key identifying the error message
+   * @param params additional context required to render the message
+   * @return a global error DTO
+   */
+  public static ErrorDto global(String messageKey, Map<String, Object> params) {
+    return new ErrorDto(ErrorTarget.GLOBAL, null, null, messageKey, params);
   }
 
   /**

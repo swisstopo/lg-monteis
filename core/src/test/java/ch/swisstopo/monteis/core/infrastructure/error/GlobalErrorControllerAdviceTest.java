@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import jakarta.validation.Constraint;
@@ -102,6 +103,19 @@ class GlobalErrorControllerAdviceTest {
         .andExpect(
             jsonPath("$.params.errorId").exists()) // Ensures the UUID is generated for tracing
         .andExpect(jsonPath("$.params.errorId").isString());
+  }
+
+  @Test
+  void should_translate_invalid_paged_request_exception_return_400() throws Exception {
+    // given a request to an endpoint that throws an InvalidPagedRequestException
+
+    // when
+    var response = mockMvc.perform(get("/dummy/invalid-paged-request-error").with(jwt()));
+
+    // then
+    response
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
   }
 
   @Test
@@ -220,6 +234,11 @@ class GlobalErrorControllerAdviceTest {
     @GetMapping("/dummy/unexpected-error")
     public void throwUnexpectedError() {
       throw new RuntimeException("Simulated catastrophic failure, like a DB timeout");
+    }
+
+    @GetMapping("/dummy/invalid-paged-request-error")
+    public void throwInvalidPagedRequestError() {
+      throw new InvalidPagedRequestException("Unsupported text filter type: bogus");
     }
 
     @PostMapping("/dummy/validate")

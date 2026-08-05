@@ -12,6 +12,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
@@ -27,6 +30,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseD
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -45,6 +49,7 @@ class SensorControllerTest {
   @MockitoBean private SensorQuery queryService;
 
   @MockitoBean private SensorWebMapper mapper;
+  @MockitoBean private PagedRequestParser pagedRequestParser;
 
   @Test
   void should_route_get_sensor_and_verify_output() throws Exception {
@@ -81,7 +86,7 @@ class SensorControllerTest {
   }
 
   @Test
-  void should_route_find_all_sensors_and_return_json_array() throws Exception {
+  void should_route_get_sensors_and_return_paged_result() throws Exception {
     // given
     SensorResponseDto dto1 =
         new SensorResponseDto(
@@ -96,37 +101,40 @@ class SensorControllerTest {
             true,
             null,
             1);
-    SensorResponseDto dto2 =
-        new SensorResponseDto(
-            2L,
-            "SENS-02",
-            "Test 2",
-            Unit.METER,
-            new SensorTypeResponseDto(2L, "Temperature", 1),
-            null,
-            new CoordinatesDto(0, 0, 0),
-            new AlarmLimitsDto(0.0, 100.0),
-            true,
-            null,
-            1);
 
-    given(queryService.getAll()).willReturn(List.of(dto1, dto2));
+    given(pagedRequestParser.parse(any())).willReturn(new PagedRequest(0, 20, List.of(), Map.of()));
+    given(queryService.getSensors(any())).willReturn(new PagedResult<>(List.of(dto1), 1));
 
     // when / then
     mockMvc
-        .perform(get("/api/sensors").with(jwt()).contentType(MediaType.APPLICATION_JSON))
+        .perform(
+            get("/api/sensors")
+                .queryParam("startRow", "0")
+                .queryParam("endRow", "20")
+                .with(jwt())
+                .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].id").value(dto1.id()))
-        .andExpect(jsonPath("$[0].code").value(dto1.code()))
-        .andExpect(jsonPath("$[0].type.name").value(dto1.type().name()))
-        .andExpect(jsonPath("$[1].id").value(dto2.id()))
-        .andExpect(jsonPath("$[1].code").value(dto2.code()))
-        .andExpect(jsonPath("$[1].type.name").value(dto2.type().name()));
+        .andExpect(jsonPath("$.totalCount").value(1))
+        .andExpect(jsonPath("$.rows[0].id").value(dto1.id()))
+        .andExpect(jsonPath("$.rows[0].code").value(dto1.code()))
+        .andExpect(jsonPath("$.rows[0].type.name").value(dto1.type().name()));
 
     // Verify the read flow bypasses the service/mapper entirely
-    then(queryService).should().getAll();
+    then(queryService).should().getSensors(any());
     then(service).shouldHaveNoInteractions();
     then(mapper).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_reject_negative_start_row_with_400() throws Exception {
+    // when / then: Spring validates the constrained @RequestParam before the handler body runs
+    mockMvc
+        .perform(
+            get("/api/sensors").queryParam("startRow", "-1").queryParam("endRow", "20").with(jwt()))
+        .andExpect(status().isBadRequest());
+
+    then(pagedRequestParser).shouldHaveNoInteractions();
+    then(queryService).shouldHaveNoInteractions();
   }
 
   @Test
