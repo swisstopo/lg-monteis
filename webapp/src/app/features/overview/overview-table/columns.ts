@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { translate } from '@ngx-translate/core';
 import { ReadSimpleMetricDto } from '../../../core/generated';
 import { TableColumn } from '../../../ui/table/table.types';
 
@@ -6,14 +7,14 @@ export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetricD
   return [
     {
       field: 'sensorId',
-      headerName: 'Sensor ID',
+      headerName: translate('measurements.column.sensorId')(),
       sortable: true,
       filter: true,
       flex: 2,
     },
     {
       field: 'timestamp',
-      headerName: 'Timestamp',
+      headerName: translate('measurements.column.timestamp')(),
       sortable: true,
       filter: true,
       flex: 1.5,
@@ -21,14 +22,14 @@ export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetricD
     },
     {
       field: 'normValue',
-      headerName: 'Value (Normalized)',
+      headerName: translate('measurements.column.normValue')(),
       sortable: true,
       filter: true,
       flex: 1,
     },
     {
       field: 'rawValue',
-      headerName: 'Value (Raw)',
+      headerName: translate('measurements.column.rawValue')(),
       sortable: true,
       filter: true,
       flex: 1,

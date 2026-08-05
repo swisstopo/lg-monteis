@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
@@ -21,6 +22,7 @@ describe('SensorTable', () => {
           useValue: overviewServiceMock,
         },
         WorkbenchView,
+        provideTranslateService(),
       ],
     }).compileComponents();
 

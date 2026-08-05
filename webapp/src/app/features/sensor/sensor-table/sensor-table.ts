@@ -1,4 +1,5 @@
 import { Component, effect, inject, signal } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { SensorResponseDto } from '../../../core/generated';
 import Table from '../../../ui/table/table';
@@ -8,12 +9,13 @@ import { createColumns } from './columns';
 
 @Component({
   selector: 'app-sensor-table',
-  imports: [Table, TableHeader],
+  imports: [Table, TableHeader, TranslatePipe],
   templateUrl: './sensor-table.html',
   styleUrl: './sensor-table.scss',
 })
 export default class SensorTable {
   protected sensorService = inject(SensorService);
+  private readonly i18nService = inject(TranslateService);
 
   protected wrappedCols = createColumns();
   protected selectedSensorId = signal<number | undefined>(undefined);
@@ -22,7 +24,7 @@ export default class SensorTable {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
       const count = this.sensorService.allSensors.value()?.length ?? 0;
-      view.title = `Setup Sensors (${count})`;
+      view.title = this.i18nService.instant('tab.sensor', { count });
     });
   }
 

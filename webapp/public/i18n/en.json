@@ -142,7 +142,8 @@
     },
     "success": "Sensor saved successfully.",
     "error": {
-      "noId": "No sensor id provided"
+      "noId": "No sensor id provided",
+      "connection": "Failed to connect to the backend server."
     }
   },
   "overview": {
