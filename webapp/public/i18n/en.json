@@ -140,6 +140,12 @@
       "saveAndCreate": "Save and create new",
       "save": "Save"
     },
+    "tableHeader": {
+      "search": "Search",
+      "download": "Download",
+      "create": "Create Sensor",
+      "edit": "Edit Sensor"
+    },
     "success": "Sensor saved successfully.",
     "error": {
       "noId": "No sensor id provided",

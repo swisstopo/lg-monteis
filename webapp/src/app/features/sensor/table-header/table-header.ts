@@ -3,11 +3,12 @@ import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatFormField, MatInput } from '@angular/material/input';
+import { TranslatePipe } from '@ngx-translate/core';
 import SensorEdit from '../sensor-edit/sensor-edit';
 
 @Component({
   selector: 'app-table-header',
-  imports: [MatButton, MatIcon, MatFormField, MatInput],
+  imports: [MatButton, MatIcon, MatFormField, MatInput, TranslatePipe],
   templateUrl: './table-header.html',
   styleUrl: './table-header.scss',
 })
