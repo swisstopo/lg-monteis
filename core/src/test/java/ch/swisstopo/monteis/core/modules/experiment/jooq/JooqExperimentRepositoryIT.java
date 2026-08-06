@@ -43,7 +43,7 @@ class JooqExperimentRepositoryIT {
           // Assert
           assertEquals(experimentId, details.id());
           assertEquals("Experiment Without Sensors", details.name());
-          assertEquals("No sensors attached", details.description());
+          assertEquals("No sensors attached", details.comment());
         });
   }
 
@@ -101,7 +101,7 @@ class JooqExperimentRepositoryIT {
     return Objects.requireNonNull(
             dsl.insertInto(EXPERIMENTS)
                 .set(EXPERIMENTS.NAME, name)
-                .set(EXPERIMENTS.DESCRIPTION, description)
+                .set(EXPERIMENTS.COMMENT, description)
                 .returning(EXPERIMENTS.ID)
                 .fetchOne())
         .getId();

@@ -21,7 +21,7 @@ import { getStatusMetadata, Status } from '../models/experiment.model';
 import { ExperimentService } from '../services/experiment.service';
 
 interface ExperimentFormData {
-  description: string;
+  comment: string;
   experimentDates: {
     experimentStart: Date;
     experimentEnd: Date;
@@ -33,7 +33,7 @@ interface ExperimentFormData {
 function domainModelToFormModel(domainModel: ExperimentResponseDto): ExperimentFormData {
   return {
     name: domainModel.name ?? '',
-    description: domainModel.description ?? '',
+    comment: domainModel.comment ?? '',
     experimentDates: {
       experimentStart: domainModel.experimentDates?.experimentStart
         ? new Date(domainModel.experimentDates.experimentStart)
@@ -128,7 +128,7 @@ export default class ExperimentEdit {
     return {
       name: '',
       status: WriteExperimentDto.StatusEnum.Active,
-      description: '',
+      comment: '',
       experimentDates: {
         experimentStart: new Date(),
         experimentEnd: new Date(),
@@ -187,7 +187,7 @@ export default class ExperimentEdit {
       id: this.experiment()?.id ?? undefined,
       status: formData.status,
       name: formData.name,
-      description: formData.description,
+      comment: formData.comment,
       experimentDates: {
         experimentStart: this.toLocalDateString(formData.experimentDates.experimentStart),
         experimentEnd: this.toLocalDateString(formData.experimentDates.experimentEnd),
