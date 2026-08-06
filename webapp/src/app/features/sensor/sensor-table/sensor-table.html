@@ -1,5 +1,13 @@
 <div class="metrics-panel">
-  <app-table-header [selectedSensorId]="selectedSensorId()"></app-table-header>
+  <app-table-header
+    entityName="sensor"
+    [selectedItemId]="selectedSensorId()"
+    [dialogComponent]="SensorEdit"
+    [searchAction]="onSearch"
+    [showCreate]="true"
+    [showDownload]="true"
+    [showEdit]="true"
+  />
   @if (loadError()) {
     <p class="error-text">{{ 'sensor.error.connection' | translate }}</p>
   } @else {

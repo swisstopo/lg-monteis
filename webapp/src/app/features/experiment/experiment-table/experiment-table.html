@@ -1,3 +1,9 @@
 <div class="metrics-panel">
-  <app-table-header [selectedExperimentId]="selectedExperimentId()"></app-table-header>
+  <app-table-header
+    entityName="experiment"
+    [selectedItemId]="selectedExperimentId()"
+    [dialogComponent]="ExperimentEdit"
+    [showCreate]="true"
+    [showEdit]="true"
+  />
 </div>
