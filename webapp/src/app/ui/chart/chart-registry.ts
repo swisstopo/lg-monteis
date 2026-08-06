@@ -14,6 +14,9 @@ import {
 
 let registered = false;
 
+/**
+ * Register only the necessary chart.js components for tree shaking the chart.js library.
+ */
 export function registerChartJs(): void {
   if (registered) {
     return;

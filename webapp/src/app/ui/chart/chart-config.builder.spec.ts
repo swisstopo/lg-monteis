@@ -37,7 +37,7 @@ describe('buildChartConfig', () => {
   it('applies axis labels and legend visibility from options', () => {
     const config = buildChartConfig('line', [dataset], [], {
       xAxisLabel: 'Time',
-      yAxisLabel: 'Value',
+      yAxisLabels: { y: 'Value' },
       showLegend: false,
     });
 

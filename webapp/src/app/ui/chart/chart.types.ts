@@ -1,3 +1,4 @@
+import type { ChartOptions as ChartJsOptions } from 'chart.js';
 export type ChartType = 'line' | 'scatter';
 
 export interface ChartPoint {
@@ -10,21 +11,27 @@ export interface ChartDataset {
   label: string;
   data: ChartPoint[];
   color?: string;
-  yAxisId?: 'y' | 'y1';
+  yAxisId?: string;
 }
 
 export interface ChartOptions {
   title?: string;
   subtitle?: string;
   xAxisLabel?: string;
-  yAxisLabel?: string;
-  secondaryYAxisLabel?: string;
+  yAxisLabels?: Record<string, string>;
   showLegend?: boolean;
   maintainAspectRatio?: boolean;
+  advancedOptions?: ChartJsOptions<ChartType>;
 }
 
 export interface ChartPointEvent {
   datasetId: string | number;
   datasetLabel: string;
   point: ChartPoint;
+}
+
+export interface ChartThemePalette {
+  textColor?: string;
+  gridColor?: string;
+  seriesColors?: string[];
 }

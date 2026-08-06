@@ -3,12 +3,12 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
-  computed,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
   input,
-  OnDestroy,
+  LOCALE_ID,
   output,
   signal,
   viewChild,
@@ -22,11 +22,17 @@ import {
   MatDialogTitle,
 } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ActiveElement, ChartConfiguration, ChartEvent, Chart as ChartJs } from 'chart.js';
-import { buildChartConfig, ChartThemePalette } from './chart-config.builder';
+import { buildChartConfig } from './chart-config.builder';
 import { registerChartJs } from './chart-registry';
-import { ChartDataset, ChartOptions, ChartPointEvent, ChartType } from './chart.types';
+import {
+  ChartDataset,
+  ChartOptions,
+  ChartPointEvent,
+  ChartThemePalette,
+  ChartType,
+} from './chart.types';
 
 registerChartJs();
 
@@ -75,11 +81,21 @@ function resolveCssVariableColor(element: HTMLElement, variableName: string): st
   return resolveColorScheme(element) === 'dark' ? darkValue : lightValue;
 }
 
+// seriesColor: resolveCssVariableColor(element, '--mat-sys-primary'), TODO replace with palett
 function resolveThemePalette(element: HTMLElement): ChartThemePalette {
   return {
     textColor: resolveCssVariableColor(element, '--mat-sys-on-surface'),
     gridColor: resolveCssVariableColor(element, '--mat-sys-surface-container-highest'),
-    seriesColor: resolveCssVariableColor(element, '--mat-sys-primary'),
+    seriesColors: [
+      '#4285F4',
+      '#EA4335',
+      '#FBBC04',
+      '#34A853',
+      '#990099',
+      '#00BCD4',
+      '#FF6D00',
+      '#E91E63',
+    ],
   };
 }
 
@@ -99,20 +115,18 @@ function resolveThemePalette(element: HTMLElement): ChartThemePalette {
   ],
   providers: [DatePipe],
 })
-export default class Chart implements OnDestroy {
-  private readonly i18nService = inject(TranslateService);
-  private readonly datePipe = inject(DatePipe);
+export default class Chart {
+  private readonly locale = inject(LOCALE_ID);
   readonly dialogRef = inject<MatDialogRef<Chart>>(MatDialogRef, {
     optional: true,
   });
+  private readonly destroyRef = inject(DestroyRef);
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+  readonly title = input.required<string>();
   readonly type = input<ChartType>('line');
   readonly datasets = input<ChartDataset[]>([]);
   readonly labels = input<(string | number)[]>([]);
   readonly options = input<ChartOptions>({});
-  readonly sensorName = input<string | undefined>();
-  readonly rangeFrom = input<Date | undefined>();
-  readonly rangeTo = input<Date | undefined>();
 
   readonly pointClick = output<ChartPointEvent>();
   readonly pointHover = output<ChartPointEvent>();
@@ -122,20 +136,40 @@ export default class Chart implements OnDestroy {
   private readonly viewReady = signal(false);
 
   constructor() {
-    afterNextRender(() => this.viewReady.set(true));
+    // key architectural consideration for for gpu references clean up
+    this.destroyRef.onDestroy(() => {
+      this.instance?.destroy();
+    });
+    // key architectural consideration for hydration saftey -> afterNextRender
+    afterNextRender(() => {
+      const canvasEl = this.canvasRef().nativeElement;
+
+      this.palette.set(resolveThemePalette(canvasEl));
+      this.viewReady.set(true);
+
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const themeChangeListener = () => {
+        this.palette.set(resolveThemePalette(canvasEl));
+      };
+
+      mediaQuery.addEventListener('change', themeChangeListener);
+
+      // Clean up the listener to prevent memory leaks
+      this.destroyRef.onDestroy(() => {
+        mediaQuery.removeEventListener('change', themeChangeListener);
+      });
+    });
+
     effect(() => {
-      // Wait for the view to be ready before running this effect
       if (!this.viewReady()) {
         return;
-      }
-      if (!this.instance) {
-        this.palette.set(resolveThemePalette(this.canvasRef().nativeElement));
       }
       const config = buildChartConfig(
         this.type(),
         this.datasets(),
         this.labels(),
         this.options(),
+        this.locale,
         this.palette(),
       );
       if (this.instance) {
@@ -146,30 +180,28 @@ export default class Chart implements OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {
-    this.instance?.destroy();
-  }
-
-  readonly title = computed(() =>
-    this.i18nService.translate('chart.title', {
-      name: this.sensorName(),
-      rangeFrom: this.datePipe.transform(this.rangeFrom(), 'yyyy-MM-dd'),
-      rangeTo: this.datePipe.transform(this.rangeTo(), 'yyyy-MM-dd'),
-    })(),
-  );
-
   private createChart(config: ChartConfiguration): void {
     const canvas = this.canvasRef().nativeElement;
     this.instance = new ChartJs(canvas, this.withEventHandlers(config));
   }
 
+  /**
+   * Updates the chart configuration
+   *     // For real-time streaming - if ever a requirement we will need to update the inner array directly:
+   *     // this.instance.data.datasets[i].data.push(newPoint);
+   *     // this.instance.data.labels.push(newLabel);
+   *     // this.instance.update('quiet'); // 'quiet' skips animations
+   */
   private updateChart(config: ChartConfiguration): void {
     if (!this.instance) {
       return;
     }
     const next = this.withEventHandlers(config);
     (this.instance.config as ChartConfiguration).type = next.type;
-    this.instance.data = next.data;
+    // Mutate the properties of the existing data object to prevent complete rerendering
+    this.instance.data.labels = next.data.labels;
+    this.instance.data.datasets = next.data.datasets;
+
     this.instance.options = next.options ?? {};
     this.instance.update();
   }
