@@ -13,6 +13,7 @@ import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidati
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import jakarta.validation.Constraint;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.lang.annotation.ElementType;
@@ -31,6 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @ControllerTest
@@ -116,6 +118,19 @@ class GlobalErrorControllerAdviceTest {
     response
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
+  }
+
+  @Test
+  void should_reject_negative_start_row_with_400() throws Exception {
+    // when / then: Spring MVC intercepts invalid pagination parameter constraints before handler
+    // execution
+    mockMvc
+        .perform(
+            get("/dummy/paging")
+                .queryParam("startRow", "-1")
+                .queryParam("endRow", "20")
+                .with(jwt()))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
@@ -239,6 +254,13 @@ class GlobalErrorControllerAdviceTest {
     @GetMapping("/dummy/invalid-paged-request-error")
     public void throwInvalidPagedRequestError() {
       throw new InvalidPagedRequestException("Unsupported text filter type: bogus");
+    }
+
+    @GetMapping("/dummy/paging")
+    public void getPaged(
+        @RequestParam(defaultValue = "0") @Min(0) int startRow,
+        @RequestParam(defaultValue = "50") @Min(1) int endRow) {
+      // Do nothing, Spring validates the @Min constraints
     }
 
     @PostMapping("/dummy/validate")

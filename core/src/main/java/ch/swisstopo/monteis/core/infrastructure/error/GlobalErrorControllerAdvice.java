@@ -61,6 +61,7 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
   private static final Logger log = LoggerFactory.getLogger(GlobalErrorControllerAdvice.class);
   private static final Set<String> INTERNAL_ANNOTATION_KEYS =
       Set.of("message", "groups", "payload");
+  public static final String ERROR_ID = "errorId";
 
   @ExceptionHandler(ObjectBusinessValidationException.class)
   @ApiResponse(
@@ -119,9 +120,16 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
       responseCode = "400",
       description = "Malformed paging request (unparseable sort/filter model, or unknown column).",
       content = @Content(schema = @Schema(implementation = ErrorDto.class)))
-  public ResponseEntity<ErrorDto> handleInvalidPagedRequest(InvalidPagedRequestException e) {
-    log.warn("Invalid paged request: {}", e.getMessage());
-    ErrorDto payload = ErrorDto.global("error.paging.invalid", Map.of());
+  public ResponseEntity<ErrorDto> handleInvalidPagedRequest(
+      InvalidPagedRequestException e, HttpServletRequest request) {
+    RequestErrorContext ctx = getErrorContext(request);
+    log.warn(
+        "Invalid paged request at {} {} [ErrorID: {}]: {}",
+        ctx.method(),
+        ctx.uri(),
+        ctx.errorId(),
+        e.getMessage());
+    ErrorDto payload = ErrorDto.global("error.paging.invalid", Map.of(ERROR_ID, ctx.errorId()));
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(payload);
   }
 
@@ -135,7 +143,7 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
 
     String errorId = UUID.randomUUID().toString();
     log.warn("Spring MVC Framework Error [ErrorID: {}]: {}", errorId, ex.getMessage());
-    ErrorDto payload = ErrorDto.global(Map.of("errorId", errorId));
+    ErrorDto payload = ErrorDto.global(Map.of(ERROR_ID, errorId));
 
     return ResponseEntity.status(statusCode).headers(headers).body(payload);
   }
@@ -147,13 +155,15 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
       content = @Content(schema = @Schema(implementation = ErrorDto.class)))
   public ResponseEntity<ErrorDto> handleAllOtherExceptions(
       Exception e, HttpServletRequest request) {
-    String errorId = UUID.randomUUID().toString();
-    String method = request.getMethod();
-    String uri = request.getRequestURI();
+    RequestErrorContext ctx = getErrorContext(request);
+    log.error(
+        "Unexpected system error at {} {} [ErrorID: {}]",
+        ctx.method(),
+        ctx.uri(),
+        ctx.errorId(),
+        e);
 
-    log.error("Unexpected system error at {} {} [ErrorID: {}]", method, uri, errorId, e);
-
-    ErrorDto payload = ErrorDto.global(Map.of("errorId", errorId));
+    ErrorDto payload = ErrorDto.global(Map.of(ERROR_ID, ctx.errorId()));
 
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
   }
@@ -192,5 +202,12 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
     } catch (RuntimeException _) {
       return Map.of();
     }
+  }
+
+  private record RequestErrorContext(String errorId, String method, String uri) {}
+
+  private RequestErrorContext getErrorContext(HttpServletRequest request) {
+    return new RequestErrorContext(
+        UUID.randomUUID().toString(), request.getMethod(), request.getRequestURI());
   }
 }

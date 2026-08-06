@@ -6,9 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -123,18 +121,6 @@ class SensorControllerTest {
     then(queryService).should().getSensors(any());
     then(service).shouldHaveNoInteractions();
     then(mapper).shouldHaveNoInteractions();
-  }
-
-  @Test
-  void should_reject_negative_start_row_with_400() throws Exception {
-    // when / then: Spring validates the constrained @RequestParam before the handler body runs
-    mockMvc
-        .perform(
-            get("/api/sensors").queryParam("startRow", "-1").queryParam("endRow", "20").with(jwt()))
-        .andExpect(status().isBadRequest());
-
-    then(pagedRequestParser).shouldHaveNoInteractions();
-    then(queryService).shouldHaveNoInteractions();
   }
 
   @Test
