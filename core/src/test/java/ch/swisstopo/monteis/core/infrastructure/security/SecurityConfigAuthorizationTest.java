@@ -38,7 +38,7 @@ class SecurityConfigAuthorizationTest {
 
   @Test
   void should_allow_admin_to_write() throws Exception {
-    givenDecodableToken("admin-token", "admin");
+    givenDecodableToken("admin-token", List.of("monteis-client:read-all", "monteis-client:write"));
 
     mockMvc
         .perform(post("/dummy/write").header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
@@ -47,7 +47,7 @@ class SecurityConfigAuthorizationTest {
 
   @Test
   void should_forbid_user_from_writing() throws Exception {
-    givenDecodableToken("user-token", "user");
+    givenDecodableToken("user-token", List.of("monteis-client:read"));
 
     mockMvc
         .perform(post("/dummy/write").header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
@@ -61,7 +61,7 @@ class SecurityConfigAuthorizationTest {
 
   @Test
   void should_allow_admin_to_read() throws Exception {
-    givenDecodableToken("admin-token", "admin");
+    givenDecodableToken("admin-token", List.of("monteis-client:read-all", "monteis-client:write"));
 
     mockMvc
         .perform(get("/dummy/read").header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
@@ -70,7 +70,7 @@ class SecurityConfigAuthorizationTest {
 
   @Test
   void should_allow_user_to_read() throws Exception {
-    givenDecodableToken("user-token", "user");
+    givenDecodableToken("user-token", List.of("monteis-client:read"));
 
     mockMvc
         .perform(get("/dummy/read").header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
@@ -87,12 +87,12 @@ class SecurityConfigAuthorizationTest {
     mockMvc.perform(get("/actuator/health")).andExpect(status().isOk());
   }
 
-  private void givenDecodableToken(String token, String realmRole) {
+  private void givenDecodableToken(String token, List<String> roles) {
     Instant now = Instant.now();
     Jwt jwt =
         Jwt.withTokenValue(token)
             .header("alg", "none")
-            .claim("realm_access", Map.of("roles", List.of(realmRole)))
+            .claim("monteis_access", Map.of("roles", roles))
             .claim("preferred_username", "test_user_name")
             .subject(UUID.randomUUID().toString())
             .issuedAt(now)

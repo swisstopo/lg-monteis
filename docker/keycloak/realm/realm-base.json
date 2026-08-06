@@ -18,19 +18,19 @@
       "monteis-spa": [
         {
           "name": "monteis-client:read",
-          "description": "",
+          "description": "Read access to experiments/sensors the user is explicitly scoped to via their experiment group memberships (see the 'Experiments' groups). Never assign this directly to a user - assign an experiment group instead.",
           "composite": false,
           "clientRole": true
         },
         {
           "name": "monteis-client:read-all",
-          "description": "",
+          "description": "Read access to all experiments/sensors, bypassing per-experiment scoping. Granted via the 'Monteis Read All' or 'Monteis Admin' group - never assign this directly to a user.",
           "composite": false,
           "clientRole": true
         },
         {
           "name": "monteis-client:write",
-          "description": "",
+          "description": "Write access to all experiments/sensors. Only ever valid combined with monteis-client:read-all (see the 'Monteis Admin' group) - write without read-all, or write combined with monteis-client:read, is a misconfiguration.",
           "composite": false,
           "clientRole": true
         }
@@ -160,12 +160,31 @@
     {
       "name": "Monteis Admin",
       "path": "/Monteis Admin",
+      "attributes": {
+        "description": [
+          "Full administrators: read-all + write access to every experiment. Members get both monteis-client:read-all and monteis-client:write."
+        ]
+      },
       "clientRoles": { "monteis-spa": ["monteis-client:read-all", "monteis-client:write"] }
     },
     {
       "name": "Monteis Read All",
       "path": "/Monteis Read All",
+      "attributes": {
+        "description": [
+          "Read-only access to every experiment, without write access. Members get monteis-client:read-all."
+        ]
+      },
       "clientRoles": { "monteis-spa": ["monteis-client:read-all"] }
+    },
+    {
+      "name": "Experiments",
+      "path": "/Experiments",
+      "attributes": {
+        "description": [
+          "Namespace for per-experiment groups. One subgroup per experiment: set its experiment_ids attribute + monteis-client:read. A user's experiment_ids claim unions every subgroup they belong to."
+        ]
+      }
     }
   ],
   "users": [],

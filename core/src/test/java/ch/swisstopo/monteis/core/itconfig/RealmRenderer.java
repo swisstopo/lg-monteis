@@ -35,6 +35,23 @@ final class RealmRenderer {
         }
       }
 
+      ArrayNode groups = base.withArray("groups");
+      for (JsonNode patchGroup : patch.withArray("groups")) {
+        ObjectNode matchingBaseGroup = null;
+        for (JsonNode baseGroup : groups) {
+          if (baseGroup.path("name").equals(patchGroup.path("name"))) {
+            matchingBaseGroup = (ObjectNode) baseGroup;
+            break;
+          }
+        }
+        if (matchingBaseGroup != null) {
+          ArrayNode subGroups = matchingBaseGroup.withArray("subGroups");
+          patchGroup.withArray("subGroups").forEach(subGroups::add);
+        } else {
+          groups.add(patchGroup);
+        }
+      }
+
       ArrayNode users = base.withArray("users");
       patch.withArray("users").forEach(users::add);
 

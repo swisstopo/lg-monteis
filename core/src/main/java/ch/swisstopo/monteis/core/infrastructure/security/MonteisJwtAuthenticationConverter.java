@@ -13,10 +13,13 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
- * Builds this app's {@link MonteisAuthenticationToken} from a JWT: realm roles map to {@code
+ * Builds this app's {@link MonteisAuthenticationToken} from a JWT: client roles map to {@code
  * api:*} authorities, and sub/username/experiment_ids become the {@link MonteisPrincipal}.
  */
 public class MonteisJwtAuthenticationConverter
@@ -36,9 +39,15 @@ public class MonteisJwtAuthenticationConverter
   private static final Set<String> READ_AUTHORITIES_SET =
       Set.of(READ_AUTHORITY, READ_ALL_AUTHORITY);
 
+  // return built in OAuth2Error if keycloak users are misconfigured
+  private static final OAuth2Error INVALID_ROLE_COMBINATION_ERROR =
+      new OAuth2Error(
+          OAuth2ErrorCodes.INVALID_TOKEN,
+          "monteis_access.roles contains an unsupported combination of client roles",
+          null);
+
   @Override
   public AbstractAuthenticationToken convert(@NonNull Jwt source) {
-
     Collection<GrantedAuthority> authorities = extractAuthorities(source);
 
     // Fail closed: a caller with neither read authority must never leak a populated
@@ -55,26 +64,25 @@ public class MonteisJwtAuthenticationConverter
     return new MonteisAuthenticationToken(source, principal, authorities);
   }
 
-  @SuppressWarnings("java:S1301")
   private static Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
+    List<String> roles = extractRoles(jwt);
+    boolean hasRead = roles.contains(CLIENT_ROLE_READ);
+    boolean hasReadAll = roles.contains(CLIENT_ROLE_READ_ALL);
+    boolean hasWrite = roles.contains(CLIENT_ROLE_WRITE);
+
+    if (hasWrite && !hasReadAll) {
+      throw new OAuth2AuthenticationException(INVALID_ROLE_COMBINATION_ERROR);
+    }
+
     Set<GrantedAuthority> authorities = new HashSet<>();
-    for (String role : extractRoles(jwt)) {
-      switch (role) {
-        case CLIENT_ROLE_READ -> authorities.add(new SimpleGrantedAuthority(READ_AUTHORITY));
-
-        case CLIENT_ROLE_READ_ALL ->
-            authorities.add(new SimpleGrantedAuthority(READ_ALL_AUTHORITY));
-
-        // Write implies read-all: it never makes sense to grant write without also being able
-        // to read everything you might write to.
-        case CLIENT_ROLE_WRITE -> {
-          authorities.add(new SimpleGrantedAuthority(WRITE_AUTHORITY));
-          authorities.add(new SimpleGrantedAuthority(READ_ALL_AUTHORITY));
-        }
-        default -> {
-          /* Ignore unknown roles */
-        }
+    if (hasReadAll) {
+      // read-all subsumes read: a caller with both only ever needs the wider authority.
+      authorities.add(new SimpleGrantedAuthority(READ_ALL_AUTHORITY));
+      if (hasWrite) {
+        authorities.add(new SimpleGrantedAuthority(WRITE_AUTHORITY));
       }
+    } else if (hasRead) {
+      authorities.add(new SimpleGrantedAuthority(READ_AUTHORITY));
     }
 
     return authorities;

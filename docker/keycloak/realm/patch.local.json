@@ -12,24 +12,32 @@
   "groups": [
     {
       "name": "Experiments",
-      "path": "/Experiments",
       "subGroups": [
         {
           "name": "Experiment Alpha",
           "path": "/Experiments/Experiment Alpha",
-          "attributes": { "experiment_ids": ["1"] },
+          "attributes": {
+            "experiment_ids": ["1"],
+            "description": ["Grants read access to experiment 1 (Alpha)."]
+          },
           "clientRoles": { "monteis-spa": ["monteis-client:read"] }
         },
         {
           "name": "Experiment Beta",
           "path": "/Experiments/Experiment Beta",
-          "attributes": { "experiment_ids": ["2"] },
+          "attributes": {
+            "experiment_ids": ["2"],
+            "description": ["Grants read access to experiment 2 (Beta)."]
+          },
           "clientRoles": { "monteis-spa": ["monteis-client:read"] }
         },
         {
           "name": "Experiment Gamma",
           "path": "/Experiments/Experiment Gamma",
-          "attributes": { "experiment_ids": ["3"] },
+          "attributes": {
+            "experiment_ids": ["3"],
+            "description": ["Grants read access to experiment 3 (Gamma)."]
+          },
           "clientRoles": { "monteis-spa": ["monteis-client:read"] }
         }
       ]
