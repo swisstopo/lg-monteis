@@ -1,22 +1,26 @@
 import { Component, effect, inject, signal } from '@angular/core';
+import { MatOption } from '@angular/material/core';
+import { MatFormField, MatLabel, MatSelect } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { GridApi } from 'ag-grid-community';
 import { SensorResponseDto } from '../../../core/generated';
 import { createPagedDatasource } from '../../../ui/table/paged-datasource.factory';
+import { TableHeader } from '../../../shared/table-header/table-header';
 import Table from '../../../ui/table/table';
+import SensorEdit from '../sensor-edit/sensor-edit';
 import { SensorService } from '../services/sensor.service';
-import { TableHeader } from '../table-header/table-header';
 import { createColumns } from './columns';
 
 @Component({
   selector: 'app-sensor-table',
-  imports: [Table, TableHeader, TranslatePipe],
+  imports: [Table, TableHeader, TranslatePipe, MatOption, MatSelect, MatFormField, MatLabel],
   templateUrl: './sensor-table.html',
   styleUrl: './sensor-table.scss',
 })
 export default class SensorTable {
   protected sensorService = inject(SensorService);
+  protected readonly SensorEdit = SensorEdit;
   private readonly translateService = inject(TranslateService);
 
   protected wrappedCols = createColumns();
@@ -58,6 +62,10 @@ export default class SensorTable {
 
   onSelectionChanged(rows: SensorResponseDto[]): void {
     this.selectedSensorId.set(rows[0]?.id);
+  }
+
+  onSearch(searchTerm: string): void {
+    // Not implemented yet.
   }
 
   protected getSensorRowId = (row: SensorResponseDto): string => String(row.id);
