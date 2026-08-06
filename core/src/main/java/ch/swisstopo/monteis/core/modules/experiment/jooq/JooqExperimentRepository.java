@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
-import static org.jooq.Records.mapping;
 import static org.jooq.impl.DSL.*;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
@@ -13,11 +12,6 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQuery;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.ExperimentDatesDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
@@ -47,39 +41,16 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
     return dsl.select(
             EXPERIMENTS.ID,
             EXPERIMENTS.NAME,
-            EXPERIMENTS.DESCRIPTION,
-
+            EXPERIMENTS.COMMENT,
             // Map the flat date columns into the nested ExperimentDatesDto record
             row(EXPERIMENTS.EXPERIMENT_START, EXPERIMENTS.EXPERIMENT_END)
                 .mapping(ExperimentDatesDto::new),
             EXPERIMENTS.STATUS,
             EXPERIMENTS.VERSION,
-            multiset(
-                    select(
-                            SENSORS.ID,
-                            SENSORS.CODE,
-                            SENSORS.NAME,
-                            SENSORS.UNIT,
-                            row(SENSOR_TYPES.ID, SENSOR_TYPES.NAME, SENSOR_TYPES.VERSION)
-                                .mapping(SensorTypeResponseDto::new),
-                            SENSORS.COMMENT,
-                            row(SENSORS.X, SENSORS.Y, SENSORS.Z).mapping(CoordinatesDto::new),
-                            row(SENSORS.LOWER_ALARM_LIMIT, SENSORS.UPPER_ALARM_LIMIT)
-                                .mapping(AlarmLimitsDto::new),
-                            SENSORS.ACTIVE,
-                            row(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
-                                .mapping(FormulaResponseDto::new),
-                            SENSORS.VERSION)
-                        .from(SENSORS)
-                        .join(EXPERIMENT_SENSOR)
-                        .on(SENSORS.ID.eq(EXPERIMENT_SENSOR.SENSOR_ID))
-                        .join(FORMULAS)
-                        .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
-                        .join(SENSOR_TYPES)
-                        .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
-                        .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID)))
-                .as("sensors")
-                .convertFrom(r -> r.map(mapping(SensorResponseDto::new))))
+            DSL.selectCount()
+                .from(EXPERIMENT_SENSOR)
+                .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
+                .asField("sensorCount"))
         .from(EXPERIMENTS)
         .where(EXPERIMENTS.ID.eq(experimentId))
         .fetchOneInto(ExperimentResponseDto.class);

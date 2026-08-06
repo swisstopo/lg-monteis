@@ -1,6 +1,4 @@
 import { Component, effect, inject, signal } from '@angular/core';
-import { MatOption } from '@angular/material/core';
-import { MatFormField, MatLabel, MatSelect } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { GridApi } from 'ag-grid-community';
@@ -14,7 +12,7 @@ import { createColumns } from './columns';
 
 @Component({
   selector: 'app-sensor-table',
-  imports: [Table, TableHeader, TranslatePipe, MatOption, MatSelect, MatFormField, MatLabel],
+  imports: [Table, TableHeader, TranslatePipe],
   templateUrl: './sensor-table.html',
   styleUrl: './sensor-table.scss',
 })

@@ -13,7 +13,7 @@ public class Experiment implements Auditable {
   private String name;
   private String owner;
   private ExperimentDates experimentDates;
-  private String description;
+  private String comment;
   private Status status;
   private Integer version;
 
@@ -32,7 +32,7 @@ public class Experiment implements Auditable {
     this.name = name;
     this.owner = owner;
     this.experimentDates = experimentDates;
-    this.description = description;
+    this.comment = description;
     this.status = status;
   }
 
@@ -52,7 +52,7 @@ public class Experiment implements Auditable {
     this.name = name;
     this.owner = owner;
     this.experimentDates = experimentDates;
-    this.description = description;
+    this.comment = description;
     this.status = status;
     this.version = version;
   }
@@ -91,12 +91,12 @@ public class Experiment implements Auditable {
     this.experimentDates = experimentDates;
   }
 
-  public String getDescription() {
-    return description;
+  public String getComment() {
+    return comment;
   }
 
-  public void setDescription(String description) {
-    this.description = description;
+  public void setComment(String comment) {
+    this.comment = comment;
   }
 
   public Status getStatus() {
