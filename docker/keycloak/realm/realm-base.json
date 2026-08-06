@@ -123,6 +123,7 @@
             "claim.name": "experiment_ids",
             "jsonType.label": "long",
             "multivalued": "true",
+            "aggregate.attrs": "true",
             "access.token.claim": "true"
           }
         }
@@ -153,6 +154,18 @@
       "publicClient": false,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false
+    }
+  ],
+  "groups": [
+    {
+      "name": "Monteis Admin",
+      "path": "/Monteis Admin",
+      "clientRoles": { "monteis-spa": ["monteis-client:read-all", "monteis-client:write"] }
+    },
+    {
+      "name": "Monteis Read All",
+      "path": "/Monteis Read All",
+      "clientRoles": { "monteis-spa": ["monteis-client:read-all"] }
     }
   ],
   "users": [],

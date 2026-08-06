@@ -9,6 +9,7 @@ yq -o=json eval-all '
   select(fi==0) as $base | select(fi==1) as $p
   | $base
   | .clients |= map(select(.clientId=="monteis-spa") .redirectUris = $p.spa.redirectUris | .webOrigins = $p.spa.webOrigins)
+  | .groups = (($base.groups // []) + ($p.groups // []))
   | .users = (($base.users // []) + ($p.users // []))
 ' /realm/realm-base.json /realm/patch.local.json > /out/realm-local.json
 echo "rendered /out/realm-local.json"
