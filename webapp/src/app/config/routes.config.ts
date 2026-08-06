@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '../core/auth/auth.guard';
 import { OVERVIEW_ROUTES } from '../features/overview/overview.routes';
-import { SENSOR_ROUTES } from '../features/sensor/sensor.routes';
+import { SENSOR_ROUTES } from '../features/sensor.routes';
 
 export const APP_ROUTES: Routes = [
   {
