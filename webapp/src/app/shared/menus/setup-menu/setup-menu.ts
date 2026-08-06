@@ -5,7 +5,7 @@ import { RouteButton } from '../../../ui/buttons/route-button/route-button';
 @Component({
   selector: 'app-sensor-menu',
   imports: [RouteButton, TranslatePipe],
-  templateUrl: './sensor-menu.html',
-  styleUrl: './sensor-menu.scss',
+  templateUrl: './setup-menu.html',
+  styleUrl: './setup-menu.scss',
 })
-export default class SensorMenu {}
+export default class SetupMenu {}

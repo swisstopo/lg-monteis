@@ -1,12 +1,8 @@
 import { Routes } from '@angular/router';
 
-export const SENSOR_ROUTES: Routes = [
+export const EXPERIMENT_ROUTES: Routes = [
   {
-    path: 'sensor-menu',
-    loadComponent: () => import('./experiment-menu/experiment-menu'),
-  },
-  {
-    path: 'sensor-table',
+    path: 'experiment-table',
     loadComponent: () => import('./experiment-table/experiment-table'),
   },
 ];
