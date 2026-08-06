@@ -16,7 +16,7 @@ export const workbenchConfig = provideWorkbench({
       )
       .navigatePart('metrics-menu', ['metrics-menu'])
       .activatePart('metrics-menu')
-      .addPart('sensor-menu', { dockTo: 'left-top' }, { label: '%menu.setup', icon: 'settings' })
-      .navigatePart('sensor-menu', ['sensor-menu'])
-      .activatePart('sensor-menu'),
+      .addPart('setup-menu', { dockTo: 'left-top' }, { label: '%menu.setup', icon: 'settings' })
+      .navigatePart('setup-menu', ['setup-menu'])
+      .activatePart('setup-menu'),
 });
