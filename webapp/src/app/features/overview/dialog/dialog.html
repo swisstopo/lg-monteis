@@ -27,7 +27,8 @@
       />
 
       <button mat-stroked-button color="primary" type="button" (click)="fileInput.click()">
-        <mat-icon>upload_file</mat-icon> Add file
+        <mat-icon>upload_file</mat-icon>
+        Add file
       </button>
 
       @if (form.controls.files.value.length > 0) {
@@ -89,6 +90,13 @@
       ></textarea>
     </mat-form-field>
 
+    <mat-form-field appearance="fill">
+      <mat-label>Choose a date</mat-label>
+      <input matInput [matDatepicker]="picker" />
+      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+    </mat-form-field>
+    <button matButton="elevated" (click)="picker.open()">Open</button>
     <button matButton="filled" (click)="onCreateDialogOpen()">Create Sensor</button>
     <button matButton="filled" (click)="onDialogOpen()">Edit Sensor</button>
     <button matButton="filled" type="submit" [disabled]="form.invalid">Submit</button>
