@@ -15,16 +15,16 @@ User -> UI : Öffnet geschützten Bereich
 UI -> KC : Redirect Login (Auth Code Flow + PKCE)
 KC -> AGOV : Delegiert Authentifizierung
 AGOV --> KC : Auth Success
-KC -> KC : Mappt User-Rollen & Experiment-IDs\nin Token-Claims (realm_access.roles, experiment_ids)
-KC --> UI : Return JWT (Roles, Experiment-IDs)
+KC -> KC : Mappt Gruppen des Nutzers auf Rollen\n& Experiment-IDs in Token-Claims
+KC --> UI : Return JWT (Rollen, Experiment-IDs)
 
 == API Request mit Row-Level Security ==
 User -> UI : Klickt auf Experiment-Dashboard
 UI -> Backend : GET /experiments/data\n(Header: Bearer JWT)
 activate Backend
 
-Backend -> Backend : Security Filter: JWT validieren\n(Signatur-Check via KC JWKS)
-Backend -> Backend : MonteisJwtAuthenticationConverter: Rolle user -> api:read,\nRolle admin -> api:write + api:read-all,\nSub & Experiment-IDs -> MonteisPrincipal,\nals Authentication im SecurityContextHolder ablegen
+Backend -> Backend : Security Filter: JWT validieren\n(Signatur via KC JWKS, Issuer, Audience)
+Backend -> Backend : MonteisJwtAuthenticationConverter: Rollen -> Authorities,\nSub & Experiment-IDs -> MonteisPrincipal,\nals Authentication im SecurityContextHolder ablegen
 
 Backend -> DB : set_config('app.read_all', ...)\nset_config('app.user_experiment_ids', ...)\n(RlsConnectionProvider, transaktionslokal)
 Backend -> DB : jOOQ Query ausführen\n(unverändert, ohne manuelle\nBerechtigungs-WHERE-Klausel)

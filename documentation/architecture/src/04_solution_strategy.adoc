@@ -23,7 +23,7 @@ Die folgende Tabelle gibt einen Überblick (Executive Summary), mit welchen arch
 | -> Kap. 5.3.2 & 6.1
 
 | **Sicherheit** | Zugriffe auf sensible Experimentdaten müssen strikt geregelt und vor unbefugtem Zugriff geschützt sein.
-| **Zentrales API-Gateway & RBAC via Keycloak:** Direkte Zugriffe auf Pipelines oder Datenbanken sind unterbunden; Frontend und Backend fungieren als Nadelöhr. Die Authentifizierung (eIAM) wird über Keycloak angebunden. Rollen (z. B. `read_exp_a`) werden als Claims im JWT an das Spring Boot Backend übergeben, welches die Berechtigungen durchsetzt.
+| **Zentrales API-Gateway & RBAC via Keycloak:** Direkte Zugriffe auf Pipelines oder Datenbanken sind unterbunden; Frontend und Backend fungieren als Nadelöhr. Die Authentifizierung (eIAM) wird über Keycloak angebunden. Rollen werden dort über Gruppenmitgliedschaft vergeben und als Claims im JWT an das Spring Boot Backend übergeben, welches die Berechtigungen durchsetzt.
 | -> Kap. 5.3.1 & 6.6
 
 | **Datenintegrität** | Historische Sensordaten und deren Umrechnungen müssen manipulationssicher und jederzeit nachvollziehbar gespeichert werden.
