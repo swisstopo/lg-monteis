@@ -4,6 +4,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatFormField, MatInput } from '@angular/material/input';
 import { TranslatePipe } from '@ngx-translate/core';
+import { PermissionsService } from '../../../core/auth/permissions.service';
 import SensorEdit from '../sensor-edit/sensor-edit';
 
 @Component({
@@ -14,6 +15,7 @@ import SensorEdit from '../sensor-edit/sensor-edit';
 })
 export class TableHeader {
   private readonly dialog = inject(MatDialog);
+  protected readonly permissions = inject(PermissionsService);
 
   selectedSensorId = input<number | undefined>(undefined);
 

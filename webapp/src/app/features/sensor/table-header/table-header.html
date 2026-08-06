@@ -9,13 +9,15 @@
     {{ 'sensor.tableHeader.download' | translate }}
   </button>
 
-  <button matButton="tonal" (click)="onCreate()">
-    <mat-icon fontIcon="add"></mat-icon>
-    {{ 'sensor.tableHeader.create' | translate }}
-  </button>
+  @if (permissions.canWrite()) {
+    <button matButton="tonal" (click)="onCreate()">
+      <mat-icon fontIcon="add"></mat-icon>
+      {{ 'sensor.tableHeader.create' | translate }}
+    </button>
 
-  <button matButton="filled" [disabled]="selectedSensorId() === undefined" (click)="onEdit()">
-    <mat-icon fontIcon="edit"></mat-icon>
-    {{ 'sensor.tableHeader.edit' | translate }}
-  </button>
+    <button matButton="filled" [disabled]="selectedSensorId() === undefined" (click)="onEdit()">
+      <mat-icon fontIcon="edit"></mat-icon>
+      {{ 'sensor.tableHeader.edit' | translate }}
+    </button>
+  }
 </div>

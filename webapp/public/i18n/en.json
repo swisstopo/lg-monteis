@@ -9,6 +9,11 @@
     },
     "paging": {
       "invalid": "Invalid sorting or filtering was requested."
+    },
+    "auth": {
+      "sessionExpired": "Your session has expired.",
+      "logInAgain": "Log in again",
+      "forbidden": "You don't have permission for this action."
     }
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",

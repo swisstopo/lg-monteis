@@ -8,7 +8,7 @@ import {
   ViewChild,
   ViewEncapsulation,
 } from '@angular/core';
-import { MatMiniFabButton } from '@angular/material/button';
+import { MatButton, MatMiniFabButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import {
   MatSnackBar,
@@ -19,13 +19,20 @@ import {
   MatSnackBarRef,
   MatSnackBarVerticalPosition,
 } from '@angular/material/snack-bar';
-import { ToastInfo, ToastService } from '../../shared/services/toast.service';
+import { ToastAction, ToastInfo, ToastService } from '../../shared/services/toast.service';
 
 @Component({
   selector: 'app-toast',
   templateUrl: './toast.component.html',
   styleUrls: ['./toast.component.scss'],
-  imports: [MatSnackBarLabel, MatSnackBarAction, MatSnackBarActions, MatIcon, MatMiniFabButton],
+  imports: [
+    MatSnackBarLabel,
+    MatSnackBarAction,
+    MatSnackBarActions,
+    MatIcon,
+    MatButton,
+    MatMiniFabButton,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
 })
@@ -56,8 +63,13 @@ export class ToastComponent {
       verticalPosition: this.verticalPosition(),
       panelClass: toast.classname,
       data: toast,
-      duration: 5000,
+      duration: toast.action ? undefined : 5000,
     });
+  }
+
+  runAction(action: ToastAction) {
+    action.onClick();
+    this.dismiss();
   }
 
   dismiss() {
