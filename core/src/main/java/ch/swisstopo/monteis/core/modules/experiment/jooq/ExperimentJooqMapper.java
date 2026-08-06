@@ -12,8 +12,6 @@ public interface ExperimentJooqMapper {
 
   // --- Parent Experiment Graph Mapping ---
 
-  // MapStruct automatically maps id, name, owner, description, and status
-  // because the field names match exactly between source and target.
   @Mapping(target = "id", source = "id")
   @Mapping(target = "name", source = "name")
   @Mapping(target = "version", source = "version")
@@ -37,8 +35,7 @@ public interface ExperimentJooqMapper {
       Experiment experiment, @MappingTarget ExperimentsRecord experimentsRecord);
 
   // --- Parent Experiment Graph Mapping (Read Flow) ---
-  // Projects the joined jOOQ records straight into the response DTO, bypassing the Domain
-  // entirely - the read flow never needs an Experiment instance.
+
   @Mapping(target = "id", source = "id")
   @Mapping(target = "name", source = "name")
   @Mapping(target = "description", source = "description")
