@@ -16,8 +16,9 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+  // todo: remove api endpoint here its only for testing
   private static final String[] PUBLIC_ENDPOINTS = {
-    "/actuator/**", "/actuator", "/swagger-ui/**", "/v3/api-docs/**"
+    "/actuator/**", "/actuator", "/swagger-ui/**", "/v3/api-docs/**", "/api/measurements/**"
   };
 
   @Bean

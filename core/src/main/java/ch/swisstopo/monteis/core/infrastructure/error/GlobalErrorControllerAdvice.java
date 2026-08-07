@@ -88,6 +88,8 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(payload);
   }
 
+  // todo: handle the exception of HandlerMethodValidationException here..
+
   @ApiResponse(
       responseCode = "422",
       description = "Business validation failure on User Input",
