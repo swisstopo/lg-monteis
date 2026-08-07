@@ -31,4 +31,9 @@
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--mat-sys-outline-variant, #cac4d0);
   }
+
+  .button-gap {
+    gap: 0.75rem;
+    display: flex;
+  }
 }

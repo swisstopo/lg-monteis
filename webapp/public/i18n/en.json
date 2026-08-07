@@ -163,6 +163,83 @@
     "error": {
       "noId": "No sensor id provided",
       "connection": "Failed to connect to the backend server."
+    },
+    "experimentDate": {
+      "to": {
+        "validation": {
+          "bounds": "End date must be after start date"
+        }
+      }
+    }
+  },
+  "experiment": {
+    "edit": {
+      "title": {
+        "create": "Setup new Experiment",
+        "edit": "Edit Experiment"
+      }
+    },
+    "name": {
+      "label": "Experiment Name",
+      "validation": {
+        "required": "Experiment name is required",
+        "minLength": "Name must be at least 2 characters long",
+        "maxLength": "Name must be at most 50 characters long"
+      }
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Select a status",
+      "validation": {
+        "required": "Experiment status is required"
+      },
+      "option": {
+        "active": {
+          "label": "Active",
+          "symbol": "A"
+        },
+        "historic": {
+          "label": "Historic",
+          "symbol": "H"
+        }
+      }
+    },
+    "comment": {
+      "label": "Comment"
+    },
+    "experimentDates": {
+      "experimentStart": {
+        "label": "Start Date",
+        "validation": {
+          "required": "Experiment start date is required"
+        }
+      },
+      "experimentEnd": {
+        "label": "End Date",
+        "validation": {
+          "required": "Experiment end date is required"
+        }
+      }
+    },
+    "alarmLimit": {
+      "from": {
+        "validation": {
+          "bounds": "Start date must be before end date"
+        }
+      }
+    },
+    "success": "Experiment saved successfully.",
+    "error": {
+      "unspecified": {
+        "title": "Error",
+        "message": "An unspecified error occurred while saving the experiment."
+      },
+      "noId": "No experiment id provided"
+    },
+    "tableHeader": {
+      "download": "Download",
+      "create": "Create Experiment",
+      "edit": "Edit Experiment"
     }
   },
   "overview": {
@@ -212,7 +289,8 @@
     "overview": "Overview",
     "sensor": "Sensor",
     "setup": "Setup",
-    "measurements": "Measurements"
+    "measurements": "Measurements",
+    "experiment": "Experiment"
   },
   "chart": {
     "error": {
@@ -236,6 +314,10 @@
   },
   "tab": {
     "sensor": "Setup Sensors ({{count}})",
+    "experiment": "Setup Experiment ({{count}})",
     "overview": "Measurements"
+  },
+  "tableHeader": {
+    "search": "Search"
   }
 }

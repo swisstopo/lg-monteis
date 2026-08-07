@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, output } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { MatFormField, MatInput, MatPrefix } from '@angular/material/input';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -11,9 +11,7 @@ import { TranslatePipe } from '@ngx-translate/core';
   styleUrl: './table-header.scss',
 })
 export class TableHeader {
-  entityName = input.required<string>();
-
-  translationPrefix = computed(() => `${this.entityName()}.tableHeader`);
+  translationPrefix = computed(() => `tableHeader`);
 
   searchAction = output<string>();
 

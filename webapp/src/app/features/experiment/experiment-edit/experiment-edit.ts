@@ -1,5 +1,13 @@
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
-import { form, FormField, maxLength, minLength, required, submit } from '@angular/forms/signals';
+import {
+  form,
+  FormField,
+  maxLength,
+  minLength,
+  required,
+  submit,
+  validate,
+} from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { MatOption, provideNativeDateAdapter } from '@angular/material/core';
 import {
@@ -140,7 +148,35 @@ export default class ExperimentEdit {
     required(schema.name, { message: translate('experiment.name.validation.required')() });
     minLength(schema.name, 2, { message: translate('experiment.name.validation.minLength')() });
     maxLength(schema.name, 50, { message: translate('experiment.name.validation.maxLength')() });
-    required(schema.status);
+    required(schema.experimentDates.experimentStart, {
+      message: translate('experiment.experimentDates.experimentStart.validation.required')(),
+    });
+    required(schema.experimentDates.experimentEnd, {
+      message: translate('experiment.experimentDates.experimentEnd.validation.required')(),
+    });
+    required(schema.status, { message: translate('experiment.status.validation.required')() });
+    validate(schema.experimentDates.experimentStart, ({ value, valueOf }) => {
+      const experimentStart = value();
+      const experimentEnd = valueOf(schema.experimentDates.experimentEnd);
+      if (experimentStart > experimentEnd) {
+        return {
+          kind: 'bounds',
+          message: this.i18nService.translate('experiment.alarmLimit.from.validation.bounds')(),
+        };
+      }
+      return undefined;
+    });
+    validate(schema.experimentDates.experimentEnd, ({ value, valueOf }) => {
+      const experimentEnd = value();
+      const experimentStart = valueOf(schema.experimentDates.experimentStart);
+      if (experimentEnd > experimentStart) {
+        return {
+          kind: 'bounds',
+          message: this.i18nService.translate('sensor.experimentDate.to.validation.bounds')(),
+        };
+      }
+      return undefined;
+    });
   });
 
   async onSubmit(event: SubmitEvent) {
