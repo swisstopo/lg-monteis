@@ -1,0 +1,11 @@
+# SCAFFOLD — un-gated; staging AppProject does not yet exist.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pipeline
+  namespace: monteis-staging
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pipeline

@@ -1,0 +1,175 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monteis-dev
+
+resources:
+  - ../../../backend-base
+  - externalsecret-pipeline.yaml
+
+# Image digest pinning (MANDATED: never :latest or bare semver tag).
+# CI release pipeline overwrites the digest below after each successful build.
+images:
+  - name: pipeline
+    newName: 789130777196.dkr.ecr.eu-central-1.amazonaws.com/lg-monteis/pipeline
+    # PLACEHOLDER — REPLACED-BY-CI on first build (vX.Y.Z)
+    # CI runs: kustomize edit set image pipeline=<newName>@sha256:<digest>
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+
+patches:
+  # ── Deployment ──────────────────────────────────────────────────────────────
+  - target:
+      kind: Deployment
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pipeline
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: pipeline
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: pipeline
+      - op: replace
+        path: /spec/template/metadata/labels/app.kubernetes.io~1name
+        value: pipeline
+      - op: replace
+        path: /spec/template/spec/serviceAccountName
+        value: pipeline-dev-sa
+      - op: replace
+        path: /spec/template/spec/containers/0/name
+        value: pipeline
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: pipeline
+      # Dev resources: cpu request<limit (compressible); memory request=limit
+      # (incompressible — avoids scheduler overcommit + OOM kill at peak).
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 500m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 2000m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 2Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 2Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/envFrom/0/configMapRef/name
+        value: configmap-pipeline
+      # Add ESO-synced Secret (TimescaleDB password) to envFrom.
+      # PIPELINE_APP_TS_DB_PWD comes from this Secret, not from ConfigMap.
+      - op: add
+        path: /spec/template/spec/containers/0/envFrom/-
+        value:
+          secretRef:
+            name: pipeline-ts-db
+
+  # ── Service ─────────────────────────────────────────────────────────────────
+  - target:
+      kind: Service
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pipeline
+      - op: replace
+        path: /spec/selector/app
+        value: pipeline
+
+  # ── ServiceAccount ──────────────────────────────────────────────────────────
+  - target:
+      kind: ServiceAccount
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pipeline-dev-sa
+
+  # ── NetworkPolicy ────────────────────────────────────────────────────────────
+  # Pipeline has NO Ingress (BR-B5). Only egress to TimescaleDB + MSK.
+  # No RDS, no Keycloak, no S3 (MANDATED: egress follows code, not IAM grants).
+  - target:
+      kind: NetworkPolicy
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pipeline
+      - op: replace
+        path: /spec/podSelector/matchLabels/app
+        value: pipeline
+      # Egress: TimescaleDB CNPG (PostgreSQL, port 5433)
+      - op: add
+        path: /spec/egress/-
+        value:
+          to:
+            - namespaceSelector: {}
+          ports:
+            - protocol: TCP
+              port: 5433
+      # Egress: MSK (Kafka SASL_SSL/IAM, port 9098)
+      - op: add
+        path: /spec/egress/-
+        value:
+          to:
+            - namespaceSelector: {}
+          ports:
+            - protocol: TCP
+              port: 9098
+
+  # ── ConfigMap ────────────────────────────────────────────────────────────────
+  - target:
+      kind: ConfigMap
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: configmap-pipeline
+      - op: replace
+        path: /data/SPRING_KAFKA_BOOTSTRAP_SERVERS
+        value: REPLACED-BY-OUTPUTS
+      - op: replace
+        path: /data/SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL
+        value: SASL_SSL
+      - op: replace
+        path: /data/SPRING_KAFKA_PROPERTIES_SASL_MECHANISM
+        value: AWS_MSK_IAM
+      - op: add
+        path: /data/SPRING_DATASOURCE_URL
+        value: REPLACED-BY-OUTPUTS
+      - op: add
+        path: /data/SPRING_DATASOURCE_USERNAME
+        value: REPLACED-BY-OUTPUTS
+      - op: add
+        path: /data/management.endpoint.health.group.readiness.include
+        value: readinessState,db,kafka
+
+  # ── SecretStore ──────────────────────────────────────────────────────────────
+  - target:
+      kind: SecretStore
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pipeline
+      - op: replace
+        path: /spec/provider/aws/region
+        value: eu-central-1
+      # TODO(outputs): replace with actual ARN from lg-monteis-infra outputs.tf
+      # arn:aws:iam::789130777196:role/monteis/dev/pipeline-sm-reader-dev
+      - op: replace
+        path: /spec/provider/aws/role
+        value: REPLACED-BY-OUTPUTS
+
+  # ── ExternalSecret remoteRef ─────────────────────────────────────────────────
+  - target:
+      kind: ExternalSecret
+      name: pipeline-ts-db
+    patch: |-
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: monteis-dev/pipeline/ts-db-pwd

@@ -1,0 +1,163 @@
+# SCAFFOLD — un-gated, TODO ARNs; staging AppProject does not yet exist.
+# Only the dev overlay is render-tested. This file is deliberately un-gated.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monteis-staging
+
+resources:
+  - ../../../backend-base
+  - externalsecret-pipeline.yaml
+  - pdb-pipeline.yaml
+
+images:
+  - name: pipeline
+    newName: 789130777196.dkr.ecr.eu-central-1.amazonaws.com/lg-monteis/pipeline
+    # PLACEHOLDER — REPLACED-BY-CI on first build (vX.Y.Z)
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+
+patches:
+  - target:
+      kind: Deployment
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pipeline
+      - op: replace
+        path: /spec/replicas
+        value: 2
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: pipeline
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: pipeline
+      - op: replace
+        path: /spec/template/metadata/labels/app.kubernetes.io~1name
+        value: pipeline
+      - op: replace
+        path: /spec/template/spec/serviceAccountName
+        value: pipeline-staging-sa
+      - op: replace
+        path: /spec/template/spec/containers/0/name
+        value: pipeline
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: pipeline
+      # Staging resources (nfr-requirements performance-requirements §1)
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 1000m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 3000m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 3Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 3Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/envFrom/0/configMapRef/name
+        value: configmap-pipeline
+      - op: add
+        path: /spec/template/spec/containers/0/envFrom/-
+        value:
+          secretRef:
+            name: pipeline-ts-db
+
+  - target:
+      kind: Service
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pipeline
+      - op: replace
+        path: /spec/selector/app
+        value: pipeline
+
+  - target:
+      kind: ServiceAccount
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pipeline-staging-sa
+
+  - target:
+      kind: NetworkPolicy
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pipeline
+      - op: replace
+        path: /spec/podSelector/matchLabels/app
+        value: pipeline
+      - op: add
+        path: /spec/egress/-
+        value:
+          to:
+            - namespaceSelector: {}
+          ports:
+            - protocol: TCP
+              port: 5433
+      - op: add
+        path: /spec/egress/-
+        value:
+          to:
+            - namespaceSelector: {}
+          ports:
+            - protocol: TCP
+              port: 9098
+
+  - target:
+      kind: ConfigMap
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: configmap-pipeline
+      - op: replace
+        path: /data/SPRING_KAFKA_BOOTSTRAP_SERVERS
+        value: TODO-STAGING-MSK-BOOTSTRAP
+      - op: replace
+        path: /data/SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL
+        value: SASL_SSL
+      - op: replace
+        path: /data/SPRING_KAFKA_PROPERTIES_SASL_MECHANISM
+        value: AWS_MSK_IAM
+      - op: add
+        path: /data/SPRING_DATASOURCE_URL
+        value: TODO-STAGING-TIMESCALEDB-JDBC-URL
+      - op: add
+        path: /data/SPRING_DATASOURCE_USERNAME
+        value: TODO-STAGING-TS-DB-USER
+      - op: add
+        path: /data/management.endpoint.health.group.readiness.include
+        value: readinessState,db,kafka
+
+  - target:
+      kind: SecretStore
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pipeline
+      - op: replace
+        path: /spec/provider/aws/region
+        value: eu-central-1
+      # TODO(outputs): arn:aws:iam::789130777196:role/monteis/staging/pipeline-sm-reader-staging
+      - op: replace
+        path: /spec/provider/aws/role
+        value: TODO-STAGING-PIPELINE-SM-READER-ARN
+
+  - target:
+      kind: ExternalSecret
+      name: pipeline-ts-db
+    patch: |-
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: monteis-staging/pipeline/ts-db-pwd
