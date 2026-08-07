@@ -1,5 +1,17 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Ensures the component fills the dialog wrapper */
+}
+
+mat-dialog-content {
+  flex: 1; /* Forces the content area to grow */
+  display: flex; /* Passes the height down to the chart container */
+  max-height: none !important; /* Overrides Angular Material's default 65vh limit */
+}
 .chart-container {
   position: relative;
   width: 100%;
   height: 100%;
+  flex: 1;
 }
