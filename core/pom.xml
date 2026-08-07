@@ -62,6 +62,20 @@
       <artifactId>mapstruct-processor</artifactId>
     </dependency>
 
+    <!-- MSK IAM authentication — provides IAMLoginModule + IAMClientCallbackHandler -->
+    <dependency>
+      <groupId>software.amazon.msk</groupId>
+      <artifactId>aws-msk-iam-auth</artifactId>
+      <version>2.3.2</version>
+    </dependency>
+    <!-- AWS SDK v2 RDS utilities — generates short-lived IAM auth tokens for RDS
+         without a static password. Used by DataSourceConfig (prod profile only). -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>rds</artifactId>
+      <version>2.31.13</version>
+    </dependency>
+
     <!--    Development Only -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
