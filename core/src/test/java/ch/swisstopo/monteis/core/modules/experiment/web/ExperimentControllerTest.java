@@ -22,6 +22,7 @@ import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.ExperimentDat
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -49,7 +50,8 @@ class ExperimentControllerTest {
             1L,
             "EXP-01",
             "A test experiment",
-            new ExperimentDatesDto(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+            new ExperimentDatesDto(
+                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             2,
             1);
@@ -79,7 +81,8 @@ class ExperimentControllerTest {
             null,
             "EXP-01",
             "A test experiment",
-            new ExperimentDatesDto(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+            new ExperimentDatesDto(
+                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             null);
 
@@ -88,7 +91,8 @@ class ExperimentControllerTest {
             1L,
             "EXP-01",
             "A test experiment",
-            new ExperimentDatesDto(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+            new ExperimentDatesDto(
+                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             0,
             1);
@@ -134,7 +138,8 @@ class ExperimentControllerTest {
             1L,
             "EXP-01-UPDATED",
             "Updated comment",
-            new ExperimentDatesDto(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+            new ExperimentDatesDto(
+                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             1);
 
@@ -143,7 +148,8 @@ class ExperimentControllerTest {
             1L,
             "EXP-01-UPDATED",
             "Updated comment",
-            new ExperimentDatesDto(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+            new ExperimentDatesDto(
+                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             3,
             2);
@@ -181,7 +187,8 @@ class ExperimentControllerTest {
             2L,
             "EXP-01",
             "A test experiment",
-            new ExperimentDatesDto(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+            new ExperimentDatesDto(
+                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             1);
 
