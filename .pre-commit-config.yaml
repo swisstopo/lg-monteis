@@ -1,0 +1,25 @@
+# Local pre-commit hooks for lg-monteis.
+# These are optional fast-feedback mirrors of the server-side manifest render gate in
+# .github/workflows/pr-gate.yml. The server-side gate is the authoritative PR blocker.
+#
+# Prerequisites (must be on PATH):
+#   - kustomize: https://kubectl.sigs.k8s.io/kustomize/installation/
+#   - pre-commit: pip install pre-commit  (then run: pre-commit install)
+#
+# After checkout, activate via: ./setup.sh  (which runs pre-commit install)
+repos:
+  - repo: local
+    hooks:
+      - id: kustomize-build-core
+        name: kustomize build core (dev overlay)
+        entry: bash -c 'kustomize build k8s/core/overlays/dev >/dev/null'
+        language: system
+        files: ^k8s/core/.*\.ya?ml$
+        pass_filenames: false
+
+      - id: kustomize-build-pipeline
+        name: kustomize build pipeline (dev overlay)
+        entry: bash -c 'kustomize build k8s/pipeline/overlays/dev >/dev/null'
+        language: system
+        files: ^k8s/pipeline/.*\.ya?ml$
+        pass_filenames: false
