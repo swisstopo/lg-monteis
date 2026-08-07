@@ -1,18 +1,18 @@
 <div class="metrics-panel">
-  <app-table-header entityName="sensor" (search)="onSearch($event)">
+  <app-table-header entityName="experiment" (searchAction)="onSearch($event)">
     <button matButton="text" (click)="onDownload()">
       <mat-icon fontIcon="download"></mat-icon>
-      {{ 'sensor.tableHeader.download' | translate }}
+      {{ 'experiment.tableHeader.download' | translate }}
     </button>
 
     <button matButton="tonal" (click)="onCreate()">
       <mat-icon fontIcon="add"></mat-icon>
-      {{ 'sensor.tableHeader.create' | translate }}
+      {{ 'experiment.tableHeader.create' | translate }}
     </button>
 
     <button matButton="filled" [disabled]="!selectedExperimentId()" (click)="onEdit()">
       <mat-icon fontIcon="edit"></mat-icon>
-      {{ 'sensor.tableHeader.edit' | translate }}
+      {{ 'experiment.tableHeader.edit' | translate }}
     </button>
   </app-table-header>
 </div>

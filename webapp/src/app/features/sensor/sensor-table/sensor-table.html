@@ -1,5 +1,5 @@
 <div class="metrics-panel">
-  <app-table-header entityName="sensor" (search)="onSearch($event)">
+  <app-table-header entityName="sensor" (searchAction)="onSearch($event)">
     <button matButton="text" (click)="onDownload()">
       <mat-icon fontIcon="download"></mat-icon>
       {{ 'sensor.tableHeader.download' | translate }}

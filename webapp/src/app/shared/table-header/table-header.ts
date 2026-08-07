@@ -15,10 +15,10 @@ export class TableHeader {
 
   translationPrefix = computed(() => `${this.entityName()}.tableHeader`);
 
-  search = output<string>();
+  searchAction = output<string>();
 
   onSearch(event: Event): void {
     const inputElement = event.target as HTMLInputElement;
-    this.search.emit(inputElement.value);
+    this.searchAction.emit(inputElement.value);
   }
 }

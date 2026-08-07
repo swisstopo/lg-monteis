@@ -35,7 +35,7 @@ class ExperimentDatesTest {
   @Test
   void should_initialize_when_end_date_is_equal_to_start_date() {
     // given
-    LocalDate sameDate = LocalDate.of(2026, 8, 7);
+    LocalDate sameDate = LocalDate.of(2026, Month.AUGUST, 7);
 
     // when
     ExperimentDates experimentDates = new ExperimentDates(sameDate, sameDate);
