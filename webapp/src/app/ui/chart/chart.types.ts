@@ -18,6 +18,7 @@ export interface ChartOptions {
   title?: string;
   subtitle?: string;
   xAxisLabel?: string;
+  xAxisType?: 'linear' | 'time';
   yAxisLabels?: Record<string, string>;
   showLegend?: boolean;
   maintainAspectRatio?: boolean;

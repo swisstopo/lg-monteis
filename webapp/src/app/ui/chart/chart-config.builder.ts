@@ -8,17 +8,18 @@ import { ChartDataset, ChartOptions, ChartThemePalette, ChartType } from './char
 export function buildChartConfig(
   type: ChartType,
   datasets: ChartDataset[],
-  labels: (string | number)[],
   options: ChartOptions,
   locale: string = 'en-GB',
   palette: ChartThemePalette = {},
 ): ChartConfiguration<ChartType> {
-  const isTimeSeries = type === 'scatter';
-  const xSpanMs = isTimeSeries ? computeXSpanMs(datasets) : 0;
+  datasets = Array.isArray(datasets) ? datasets : [];
 
   const scales: any = {
     x: {
-      type: isTimeSeries ? 'linear' : 'category',
+      type: options.xAxisType === 'time' ? 'time' : 'linear',
+      time: {
+        tooltipFormat: 'PPpp',
+      },
       title: {
         display: !!options.xAxisLabel,
         text: options.xAxisLabel ?? '',
@@ -26,12 +27,7 @@ export function buildChartConfig(
       },
       ticks: {
         color: palette.textColor,
-        ...(isTimeSeries
-          ? {
-              maxTicksLimit: 8,
-              callback: (value: any) => formatDateTick(Number(value), xSpanMs, locale),
-            }
-          : {}),
+        maxTicksLimit: 8,
       },
       grid: { color: palette.gridColor },
     },
@@ -57,7 +53,7 @@ export function buildChartConfig(
         color: palette.textColor,
       },
       ticks: {
-        maxTicksLimit: 12,
+        maxTicksLimit: 8,
         color: palette.textColor,
       },
       grid: {
@@ -70,7 +66,6 @@ export function buildChartConfig(
   return {
     type,
     data: {
-      labels,
       datasets: datasets.map((dataset, i) => buildDataset(type, dataset, palette, i)),
     },
     options: {
@@ -118,27 +113,6 @@ export function buildChartConfig(
       scales: scales,
     } as ChartJsOptions<ChartType>,
   };
-}
-
-function computeXSpanMs(datasets: ChartDataset[]): number {
-  const xValues = datasets.flatMap((dataset) => dataset.data.map((point) => point.x));
-  if (xValues.length === 0) return 0;
-  return Math.max(...xValues) - Math.min(...xValues);
-}
-
-function formatDateTick(value: number, spanMs: number, locale: string): string {
-  const date = new Date(value);
-  const hour = 60 * 60 * 1000;
-  const day = 24 * hour;
-
-  if (spanMs <= day) {
-    return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-  }
-  if (spanMs <= 3 * day) {
-    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', hour: '2-digit' });
-  }
-
-  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 function buildDataset(

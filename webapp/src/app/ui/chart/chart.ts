@@ -26,6 +26,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ActiveElement, ChartConfiguration, ChartEvent, Chart as ChartJs } from 'chart.js';
 import { buildChartConfig } from './chart-config.builder';
 import { registerChartJs } from './chart-registry';
+import { resolveThemePalette } from './chart-theme.util';
 import {
   ChartDataset,
   ChartOptions,
@@ -35,69 +36,6 @@ import {
 } from './chart.types';
 
 registerChartJs();
-
-function resolveColorScheme(element: Element): 'light' | 'dark' {
-  const scheme = getComputedStyle(element).colorScheme;
-  if (scheme === 'dark') return 'dark';
-  if (scheme === 'light') return 'light';
-  // `color-scheme: light dark` defers the choice to the user's OS preference.
-  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-/**
- * Splits `light-dark(<light>, <dark>)` into its two arguments, respecting nested parentheses
- * (e.g. `light-dark(rgb(0, 0, 0), rgb(255, 255, 255))`) rather than naively splitting on the
- * first comma.
- */
-function parseLightDark(value: string): [light: string, dark: string] | undefined {
-  const prefix = 'light-dark(';
-  if (!value.startsWith(prefix) || !value.endsWith(')')) return undefined;
-
-  const args = value.slice(prefix.length, -1);
-  let depth = 0;
-  for (let i = 0; i < args.length; i++) {
-    const char = args[i];
-    if (char === '(') depth++;
-    else if (char === ')') depth--;
-    else if (char === ',' && depth === 0) {
-      return [args.slice(0, i).trim(), args.slice(i + 1).trim()];
-    }
-  }
-  return undefined;
-}
-
-function resolveCssVariableColor(element: HTMLElement, variableName: string): string | undefined {
-  // `--mat-sys-*` tokens are defined as `light-dark(<light>, <dark>)`. Reading a custom property's
-  // computed value returns that raw text as-is (functions inside custom properties are only
-  // evaluated once consumed by an actual property), so we parse it and pick the matching branch
-  // ourselves based on the resolved `color-scheme`.
-  const raw = getComputedStyle(element).getPropertyValue(variableName).trim();
-  if (!raw) return undefined;
-
-  const parsed = parseLightDark(raw);
-  if (!parsed) return raw;
-
-  const [lightValue, darkValue] = parsed;
-  return resolveColorScheme(element) === 'dark' ? darkValue : lightValue;
-}
-
-// seriesColor: resolveCssVariableColor(element, '--mat-sys-primary'), TODO replace with palett
-function resolveThemePalette(element: HTMLElement): ChartThemePalette {
-  return {
-    textColor: resolveCssVariableColor(element, '--mat-sys-on-surface'),
-    gridColor: resolveCssVariableColor(element, '--mat-sys-surface-container-highest'),
-    seriesColors: [
-      '#4285F4',
-      '#EA4335',
-      '#FBBC04',
-      '#34A853',
-      '#990099',
-      '#00BCD4',
-      '#FF6D00',
-      '#E91E63',
-    ],
-  };
-}
 
 @Component({
   selector: 'app-chart',
@@ -123,9 +61,8 @@ export default class Chart {
   private readonly destroyRef = inject(DestroyRef);
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   readonly title = input.required<string>();
-  readonly type = input<ChartType>('line');
+  readonly type = input<ChartType>('scatter');
   readonly datasets = input<ChartDataset[]>([]);
-  readonly labels = input<(string | number)[]>([]);
   readonly options = input<ChartOptions>({});
 
   readonly pointClick = output<ChartPointEvent>();
@@ -139,6 +76,7 @@ export default class Chart {
     // key architectural consideration for for gpu references clean up
     this.destroyRef.onDestroy(() => {
       this.instance?.destroy();
+      this.dialogRef?.close();
     });
     // key architectural consideration for hydration saftey -> afterNextRender
     afterNextRender(() => {
@@ -146,18 +84,19 @@ export default class Chart {
 
       this.palette.set(resolveThemePalette(canvasEl));
       this.viewReady.set(true);
+      if (typeof window.matchMedia === 'function') {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const themeChangeListener = () => {
+          this.palette.set(resolveThemePalette(canvasEl));
+        };
 
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const themeChangeListener = () => {
-        this.palette.set(resolveThemePalette(canvasEl));
-      };
+        mediaQuery.addEventListener('change', themeChangeListener);
 
-      mediaQuery.addEventListener('change', themeChangeListener);
-
-      // Clean up the listener to prevent memory leaks
-      this.destroyRef.onDestroy(() => {
-        mediaQuery.removeEventListener('change', themeChangeListener);
-      });
+        // Clean up the listener to prevent memory leaks
+        this.destroyRef.onDestroy(() => {
+          mediaQuery.removeEventListener('change', themeChangeListener);
+        });
+      }
     });
 
     effect(() => {
@@ -167,7 +106,6 @@ export default class Chart {
       const config = buildChartConfig(
         this.type(),
         this.datasets(),
-        this.labels(),
         this.options(),
         this.locale,
         this.palette(),

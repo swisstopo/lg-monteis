@@ -1,5 +1,4 @@
 import {
-  CategoryScale,
   Chart,
   Legend,
   LinearScale,
@@ -8,9 +7,11 @@ import {
   PointElement,
   ScatterController,
   SubTitle,
+  TimeScale,
   Title,
   Tooltip,
 } from 'chart.js';
+import 'chartjs-adapter-date-fns';
 
 let registered = false;
 
@@ -25,11 +26,11 @@ export function registerChartJs(): void {
     LineController,
     ScatterController,
     LinearScale,
-    CategoryScale,
     PointElement,
     LineElement,
     Tooltip,
     Legend,
+    TimeScale,
     Title,
     SubTitle,
   );

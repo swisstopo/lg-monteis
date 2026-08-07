@@ -14,7 +14,7 @@ describe('buildChartConfig', () => {
   };
 
   it('maps type, labels and datasets', () => {
-    const config = buildChartConfig('line', [dataset], ['a', 'b'], {});
+    const config = buildChartConfig('line', [dataset], {});
 
     expect(config.type).toBe('line');
     expect(config.data.labels).toEqual(['a', 'b']);
@@ -27,15 +27,15 @@ describe('buildChartConfig', () => {
   });
 
   it('uses a linear x scale for scatter charts and category for line charts', () => {
-    const scatterConfig = buildChartConfig('scatter', [dataset], [], {});
-    const lineConfig = buildChartConfig('line', [dataset], [], {});
+    const scatterConfig = buildChartConfig('scatter', [dataset], {});
+    const lineConfig = buildChartConfig('line', [dataset], {});
 
     expect(scatterConfig.options?.scales?.['x']).toMatchObject({ type: 'linear' });
     expect(lineConfig.options?.scales?.['x']).toMatchObject({ type: 'category' });
   });
 
   it('applies axis labels and legend visibility from options', () => {
-    const config = buildChartConfig('line', [dataset], [], {
+    const config = buildChartConfig('line', [dataset], {
       xAxisLabel: 'Time',
       yAxisLabels: { y: 'Value' },
       showLegend: false,

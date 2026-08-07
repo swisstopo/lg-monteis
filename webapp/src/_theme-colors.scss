@@ -180,3 +180,17 @@ $tertiary-palette: map.merge(map.get($_palettes, tertiary), $_rest);
 $error-palette: map.get($_palettes, error);
 $success-palette: map.get($_palettes, success);
 $warning-palette: map.get($_palettes, warning);
+
+:root {
+  --chart-series-1: light-dark(#{map.get($primary-palette, 40)}, #{map.get($primary-palette, 80)});
+  --chart-series-2: light-dark(#{map.get($success-palette, 40)}, #{map.get($success-palette, 80)});
+  --chart-series-3: light-dark(#{map.get($warning-palette, 40)}, #{map.get($warning-palette, 80)});
+  --chart-series-4: light-dark(#{map.get($error-palette, 40)}, #{map.get($error-palette, 80)});
+  --chart-series-5: light-dark(
+    #{map.get($tertiary-palette, 40)},
+    #{map.get($tertiary-palette, 80)}
+  );
+  --chart-series-6: light-dark(#990099, #e066e0);
+  --chart-series-7: light-dark(#00bcd4, #80deea);
+  --chart-series-8: light-dark(#ff6d00, #ffb74d);
+}

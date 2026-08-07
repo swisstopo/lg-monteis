@@ -1,7 +1,51 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Chart from './chart';
 import { ChartDataset } from './chart.types';
+
+vi.stubGlobal(
+  'matchMedia',
+  vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+);
+// 2. Mock ResizeObserver (Chart.js needs this for responsive charts)
+vi.stubGlobal(
+  'ResizeObserver',
+  vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  })),
+);
+vi.mock('chart.js', async (importOriginal) => {
+  const actual: any = await importOriginal();
+
+  class MockChart {
+    // Intercepts Chart.register() called in chart-registry.ts
+    static register = vi.fn();
+
+    // Fake internal state
+    config = { type: 'line' };
+    data = { datasets: [], labels: [] };
+    options = {};
+
+    // Spies for lifecycle methods
+    destroy = vi.fn();
+    update = vi.fn();
+  }
+
+  return {
+    ...actual,
+    Chart: MockChart,
+  };
+});
 
 describe('Chart', () => {
   let component: Chart;
@@ -19,12 +63,13 @@ describe('Chart', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Chart],
+      providers: [provideTranslateService()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Chart);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('title', 'TestChart');
     fixture.componentRef.setInput('datasets', [dataset]);
-    fixture.componentRef.setInput('labels', ['0', '1']);
     await fixture.whenStable();
   });
 
