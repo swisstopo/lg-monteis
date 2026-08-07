@@ -1,0 +1,11 @@
+# SCAFFOLD — un-gated; prod AppProject does not yet exist.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: core
+  namespace: monteis-prod
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: core

@@ -1,0 +1,21 @@
+# SCAFFOLD — un-gated; staging AppProject does not yet exist.
+# TODO: replace host with the staging hostname when the environment is provisioned.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: core
+  namespace: monteis-staging
+spec:
+  ingressClassName: traefik
+  # No spec.tls block — TLS terminates at CloudFront (MANDATED).
+  rules:
+    - host: TODO-staging.swisstopo-monteis-test.swisstopo.cloud
+      http:
+        paths:
+          - pathType: Prefix
+            path: /api
+            backend:
+              service:
+                name: core
+                port:
+                  name: http

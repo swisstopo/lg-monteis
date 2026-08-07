@@ -1,0 +1,187 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monteis-dev
+
+resources:
+  - ../../../backend-base
+  - ingress-core.yaml
+
+# Image digest pinning (MANDATED: never :latest or bare semver tag).
+# The CI release pipeline (Paketo build -> ECR -> kustomize edit set image)
+# overwrites the digest below with the real sha256 from the ECR push.
+images:
+  - name: core
+    newName: 789130777196.dkr.ecr.eu-central-1.amazonaws.com/lg-monteis/core
+    # PLACEHOLDER — REPLACED-BY-CI on first build (vX.Y.Z)
+    # CI runs: kustomize edit set image core=<newName>@sha256:<digest>
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+
+patches:
+  # ── Deployment ──────────────────────────────────────────────────────────────
+  - target:
+      kind: Deployment
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: core
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: core
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: core
+      - op: replace
+        path: /spec/template/metadata/labels/app.kubernetes.io~1name
+        value: core
+      - op: replace
+        path: /spec/template/spec/serviceAccountName
+        value: core-dev-sa
+      - op: replace
+        path: /spec/template/spec/containers/0/name
+        value: core
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: core
+      # Dev resources: cpu request<limit (compressible); memory request=limit
+      # (incompressible — avoids scheduler overcommit + OOM kill at peak).
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 250m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 1000m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 1Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 1Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/envFrom/0/configMapRef/name
+        value: configmap-core
+
+  # ── Service ─────────────────────────────────────────────────────────────────
+  - target:
+      kind: Service
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: core
+      - op: replace
+        path: /spec/selector/app
+        value: core
+
+  # ── ServiceAccount ──────────────────────────────────────────────────────────
+  - target:
+      kind: ServiceAccount
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: core-dev-sa
+
+  # ── NetworkPolicy ────────────────────────────────────────────────────────────
+  - target:
+      kind: NetworkPolicy
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: core
+      - op: replace
+        path: /spec/podSelector/matchLabels/app
+        value: core
+      # Ingress: allow traffic from Traefik ingress controller namespace
+      - op: add
+        path: /spec/ingress/-
+        value:
+          from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: kube-ingress-ctl
+          ports:
+            - protocol: TCP
+              port: 8080
+      # Egress: RDS meta DB (PostgreSQL)
+      - op: add
+        path: /spec/egress/-
+        value:
+          to:
+            - namespaceSelector: {}
+          ports:
+            - protocol: TCP
+              port: 5432
+      # Egress: Keycloak (OIDC JWKS fetch) — dev port :8081
+      - op: add
+        path: /spec/egress/-
+        value:
+          to:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: keycloak
+          ports:
+            - protocol: TCP
+              port: 8081
+      # Egress: MSK (Kafka SASL_SSL/IAM)
+      # core -> MSK egress: staged for the core Kafka client landing THIS sprint (dev-team confirmed, MON-86). Human-approved deviation from app-code-egress-truth — remove if the Kafka code slips.
+      - op: add
+        path: /spec/egress/-
+        value:
+          to:
+            - namespaceSelector: {}
+          ports:
+            - protocol: TCP
+              port: 9098
+
+  # ── ConfigMap ────────────────────────────────────────────────────────────────
+  - target:
+      kind: ConfigMap
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: configmap-core
+      - op: replace
+        path: /data/SPRING_KAFKA_BOOTSTRAP_SERVERS
+        value: REPLACED-BY-OUTPUTS
+      - op: replace
+        path: /data/SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL
+        value: SASL_SSL
+      - op: replace
+        path: /data/SPRING_KAFKA_PROPERTIES_SASL_MECHANISM
+        value: AWS_MSK_IAM
+      - op: add
+        path: /data/CORE_META_DB_JDBC_URL
+        value: REPLACED-BY-OUTPUTS
+      - op: add
+        path: /data/CORE_APP_META_DB_USER
+        value: rds_iam
+      - op: add
+        path: /data/KC_ISSUER_URI
+        value: REPLACED-BY-OUTPUTS
+      - op: add
+        path: /data/KC_JWK_SET_URI
+        value: REPLACED-BY-OUTPUTS
+      - op: add
+        path: /data/management.endpoint.health.group.readiness.include
+        value: readinessState,db
+
+  # ── SecretStore ──────────────────────────────────────────────────────────────
+  - target:
+      kind: SecretStore
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: core
+      - op: replace
+        path: /spec/provider/aws/region
+        value: eu-central-1
+      # TODO(outputs): replace with actual ARN from lg-monteis-infra outputs.tf
+      # arn:aws:iam::789130777196:role/monteis/dev/core-sm-reader-dev
+      - op: replace
+        path: /spec/provider/aws/role
+        value: REPLACED-BY-OUTPUTS

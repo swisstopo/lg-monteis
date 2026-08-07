@@ -1,0 +1,177 @@
+# SCAFFOLD — un-gated, TODO ARNs; staging AppProject does not yet exist.
+# Only the dev overlay is render-tested. This file is deliberately un-gated
+# (would fail kustomize build due to TODO placeholder ARNs).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monteis-staging
+
+resources:
+  - ../../../backend-base
+  - ingress-core-staging.yaml
+  - pdb-core.yaml
+
+images:
+  - name: core
+    newName: 789130777196.dkr.ecr.eu-central-1.amazonaws.com/lg-monteis/core
+    # PLACEHOLDER — REPLACED-BY-CI on first build (vX.Y.Z)
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+
+patches:
+  - target:
+      kind: Deployment
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: core
+      - op: replace
+        path: /spec/replicas
+        value: 2
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: core
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: core
+      - op: replace
+        path: /spec/template/metadata/labels/app.kubernetes.io~1name
+        value: core
+      - op: replace
+        path: /spec/template/spec/serviceAccountName
+        value: core-staging-sa
+      - op: replace
+        path: /spec/template/spec/containers/0/name
+        value: core
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: core
+      # Staging resources (nfr-requirements performance-requirements §1)
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 500m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 1500m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 1500Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 1500Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/envFrom/0/configMapRef/name
+        value: configmap-core
+
+  - target:
+      kind: Service
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: core
+      - op: replace
+        path: /spec/selector/app
+        value: core
+
+  - target:
+      kind: ServiceAccount
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: core-staging-sa
+
+  - target:
+      kind: NetworkPolicy
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: core
+      - op: replace
+        path: /spec/podSelector/matchLabels/app
+        value: core
+      - op: add
+        path: /spec/ingress/-
+        value:
+          from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: kube-ingress-ctl
+          ports:
+            - protocol: TCP
+              port: 8080
+      - op: add
+        path: /spec/egress/-
+        value:
+          to:
+            - namespaceSelector: {}
+          ports:
+            - protocol: TCP
+              port: 5432
+      - op: add
+        path: /spec/egress/-
+        value:
+          to:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: keycloak
+          ports:
+            - protocol: TCP
+              port: 8080
+      - op: add
+        path: /spec/egress/-
+        value:
+          to:
+            - namespaceSelector: {}
+          ports:
+            - protocol: TCP
+              port: 9098
+
+  - target:
+      kind: ConfigMap
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: configmap-core
+      - op: replace
+        path: /data/SPRING_KAFKA_BOOTSTRAP_SERVERS
+        value: TODO-STAGING-MSK-BOOTSTRAP
+      - op: replace
+        path: /data/SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL
+        value: SASL_SSL
+      - op: replace
+        path: /data/SPRING_KAFKA_PROPERTIES_SASL_MECHANISM
+        value: AWS_MSK_IAM
+      - op: add
+        path: /data/CORE_META_DB_JDBC_URL
+        value: TODO-STAGING-RDS-JDBC-URL
+      - op: add
+        path: /data/CORE_APP_META_DB_USER
+        value: rds_iam
+      - op: add
+        path: /data/KC_ISSUER_URI
+        value: TODO-STAGING-KC-ISSUER-URI
+      - op: add
+        path: /data/KC_JWK_SET_URI
+        value: TODO-STAGING-KC-JWK-SET-URI
+      - op: add
+        path: /data/management.endpoint.health.group.readiness.include
+        value: readinessState,db
+
+  - target:
+      kind: SecretStore
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: core
+      - op: replace
+        path: /spec/provider/aws/region
+        value: eu-central-1
+      # TODO(outputs): arn:aws:iam::789130777196:role/monteis/staging/core-sm-reader-staging
+      - op: replace
+        path: /spec/provider/aws/role
+        value: TODO-STAGING-CORE-SM-READER-ARN
