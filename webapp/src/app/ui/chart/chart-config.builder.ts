@@ -9,7 +9,6 @@ export function buildChartConfig(
   type: ChartType,
   datasets: ChartDataset[],
   options: ChartOptions,
-  locale: string = 'en-GB',
   palette: ChartThemePalette = {},
 ): ChartConfiguration<ChartType> {
   datasets = Array.isArray(datasets) ? datasets : [];
