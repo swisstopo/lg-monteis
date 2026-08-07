@@ -70,19 +70,31 @@ class DataSourceConfigTest {
    */
   @Test
   void local_datasource_fails_fast_with_wrong_password() {
-    // Use a non-existent JDBC URL to force a connection failure.
+    // Use a non-existent JDBC endpoint to force a connection failure.
+    // HikariCP initialises the pool eagerly (fail-fast) at DataSource construction, so the
+    // failure surfaces from localDataSource(...) itself — not a later getConnection(). Wrap
+    // both so the assertion holds wherever HikariCP throws (construction or first connection).
     DataSourceConfig config = new DataSourceConfig();
-    DataSource ds =
-        config.localDataSource(
-            "jdbc:postgresql://localhost:15432/nonexistent", "user", "wrong-password");
 
-    assertThatThrownBy(() -> ds.getConnection())
+    assertThatThrownBy(
+            () -> {
+              DataSource ds =
+                  config.localDataSource(
+                      "jdbc:postgresql://localhost:15432/nonexistent", "user", "wrong-password");
+              try (var connection = ds.getConnection()) {
+                connection.isValid(1);
+              }
+            })
         .isInstanceOf(Exception.class)
         .satisfies(
             ex ->
                 assertThat(ex.getMessage() + ex.getCause())
                     .containsAnyOf(
-                        "Connection refused", "connect", "Unable to acquire", "timed out"));
+                        "Connection refused",
+                        "connect",
+                        "Unable to acquire",
+                        "timed out",
+                        "Failed to initialize pool"));
   }
 
   // ── Branch 2: cloud/prod (IAM token) ────────────────────────────────────────
@@ -94,10 +106,13 @@ class DataSourceConfigTest {
    */
   @Test
   void cloud_datasource_uses_iam_token_not_static_password() throws Exception {
+    // This test verifies the wrapper TYPE and that the JDBC password is the IAM token (not a
+    // static env password). It does NOT trigger a connection, so the token generator is never
+    // invoked — hence no stub on mockRds (a stub here would be flagged UnnecessaryStubbing by
+    // MockitoExtension's strict stubbing). Token-refresh-on-getConnection is covered by the
+    // separate refresh test below.
     RdsUtilities mockRds = mock(RdsUtilities.class);
     String mockToken = "mock-iam-token-" + System.currentTimeMillis();
-    when(mockRds.generateAuthenticationToken(any(GenerateAuthenticationTokenRequest.class)))
-        .thenReturn(mockToken);
 
     // Use a placeholder JDBC URL — we test configuration, not live connectivity.
     // The host/port parsing must succeed with a valid format.
@@ -105,11 +120,8 @@ class DataSourceConfigTest {
         "jdbc:postgresql://rds-instance.cluster-xyz.eu-central-1.rds.amazonaws.com:5432/monteis-meta-db";
     String username = "rds_iam";
 
-    DataSourceConfig config = new DataSourceConfig();
-
-    // We test the token-generation path directly by constructing the wrapper with the mock.
-    // DataSourceConfig.iamAuthDataSource requires a live credential chain for the eager token,
-    // so we test the RdsIamHikariDataSource wrapper class directly here.
+    // We test the wrapper class directly (DataSourceConfig.iamAuthDataSource requires a live
+    // credential chain for its eager startup token, which is unavailable in unit tests).
     com.zaxxer.hikari.HikariConfig hc = new com.zaxxer.hikari.HikariConfig();
     hc.setJdbcUrl(jdbcUrl);
     hc.setUsername(username);
@@ -139,34 +151,39 @@ class DataSourceConfigTest {
    */
   @Test
   void cloud_datasource_refreshes_token_per_connection_attempt() {
+    // Rotation proof: seed the pool with a distinct INITIAL password, then verify getConnection()
+    // regenerates it to a freshly-generated token. getConnection() calls
+    // generateAuthenticationToken
+    // exactly ONCE per invocation (see RdsIamHikariDataSource), so a single stubbed return is the
+    // "refreshed" token — it must differ from the initial value to prove regeneration happened.
     RdsUtilities mockRds = mock(RdsUtilities.class);
-    String firstToken = "token-first";
-    String secondToken = "token-second";
+    String initialToken = "token-initial";
+    String refreshedToken = "token-refreshed";
     when(mockRds.generateAuthenticationToken(any(GenerateAuthenticationTokenRequest.class)))
-        .thenReturn(firstToken)
-        .thenReturn(secondToken);
+        .thenReturn(refreshedToken);
 
     com.zaxxer.hikari.HikariConfig hc = new com.zaxxer.hikari.HikariConfig();
     hc.setJdbcUrl("jdbc:postgresql://localhost:5432/db");
     hc.setUsername("rds_iam");
-    hc.setPassword(firstToken);
+    hc.setPassword(initialToken);
     hc.setMaximumPoolSize(1);
-    hc.setConnectionTimeout(100);
+    hc.setConnectionTimeout(250); // HikariCP floor is 250ms; <250 throws IllegalArgumentException
     hc.setInitializationFailTimeout(-1);
 
     RdsIamHikariDataSource ds =
         new RdsIamHikariDataSource(hc, mockRds, "localhost", 5432, "rds_iam");
 
-    // First getConnection() call will attempt to refresh the token.
-    // Connection will fail (no real DB) but the password must have been updated.
+    // getConnection() regenerates the token, then attempts the physical connection.
+    // The connection fails (no real DB) but the password must already have been rotated.
     try {
       ds.getConnection();
     } catch (Exception ignored) {
-      // Expected: no real DB available; we only care that the token was rotated.
+      // Expected: no real DB available; we only assert the token was regenerated.
     }
 
-    // The token was set to secondToken on the first getConnection() call.
-    assertThat(ds.getPassword()).isEqualTo(secondToken);
+    // getConnection() replaced the initial password with the freshly generated token.
+    assertThat(ds.getPassword()).isEqualTo(refreshedToken);
+    assertThat(ds.getPassword()).isNotEqualTo(initialToken);
 
     ds.close();
   }
