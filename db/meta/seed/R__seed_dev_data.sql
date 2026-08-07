@@ -46,10 +46,18 @@ VALUES
      140, 240, 340, 1500.0, 0.0, true, 4, 1);
 
 -- 4. Insert Experiments
-# INSERT INTO experiments (id, name, description, version)
-# VALUES
-#     (1, 'Mont Terri Alpha', 'Initial temperature and pressure survey', 1),
-#     (2, 'Mont Terri Beta', 'Deep borehole displacement and pressure monitoring', 1);
+INSERT INTO experiments (
+    id, name, comment,
+    version, owner,
+    experiment_start,
+    experiment_end,
+    status
+)
+VALUES
+    (1, 'Mont Terri Alpha', 'Initial temperature and pressure survey', 1, 'User1',
+     DATE '2024-01-15', DATE '2024-06-30', 'ACTIVE'),
+    (2, 'Mont Terri Beta', 'Deep borehole displacement and pressure monitoring', 1, 'User2',
+     DATE '2024-07-01', DATE '2025-03-31', 'HISTORIC');
 
 -- 5. Link Sensors to Experiments (Many-to-Many)
 INSERT INTO experiment_sensor (experiment_id, sensor_id)

@@ -7,8 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.jooq.generated.enums.Status;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
+import java.time.LocalDate;
 import java.util.Objects;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
@@ -35,7 +37,12 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          Long experimentId = createExperiment("Experiment Without Sensors", "No sensors attached");
+          Long experimentId =
+              createExperiment(
+                  "Experiment Without Sensors",
+                  "No sensors attached",
+                  LocalDate.of(2024, 1, 1),
+                  LocalDate.of(2024, 12, 31));
 
           // Act
           ExperimentResponseDto details = repository.getById(experimentId);
@@ -47,40 +54,31 @@ class JooqExperimentRepositoryIT {
         });
   }
 
-  //  @Test
-  //  @Transactional
-  //  void should_return_experiment_details_with_linked_sensors_and_formulas() {
-  //    SecurityContextTestSupport.runAsAdmin(
-  //        () -> {
-  //          // Arrange
-  //          Long experimentId = createExperiment("Experiment With Sensors", "Has two sensors");
-  //
-  //          Sensor sensor1 = createDummySensor("SENS-EXP-01", "Sensor One", "x * 2");
-  //          Sensor sensor2 = createDummySensor("SENS-EXP-02", "Sensor Two", "x + 5");
-  //          linkSensorToExperiment(experimentId, sensor1.getId());
-  //          linkSensorToExperiment(experimentId, sensor2.getId());
-  //
-  //          // Act
-  //          ExperimentResponseDto details = repository.getExperimentDetails(experimentId);
-  //
-  //          // Assert
-  //          assertEquals(2, details.sensors().size());
-  //          assertTrue(
-  //              details.sensors().stream()
-  //                  .anyMatch(
-  //                      s ->
-  //                          s.code().equals("SENS-EXP-01")
-  //                              && s.formula().expression().equals("x * 2")),
-  //              "Sensor One with its formula should be present");
-  //          assertTrue(
-  //              details.sensors().stream()
-  //                  .anyMatch(
-  //                      s ->
-  //                          s.code().equals("SENS-EXP-02")
-  //                              && s.formula().expression().equals("x + 5")),
-  //              "Sensor Two with its formula should be present");
-  //        });
-  //  }
+  @Test
+  @Transactional
+  void should_return_experiment_details_with_linked_sensors_and_formulas() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Long experimentId =
+              createExperiment(
+                  "Experiment Without Sensors",
+                  "Has 2 sensors",
+                  LocalDate.of(2024, 1, 1),
+                  LocalDate.of(2024, 12, 31));
+
+          Sensor sensor1 = createDummySensor("SENS-EXP-01", "Sensor One", "x * 2");
+          Sensor sensor2 = createDummySensor("SENS-EXP-02", "Sensor Two", "x + 5");
+          linkSensorToExperiment(experimentId, sensor1.getId());
+          linkSensorToExperiment(experimentId, sensor2.getId());
+
+          // Act
+          ExperimentResponseDto details = repository.getById(experimentId);
+
+          // Assert
+          assertEquals(2, details.sensorCount());
+        });
+  }
 
   @Test
   @Transactional
@@ -97,11 +95,16 @@ class JooqExperimentRepositoryIT {
 
   // --- Helper Methods ---
 
-  private Long createExperiment(String name, String description) {
+  private Long createExperiment(
+      String name, String comment, LocalDate experimentStart, LocalDate experimentEnd) {
     return Objects.requireNonNull(
             dsl.insertInto(EXPERIMENTS)
                 .set(EXPERIMENTS.NAME, name)
-                .set(EXPERIMENTS.COMMENT, description)
+                .set(EXPERIMENTS.COMMENT, comment)
+                .set(EXPERIMENTS.EXPERIMENT_START, experimentStart)
+                .set(EXPERIMENTS.EXPERIMENT_END, experimentEnd)
+                .set(EXPERIMENTS.STATUS, Status.ACTIVE.toString())
+                .set(EXPERIMENTS.OWNER, "owner")
                 .returning(EXPERIMENTS.ID)
                 .fetchOne())
         .getId();
