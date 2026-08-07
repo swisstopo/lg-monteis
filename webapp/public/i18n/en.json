@@ -195,12 +195,10 @@
       },
       "option": {
         "active": {
-          "label": "Active",
-          "symbol": "A"
+          "label": "Active"
         },
         "historic": {
-          "label": "Historic",
-          "symbol": "H"
+          "label": "Historic"
         }
       }
     },

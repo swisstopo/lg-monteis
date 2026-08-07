@@ -25,7 +25,6 @@ import { ExperimentResponseDto, WriteExperimentDto } from '../../../core/generat
 import { toErrorDtos } from '../../../shared/models/api-error.model';
 import { FormErrorService } from '../../../shared/services/form-error.service';
 import { ToastService } from '../../../shared/services/toast.service';
-import { getStatusMetadata, Status } from '../models/experiment.model';
 import { ExperimentService } from '../services/experiment.service';
 
 interface ExperimentFormData {
@@ -35,7 +34,7 @@ interface ExperimentFormData {
     experimentEnd: Date;
   };
   name: string;
-  status: Status;
+  status: ExperimentResponseDto.StatusEnum;
 }
 
 function domainModelToFormModel(domainModel: ExperimentResponseDto): ExperimentFormData {
@@ -88,8 +87,7 @@ export default class ExperimentEdit {
   });
   readonly experimentId = input<number | undefined>(undefined);
 
-  readonly statusValues = Object.values(WriteExperimentDto.StatusEnum) as Status[];
-  readonly statusMetadata = getStatusMetadata();
+  readonly statusValues = Object.values(WriteExperimentDto.StatusEnum);
 
   readonly saveError = this.experimentService.error;
   experiment = signal<ExperimentResponseDto | undefined>(undefined);
@@ -169,7 +167,7 @@ export default class ExperimentEdit {
     validate(schema.experimentDates.experimentEnd, ({ value, valueOf }) => {
       const experimentEnd = value();
       const experimentStart = valueOf(schema.experimentDates.experimentStart);
-      if (experimentEnd > experimentStart) {
+      if (experimentEnd < experimentStart) {
         return {
           kind: 'bounds',
           message: this.i18nService.translate('sensor.experimentDate.to.validation.bounds')(),

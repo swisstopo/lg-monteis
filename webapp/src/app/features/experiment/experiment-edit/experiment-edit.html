@@ -24,8 +24,8 @@
         <mat-select [formField]="experimentForm.status">
           <mat-option value="">{{ 'experiment.status.placeholder' | translate }}</mat-option>
           @for (status of statusValues; track status) {
-            <mat-option [value]="status"
-              >{{ statusMetadata[status].label() }} ({{ statusMetadata[status].symbol() }})
+            <mat-option [value]="status">
+              {{ 'experiment.status.option.' + status.toLowerCase() + '.label' | translate }}
             </mat-option>
           }
         </mat-select>
