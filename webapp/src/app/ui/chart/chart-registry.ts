@@ -12,6 +12,7 @@ import {
   Tooltip,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
+import zoomPlugin from 'chartjs-plugin-zoom';
 
 let registered = false;
 
@@ -33,6 +34,7 @@ export function registerChartJs(): void {
     TimeScale,
     Title,
     SubTitle,
+    zoomPlugin,
   );
   registered = true;
 }

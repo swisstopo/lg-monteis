@@ -76,6 +76,27 @@ export class TableHeader {
         y3: 'Temperature [°C]',
         y4: 'Relative Humidity [%]',
       },
+      advancedOptions: {
+        plugins: {
+          zoom: {
+            zoom: {
+              wheel: {
+                enabled: true, // Enables zooming with the mouse wheel
+              },
+              pinch: {
+                enabled: false,
+              },
+              drag: {
+                enabled: true,
+                backgroundColor: 'rgba(66, 133, 244, 0.2)', // Optional: Customize the rectangle's color
+                borderWidth: 1, // Optional: Outline the rectangle
+                borderColor: 'rgba(66, 133, 244, 1)',
+              },
+              mode: 'xy', // Allow zooming on the x-axis only (can be 'y' or 'xy')
+            },
+          },
+        },
+      },
     };
 
     this.dialog.open(Chart, {

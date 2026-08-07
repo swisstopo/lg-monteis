@@ -19,6 +19,13 @@ export function buildChartConfig(
       type: options.xAxisType === 'time' ? 'time' : 'linear',
       time: {
         tooltipFormat: 'PPpp',
+        displayFormats: {
+          // Tell date-fns how to format specific zoom levels
+          hour: 'MMM d, HH:mm', // e.g., "May 21, 14:00"
+          day: 'MMM d', // e.g., "May 21"
+          week: 'MMM d, yyyy',
+          month: 'MMM yyyy',
+        },
       },
       title: {
         display: !!options.xAxisLabel,

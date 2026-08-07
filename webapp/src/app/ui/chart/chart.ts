@@ -118,6 +118,12 @@ export default class Chart {
     });
   }
 
+  public resetZoom(): void {
+    if (this.instance) {
+      this.instance.resetZoom();
+    }
+  }
+
   private createChart(config: ChartConfiguration): void {
     const canvas = this.canvasRef().nativeElement;
     this.instance = new ChartJs(canvas, this.withEventHandlers(config));
