@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
@@ -147,6 +148,28 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
+  void should_throw_on_create_non_unique_experiment() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Experiment uniqueExperiment = buildDummyDomainExperiment("Uniqe_Experiment", "Owner_1");
+          Experiment nonUniqueExperiment =
+              buildDummyDomainExperiment("Uniqe_Experiment", "Owner_1");
+          repository.create(uniqueExperiment);
+
+          // Act & Assert
+          FieldBusinessValidationException exception =
+              assertThrows(
+                  FieldBusinessValidationException.class,
+                  () -> repository.create(nonUniqueExperiment));
+
+          assertEquals("name", exception.getField());
+          assertEquals("validation.unique", exception.getMessageKey());
+        });
+  }
+
+  @Test
+  @Transactional
   void should_update_experiment() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
@@ -165,6 +188,33 @@ class JooqExperimentRepositoryIT {
           // Assert
           assertEquals("NEW-NAME", updatedExperiment.getName());
           assertEquals("Updated comment", updatedExperiment.getComment());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_throw_on_update_duplicated_code() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Experiment uniqueExperiment1 =
+              buildDummyDomainExperiment("Unique_Experiment1", "Owner_1");
+          Experiment UniqueExperiment2 =
+              buildDummyDomainExperiment("Unique_Experiment2", "Owner_1");
+          uniqueExperiment1 = repository.create(uniqueExperiment1);
+          UniqueExperiment2 = repository.create(UniqueExperiment2);
+
+          UniqueExperiment2.setName(uniqueExperiment1.getName());
+
+          // Act & Assert
+          Experiment nonUniqueExperiment = UniqueExperiment2;
+          FieldBusinessValidationException exception =
+              assertThrows(
+                  FieldBusinessValidationException.class,
+                  () -> repository.update(nonUniqueExperiment));
+
+          assertEquals("name", exception.getField());
+          assertEquals("validation.unique", exception.getMessageKey());
         });
   }
 
