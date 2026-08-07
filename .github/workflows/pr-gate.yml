@@ -35,6 +35,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Detect whether this PR touches the backend Kustomize manifests.
+  # Gates the manifest-render-gate job so kustomize/kubeconform only run when
+  # k8s/** (base or overlays) actually changed — not on pure src-code PRs.
+  detect-manifest-changes:
+    name: Detect Manifest Changes
+    runs-on: ubuntu-24.04
+    outputs:
+      k8s: ${{ steps.filter.outputs.k8s }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Detect k8s/** changes vs base
+        id: filter
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^k8s/'; then
+            echo "k8s=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "k8s=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Runs kustomize build + kubeconform on both backend dev overlays before Java tests.
+  # Conditional: only when the PR changes k8s/** (see detect-manifest-changes).
+  manifest-render-gate:
+    name: Manifest Render Gate
+    needs: detect-manifest-changes
+    if: needs.detect-manifest-changes.outputs.k8s == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Install kubeconform
+        run: |
+          curl -L https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Render and validate core dev overlay
+        run: kustomize build k8s/core/overlays/dev | kubeconform -strict -ignore-missing-schemas
+
+      - name: Render and validate pipeline dev overlay
+        run: kustomize build k8s/pipeline/overlays/dev | kubeconform -strict -ignore-missing-schemas
+
   validate-pr-title:
     name: Validate PR Title
     runs-on: ubuntu-24.04
