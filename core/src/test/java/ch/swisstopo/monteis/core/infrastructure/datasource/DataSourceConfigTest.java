@@ -70,21 +70,15 @@ class DataSourceConfigTest {
    */
   @Test
   void local_datasource_fails_fast_with_wrong_password() {
-    // Use a non-existent JDBC endpoint to force a connection failure.
-    // HikariCP initialises the pool eagerly (fail-fast) at DataSource construction, so the
-    // failure surfaces from localDataSource(...) itself — not a later getConnection(). Wrap
-    // both so the assertion holds wherever HikariCP throws (construction or first connection).
+    // Use a non-existent JDBC endpoint to force a failure. HikariCP initialises the pool
+    // EAGERLY (fail-fast) at DataSource construction — the failure surfaces from
+    // localDataSource(...) itself, before any getConnection().
     DataSourceConfig config = new DataSourceConfig();
 
     assertThatThrownBy(
-            () -> {
-              DataSource ds =
-                  config.localDataSource(
-                      "jdbc:postgresql://localhost:15432/nonexistent", "user", "wrong-password");
-              try (var connection = ds.getConnection()) {
-                connection.isValid(1);
-              }
-            })
+            () ->
+                config.localDataSource(
+                    "jdbc:postgresql://localhost:15432/nonexistent", "user", "wrong-password"))
         .isInstanceOf(Exception.class)
         .satisfies(
             ex ->
