@@ -46,27 +46,10 @@ public class DataSourceConfig {
   @Profile("prod")
   public DataSource iamAuthDataSource(
       @Value("${spring.datasource.url}") String jdbcUrl,
+      @Value("${metadata.db.host}") String host,
+      @Value("${metadata.db.port}") Integer port,
       @Value("${spring.datasource.username}") String username,
       @Value("${cloud.aws.region.static:eu-central-1}") String awsRegion) {
-
-    // Extract host and port from the JDBC URL for the token request.
-    // Expected format: jdbc:postgresql://<host>:<port>/<db>[?...]
-    String stripped = jdbcUrl.replace("jdbc:postgresql://", "");
-    int slashIndex = stripped.indexOf('/');
-    String hostPort = slashIndex > 0 ? stripped.substring(0, slashIndex) : stripped;
-    int colonIndex = hostPort.lastIndexOf(':');
-    if (colonIndex < 0) {
-      throw new IllegalStateException(
-          "DataSourceConfig (prod): cannot parse host:port from JDBC URL: " + jdbcUrl);
-    }
-    String hostname = hostPort.substring(0, colonIndex);
-    int port;
-    try {
-      port = Integer.parseInt(hostPort.substring(colonIndex + 1));
-    } catch (NumberFormatException ex) {
-      throw new IllegalStateException(
-          "DataSourceConfig (prod): cannot parse port from JDBC URL: " + jdbcUrl, ex);
-    }
 
     // Validate that Pod Identity credentials are reachable before building the pool.
     // RdsUtilities.generateAuthenticationToken fetches credentials from the default chain,
@@ -76,10 +59,10 @@ public class DataSourceConfig {
 
     // Eagerly generate one token to validate the credential chain at startup.
     // If this fails the application context will not start (fail-fast).
-    String initialToken = generateToken(rdsUtilities, hostname, port, username);
+    String initialToken = generateToken(rdsUtilities, host, port, username);
     logger.info(
         "DataSourceConfig (prod): RDS IAM auth token generated successfully for host={}, user={}",
-        hostname,
+        host,
         username);
 
     HikariConfig config = new HikariConfig();
@@ -91,14 +74,11 @@ public class DataSourceConfig {
     config.setMaxLifetime(Duration.ofMinutes(13).toMillis());
     config.setConnectionTimeout(Duration.ofSeconds(10).toMillis());
 
-    // Supply a fresh IAM token each time Hikari creates a new physical connection.
-    // Captures rdsUtilities, hostname, port, username as effectively-final locals.
-    final String capturedHostname = hostname;
-    final int capturedPort = port;
-    config.setPassword(null); // reset; ConnectionInitSql not suitable for token refresh
-    // Use a custom datasource-bean approach: wrap HikariDataSource with token rotation.
-    return new RdsIamHikariDataSource(
-        config, rdsUtilities, capturedHostname, capturedPort, username);
+    // The wrapper supplies a fresh IAM token on each new physical connection (see
+    // RdsIamHikariDataSource#getConnection); the eager token above only validated the
+    // credential chain at startup. Clear it here so the wrapper is the sole token source.
+    config.setPassword(null);
+    return new RdsIamHikariDataSource(config, rdsUtilities, host, port, username);
   }
 
   /**
