@@ -157,7 +157,8 @@
       "search": "Search",
       "download": "Download",
       "create": "Create Sensor",
-      "edit": "Edit Sensor"
+      "edit": "Edit Sensor",
+      "plot": "Plot"
     },
     "success": "Sensor saved successfully.",
     "error": {
