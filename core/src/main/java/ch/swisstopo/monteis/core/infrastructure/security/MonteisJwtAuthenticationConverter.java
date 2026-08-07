@@ -52,8 +52,7 @@ public class MonteisJwtAuthenticationConverter
 
     // Fail closed: a caller with neither read authority must never leak a populated
     // experiment_ids claim through as if it were a legitimately scoped user.
-    boolean hasAnyReadAuthority = hasAuthority(authorities);
-    List<Long> experimentIds = hasAnyReadAuthority ? extractExperimentIds(source) : List.of();
+    List<Long> experimentIds = canReadAny(authorities) ? extractExperimentIds(source) : List.of();
 
     MonteisPrincipal principal =
         new MonteisPrincipal(
@@ -88,7 +87,7 @@ public class MonteisJwtAuthenticationConverter
     return authorities;
   }
 
-  private static boolean hasAuthority(Collection<GrantedAuthority> authorities) {
+  private static boolean canReadAny(Collection<GrantedAuthority> authorities) {
     return authorities.stream().anyMatch(a -> READ_AUTHORITIES_SET.contains(a.getAuthority()));
   }
 
