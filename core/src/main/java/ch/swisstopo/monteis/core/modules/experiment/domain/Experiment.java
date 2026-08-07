@@ -24,15 +24,11 @@ public class Experiment implements Auditable {
   @SuppressWarnings("java:S107")
   @Default
   public Experiment(
-      String name,
-      String owner,
-      ExperimentDates experimentDates,
-      String description,
-      Status status) {
+      String name, String owner, ExperimentDates experimentDates, String comment, Status status) {
     this.name = name;
     this.owner = owner;
     this.experimentDates = experimentDates;
-    this.comment = description;
+    this.comment = comment;
     this.status = status;
   }
 
@@ -45,14 +41,14 @@ public class Experiment implements Auditable {
       String name,
       String owner,
       ExperimentDates experimentDates,
-      String description,
+      String comment,
       Status status,
       Integer version) {
     this.id = id;
     this.name = name;
     this.owner = owner;
     this.experimentDates = experimentDates;
-    this.comment = description;
+    this.comment = comment;
     this.status = status;
     this.version = version;
   }

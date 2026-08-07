@@ -2,13 +2,7 @@ package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentSensor.EXPERIMENT_SENSOR;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
@@ -199,15 +193,15 @@ class JooqExperimentRepositoryIT {
           // Arrange
           Experiment uniqueExperiment1 =
               buildDummyDomainExperiment("Unique_Experiment1", "Owner_1");
-          Experiment UniqueExperiment2 =
+          Experiment uniqueExperiment2 =
               buildDummyDomainExperiment("Unique_Experiment2", "Owner_1");
           uniqueExperiment1 = repository.create(uniqueExperiment1);
-          UniqueExperiment2 = repository.create(UniqueExperiment2);
+          uniqueExperiment2 = repository.create(uniqueExperiment2);
 
-          UniqueExperiment2.setName(uniqueExperiment1.getName());
+          uniqueExperiment2.setName(uniqueExperiment1.getName());
 
           // Act & Assert
-          Experiment nonUniqueExperiment = UniqueExperiment2;
+          Experiment nonUniqueExperiment = uniqueExperiment2;
           FieldBusinessValidationException exception =
               assertThrows(
                   FieldBusinessValidationException.class,
