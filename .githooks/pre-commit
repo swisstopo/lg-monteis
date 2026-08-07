@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 echo "[INFO]: Running pre-commit formatting..."
 PROJECT_DIR=$(git rev-parse --show-toplevel)
