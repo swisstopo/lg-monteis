@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: REPLACED-IN-OVERLAY
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      # Literal app: label required; Service selector and NetworkPolicy podSelector
+      # depend on this exact value and must not be injected via commonLabels.
+      app: REPLACED-IN-OVERLAY
+  template:
+    metadata:
+      labels:
+        # Written literally here — not via commonLabels — because Service selector
+        # and NetworkPolicy podSelector.matchLabels key off this exact label.
+        app: REPLACED-IN-OVERLAY
+        app.kubernetes.io/name: REPLACED-IN-OVERLAY
+    spec:
+      serviceAccountName: REPLACED-IN-OVERLAY
+      securityContext:
+        runAsNonRoot: true
+        # Paketo Buildpacks run as uid 1000 (cnb user). A numeric UID is required
+        # so the kubelet can enforce runAsNonRoot without relying on the image USER string.
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: REPLACED-IN-OVERLAY
+          image: REPLACED-IN-OVERLAY
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: REPLACED-IN-OVERLAY
+          # /tmp emptyDir required: readOnlyRootFilesystem=true prevents JVM from
+          # writing its temporary files to the root filesystem.
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: REPLACED-IN-OVERLAY
+              memory: REPLACED-IN-OVERLAY
+            limits:
+              cpu: REPLACED-IN-OVERLAY
+              memory: REPLACED-IN-OVERLAY
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # startupProbe guards liveness; no initialDelaySeconds on liveness needed.
+          # Timings: periodSeconds=5, failureThreshold=30 gives 150 s for JVM startup.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: tmp
+          emptyDir: {}

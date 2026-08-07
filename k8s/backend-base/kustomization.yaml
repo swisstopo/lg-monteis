@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Shared base for all in-house backends (core + pipeline).
+# Each backend has its own overlays/<stage>/kustomization.yaml that
+# imports this base as a resource and supplies its JSON6902 patches.
+# Do NOT set namespace here; overlays supply it.
+#
+# CI release pipeline (Paketo build -> ECR -> kustomize edit set image)
+# bumps the image digest in the overlay kustomization.yaml after each build.
+
+commonLabels:
+  app.kubernetes.io/managed-by: argocd
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - serviceaccount.yaml
+  - networkpolicy.yaml
+  - configmap.yaml
+  - secretstore.yaml

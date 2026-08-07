@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: REPLACED-IN-OVERLAY
+spec:
+  podSelector:
+    matchLabels:
+      # Literal app: label — must match Deployment pod template label exactly.
+      app: REPLACED-IN-OVERLAY
+  policyTypes:
+    - Ingress
+    - Egress
+  # Default-deny ingress; overlays add workload-specific ingress rules.
+  # (core overlay adds Traefik ingress rule; pipeline has no ingress — no-op)
+  ingress: []
+  egress:
+    # DNS — cluster-internal resolver (namespaceSelector: all namespaces)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # DNS — CoreDNS ClusterIP direct (ipBlock fallback for kube-dns svc IP)
+    - to:
+        - ipBlock:
+            cidr: 172.20.0.10/32
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # EKS Pod Identity agent (link-local metadata endpoint)
+    # Required on every workload to enable Pod Identity AWS credential fetching.
+    - to:
+        - ipBlock:
+            cidr: 169.254.170.23/32
+      ports:
+        - protocol: TCP
+          port: 80
+    # Workload-specific egress rules are added by each overlay's JSON6902 patches.
+    # See: k8s/core/overlays/dev/ and k8s/pipeline/overlays/dev/

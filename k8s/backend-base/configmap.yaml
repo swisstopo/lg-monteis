@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: REPLACED-IN-OVERLAY
+data:
+  # Actuator probe config — identical on both backends; values are deterministic.
+  management.endpoint.health.probes.enabled: "true"
+  management.endpoint.health.group.liveness.include: "livenessState"
+  management.server.port: "8080"
+  # Kafka / MSK config — values differ per overlay (SASL_SSL+AWS_MSK_IAM in cloud).
+  # Overlays supply the real values via JSON6902 op:replace patches.
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: REPLACED-IN-OVERLAY
+  SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL: REPLACED-IN-OVERLAY
+  SPRING_KAFKA_PROPERTIES_SASL_MECHANISM: REPLACED-IN-OVERLAY

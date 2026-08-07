@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: REPLACED-IN-OVERLAY
+spec:
+  type: ClusterIP
+  # Literal selector — must match the app: label written literally in the Deployment
+  # pod template. Do not rely on commonLabels injection for this selector.
+  selector:
+    app: REPLACED-IN-OVERLAY
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
