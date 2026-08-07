@@ -8,7 +8,6 @@ import {
   ElementRef,
   inject,
   input,
-  LOCALE_ID,
   output,
   signal,
   viewChild,
@@ -54,7 +53,6 @@ registerChartJs();
   providers: [DatePipe],
 })
 export default class Chart {
-  private readonly locale = inject(LOCALE_ID);
   readonly dialogRef = inject<MatDialogRef<Chart>>(MatDialogRef, {
     optional: true,
   });
@@ -103,13 +101,7 @@ export default class Chart {
       if (!this.viewReady()) {
         return;
       }
-      const config = buildChartConfig(
-        this.type(),
-        this.datasets(),
-        this.options(),
-        this.locale,
-        this.palette(),
-      );
+      const config = buildChartConfig(this.type(), this.datasets(), this.options(), this.palette());
       if (this.instance) {
         this.updateChart(config);
       } else {
