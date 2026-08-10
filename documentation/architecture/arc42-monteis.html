@@ -439,7 +439,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h1><span class="image"><img src="./images/arc42-logo.png" alt="arc42"></span> MONTEIS - Architektur</h1>
 <div class="details">
 <span id="revnumber">version 1.0.0-rc,</span>
-<span id="revdate">2026-05-19</span>
+<span id="revdate">2026-06-02</span>
 <br><span id="revremark">Draft</span>
 </div>
 <div id="toc" class="toc">
@@ -555,7 +555,7 @@ Creative Commons Attribution-ShareAlike 4.0 International
 Creative Commons Attribution-ShareAlike 4.0 International Lizenz bereitgestellt.</p>
 </div>
 <div class="paragraph">
-<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-05-19</p>
+<p>Dokumentationsversion: 1.0.0-rc. Draft, 2026-06-02</p>
 </div>
 <hr>
 <div style="page-break-after: always;"></div>
@@ -1033,7 +1033,7 @@ welches die Bedürfnisse der Forscher im Bereich der Geologie im Felslabor Mont 
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Sicherheit</strong></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Zugriffe auf sensible Experimentdaten müssen strikt geregelt und vor unbefugtem Zugriff geschützt sein.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Zentrales API-Gateway &amp; RBAC via Keycloak:</strong> Direkte Zugriffe auf Pipelines oder Datenbanken sind unterbunden; Frontend und Backend fungieren als Nadelöhr. Die Authentifizierung (eIAM) wird über Keycloak angebunden. Rollen (z. B. <code>read_exp_a</code>) werden als Claims im JWT an das Spring Boot Backend übergeben, welches die Berechtigungen durchsetzt.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Zentrales API-Gateway &amp; RBAC via Keycloak:</strong> Direkte Zugriffe auf Pipelines oder Datenbanken sind unterbunden; Frontend und Backend fungieren als Nadelöhr. Die Authentifizierung (eIAM) wird über Keycloak angebunden. Rollen werden dort über Gruppenmitgliedschaft vergeben und als Claims im JWT an das Spring Boot Backend übergeben, welches die Berechtigungen durchsetzt.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">&#8594; Kap. 5.3.1 &amp; 6.6</p></td>
 </tr>
 <tr>
@@ -1253,7 +1253,7 @@ Es wird prozessual (z. B. durch Lizenz-Scanning in der CI/CD-Pipeline) sicherges
 <div class="ulist">
 <ul>
 <li>
-<p><strong>Security &amp; Auth Filter:</strong> Der Authentifizierungs-Filter von Spring Security&#8217;s OAuth2-Resource-Server verifiziert das Keycloak/eIAM-JWT und baut daraus über einen custom <code>Converter</code> (<code>MonteisJwtAuthenticationConverter</code>) in einem Schritt die vollständige <code>Authentication</code> auf: Rolle → <code>api:*</code>-Authorities, sowie Sub und Experiment-IDs als eigener <code>MonteisPrincipal</code>, abgelegt im Standard-<code>SecurityContextHolder</code>. Leseberechtigungen werden darüber transparent auf Datenbankebene per Row-Level-Security durchgesetzt, Schreibberechtigungen anhand der HTTP-Methode zentral im Filterchain (siehe Kap. 8 &amp; 9).</p>
+<p><strong>Security &amp; Auth Filter:</strong> Der Authentifizierungs-Filter von Spring Security&#8217;s OAuth2-Resource-Server verifiziert das Keycloak/eIAM-JWT (Signatur, Aussteller, Audience) und baut daraus über einen custom <code>Converter</code> (<code>MonteisJwtAuthenticationConverter</code>) in einem Schritt die vollständige <code>Authentication</code> auf: Rolle (über Keycloak-Gruppen vergeben) → <code>api:*</code>-Authorities, sowie Sub und Experiment-IDs als eigener <code>MonteisPrincipal</code>, abgelegt im Standard-<code>SecurityContextHolder</code>. Leseberechtigungen werden darüber transparent auf Datenbankebene per Row-Level-Security durchgesetzt, Schreibberechtigungen anhand der HTTP-Methode zentral im Filterchain (siehe Kap. 8 &amp; 9). Ein schlanker <code>GET /api/me</code>-Endpunkt spiegelt die Schreibberechtigung an das Frontend, das damit rein kosmetisch schreibende UI-Elemente ausblendet.</p>
 </li>
 <li>
 <p><strong>Query &amp; Downsampling Service:</strong> Ein dedizierter Service, der Leseanfragen an die TimeScaleDB richtet und intelligente Downsampling-Algorithmen anwendet, um die abgerufene Datenmenge vor der Auslieferung an das Frontend zu reduzieren.</p>
@@ -1580,31 +1580,31 @@ Es wird prozessual (z. B. durch Lizenz-Scanning in der CI/CD-Pipeline) sicherges
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Der Nutzer öffnet die Web-App und wird vom Angular Frontend an Keycloak weitergeleitet (OIDC Authorization Code Flow mit PKCE) und authentifiziert sich (delegiert an AGOV). Keycloak stellt ein JWT aus, dessen Claims die Rollen (<code>realm_access.roles</code>, <code>user</code>/<code>admin</code>) sowie die Experiment-Zugehörigkeiten (<code>experiment_ids</code>-Claim) enthalten.</p>
+<p>Der Nutzer öffnet die Web-App und wird vom Angular Frontend an Keycloak weitergeleitet (OIDC Authorization Code Flow mit PKCE) und authentifiziert sich (delegiert an AGOV). Berechtigungen sind in Keycloak über Gruppenmitgliedschaft vergeben (z. B. eine Admin-Gruppe, eine Gruppe pro Experiment) statt direkt am Nutzer. Keycloak stellt ein JWT aus, dessen Claims die Berechtigungen sowie die Experiment-Zugehörigkeiten des Nutzers enthalten.</p>
 </li>
 <li>
 <p>Das Frontend sendet dieses JWT bei jedem REST-Call im <code>Authorization: Bearer</code>-Header mit.</p>
 </li>
 <li>
-<p>Ein Security-Filter im Spring Boot Backend (OAuth2 Resource Server) fängt den Request ab, verifiziert die Signatur des Tokens (via JWKS von Keycloak) und übergibt es an einen custom <code>Converter</code> (<code>MonteisJwtAuthenticationConverter</code>), der daraus in einem Schritt die vollständige <code>Authentication</code> baut: Rolle <code>user</code> → <code>api:read</code>-Authority, Rolle <code>admin</code> → <code>api:write</code>- und <code>api:read-all</code>-Authority, sowie Sub und Experiment-IDs als eigener <code>MonteisPrincipal</code>. Diese <code>Authentication</code> landet im Standard-<code>SecurityContextHolder</code>. Fehlt eine gültige Rolle (keine <code>api:read</code>/<code>api:read-all</code>-Authority), werden Experiment-IDs strikt auf "keine Rechte" verengt (<strong>fail closed</strong>), selbst wenn der <code>experiment_ids</code>-Claim befüllt wäre.</p>
+<p>Ein Security-Filter im Spring Boot Backend (OAuth2 Resource Server) fängt den Request ab, verifiziert Signatur, Aussteller und Audience des Tokens (via JWKS von Keycloak) und übergibt es an einen custom <code>Converter</code>, der daraus die vollständige <code>Authentication</code> baut und im Standard-<code>SecurityContextHolder</code> ablegt. Fehlt eine gültige Leseberechtigung, werden Experiment-IDs strikt auf "keine Rechte" verengt (<strong>fail closed</strong>), selbst wenn der Claim befüllt wäre.</p>
 </li>
 <li>
-<p>Bei jeder jOOQ-Datenbankverbindung schreibt ein custom <code>ConnectionProvider</code> (<code>RlsConnectionProvider</code>) die aktuelle <code>Authentication</code> transaktionslokal als Postgres-GUCs auf die Connection (<code>app.read_all</code> aus den Authorities, <code>app.user_experiment_ids</code> aus dem <code>MonteisPrincipal</code>).</p>
+<p>Bei jeder jOOQ-Datenbankverbindung schreibt ein custom <code>ConnectionProvider</code> (<code>RlsConnectionProvider</code>) die aktuelle <code>Authentication</code> transaktionslokal als Postgres-GUCs auf die Connection.</p>
 </li>
 <li>
-<p>Native <strong>Row-Level-Security-Policies</strong> auf <code>sensors</code>/<code>experiments</code> sowie eine <code>security_barrier</code>-View für die (per Foreign Data Wrapper eingebundenen) Sensormesswerte werten diese GUCs serverseitig aus und filtern Zeilen automatisch — der jOOQ-Code selbst enthält keine manuelle Berechtigungs-<code>WHERE</code>-Klausel. Admins sehen alles; reguläre Nutzer nur Daten aus Experimenten, denen sie zugeordnet sind.</p>
+<p>Native <strong>Row-Level-Security-Policies</strong> auf <code>sensors</code>/<code>experiments</code> sowie eine <code>security_barrier</code>-View für die (per Foreign Data Wrapper eingebundenen) Sensormesswerte werten diese GUCs serverseitig aus und filtern Zeilen automatisch — der jOOQ-Code selbst enthält keine manuelle Berechtigungs-<code>WHERE</code>-Klausel. Admins sehen alles; reguläre Nutzer nur Daten aus Experimenten, deren Gruppe sie angehören.</p>
 </li>
 <li>
-<p>Schreibende Requests (<code>POST</code>/<code>PUT</code>/<code>PATCH</code>/<code>DELETE</code>) werden unabhängig davon zentral im Filterchain (<code>SecurityConfig</code>) geprüft: Sie erfordern die <code>api:write</code>-Authority, also die Rolle <code>admin</code>.</p>
+<p>Schreibende Requests (<code>POST</code>/<code>PUT</code>/<code>PATCH</code>/<code>DELETE</code>) werden unabhängig davon zentral im Filterchain (<code>SecurityConfig</code>) geprüft und erfordern eine Write-Berechtigung. Das Frontend fragt diese zusätzlich über <code>GET /api/me</code> ab, um schreibende UI-Elemente rein kosmetisch auszublenden — die eigentliche Durchsetzung bleibt serverseitig im Filterchain.</p>
 </li>
 </ol>
 </div>
 <div class="paragraph">
-<p>Die Experiment-Zugehörigkeit wird aktuell bewusst als JWT-Claim geführt, gespeist aus einem Keycloak User-Attribut (<code>experiment_ids</code>) via Protocol Mapper. Das ist einfach zu betreiben, solange die Zugehörigkeitsmengen klein bleiben — in der Praxis meist ein einzelnes Experiment pro Nutzer. Sollte das nicht mehr skalieren (viele Experimente pro Nutzer, häufig wechselnde Zuordnungen, oder schlicht Token-Grössenlimits), ist die vorgesehene Ausweichlösung eine eigene <code>experiment_membership</code>-Tabelle (Schlüssel: <code>sub</code>), die der <code>MonteisJwtAuthenticationConverter</code> pro Request abfragt, statt die Zugehörigkeit aus dem Token zu lesen.</p>
+<p>Die Experiment-Zugehörigkeit wird aktuell bewusst als JWT-Claim geführt, gespeist aus der Gruppenmitgliedschaft des Nutzers. Das ist einfach zu betreiben, solange die Zugehörigkeitsmengen klein bleiben — in der Praxis meist ein einzelnes Experiment pro Nutzer. Sollte das nicht mehr skalieren (viele Experimente pro Nutzer, häufig wechselnde Zuordnungen, oder schlicht Token-Grössenlimits), ist die vorgesehene Ausweichlösung eine eigene <code>experiment_membership</code>-Tabelle (Schlüssel: <code>sub</code>), die der <code>MonteisJwtAuthenticationConverter</code> pro Request abfragt, statt die Zugehörigkeit aus dem Token zu lesen.</p>
 </div>
 <div class="imageblock">
 <div class="content">
-<img src="./images/seq-login-sso.svg" alt="seq login sso" width="1180" height="1362">
+<img src="./images/seq-login-sso.svg" alt="seq login sso" width="1176" height="1301">
 </div>
 </div>
 </div>
@@ -2041,13 +2041,19 @@ Ref: <a href="https://pcg.io/insights/vpc-endpoints-explanation-and-cost-compari
 <div class="ulist">
 <ul>
 <li>
-<p><strong>Security Context (<code>SecurityContextHolder</code>):</strong> Ein Auth-Filter validiert das JWT und übergibt es an <code>MonteisJwtAuthenticationConverter</code>, der daraus Rolle → <code>api:read</code>/<code>api:write</code>/<code>api:read-all</code>-Authorities (Rolle <code>user</code> → <code>api:read</code>; Rolle <code>admin</code> → <code>api:write</code> + <code>api:read-all</code>) sowie Sub und Experiment-IDs als <code>MonteisPrincipal</code> ableitet und beides als <code>Authentication</code> für die Dauer des Requests im Standard-<code>SecurityContextHolder</code> von Spring Security ablegt — kein eigener Propagierungsmechanismus. Fehlt eine gültige Rolle, werden Experiment-IDs strikt auf leer verengt (<strong>fail closed</strong>). Hintergrundjobs ohne Request (z. B. der Startup-Audit-Backfill) binden stattdessen explizit einen <code>SystemSecurityContext</code> mit Admin-Rechten (<code>api:read-all</code>).</p>
+<p><strong>Security Context (<code>SecurityContextHolder</code>):</strong> Ein Auth-Filter validiert das JWT (Signatur, Aussteller, Audience) und übergibt es an <code>MonteisJwtAuthenticationConverter</code>, der daraus die Berechtigungen sowie Sub und Experiment-IDs als <code>MonteisPrincipal</code> ableitet und beides als <code>Authentication</code> für die Dauer des Requests im Standard-<code>SecurityContextHolder</code> von Spring Security ablegt — kein eigener Propagierungsmechanismus. Fehlt eine gültige Leseberechtigung, werden Experiment-IDs strikt auf leer verengt (<strong>fail closed</strong>). Hintergrundjobs ohne Request (z. B. der Startup-Audit-Backfill) binden stattdessen explizit einen <code>SystemSecurityContext</code> mit Admin-Rechten.</p>
+</li>
+<li>
+<p><strong>Rollenvergabe via Keycloak-Gruppen:</strong> Berechtigungen werden Nutzern nie direkt zugewiesen, sondern über Gruppenmitgliedschaft (Admin-Gruppe, Read-All-Gruppe, eine Gruppe pro Experiment). Details zu den konkreten Rollen/Claims siehe Keycloak-Realm-Config und <code>MonteisJwtAuthenticationConverter</code>.</p>
 </li>
 <li>
 <p><strong>Leseberechtigungen (Row-Level Security):</strong> <code>RlsConnectionProvider</code> schreibt die aktuelle <code>Authentication</code> bei jeder Connection-Beschaffung transaktionslokal auf die Verbindung. Native RLS-Policies auf <code>sensors</code>/<code>experiments</code> sowie eine security-barrier-View für die per FDW eingebundene TimescaleDB-Tabelle filtern Zeilen serverseitig danach — der jOOQ-Code selbst enthält keine Berechtigungslogik. Weil der Kontext transaktionslokal ist, muss jede RLS-relevante Repository-Methode innerhalb einer Spring-Transaktion laufen (<code>@Transactional(readOnly = true)</code>).</p>
 </li>
 <li>
-<p><strong>Schreibberechtigungen (RBAC):</strong> Alle DB-Zugriffe laufen über dieselbe Rolle (<code>core_app</code>), RLS kann also keine nutzerspezifischen Schreibrechte abbilden. Schreibzugriffe bleiben auf DB-Ebene permissiv; die Autorisierung erfolgt stattdessen zentral im Spring-Security-Filterchain (<code>SecurityConfig</code>) anhand der HTTP-Methode: <code>POST</code>/<code>PUT</code>/<code>PATCH</code>/<code>DELETE</code> erfordern die <code>api:write</code>-Authority (Rolle <code>admin</code>), <code>GET</code> bleibt für alle authentifizierten Nutzer offen — siehe ADR in Kap. 9.</p>
+<p><strong>Schreibberechtigungen (RBAC):</strong> Alle DB-Zugriffe laufen über dieselbe Rolle (<code>core_app</code>), RLS kann also keine nutzerspezifischen Schreibrechte abbilden. Schreibzugriffe bleiben auf DB-Ebene permissiv; die Autorisierung erfolgt stattdessen zentral im Spring-Security-Filterchain (<code>SecurityConfig</code>) anhand der HTTP-Methode: <code>POST</code>/<code>PUT</code>/<code>PATCH</code>/<code>DELETE</code> erfordern eine Write-Berechtigung, <code>GET</code> bleibt für alle authentifizierten Nutzer offen — siehe ADR in Kap. 9. Das Frontend fragt diese Berechtigung über <code>GET /api/me</code> ab und blendet Schreib-Buttons rein kosmetisch aus, wenn sie fehlt.</p>
+</li>
+<li>
+<p><strong>Frontend-seitige Sichtbarkeit (rein kosmetisch):</strong> Der Endpunkt <code>GET /api/me</code> (<code>CurrentUserController</code>) spiegelt lediglich wider, ob die aktuelle <code>Authentication</code> die <code>api:write</code>-Authority besitzt (<code>CurrentUserDto#canWrite</code>). Das Angular-Frontend fragt dies über den <code>PermissionsService</code> beim App-Start einmalig ab und blendet darüber z. B. "Sensor erstellen/bearbeiten"-Buttons für Nutzer ohne Schreibrecht aus. Das ist ausschliesslich UX-Komfort — die eigentliche Durchsetzung bleibt vollständig serverseitig im Filterchain (siehe oben); ein Bypass dieser UI-Ausblendung führt zu keinem unautorisierten Zugriff.</p>
 </li>
 </ul>
 </div>
@@ -3300,7 +3306,7 @@ components:
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Entscheidung</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Leseberechtigungen werden über native PostgreSQL Row-Level-Security-Policies auf <code>sensors</code>/<code>experiments</code> sowie eine security-barrier-View (<code>sensor_reading_secured</code>) für die FDW-Tabelle durchgesetzt. Ein custom jOOQ <code>ConnectionProvider</code> (<code>RlsConnectionProvider</code>) schreibt dafür bei jeder Connection-Beschaffung die aktuelle <code>Authentication</code> transaktionslokal auf die Verbindung; die Policies lesen diesen Kontext serverseitig aus. Die <code>Authentication</code> selbst wird von einem custom <code>Converter</code> (<code>MonteisJwtAuthenticationConverter</code>) aus dem JWT gebaut — Rollen werden zu <code>api:*</code>-Authorities (Rolle <code>user</code> → <code>api:read</code>; Rolle <code>admin</code> → <code>api:write</code> + <code>api:read-all</code>), Sub und Experiment-IDs landen in einem eigenen <code>MonteisPrincipal</code> als Authentication-Principal — und liegt für die Dauer des Requests im Standard-<code>SecurityContextHolder</code> von Spring Security, ohne eigenen Propagierungsmechanismus.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Leseberechtigungen werden über native PostgreSQL Row-Level-Security-Policies auf <code>sensors</code>/<code>experiments</code> sowie eine security-barrier-View (<code>sensor_reading_secured</code>) für die FDW-Tabelle durchgesetzt. Ein custom jOOQ <code>ConnectionProvider</code> (<code>RlsConnectionProvider</code>) schreibt dafür bei jeder Connection-Beschaffung die aktuelle <code>Authentication</code> transaktionslokal auf die Verbindung; die Policies lesen diesen Kontext serverseitig aus. Die <code>Authentication</code> selbst wird von einem custom <code>Converter</code> (<code>MonteisJwtAuthenticationConverter</code>) aus den Berechtigungen und Experiment-IDs im JWT gebaut (<code>MonteisPrincipal</code>) und liegt für die Dauer des Requests im Standard-<code>SecurityContextHolder</code> von Spring Security, ohne eigenen Propagierungsmechanismus.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Begründung</p></td>
@@ -3342,7 +3348,7 @@ components:
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Entscheidung (vorläuffig)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Lesen bleibt vollständig RLS-gefiltert (siehe vorherige ADR). Schreiben ist stattdessen klassisch rollenbasiert (RBAC) auf Applikationsebene geregelt: Im Spring-Security-Filterchain (<code>SecurityConfig</code>) erfordert jeder <code>POST</code>/<code>PUT</code>/<code>PATCH</code>/<code>DELETE</code>-Request global die <code>api:write</code>-Authority, welche nur die Rolle <code>admin</code> besitzt. <code>GET</code>-Requests bleiben für alle authentifizierten Nutzer offen (weiterhin RLS-gefiltert).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Lesen bleibt vollständig RLS-gefiltert (siehe vorherige ADR). Schreiben ist stattdessen klassisch rollenbasiert (RBAC) auf Applikationsebene geregelt: Im Spring-Security-Filterchain (<code>SecurityConfig</code>) erfordert jeder <code>POST</code>/<code>PUT</code>/<code>PATCH</code>/<code>DELETE</code>-Request global eine Write-Berechtigung, die nur Admins besitzen. <code>GET</code>-Requests bleiben für alle authentifizierten Nutzer offen (weiterhin RLS-gefiltert).</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Begründung</p></td>
@@ -3423,7 +3429,7 @@ components:
 <div id="footer">
 <div id="footer-text">
 Version 1.0.0-rc<br>
-Last updated 2026-05-19 09:48:44 UTC
+Last updated 2026-06-02 18:54:17 UTC
 </div>
 </div>
 </body>

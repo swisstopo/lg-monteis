@@ -13,7 +13,29 @@
     "realm": [
       { "name": "user", "description": "Standard MONTEIS user" },
       { "name": "admin", "description": "MONTEIS administrator" }
-    ]
+    ],
+    "client": {
+      "monteis-spa": [
+        {
+          "name": "monteis-client:read",
+          "description": "Read access to experiments/sensors the user is explicitly scoped to via their experiment group memberships (see the 'Experiments' groups). Never assign this directly to a user - assign an experiment group instead.",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "monteis-client:read-all",
+          "description": "Read access to all experiments/sensors, bypassing per-experiment scoping. Granted via the 'Monteis Read All' or 'Monteis Admin' group - never assign this directly to a user.",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "monteis-client:write",
+          "description": "Write access to all experiments/sensors. Only ever valid combined with monteis-client:read-all (see the 'Monteis Admin' group) - write without read-all, or write combined with monteis-client:read, is a misconfiguration.",
+          "composite": false,
+          "clientRole": true
+        }
+      ]
+    }
   },
   "clientScopes": [
     {
@@ -67,17 +89,17 @@
     },
     {
       "name": "monteis-roles",
-      "description": "Adds the caller's realm roles (realm_access.roles) to access tokens. Part of the explicit clientScopes list for the same reason as monteis-oidc-basic.",
+      "description": "Adds the users client roles to the JWT issued by Keycloak.",
       "protocol": "openid-connect",
       "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
       "protocolMappers": [
         {
-          "name": "realm-roles",
+          "name": "monteis-spa-roles",
           "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
           "consentRequired": false,
           "config": {
-            "claim.name": "realm_access.roles",
+            "claim.name": "monteis_access.roles",
             "jsonType.label": "String",
             "multivalued": "true",
             "access.token.claim": "true"
@@ -101,6 +123,7 @@
             "claim.name": "experiment_ids",
             "jsonType.label": "long",
             "multivalued": "true",
+            "aggregate.attrs": "true",
             "access.token.claim": "true"
           }
         }
@@ -131,6 +154,37 @@
       "publicClient": false,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false
+    }
+  ],
+  "groups": [
+    {
+      "name": "Monteis Admin",
+      "path": "/Monteis Admin",
+      "attributes": {
+        "description": [
+          "Full administrators: read-all + write access to every experiment. Members get both monteis-client:read-all and monteis-client:write."
+        ]
+      },
+      "clientRoles": { "monteis-spa": ["monteis-client:read-all", "monteis-client:write"] }
+    },
+    {
+      "name": "Monteis Read All",
+      "path": "/Monteis Read All",
+      "attributes": {
+        "description": [
+          "Read-only access to every experiment, without write access. Members get monteis-client:read-all."
+        ]
+      },
+      "clientRoles": { "monteis-spa": ["monteis-client:read-all"] }
+    },
+    {
+      "name": "Experiments",
+      "path": "/Experiments",
+      "attributes": {
+        "description": [
+          "Namespace for per-experiment groups. One subgroup per experiment: set its experiment_ids attribute + monteis-client:read. A user's experiment_ids claim unions every subgroup they belong to."
+        ]
+      }
     }
   ],
   "users": [],

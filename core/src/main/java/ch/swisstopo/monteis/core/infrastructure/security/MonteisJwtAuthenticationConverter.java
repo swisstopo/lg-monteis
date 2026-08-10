@@ -13,10 +13,13 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
- * Builds this app's {@link MonteisAuthenticationToken} from a JWT: realm roles map to {@code
+ * Builds this app's {@link MonteisAuthenticationToken} from a JWT: client roles map to {@code
  * api:*} authorities, and sub/username/experiment_ids become the {@link MonteisPrincipal}.
  */
 public class MonteisJwtAuthenticationConverter
@@ -27,23 +30,29 @@ public class MonteisJwtAuthenticationConverter
   public static final String WRITE_AUTHORITY = "api:write";
 
   private static final String USERNAME_CLAIM = "preferred_username";
-  private static final String ADMIN_ROLE = "admin";
-  private static final String USER_ROLE = "user";
-  private static final String REALM_ACCESS = "realm_access";
-  private static final String ROLE_CLAIM = "roles";
+  private static final String CLIENT_ROLE_READ_ALL = "monteis-client:read-all";
+  private static final String CLIENT_ROLE_WRITE = "monteis-client:write";
+  private static final String CLIENT_ROLE_READ = "monteis-client:read";
+  private static final String CLIENT_ACCESS_CLAIM = "monteis_access";
+  private static final String CLIENT_ACCESS_CLAIM_NAME = "roles";
   private static final String EXPERIMENTS_CLAIM = "experiment_ids";
   private static final Set<String> READ_AUTHORITIES_SET =
       Set.of(READ_AUTHORITY, READ_ALL_AUTHORITY);
 
+  // return built in OAuth2Error if keycloak users are misconfigured
+  private static final OAuth2Error INVALID_ROLE_COMBINATION_ERROR =
+      new OAuth2Error(
+          OAuth2ErrorCodes.INVALID_TOKEN,
+          "monteis_access.roles contains an unsupported combination of client roles",
+          null);
+
   @Override
   public AbstractAuthenticationToken convert(@NonNull Jwt source) {
-
     Collection<GrantedAuthority> authorities = extractAuthorities(source);
 
     // Fail closed: a caller with neither read authority must never leak a populated
     // experiment_ids claim through as if it were a legitimately scoped user.
-    boolean hasAnyReadAuthority = hasAuthority(authorities);
-    List<Long> experimentIds = hasAnyReadAuthority ? extractExperimentIds(source) : List.of();
+    List<Long> experimentIds = canReadAny(authorities) ? extractExperimentIds(source) : List.of();
 
     MonteisPrincipal principal =
         new MonteisPrincipal(
@@ -54,33 +63,38 @@ public class MonteisJwtAuthenticationConverter
     return new MonteisAuthenticationToken(source, principal, authorities);
   }
 
-  @SuppressWarnings("java:S1301")
   private static Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
-    Set<GrantedAuthority> authorities = new HashSet<>();
-    for (String role : extractRoles(jwt)) {
-      switch (role) {
-        case USER_ROLE -> authorities.add(new SimpleGrantedAuthority(READ_AUTHORITY));
+    List<String> roles = extractRoles(jwt);
+    boolean hasRead = roles.contains(CLIENT_ROLE_READ);
+    boolean hasReadAll = roles.contains(CLIENT_ROLE_READ_ALL);
+    boolean hasWrite = roles.contains(CLIENT_ROLE_WRITE);
 
-        case ADMIN_ROLE -> {
-          authorities.add(new SimpleGrantedAuthority(WRITE_AUTHORITY));
-          authorities.add(new SimpleGrantedAuthority(READ_ALL_AUTHORITY));
-        }
-        default -> {
-          /* Ignore unknown roles */
-        }
+    if (hasWrite && !hasReadAll) {
+      throw new OAuth2AuthenticationException(INVALID_ROLE_COMBINATION_ERROR);
+    }
+
+    Set<GrantedAuthority> authorities = new HashSet<>();
+    if (hasReadAll) {
+      // read-all subsumes read: a caller with both only ever needs the wider authority.
+      authorities.add(new SimpleGrantedAuthority(READ_ALL_AUTHORITY));
+      if (hasWrite) {
+        authorities.add(new SimpleGrantedAuthority(WRITE_AUTHORITY));
       }
+    } else if (hasRead) {
+      authorities.add(new SimpleGrantedAuthority(READ_AUTHORITY));
     }
 
     return authorities;
   }
 
-  private static boolean hasAuthority(Collection<GrantedAuthority> authorities) {
+  private static boolean canReadAny(Collection<GrantedAuthority> authorities) {
     return authorities.stream().anyMatch(a -> READ_AUTHORITIES_SET.contains(a.getAuthority()));
   }
 
   private static List<String> extractRoles(Jwt jwt) {
-    Map<String, Object> realmAccess = jwt.getClaimAsMap(REALM_ACCESS);
-    if (realmAccess == null || !(realmAccess.get(ROLE_CLAIM) instanceof List<?> rawRoles)) {
+    Map<String, Object> claimAccess = jwt.getClaimAsMap(CLIENT_ACCESS_CLAIM);
+    if (claimAccess == null
+        || !(claimAccess.get(CLIENT_ACCESS_CLAIM_NAME) instanceof List<?> rawRoles)) {
       return List.of();
     }
     List<String> roles = new ArrayList<>(rawRoles.size());

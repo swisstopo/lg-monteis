@@ -10,6 +10,11 @@
       {{ data.message }}
     </span>
     <span matSnackBarActions>
+      @if (data.action) {
+        <button matButton matSnackBarAction (click)="runAction(data.action)">
+          {{ data.action.label }}
+        </button>
+      }
       <button matMiniFab matSnackBarAction (click)="dismiss()">✕</button>
     </span>
   </div>

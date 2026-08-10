@@ -165,7 +165,7 @@ services:
   realm-builder:
     image: mikefarah/yq:4
     container_name: keycloak-realm-builder
-    profiles: [ core ]
+    profiles: [ core, kc ]
     # mikefarah/yq runs as a non-root user; the named volume is root-owned on first
     # creation → writing /out/realm-local.json fails. Run as root to seed it.
     user: "0:0"
@@ -178,7 +178,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.0
     container_name: monteis-keycloak
-    profiles: [ core ]
+    profiles: [ core, kc ]
     depends_on:
       realm-builder:
         condition: service_completed_successfully

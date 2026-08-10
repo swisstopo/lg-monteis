@@ -5,6 +5,7 @@ import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthen
 import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 /** Verifies the full JWT-to-{@code Authentication} mapping in {@link MonteisJwtAuthenticationConverter}. */
@@ -29,7 +31,7 @@ class MonteisJwtAuthenticationConverterTest {
   @Test
   void should_mark_the_resulting_token_as_authenticated() {
     // given
-    Jwt jwt = givenJwt(UUID.randomUUID(), "alice", List.of("user"), List.of(1L));
+    Jwt jwt = givenJwt(UUID.randomUUID(), "alice", List.of("monteis-client:read"), List.of(1L));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
@@ -45,7 +47,7 @@ class MonteisJwtAuthenticationConverterTest {
   void should_return_a_monteis_authentication_token_carrying_the_source_jwt_as_credentials() {
     // given: a dedicated token type, not e.g. UsernamePasswordAuthenticationToken, since this app
     // authenticates OAuth2 bearer JWTs, not a username/password exchange
-    Jwt jwt = givenJwt(UUID.randomUUID(), "alice", List.of("user"), List.of(1L));
+    Jwt jwt = givenJwt(UUID.randomUUID(), "alice", List.of("monteis-client:read"), List.of(1L));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
@@ -56,10 +58,10 @@ class MonteisJwtAuthenticationConverterTest {
   }
 
   @Test
-  void should_populate_own_scope_principal_from_user_role() {
+  void should_populate_own_scope_principal_from_read_role() {
     // given
     UUID subject = UUID.randomUUID();
-    Jwt jwt = givenJwt(subject, "alice", List.of("user"), List.of(1L, 2L));
+    Jwt jwt = givenJwt(subject, "alice", List.of("monteis-client:read"), List.of(1L, 2L));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
@@ -71,10 +73,15 @@ class MonteisJwtAuthenticationConverterTest {
   }
 
   @Test
-  void should_populate_read_all_principal_from_admin_role() {
+  void should_populate_read_all_principal_from_write_and_read_all_roles() {
     // given
     UUID subject = UUID.randomUUID();
-    Jwt jwt = givenJwt(subject, "bob", List.of("admin"), List.of(5L));
+    Jwt jwt =
+        givenJwt(
+            subject,
+            "bob",
+            List.of("monteis-client:read-all", "monteis-client:write"),
+            List.of(5L));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
@@ -89,7 +96,74 @@ class MonteisJwtAuthenticationConverterTest {
   }
 
   @Test
-  void should_deny_experiment_ids_when_realm_access_claim_missing() {
+  void should_grant_only_read_all_authority_when_read_and_read_all_roles_combined() {
+    // given: read-all subsumes read, so a user in both an experiment group and "Monteis Read
+    // All" should not end up with a redundant, narrower authority alongside the wider one
+    UUID subject = UUID.randomUUID();
+    Jwt jwt =
+        givenJwt(
+            subject,
+            "alice",
+            List.of("monteis-client:read", "monteis-client:read-all"),
+            List.of(1L));
+
+    // when
+    AbstractAuthenticationToken authentication = converter.convert(jwt);
+
+    // then
+    assertEquals(
+        Set.of(new SimpleGrantedAuthority(READ_ALL_AUTHORITY)), authoritiesOf(authentication));
+  }
+
+  @Test
+  void should_reject_write_role_without_read_all_role() {
+    // given: write without read-all is a Keycloak misconfiguration - the "Monteis Admin" group
+    // must always grant both roles together
+    Jwt jwt = givenJwt(UUID.randomUUID(), "eve", List.of("monteis-client:write"), List.of());
+
+    // then
+    assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
+  }
+
+  @Test
+  void should_reject_read_and_write_roles_combined_without_read_all() {
+    // given: write always requires read-all, regardless of whether read is also present
+    Jwt jwt =
+        givenJwt(
+            UUID.randomUUID(),
+            "eve",
+            List.of("monteis-client:read", "monteis-client:write"),
+            List.of());
+
+    // then
+    assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
+  }
+
+  @Test
+  void should_grant_read_all_and_write_authorities_when_read_also_present() {
+    // given: read alongside read-all + write is redundant, not forbidden - read-all already
+    // satisfies write's requirement, so read's presence is irrelevant
+    UUID subject = UUID.randomUUID();
+    Jwt jwt =
+        givenJwt(
+            subject,
+            "eve",
+            List.of("monteis-client:read", "monteis-client:read-all", "monteis-client:write"),
+            List.of(5L));
+
+    // when
+    AbstractAuthenticationToken authentication = converter.convert(jwt);
+
+    // then
+    assertEquals(
+        Set.of(
+            new SimpleGrantedAuthority(WRITE_AUTHORITY),
+            new SimpleGrantedAuthority(READ_ALL_AUTHORITY)),
+        authoritiesOf(authentication));
+  }
+
+  @Test
+  void should_deny_experiment_ids_when_monteis_access_claim_missing() {
     // given: experiment_ids present despite the missing role claim (and so no read authority at
     // all), to prove it's still forced empty rather than leaking through
     UUID subject = UUID.randomUUID();
@@ -109,7 +183,7 @@ class MonteisJwtAuthenticationConverterTest {
     UUID subject = UUID.randomUUID();
     Map<String, Object> claims = new HashMap<>();
     claims.put("preferred_username", "dave");
-    claims.put("realm_access", Map.of("roles", List.of("admin", 123)));
+    claims.put("monteis_access", Map.of("roles", List.of("monteis-client:read-all", 123)));
     Jwt jwt = givenJwtWithClaims(subject, claims);
 
     // when
@@ -126,7 +200,7 @@ class MonteisJwtAuthenticationConverterTest {
     UUID subject = UUID.randomUUID();
     Map<String, Object> claims = new HashMap<>();
     claims.put("preferred_username", "erin");
-    claims.put("realm_access", Map.of("roles", List.of("user")));
+    claims.put("monteis_access", Map.of("roles", List.of("monteis-client:read")));
     claims.put("experiment_ids", List.of(1L, "not-a-number", 2L));
     Jwt jwt = givenJwtWithClaims(subject, claims);
 
@@ -147,7 +221,7 @@ class MonteisJwtAuthenticationConverterTest {
     Map<String, Object> claims = new HashMap<>();
     claims.put("preferred_username", username);
     if (roles != null) {
-      claims.put("realm_access", Map.of("roles", roles));
+      claims.put("monteis_access", Map.of("roles", roles));
     }
     if (experimentIds != null) {
       claims.put("experiment_ids", experimentIds);
