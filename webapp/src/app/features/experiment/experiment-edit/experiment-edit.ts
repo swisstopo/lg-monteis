@@ -108,10 +108,6 @@ export default class ExperimentEdit {
     }
   });
 
-  protected close(): void {
-    this.dialogRef?.close();
-  }
-
   readonly domainModel = signal<ExperimentResponseDto>({});
   private readonly formModel = linkedSignal({
     source: this.domainModel,
