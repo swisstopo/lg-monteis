@@ -1,2 +1,2 @@
-export { Chart as ChartComponent } from './chart';
+export { ChartComponent } from './chart.component';
 export * from './chart.types';

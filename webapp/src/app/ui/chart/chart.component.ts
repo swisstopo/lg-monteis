@@ -39,8 +39,8 @@ registerChartJs();
 @Component({
   selector: 'app-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './chart.html',
-  styleUrl: './chart.scss',
+  templateUrl: './chart.component.html',
+  styleUrl: './chart.component.scss',
   imports: [
     MatDialogContent,
     MatDialogTitle,
@@ -52,8 +52,8 @@ registerChartJs();
   ],
   providers: [DatePipe],
 })
-export class Chart {
-  readonly dialogRef = inject<MatDialogRef<Chart>>(MatDialogRef, {
+export class ChartComponent {
+  readonly dialogRef = inject<MatDialogRef<ChartComponent>>(MatDialogRef, {
     optional: true,
   });
   private readonly destroyRef = inject(DestroyRef);

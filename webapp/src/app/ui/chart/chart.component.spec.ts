@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import Chart from './chart';
+import { ChartComponent } from './chart.component';
 import { ChartDataset } from './chart.types';
 
 vi.stubGlobal(
@@ -48,8 +48,8 @@ vi.mock('chart.js', async (importOriginal) => {
 });
 
 describe('Chart', () => {
-  let component: Chart;
-  let fixture: ComponentFixture<Chart>;
+  let component: ChartComponent;
+  let fixture: ComponentFixture<ChartComponent>;
 
   const dataset: ChartDataset = {
     id: 'sensor-1',
@@ -62,11 +62,11 @@ describe('Chart', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Chart],
+      imports: [ChartComponent],
       providers: [provideTranslateService()],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(Chart);
+    fixture = TestBed.createComponent(ChartComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('title', 'TestChart');
     fixture.componentRef.setInput('datasets', [dataset]);
