@@ -18,7 +18,7 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQuery;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.ExperimentDatesDto;
+import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
@@ -50,7 +50,7 @@ class ExperimentControllerTest {
             1L,
             "EXP-01",
             "A test experiment",
-            new ExperimentDatesDto(
+            new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             2,
@@ -81,7 +81,7 @@ class ExperimentControllerTest {
             null,
             "EXP-01",
             "A test experiment",
-            new ExperimentDatesDto(
+            new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             null);
 
@@ -90,7 +90,7 @@ class ExperimentControllerTest {
             1L,
             "EXP-01",
             "A test experiment",
-            new ExperimentDatesDto(
+            new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             0,
@@ -114,11 +114,8 @@ class ExperimentControllerTest {
         .andExpect(jsonPath("$.id").value(expectedResponseDto.id()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
         .andExpect(
-            jsonPath("$.experimentDates.experimentStart")
-                .value(expectedResponseDto.experimentDates().experimentStart().toString()))
-        .andExpect(
-            jsonPath("$.experimentDates.experimentEnd")
-                .value(expectedResponseDto.experimentDates().experimentEnd().toString()))
+            jsonPath("$.period.start").value(expectedResponseDto.period().start().toString()))
+        .andExpect(jsonPath("$.period.end").value(expectedResponseDto.period().end().toString()))
         .andExpect(jsonPath("$.comment").value(expectedResponseDto.comment()))
         .andExpect(jsonPath("$.status").value(expectedResponseDto.status().name()))
         .andExpect(jsonPath("$.version").value(expectedResponseDto.version()));
@@ -137,7 +134,7 @@ class ExperimentControllerTest {
             1L,
             "EXP-01-UPDATED",
             "Updated comment",
-            new ExperimentDatesDto(
+            new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             1);
 
@@ -146,7 +143,7 @@ class ExperimentControllerTest {
             1L,
             "EXP-01-UPDATED",
             "Updated comment",
-            new ExperimentDatesDto(
+            new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             3,
@@ -185,7 +182,7 @@ class ExperimentControllerTest {
             2L,
             "EXP-01",
             "A test experiment",
-            new ExperimentDatesDto(
+            new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             1);
 

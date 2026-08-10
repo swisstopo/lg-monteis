@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.time.Month;
 import org.junit.jupiter.api.Test;
 
-class ExperimentDatesTest {
+class PeriodTest {
 
   @Test
   void should_initialize_when_end_date_is_after_start_date() {
@@ -18,18 +18,12 @@ class ExperimentDatesTest {
     LocalDate endDate = LocalDate.of(2026, Month.JANUARY, 10);
 
     // when
-    ExperimentDates experimentDates = new ExperimentDates(startDate, endDate);
+    Period period = new Period(startDate, endDate);
 
     // then
     assertAll(
-        () ->
-            assertEquals(
-                startDate,
-                experimentDates.experimentStart(),
-                "Start date should be mapped correctly"),
-        () ->
-            assertEquals(
-                endDate, experimentDates.experimentEnd(), "End date should be mapped correctly"));
+        () -> assertEquals(startDate, period.start(), "Start date should be mapped correctly"),
+        () -> assertEquals(endDate, period.end(), "End date should be mapped correctly"));
   }
 
   @Test
@@ -38,18 +32,12 @@ class ExperimentDatesTest {
     LocalDate sameDate = LocalDate.of(2026, Month.AUGUST, 7);
 
     // when
-    ExperimentDates experimentDates = new ExperimentDates(sameDate, sameDate);
+    Period period = new Period(sameDate, sameDate);
 
     // then
     assertAll(
-        () ->
-            assertEquals(
-                sameDate,
-                experimentDates.experimentStart(),
-                "Start date should be mapped correctly"),
-        () ->
-            assertEquals(
-                sameDate, experimentDates.experimentEnd(), "End date should be mapped correctly"));
+        () -> assertEquals(sameDate, period.start(), "Start date should be mapped correctly"),
+        () -> assertEquals(sameDate, period.end(), "End date should be mapped correctly"));
   }
 
   @Test
@@ -62,12 +50,10 @@ class ExperimentDatesTest {
     ObjectBusinessValidationException exception =
         assertThrows(
             ObjectBusinessValidationException.class,
-            () -> new ExperimentDates(startDate, endDate),
+            () -> new Period(startDate, endDate),
             "Should throw validation exception when end date precedes start date");
 
     assertEquals(
-        "experiment.experimentDates.invalid",
-        exception.getMessage(),
-        "Exception message code should match");
+        "experiment.period.invalid", exception.getMessage(), "Exception message code should match");
   }
 }

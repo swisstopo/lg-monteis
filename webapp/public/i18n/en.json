@@ -199,14 +199,14 @@
     "comment": {
       "label": "Comment"
     },
-    "experimentDates": {
-      "experimentStart": {
+    "period": {
+      "start": {
         "label": "Start Date",
         "validation": {
           "required": "Experiment start date is required"
         }
       },
-      "experimentEnd": {
+      "end": {
         "label": "End Date",
         "validation": {
           "required": "Experiment end date is required"

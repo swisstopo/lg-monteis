@@ -12,7 +12,7 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQuery;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.ExperimentDatesDto;
+import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import java.time.LocalDate;
 import java.util.Map;
@@ -45,8 +45,7 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
             EXPERIMENTS.ID,
             EXPERIMENTS.NAME,
             EXPERIMENTS.COMMENT,
-            row(EXPERIMENTS.EXPERIMENT_START, EXPERIMENTS.EXPERIMENT_END)
-                .mapping(ExperimentDatesDto::new),
+            row(EXPERIMENTS.EXPERIMENT_START, EXPERIMENTS.EXPERIMENT_END).mapping(PeriodDto::new),
             DSL.case_()
                 .when(EXPERIMENTS.EXPERIMENT_START.gt(now), DSL.inline(Status.UPCOMING.name()))
                 .when(EXPERIMENTS.EXPERIMENT_END.lt(now), DSL.inline(Status.HISTORIC.name()))
