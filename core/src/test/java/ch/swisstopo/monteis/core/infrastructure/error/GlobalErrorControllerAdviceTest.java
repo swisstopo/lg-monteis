@@ -15,6 +15,7 @@ import jakarta.validation.Constraint;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -172,6 +173,26 @@ class GlobalErrorControllerAdviceTest {
   }
 
   @Test
+  void should_translate_handler_method_validation_exception_return_400() throws Exception {
+    // given: a request whose @RequestParam violates @Positive (method-level validation,
+    // as opposed to @Valid @RequestBody which raises MethodArgumentNotValidException instead)
+
+    // when
+    var response =
+        mockMvc.perform(get("/dummy/method-validation-error").param("id", "-1").with(jwt()));
+
+    // then: mapped to a global error rather than exposing the parameter/value/message
+    // details to the client; those are logged instead (see GlobalErrorControllerAdvice)
+    response
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.messageKey").value("error.system.internal"))
+        .andExpect(jsonPath("$.field").doesNotExist())
+        .andExpect(jsonPath("$.actualValue").doesNotExist())
+        .andExpect(jsonPath("$.params.errorId").exists())
+        .andExpect(jsonPath("$.params.errorId").isString());
+  }
+
+  @Test
   void should_translate_jakarta_global_validation_error_return_422() throws Exception {
     // given: A payload that passes field validation but fails class-level validation
     String validJson =
@@ -249,6 +270,11 @@ class GlobalErrorControllerAdviceTest {
     @GetMapping("/dummy/unexpected-error")
     public void throwUnexpectedError() {
       throw new RuntimeException("Simulated catastrophic failure, like a DB timeout");
+    }
+
+    @GetMapping("/dummy/method-validation-error")
+    public void throwMethodValidationError(@RequestParam @Positive Long id) {
+      // Do nothing, Spring's method validation intercepts this before the body executes
     }
 
     @GetMapping("/dummy/invalid-paged-request-error")
