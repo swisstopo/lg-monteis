@@ -1,0 +1,175 @@
+package ch.swisstopo.monteis.core.modules.measurement.web;
+
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+@ControllerTest(MeasurementController.class)
+class MeasurementControllerTest {
+
+  @Autowired private MockMvc mockMvc;
+
+  @MockitoBean private MeasurementService measurementService;
+
+  // A valid, ascending, past date pair reused by tests that only care about the happy path.
+  private final OffsetDateTime validFrom = OffsetDateTime.parse("2024-01-01T00:00:00Z");
+  private final OffsetDateTime validTo = OffsetDateTime.parse("2024-01-02T00:00:00Z");
+
+  @Test
+  void should_return_chart_data_when_request_is_valid() throws Exception {
+    // given
+    ChartDataResponseDto dto =
+        new ChartDataResponseDto(
+            1L, "TEMP-1", "monteis-001", Unit.KELVIN, List.of(new ChartPointDto(validFrom, 12.5)));
+    given(measurementService.findMeasurements(List.of(1L, 2L), validFrom, validTo))
+        .willReturn(List.of(dto));
+
+    // when / then
+    mockMvc
+        .perform(
+            get("/api/measurements/charts/data")
+                .with(jwt())
+                .param("ids", "1", "2")
+                .param("from", validFrom.toString())
+                .param("to", validTo.toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(1))
+        .andExpect(jsonPath("$[0].sensorCode").value("TEMP-1"))
+        .andExpect(jsonPath("$[0].sensorName").value("monteis-001"))
+        .andExpect(jsonPath("$[0].unit").value("KELVIN"))
+        .andExpect(jsonPath("$[0].data[0].value").value(12.5));
+
+    then(measurementService).should().findMeasurements(List.of(1L, 2L), validFrom, validTo);
+  }
+
+  @Test
+  void should_return_401_when_not_authenticated() throws Exception {
+    // when / then: no .with(jwt()) -> the request carries no credentials at all
+    mockMvc
+        .perform(
+            get("/api/measurements/charts/data")
+                .param("ids", "1")
+                .param("from", validFrom.toString())
+                .param("to", validTo.toString()))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void should_return_400_when_ids_param_is_missing() throws Exception {
+    // when / then
+    mockMvc
+        .perform(
+            get("/api/measurements/charts/data")
+                .with(jwt())
+                .param("from", validFrom.toString())
+                .param("to", validTo.toString()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.params.errorId").exists());
+  }
+
+  @Test
+  void should_return_400_when_ids_contains_a_non_positive_value() throws Exception {
+    // when / then: @Positive on the list element
+    mockMvc
+        .perform(
+            get("/api/measurements/charts/data")
+                .with(jwt())
+                .param("ids", "0", "-1")
+                .param("from", validFrom.toString())
+                .param("to", validTo.toString()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.params.errorId").exists());
+  }
+
+  @Test
+  void should_return_400_when_from_is_in_the_future() throws Exception {
+    // given: @PastOrPresent rejects any instant strictly after now
+    OffsetDateTime future = OffsetDateTime.now().plusDays(1);
+
+    // when / then
+    mockMvc
+        .perform(
+            get("/api/measurements/charts/data")
+                .with(jwt())
+                .param("ids", "1")
+                .param("from", future.toString())
+                .param("to", validTo.toString()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.params.errorId").exists());
+  }
+
+  @Test
+  void should_return_400_when_to_is_in_the_future() throws Exception {
+    // given
+    OffsetDateTime future = OffsetDateTime.now().plusDays(1);
+
+    // when / then
+    mockMvc
+        .perform(
+            get("/api/measurements/charts/data")
+                .with(jwt())
+                .param("ids", "1")
+                .param("from", validFrom.toString())
+                .param("to", future.toString()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.params.errorId").exists());
+  }
+
+  @Test
+  void should_return_200_when_from_equals_to() throws Exception {
+    // given: the boundary the service guard explicitly allows (only "after" is rejected)
+    given(measurementService.findMeasurements(List.of(1L), validFrom, validFrom))
+        .willReturn(List.of());
+
+    // when / then
+    mockMvc
+        .perform(
+            get("/api/measurements/charts/data")
+                .with(jwt())
+                .param("ids", "1")
+                .param("from", validFrom.toString())
+                .param("to", validFrom.toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray());
+  }
+
+  @Test
+  void should_return_422_when_service_rejects_from_after_to() throws Exception {
+    // given: the controller performs no from<=to check itself, it trusts the service to enforce
+    // it, so this simulates the service's ObjectBusinessValidationException reaching the client
+    OffsetDateTime laterDate = validTo;
+    OffsetDateTime earlierDate = validFrom;
+    given(measurementService.findMeasurements(List.of(1L), laterDate, earlierDate))
+        .willThrow(
+            new ObjectBusinessValidationException(
+                "measurement.dateRange.invalid", Map.of("from", laterDate, "to", earlierDate)));
+
+    // when / then: swap from/to in the request so from > to
+    mockMvc
+        .perform(
+            get("/api/measurements/charts/data")
+                .with(jwt())
+                .param("ids", "1")
+                .param("from", laterDate.toString())
+                .param("to", earlierDate.toString()))
+        .andExpect(status().isUnprocessableContent())
+        .andExpect(jsonPath("$.messageKey").value("measurement.dateRange.invalid"));
+  }
+}
