@@ -12,7 +12,7 @@ public class Experiment implements Auditable {
   @Id private Long id;
   private String name;
   private String owner;
-  private ExperimentDates experimentDates;
+  private Period period;
   private String comment;
   private Integer version;
 
@@ -22,10 +22,10 @@ public class Experiment implements Auditable {
    */
   @SuppressWarnings("java:S107")
   @Default
-  public Experiment(String name, String owner, ExperimentDates experimentDates, String comment) {
+  public Experiment(String name, String owner, Period period, String comment) {
     this.name = name;
     this.owner = owner;
-    this.experimentDates = experimentDates;
+    this.period = period;
     this.comment = comment;
   }
 
@@ -34,16 +34,11 @@ public class Experiment implements Auditable {
    */
   @SuppressWarnings("java:S107")
   public Experiment(
-      Long id,
-      String name,
-      String owner,
-      ExperimentDates experimentDates,
-      String comment,
-      Integer version) {
+      Long id, String name, String owner, Period period, String comment, Integer version) {
     this.id = id;
     this.name = name;
     this.owner = owner;
-    this.experimentDates = experimentDates;
+    this.period = period;
     this.comment = comment;
     this.version = version;
   }
@@ -74,12 +69,12 @@ public class Experiment implements Auditable {
     this.owner = owner;
   }
 
-  public ExperimentDates getExperimentDates() {
-    return experimentDates;
+  public Period getPeriod() {
+    return period;
   }
 
-  public void setExperimentDates(ExperimentDates experimentDates) {
-    this.experimentDates = experimentDates;
+  public void setPeriod(Period period) {
+    this.period = period;
   }
 
   public String getComment() {

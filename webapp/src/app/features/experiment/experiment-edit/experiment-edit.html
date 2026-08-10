@@ -20,23 +20,16 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'experiment.experimentDates.experimentStart.label' | translate }}</mat-label>
+        <mat-label>{{ 'experiment.period.start.label' | translate }}</mat-label>
 
-        <input
-          matInput
-          [matDatepicker]="startPicker"
-          [formField]="experimentForm.experimentDates.experimentStart"
-        />
+        <input matInput [matDatepicker]="startPicker" [formField]="experimentForm.period.start" />
 
         <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
         <mat-datepicker #startPicker></mat-datepicker>
 
-        @if (
-          experimentForm.experimentDates.experimentStart().touched() &&
-          experimentForm.experimentDates.experimentStart().invalid()
-        ) {
+        @if (experimentForm.period.start().touched() && experimentForm.period.start().invalid()) {
           <mat-error>
-            @for (error of experimentForm.experimentDates.experimentStart().errors(); track error) {
+            @for (error of experimentForm.period.start().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>
@@ -44,23 +37,16 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'experiment.experimentDates.experimentEnd.label' | translate }}</mat-label>
+        <mat-label>{{ 'experiment.period.end.label' | translate }}</mat-label>
 
-        <input
-          matInput
-          [matDatepicker]="endPicker"
-          [formField]="experimentForm.experimentDates.experimentEnd"
-        />
+        <input matInput [matDatepicker]="endPicker" [formField]="experimentForm.period.end" />
 
         <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
         <mat-datepicker #endPicker></mat-datepicker>
 
-        @if (
-          experimentForm.experimentDates.experimentEnd().touched() &&
-          experimentForm.experimentDates.experimentEnd().invalid()
-        ) {
+        @if (experimentForm.period.end().touched() && experimentForm.period.end().invalid()) {
           <mat-error>
-            @for (error of experimentForm.experimentDates.experimentEnd().errors(); track error) {
+            @for (error of experimentForm.period.end().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>

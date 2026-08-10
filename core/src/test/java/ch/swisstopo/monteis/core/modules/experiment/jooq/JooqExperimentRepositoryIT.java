@@ -9,7 +9,7 @@ import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidati
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
-import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDates;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import java.time.LocalDate;
@@ -284,9 +284,8 @@ class JooqExperimentRepositoryIT {
    * Helper to quickly build a valid domain Experiment for repository testing.
    */
   private Experiment buildDummyDomainExperiment(String name, String owner) {
-    ExperimentDates dates =
-        new ExperimentDates(
-            LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31));
+    Period dates =
+        new Period(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31));
 
     return new Experiment(name, owner, dates, "Dummy comment");
   }
@@ -295,13 +294,13 @@ class JooqExperimentRepositoryIT {
    * Legacy helper using DSL context directly (used by read-only tests)
    */
   private Long createExperimentWithDsl(
-      String name, String comment, LocalDate experimentStart, LocalDate experimentEnd) {
+      String name, String comment, LocalDate start, LocalDate end) {
     return Objects.requireNonNull(
             dsl.insertInto(EXPERIMENTS)
                 .set(EXPERIMENTS.NAME, name)
                 .set(EXPERIMENTS.COMMENT, comment)
-                .set(EXPERIMENTS.EXPERIMENT_START, experimentStart)
-                .set(EXPERIMENTS.EXPERIMENT_END, experimentEnd)
+                .set(EXPERIMENTS.EXPERIMENT_START, start)
+                .set(EXPERIMENTS.EXPERIMENT_END, end)
                 .set(EXPERIMENTS.OWNER, "owner")
                 .returning(EXPERIMENTS.ID)
                 .fetchOne())

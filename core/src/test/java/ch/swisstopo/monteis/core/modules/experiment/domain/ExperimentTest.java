@@ -9,16 +9,15 @@ import java.time.Month;
 import org.junit.jupiter.api.Test;
 
 class ExperimentTest {
-  ExperimentDates experimentDates =
-      new ExperimentDates(
-          LocalDate.of(2024, Month.FEBRUARY, 1), LocalDate.of(2025, Month.FEBRUARY, 1));
+  Period period =
+      new Period(LocalDate.of(2024, Month.FEBRUARY, 1), LocalDate.of(2025, Month.FEBRUARY, 1));
 
   @Test
   void should_initialize_new_experiment_without_id_and_version() {
     // given
     String name = "Test Experiment";
     String owner = "John Doe";
-    ExperimentDates dates = experimentDates;
+    Period dates = period;
     String description = "This is a new experiment";
 
     // when
@@ -28,9 +27,7 @@ class ExperimentTest {
     assertAll(
         () -> assertEquals(name, experiment.getName(), "Name should be mapped correctly"),
         () -> assertEquals(owner, experiment.getOwner(), "Owner should be mapped correctly"),
-        () ->
-            assertEquals(
-                dates, experiment.getExperimentDates(), "Dates should be mapped correctly"),
+        () -> assertEquals(dates, experiment.getPeriod(), "Dates should be mapped correctly"),
         () ->
             assertEquals(
                 description,
@@ -48,7 +45,7 @@ class ExperimentTest {
     Long id = 100L;
     String name = "Existing Experiment";
     String owner = "Jane Doe";
-    ExperimentDates dates = experimentDates;
+    Period dates = period;
     String description = "This is a rebuilt experiment";
     Integer version = 1;
 
@@ -60,9 +57,7 @@ class ExperimentTest {
         () -> assertEquals(id, experiment.getId(), "ID should be mapped correctly"),
         () -> assertEquals(name, experiment.getName(), "Name should be mapped correctly"),
         () -> assertEquals(owner, experiment.getOwner(), "Owner should be mapped correctly"),
-        () ->
-            assertEquals(
-                dates, experiment.getExperimentDates(), "Dates should be mapped correctly"),
+        () -> assertEquals(dates, experiment.getPeriod(), "Dates should be mapped correctly"),
         () ->
             assertEquals(
                 description,
@@ -74,7 +69,7 @@ class ExperimentTest {
   @Test
   void should_update_fields_using_setters() {
     // given
-    Experiment experiment = new Experiment("Initial", "Owner", experimentDates, "Desc");
+    Experiment experiment = new Experiment("Initial", "Owner", period, "Desc");
 
     // when
     experiment.setId(99L);

@@ -28,9 +28,9 @@ import { ExperimentService } from '../services/experiment.service';
 
 interface ExperimentFormData {
   comment: string;
-  experimentDates: {
-    experimentStart: Date;
-    experimentEnd: Date;
+  period: {
+    start: Date;
+    end: Date;
   };
   name: string;
 }
@@ -39,13 +39,9 @@ function domainModelToFormModel(domainModel: ExperimentResponseDto): ExperimentF
   return {
     name: domainModel.name ?? '',
     comment: domainModel.comment ?? '',
-    experimentDates: {
-      experimentStart: domainModel.experimentDates?.experimentStart
-        ? new Date(domainModel.experimentDates.experimentStart)
-        : new Date(),
-      experimentEnd: domainModel.experimentDates?.experimentEnd
-        ? new Date(domainModel.experimentDates.experimentEnd)
-        : new Date(),
+    period: {
+      start: domainModel.period?.start ? new Date(domainModel.period.start) : new Date(),
+      end: domainModel.period?.end ? new Date(domainModel.period.end) : new Date(),
     },
   };
 }
@@ -127,9 +123,9 @@ export default class ExperimentEdit {
     return {
       name: '',
       comment: '',
-      experimentDates: {
-        experimentStart: new Date(),
-        experimentEnd: new Date(),
+      period: {
+        start: new Date(),
+        end: new Date(),
       },
     };
   }
@@ -138,16 +134,16 @@ export default class ExperimentEdit {
     required(schema.name, { message: translate('experiment.name.validation.required')() });
     minLength(schema.name, 2, { message: translate('experiment.name.validation.minLength')() });
     maxLength(schema.name, 50, { message: translate('experiment.name.validation.maxLength')() });
-    required(schema.experimentDates.experimentStart, {
-      message: translate('experiment.experimentDates.experimentStart.validation.required')(),
+    required(schema.period.start, {
+      message: translate('experiment.period.start.validation.required')(),
     });
-    required(schema.experimentDates.experimentEnd, {
-      message: translate('experiment.experimentDates.experimentEnd.validation.required')(),
+    required(schema.period.end, {
+      message: translate('experiment.period.end.validation.required')(),
     });
-    validate(schema.experimentDates.experimentStart, ({ value, valueOf }) => {
-      const experimentStart = value();
-      const experimentEnd = valueOf(schema.experimentDates.experimentEnd);
-      if (experimentStart > experimentEnd) {
+    validate(schema.period.start, ({ value, valueOf }) => {
+      const start = value();
+      const end = valueOf(schema.period.end);
+      if (start > end) {
         return {
           kind: 'bounds',
           message: this.i18nService.translate('experiment.experimentDate.from.validation.bounds')(),
@@ -155,10 +151,10 @@ export default class ExperimentEdit {
       }
       return undefined;
     });
-    validate(schema.experimentDates.experimentEnd, ({ value, valueOf }) => {
-      const experimentEnd = value();
-      const experimentStart = valueOf(schema.experimentDates.experimentStart);
-      if (experimentEnd < experimentStart) {
+    validate(schema.period.end, ({ value, valueOf }) => {
+      const end = value();
+      const start = valueOf(schema.period.start);
+      if (end < start) {
         return {
           kind: 'bounds',
           message: this.i18nService.translate('experiment.experimentDate.to.validation.bounds')(),
@@ -212,9 +208,9 @@ export default class ExperimentEdit {
       id: this.experiment()?.id ?? undefined,
       name: formData.name,
       comment: formData.comment,
-      experimentDates: {
-        experimentStart: this.toLocalDateString(formData.experimentDates.experimentStart),
-        experimentEnd: this.toLocalDateString(formData.experimentDates.experimentEnd),
+      period: {
+        start: this.toLocalDateString(formData.period.start),
+        end: this.toLocalDateString(formData.period.end),
       },
       version: this.experiment()?.version ?? undefined,
     };
