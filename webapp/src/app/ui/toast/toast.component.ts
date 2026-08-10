@@ -63,7 +63,7 @@ export class ToastComponent {
       verticalPosition: this.verticalPosition(),
       panelClass: toast.classname,
       data: toast,
-      duration: toast.action ? undefined : 5000,
+      duration: toast.action ? 30000 : 5000,
     });
   }
 
