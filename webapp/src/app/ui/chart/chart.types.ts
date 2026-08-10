@@ -1,4 +1,3 @@
-import type { ChartOptions as ChartJsOptions } from 'chart.js';
 export type ChartType = 'line' | 'scatter';
 
 export interface ChartPoint {
@@ -9,7 +8,7 @@ export interface ChartPoint {
 export interface ChartDataset {
   id: string | number;
   label: string;
-  data: ChartPoint[];
+  data: ChartPoint[]; // requires presorted data as parsing is disabled
   color?: string;
   yAxisId?: string;
 }
@@ -22,7 +21,6 @@ export interface ChartOptions {
   yAxisLabels?: Record<string, string>;
   showLegend?: boolean;
   maintainAspectRatio?: boolean;
-  advancedOptions?: ChartJsOptions<ChartType>;
 }
 
 export interface ChartPointEvent {

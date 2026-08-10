@@ -129,14 +129,27 @@ describe('buildChartConfig', () => {
       expect(scales.x.grid.color).toBe('#eeeeee');
     });
 
-    it('merges advancedOptions cleanly', () => {
-      const config = buildChartConfig('line', [dataset1], {
-        advancedOptions: {
-          animation: true, // override default false
-        } as any,
-      });
+    it('sets maintainAspectRatio correctly based on options', () => {
+      const configTrue = buildChartConfig(
+        'line',
+        [dataset1],
+        { maintainAspectRatio: true },
+        mockPalette,
+      );
+      const configFalse = buildChartConfig('line', [dataset1], {}, mockPalette); // Default
 
-      expect(config.options?.animation).toBe(true);
+      expect(configTrue.options?.maintainAspectRatio).toBe(true);
+      expect(configFalse.options?.maintainAspectRatio).toBe(false);
+    });
+
+    it('enables zoom and pan functionality in plugins', () => {
+      const config = buildChartConfig('scatter', [dataset1], {}, mockPalette);
+
+      const zoomPlugin = (config.options?.plugins as any)?.zoom?.zoom;
+      expect(zoomPlugin).toBeDefined();
+      expect(zoomPlugin.wheel.enabled).toBe(true);
+      expect(zoomPlugin.drag.enabled).toBe(true);
+      expect(zoomPlugin.pinch.enabled).toBe(false);
     });
   });
 });

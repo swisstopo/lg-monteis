@@ -4,14 +4,15 @@ import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatFormField, MatInput } from '@angular/material/input';
-import { PermissionsService } from '../../../core/auth/permissions.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PermissionsService } from '../../../core/auth/permissions.service';
 import { ChartComponent, ChartDataset, ChartOptions } from '../../../ui/chart';
 import {
   generateMockHumidityDataset,
   generateMockPressureDataset,
   generateMockStressRadialDataset,
   generateMockTemperatureDataset,
+  generateTaupeDataset,
 } from '../../../ui/chart/chart-data-mock';
 import SensorEdit from '../sensor-edit/sensor-edit';
 
@@ -75,27 +76,6 @@ export class TableHeader {
         y3: 'Temperature [°C]',
         y4: 'Relative Humidity [%]',
       },
-      advancedOptions: {
-        plugins: {
-          zoom: {
-            zoom: {
-              wheel: {
-                enabled: true, // Enables zooming with the mouse wheel
-              },
-              pinch: {
-                enabled: false,
-              },
-              drag: {
-                enabled: true,
-                backgroundColor: 'rgba(66, 133, 244, 0.2)', // Optional: Customize the rectangle's color
-                borderWidth: 1, // Optional: Outline the rectangle
-                borderColor: 'rgba(66, 133, 244, 1)',
-              },
-              mode: 'xy', // Allow zooming on the x-axis only (can be 'y' or 'xy')
-            },
-          },
-        },
-      },
     };
 
     this.dialog.open(ChartComponent, {
@@ -108,6 +88,32 @@ export class TableHeader {
         inputBinding('title', () => title),
         inputBinding('datasets', () => datasets),
         inputBinding('options', () => options),
+        outputBinding('pointClick', (event) => console.log('click: ', event)),
+        outputBinding('pointHover', (event) => console.log('hover: ', event)),
+      ],
+    });
+  }
+
+  protected onPlotLine() {
+    const taupeOptions: ChartOptions = {
+      title: 'Taupe Cable Analysis',
+      xAxisLabel: 'Taupe cable length [cm]',
+      yAxisLabels: {
+        y: 'Relative Electric Permitivity',
+      },
+    };
+
+    this.dialog.open(ChartComponent, {
+      width: '95vw',
+      maxWidth: '100%',
+      height: '95vh',
+      maxHeight: '100%',
+      autoFocus: true,
+      bindings: [
+        inputBinding('title', () => 'TaupeProfile on 2026-05-20'),
+        inputBinding('type', () => 'line'),
+        inputBinding('datasets', () => [generateTaupeDataset()]),
+        inputBinding('options', () => taupeOptions),
         outputBinding('pointClick', (event) => console.log('click: ', event)),
         outputBinding('pointHover', (event) => console.log('hover: ', event)),
       ],

@@ -5,15 +5,17 @@ import type {
 } from 'chart.js';
 import { ChartDataset, ChartOptions, ChartThemePalette, ChartType } from './chart.types';
 
+type ChartJsScales = NonNullable<ChartJsOptions<ChartType>['scales']>;
+
 export function buildChartConfig(
   type: ChartType,
   datasets: ChartDataset[],
   options: ChartOptions,
   palette: ChartThemePalette = {},
 ): ChartConfiguration<ChartType> {
-  datasets = Array.isArray(datasets) ? datasets : [];
+  const safeDatasets = Array.isArray(datasets) ? datasets : [];
 
-  const scales: any = {
+  const scales: ChartJsScales = {
     x: {
       type: options.xAxisType === 'time' ? 'time' : 'linear',
       time: {
@@ -37,10 +39,9 @@ export function buildChartConfig(
       },
       grid: { color: palette.gridColor },
     },
-    ...options.advancedOptions?.scales,
   };
 
-  const uniqueYAxes = Array.from(new Set(datasets.map((d) => d.yAxisId ?? 'y')));
+  const uniqueYAxes = Array.from(new Set(safeDatasets.map((d) => d.yAxisId ?? 'y')));
   uniqueYAxes.forEach((axisId, index) => {
     // Alternate sides: even indexes on the left, odd indexes on the right ??
     const position = index % 2 === 0 ? 'left' : 'right';
@@ -72,13 +73,12 @@ export function buildChartConfig(
   return {
     type,
     data: {
-      datasets: datasets.map((dataset, i) => buildDataset(type, dataset, palette, i)),
+      datasets: safeDatasets.map((dataset, i) => buildDataset(type, dataset, palette, i)),
     },
     options: {
       responsive: true,
       maintainAspectRatio: options.maintainAspectRatio ?? false,
       animation: false,
-      ...options.advancedOptions,
       plugins: {
         title: {
           display: !!options.title,
@@ -114,10 +114,26 @@ export function buildChartConfig(
             padding: 20,
           },
         },
-        ...options.advancedOptions?.plugins,
+        zoom: {
+          zoom: {
+            wheel: {
+              enabled: true,
+            },
+            pinch: {
+              enabled: false,
+            },
+            drag: {
+              enabled: true,
+              backgroundColor: 'rgba(66, 133, 244, 0.2)',
+              borderWidth: 1,
+              borderColor: 'rgba(66, 133, 244, 1)',
+            },
+            mode: 'xy',
+          },
+        },
       },
       scales: scales,
-    } as ChartJsOptions<ChartType>,
+    },
   };
 }
 
@@ -127,7 +143,7 @@ function buildDataset(
   palette: ChartThemePalette,
   index: number,
 ): ChartJsDataset<ChartType> {
-  const paletteColors = palette.seriesColors ?? [];
+  const paletteColors = palette.seriesColors?.length ? palette.seriesColors : ['#3366cc'];
   const autoColor = paletteColors[index % paletteColors.length];
   const color = dataset.color ?? autoColor;
   return {
@@ -136,7 +152,7 @@ function buildDataset(
     borderColor: color,
     backgroundColor: color,
     showLine: type === 'line',
-    parsing: false,
+    parsing: false, // performance optimization but requires data to match exact format
     yAxisID: dataset.yAxisId ?? 'y',
-  } satisfies ChartJsDataset;
+  } satisfies ChartJsDataset<ChartType>;
 }

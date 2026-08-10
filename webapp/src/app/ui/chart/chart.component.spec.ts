@@ -24,6 +24,10 @@ vi.stubGlobal(
     disconnect: vi.fn(),
   })),
 );
+vi.mock('chartjs-plugin-zoom', () => ({
+  default: { id: 'zoom' },
+}));
+
 vi.mock('chart.js', async (importOriginal) => {
   const actual: any = await importOriginal();
 
@@ -31,14 +35,21 @@ vi.mock('chart.js', async (importOriginal) => {
     // Intercepts Chart.register() called in chart-registry.ts
     static register = vi.fn();
 
-    // Fake internal state
-    config = { type: 'line' };
-    data = { datasets: [], labels: [] };
-    options = {};
+    // Mirror the real Chart.js behaviour of retaining the config it was constructed with.
+    config: any;
+    data: any;
+    options: any;
+
+    constructor(_canvas: unknown, config: any) {
+      this.config = config;
+      this.data = config.data;
+      this.options = config.options;
+    }
 
     // Spies for lifecycle methods
     destroy = vi.fn();
     update = vi.fn();
+    resetZoom = vi.fn();
   }
 
   return {
@@ -92,5 +103,81 @@ describe('Chart', () => {
     fixture.destroy();
 
     expect(destroySpy).toHaveBeenCalled();
+  });
+
+  describe('Interactions and Events', () => {
+    it('should call resetZoom on the chart instance when resetZoom() is invoked', () => {
+      const instance = (component as any).instance;
+      instance.resetZoom = vi.fn();
+
+      component.resetZoom();
+
+      expect(instance.resetZoom).toHaveBeenCalled();
+    });
+
+    it('should not throw an error if resetZoom() is called before instance initialization', () => {
+      const originalInstance = (component as any).instance;
+      (component as any).instance = undefined;
+
+      expect(() => component.resetZoom()).not.toThrow();
+
+      (component as any).instance = originalInstance;
+    });
+
+    it('should emit pointClick when a valid chart element is clicked', () => {
+      const emitSpy = vi.spyOn(component.pointClick, 'emit');
+
+      const mockEvent = {} as any;
+      const mockElements = [{ datasetIndex: 0, index: 1 }] as any[];
+
+      (component as any).emitPointEvent(mockEvent, mockElements, component.pointClick);
+
+      expect(emitSpy).toHaveBeenCalledWith({
+        datasetId: 'sensor-1',
+        datasetLabel: 'Sensor 1',
+        point: { x: 1, y: 3 },
+      });
+    });
+
+    it('should not emit if no chart element is interacted with', () => {
+      const emitSpy = vi.spyOn(component.pointClick, 'emit');
+
+      (component as any).emitPointEvent({} as any, [], component.pointClick);
+
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Reactivity and Updates', () => {
+    it('should update the chart instance when dataset inputs change', async () => {
+      const instance = (component as any).instance;
+      const updateSpy = vi.spyOn(instance, 'update');
+
+      const newDataset: ChartDataset = {
+        id: 'sensor-2',
+        label: 'Sensor 2',
+        data: [{ x: 10, y: 42 }],
+        color: '#00ff00',
+      };
+
+      fixture.componentRef.setInput('datasets', [newDataset]);
+
+      await fixture.whenStable();
+
+      expect(updateSpy).toHaveBeenCalled();
+      expect(instance.data.datasets).toHaveLength(1);
+      expect(instance.data.datasets[0].label).toBe('Sensor 2');
+      expect(instance.data.datasets[0].data).toEqual([{ x: 10, y: 42 }]);
+    });
+
+    it('should update the chart configuration when options inputs change', async () => {
+      const instance = (component as any).instance;
+
+      fixture.componentRef.setInput('options', { title: 'Updated Title' });
+
+      await fixture.whenStable();
+
+      expect(instance.options.plugins.title.text).toBe('Updated Title');
+    });
   });
 });

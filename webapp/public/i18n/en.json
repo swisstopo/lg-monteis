@@ -191,7 +191,8 @@
   "chart": {
     "title": "{{name}} | {{rangeFrom}} to {{rangeTo}}",
     "button": {
-      "cancel": "Close"
+      "cancel": "Close",
+      "resetZoom": "Reset Zoom"
     }
   },
   "tab": {

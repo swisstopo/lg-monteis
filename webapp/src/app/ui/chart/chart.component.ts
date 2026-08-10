@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -50,7 +49,6 @@ registerChartJs();
     MatIcon,
     TranslatePipe,
   ],
-  providers: [DatePipe],
 })
 export class ChartComponent {
   readonly dialogRef = inject<MatDialogRef<ChartComponent>>(MatDialogRef, {
@@ -67,6 +65,7 @@ export class ChartComponent {
   readonly pointHover = output<ChartPointEvent>();
 
   private instance?: ChartJs;
+  private lastHoverKey?: string;
   private readonly palette = signal<ChartThemePalette>({});
   private readonly viewReady = signal(false);
 
@@ -74,7 +73,6 @@ export class ChartComponent {
     // key architectural consideration for for gpu references clean up
     this.destroyRef.onDestroy(() => {
       this.instance?.destroy();
-      this.dialogRef?.close();
     });
     // key architectural consideration for hydration saftey -> afterNextRender
     afterNextRender(() => {
@@ -102,6 +100,11 @@ export class ChartComponent {
         return;
       }
       const config = buildChartConfig(this.type(), this.datasets(), this.options(), this.palette());
+      // Chart.js resolves dataset controllers at construction, so a type change requires a rebuild.
+      if (this.instance && (this.instance.config as ChartConfiguration).type !== config.type) {
+        this.instance.destroy();
+        this.instance = undefined;
+      }
       if (this.instance) {
         this.updateChart(config);
       } else {
@@ -133,9 +136,7 @@ export class ChartComponent {
       return;
     }
     const next = this.withEventHandlers(config);
-    (this.instance.config as ChartConfiguration).type = next.type;
     // Mutate the properties of the existing data object to prevent complete rerendering
-    this.instance.data.labels = next.data.labels;
     this.instance.data.datasets = next.data.datasets;
 
     this.instance.options = next.options ?? {};
@@ -153,9 +154,23 @@ export class ChartComponent {
       options: {
         ...config.options,
         onClick: (event, elements) => this.emitPointEvent(event, elements, this.pointClick),
-        onHover: (event, elements) => this.emitPointEvent(event, elements, this.pointHover),
+        onHover: (event, elements) => this.emitHoverEvent(event, elements),
       },
     };
+  }
+
+  /**
+   * Chart.js fires `onHover` on every mousemove, so repeated events for the same point are
+   * filtered out to avoid needlessly notifying consumers.
+   */
+  private emitHoverEvent(event: ChartEvent, elements: ActiveElement[]): void {
+    const element = elements[0];
+    const key = element ? `${element.datasetIndex}:${element.index}` : undefined;
+    if (key === this.lastHoverKey) {
+      return;
+    }
+    this.lastHoverKey = key;
+    this.emitPointEvent(event, elements, this.pointHover);
   }
 
   private emitPointEvent(

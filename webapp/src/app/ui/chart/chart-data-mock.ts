@@ -13,7 +13,7 @@ export function generateMockPlateauDataset(
   label: string,
   plateaus: PressurePlateau[],
   color?: string,
-  yAxisId?: string, // <-- 1. Add this parameter
+  yAxisId?: string,
 ): ChartDataset {
   const data = plateaus.flatMap(({ fromDate, toDate, baseValueKpa, pointCount, jitterKpa }) => {
     const fromMs = Date.parse(fromDate);
@@ -155,5 +155,19 @@ export function generateMockHumidityDataset(): ChartDataset {
     label: 'Relative Humidity [%]',
     data,
     yAxisId: 'y4',
+  };
+}
+
+export function generateTaupeDataset(): ChartDataset {
+  return {
+    id: 'taupe_sensor_1',
+    label: 'Taupe Sensor 1',
+    data: [
+      { x: 10, y: 2.4 },
+      { x: 25, y: 2.8 },
+      { x: 50, y: 3.1 },
+      { x: 120, y: 4.5 },
+    ],
+    yAxisId: 'y',
   };
 }

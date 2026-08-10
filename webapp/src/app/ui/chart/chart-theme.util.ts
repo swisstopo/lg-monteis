@@ -4,6 +4,7 @@ function resolveColorScheme(element: Element): 'light' | 'dark' {
   const scheme = getComputedStyle(element).colorScheme;
   if (scheme === 'dark') return 'dark';
   if (scheme === 'light') return 'light';
+  if (typeof matchMedia !== 'function') return 'light';
   return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
