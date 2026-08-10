@@ -1,4 +1,4 @@
-import { Component, computed, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, output } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { MatFormField, MatInput, MatPrefix } from '@angular/material/input';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -9,9 +9,10 @@ import { TranslatePipe } from '@ngx-translate/core';
   imports: [MatIcon, MatFormField, MatInput, MatPrefix, TranslatePipe],
   templateUrl: './table-header.html',
   styleUrl: './table-header.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableHeader {
-  translationPrefix = computed(() => `tableHeader`);
+  translationPrefix = `tableHeader`;
 
   searchAction = output<string>();
 
