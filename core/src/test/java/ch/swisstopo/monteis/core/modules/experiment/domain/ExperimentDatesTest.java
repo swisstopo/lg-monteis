@@ -66,7 +66,7 @@ class ExperimentDatesTest {
             "Should throw validation exception when end date precedes start date");
 
     assertEquals(
-        "sensor.experimentDates.invalid",
+        "experiment.experimentDates.invalid",
         exception.getMessage(),
         "Exception message code should match");
   }

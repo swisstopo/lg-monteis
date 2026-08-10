@@ -1,14 +1,14 @@
 <h2 mat-dialog-title>{{ title() }}</h2>
 
 <mat-dialog-content>
-  <form id="sensorCreateForm" class="form-layout" (submit)="onSubmit($event)" novalidate>
+  <form id="experimentCreateForm" class="form-layout" (submit)="onSubmit($event)" novalidate>
     <div class="form-row">
       <mat-form-field appearance="outline">
         <mat-label>{{ 'experiment.name.label' | translate }}</mat-label>
         <input
           matInput
           [formField]="experimentForm.name"
-          [placeholder]="'sensor.code.placeholder' | translate"
+          [placeholder]="'experiment.name.placeholder' | translate"
         />
         @if (experimentForm.name().touched() && experimentForm.name().invalid()) {
           <mat-error>
@@ -19,25 +19,6 @@
         }
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'experiment.status.label' | translate }}</mat-label>
-        <mat-select [formField]="experimentForm.status">
-          <mat-option value="">{{ 'experiment.status.placeholder' | translate }}</mat-option>
-          @for (status of statusValues; track status) {
-            <mat-option [value]="status">
-              {{ 'experiment.status.option.' + status.toLowerCase() + '.label' | translate }}
-            </mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field class="full-width" appearance="outline">
-        <mat-label>{{ 'experiment.comment.label' | translate }}</mat-label>
-        <textarea matInput [formField]="experimentForm.comment" rows="3"></textarea>
-      </mat-form-field>
-    </div>
-
-    <div class="form-row">
       <mat-form-field appearance="outline">
         <mat-label>{{ 'experiment.experimentDates.experimentStart.label' | translate }}</mat-label>
 
@@ -86,31 +67,38 @@
         }
       </mat-form-field>
     </div>
+
+    <div class="form-row">
+      <mat-form-field class="full-width" appearance="outline">
+        <mat-label>{{ 'experiment.comment.label' | translate }}</mat-label>
+        <textarea matInput [formField]="experimentForm.comment" rows="3"></textarea>
+      </mat-form-field>
+    </div>
   </form>
 
   <mat-dialog-actions align="end">
     <button matButton (click)="close()">
       <mat-icon fontIcon="cancel"></mat-icon>
-      {{ 'sensor.button.cancel' | translate }}
+      {{ 'experiment.button.cancel' | translate }}
     </button>
     <button
       matButton="tonal"
       [disabled]="experimentForm().submitting() || experimentForm().invalid()"
       type="submit"
-      form="sensorCreateForm"
+      form="experimentCreateForm"
       data-action="saveAndCreate"
     >
       <mat-icon fontIcon="save"></mat-icon>
-      {{ 'sensor.button.saveAndCreate' | translate }}
+      {{ 'experiment.button.saveAndCreate' | translate }}
     </button>
     <button
       matButton="filled"
       [disabled]="experimentForm().submitting() || experimentForm().invalid()"
       type="submit"
-      form="sensorCreateForm"
+      form="experimentCreateForm"
     >
       <mat-icon fontIcon="save"></mat-icon>
-      {{ 'sensor.button.save' | translate }}
+      {{ 'experiment.button.save' | translate }}
     </button>
   </mat-dialog-actions>
 </mat-dialog-content>

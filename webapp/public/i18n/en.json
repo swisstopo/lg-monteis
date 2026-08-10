@@ -163,13 +163,6 @@
     "error": {
       "noId": "No sensor id provided",
       "connection": "Failed to connect to the backend server."
-    },
-    "experimentDate": {
-      "to": {
-        "validation": {
-          "bounds": "End date must be after start date"
-        }
-      }
     }
   },
   "experiment": {
@@ -181,6 +174,7 @@
     },
     "name": {
       "label": "Experiment Name",
+      "placeholder": "e.g., Mont Terri Alpha",
       "validation": {
         "required": "Experiment name is required",
         "minLength": "Name must be at least 2 characters long",
@@ -189,16 +183,15 @@
     },
     "status": {
       "label": "Status",
-      "placeholder": "Select a status",
-      "validation": {
-        "required": "Experiment status is required"
-      },
       "option": {
         "active": {
           "label": "Active"
         },
         "historic": {
           "label": "Historic"
+        },
+        "upcoming": {
+          "label": "Upcoming"
         }
       }
     },
@@ -219,13 +212,6 @@
         }
       }
     },
-    "alarmLimit": {
-      "from": {
-        "validation": {
-          "bounds": "Start date must be before end date"
-        }
-      }
-    },
     "success": "Experiment saved successfully.",
     "error": {
       "unspecified": {
@@ -238,6 +224,23 @@
       "download": "Download",
       "create": "Create Experiment",
       "edit": "Edit Experiment"
+    },
+    "experimentDate": {
+      "to": {
+        "validation": {
+          "bounds": "End date must be after start date"
+        }
+      },
+      "from": {
+        "validation": {
+          "bounds": "Start date must be before end date"
+        }
+      }
+    },
+    "button": {
+      "cancel": "Cancel",
+      "saveAndCreate": "Save and create new",
+      "save": "Save"
     }
   },
   "overview": {

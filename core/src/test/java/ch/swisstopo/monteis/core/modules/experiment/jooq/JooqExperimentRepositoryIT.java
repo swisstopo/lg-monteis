@@ -8,7 +8,6 @@ import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidatio
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
-import ch.swisstopo.monteis.core.jooq.generated.enums.Status;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDates;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
@@ -66,7 +65,7 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
-  void should_return_experiment_details_with_linked_sensors_and_formulas() {
+  void should_return_experiment_details_with_linked_sensors() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
@@ -102,8 +101,6 @@ class JooqExperimentRepositoryIT {
           assertNull(details, "Non-existent experiment should resolve to null");
         });
   }
-
-  // --- New CRUD & Auditing Tests (Mirroring Sensor IT) ---
 
   @Test
   @Transactional
@@ -187,7 +184,7 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
-  void should_throw_on_update_duplicated_code() {
+  void should_throw_on_update_duplicated_name() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
@@ -291,12 +288,7 @@ class JooqExperimentRepositoryIT {
         new ExperimentDates(
             LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31));
 
-    return new Experiment(
-        name,
-        owner,
-        dates,
-        "Dummy comment",
-        ch.swisstopo.monteis.core.modules.experiment.domain.Status.ACTIVE);
+    return new Experiment(name, owner, dates, "Dummy comment");
   }
 
   /**
@@ -310,7 +302,6 @@ class JooqExperimentRepositoryIT {
                 .set(EXPERIMENTS.COMMENT, comment)
                 .set(EXPERIMENTS.EXPERIMENT_START, experimentStart)
                 .set(EXPERIMENTS.EXPERIMENT_END, experimentEnd)
-                .set(EXPERIMENTS.STATUS, Status.ACTIVE.toString())
                 .set(EXPERIMENTS.OWNER, "owner")
                 .returning(EXPERIMENTS.ID)
                 .fetchOne())

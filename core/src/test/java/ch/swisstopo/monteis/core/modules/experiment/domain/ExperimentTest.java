@@ -20,10 +20,9 @@ class ExperimentTest {
     String owner = "John Doe";
     ExperimentDates dates = experimentDates;
     String description = "This is a new experiment";
-    Status status = Status.ACTIVE;
 
     // when
-    Experiment experiment = new Experiment(name, owner, dates, description, status);
+    Experiment experiment = new Experiment(name, owner, dates, description);
 
     // then
     assertAll(
@@ -37,7 +36,6 @@ class ExperimentTest {
                 description,
                 experiment.getComment(),
                 "Description should be mapped to comment field"),
-        () -> assertEquals(status, experiment.getStatus(), "Status should be mapped correctly"),
         () -> assertNull(experiment.getId(), "ID should be null for a newly created experiment"),
         () ->
             assertNull(
@@ -52,11 +50,10 @@ class ExperimentTest {
     String owner = "Jane Doe";
     ExperimentDates dates = experimentDates;
     String description = "This is a rebuilt experiment";
-    Status status = Status.ACTIVE;
     Integer version = 1;
 
     // when
-    Experiment experiment = new Experiment(id, name, owner, dates, description, status, version);
+    Experiment experiment = new Experiment(id, name, owner, dates, description, version);
 
     // then
     assertAll(
@@ -71,15 +68,13 @@ class ExperimentTest {
                 description,
                 experiment.getComment(),
                 "Description should be mapped to comment field"),
-        () -> assertEquals(status, experiment.getStatus(), "Status should be mapped correctly"),
         () -> assertEquals(version, experiment.getVersion(), "Version should be mapped correctly"));
   }
 
   @Test
   void should_update_fields_using_setters() {
     // given
-    Experiment experiment =
-        new Experiment("Initial", "Owner", experimentDates, "Desc", Status.ACTIVE);
+    Experiment experiment = new Experiment("Initial", "Owner", experimentDates, "Desc");
 
     // when
     experiment.setId(99L);

@@ -9,7 +9,7 @@ import {
   validate,
 } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
-import { MatOption, provideNativeDateAdapter } from '@angular/material/core';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import {
   MatDatepicker,
   MatDatepickerInput,
@@ -19,7 +19,6 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
-import { MatSelect } from '@angular/material/select';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ExperimentResponseDto, WriteExperimentDto } from '../../../core/generated';
 import { toErrorDtos } from '../../../shared/models/api-error.model';
@@ -34,7 +33,6 @@ interface ExperimentFormData {
     experimentEnd: Date;
   };
   name: string;
-  status: ExperimentResponseDto.StatusEnum;
 }
 
 function domainModelToFormModel(domainModel: ExperimentResponseDto): ExperimentFormData {
@@ -49,7 +47,6 @@ function domainModelToFormModel(domainModel: ExperimentResponseDto): ExperimentF
         ? new Date(domainModel.experimentDates.experimentEnd)
         : new Date(),
     },
-    status: domainModel.status ?? WriteExperimentDto.StatusEnum.Active,
   };
 }
 
@@ -64,8 +61,6 @@ function domainModelToFormModel(domainModel: ExperimentResponseDto): ExperimentF
     MatLabel,
     MatInput,
     MatButton,
-    MatSelect,
-    MatOption,
     FormField,
     MatDialogModule,
     MatIcon,
@@ -86,8 +81,6 @@ export default class ExperimentEdit {
     optional: true,
   });
   readonly experimentId = input<number | undefined>(undefined);
-
-  readonly statusValues = Object.values(WriteExperimentDto.StatusEnum);
 
   readonly saveError = this.experimentService.error;
   experiment = signal<ExperimentResponseDto | undefined>(undefined);
@@ -133,7 +126,6 @@ export default class ExperimentEdit {
   private initExperimentModel(): ExperimentFormData {
     return {
       name: '',
-      status: WriteExperimentDto.StatusEnum.Active,
       comment: '',
       experimentDates: {
         experimentStart: new Date(),
@@ -152,14 +144,13 @@ export default class ExperimentEdit {
     required(schema.experimentDates.experimentEnd, {
       message: translate('experiment.experimentDates.experimentEnd.validation.required')(),
     });
-    required(schema.status, { message: translate('experiment.status.validation.required')() });
     validate(schema.experimentDates.experimentStart, ({ value, valueOf }) => {
       const experimentStart = value();
       const experimentEnd = valueOf(schema.experimentDates.experimentEnd);
       if (experimentStart > experimentEnd) {
         return {
           kind: 'bounds',
-          message: this.i18nService.translate('experiment.alarmLimit.from.validation.bounds')(),
+          message: this.i18nService.translate('experiment.experimentDate.from.validation.bounds')(),
         };
       }
       return undefined;
@@ -170,7 +161,7 @@ export default class ExperimentEdit {
       if (experimentEnd < experimentStart) {
         return {
           kind: 'bounds',
-          message: this.i18nService.translate('sensor.experimentDate.to.validation.bounds')(),
+          message: this.i18nService.translate('experiment.experimentDate.to.validation.bounds')(),
         };
       }
       return undefined;
@@ -219,7 +210,6 @@ export default class ExperimentEdit {
   private buildPayload(formData: ExperimentFormData): WriteExperimentDto {
     return {
       id: this.experiment()?.id ?? undefined,
-      status: formData.status,
       name: formData.name,
       comment: formData.comment,
       experimentDates: {

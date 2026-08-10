@@ -14,26 +14,23 @@ public class Experiment implements Auditable {
   private String owner;
   private ExperimentDates experimentDates;
   private String comment;
-  private Status status;
   private Integer version;
 
   /**
-   * Constructor for creating a NEW Sensor from a web request.
+   * Constructor for creating a NEW Experiment from a web request.
    * ID and Version are omitted as they are handled by the infrastructure layer.
    */
   @SuppressWarnings("java:S107")
   @Default
-  public Experiment(
-      String name, String owner, ExperimentDates experimentDates, String comment, Status status) {
+  public Experiment(String name, String owner, ExperimentDates experimentDates, String comment) {
     this.name = name;
     this.owner = owner;
     this.experimentDates = experimentDates;
     this.comment = comment;
-    this.status = status;
   }
 
   /**
-   * Constructor for REBUILDING an existing Sensor from the database (jOOQ).
+   * Constructor for REBUILDING an existing Experiment from the database (jOOQ).
    */
   @SuppressWarnings("java:S107")
   public Experiment(
@@ -42,14 +39,12 @@ public class Experiment implements Auditable {
       String owner,
       ExperimentDates experimentDates,
       String comment,
-      Status status,
       Integer version) {
     this.id = id;
     this.name = name;
     this.owner = owner;
     this.experimentDates = experimentDates;
     this.comment = comment;
-    this.status = status;
     this.version = version;
   }
 
@@ -93,14 +88,6 @@ public class Experiment implements Auditable {
 
   public void setComment(String comment) {
     this.comment = comment;
-  }
-
-  public Status getStatus() {
-    return status;
-  }
-
-  public void setStatus(Status status) {
-    this.status = status;
   }
 
   public Integer getVersion() {
