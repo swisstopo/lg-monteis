@@ -11,6 +11,7 @@
       [rowModelType]="'infinite'"
       [datasource]="datasource"
       [gridOptions]="{ domLayout: 'normal' }"
+      [getRowId]="getSensorRowId"
       (rowClicked)="onWrappedRow($event)"
       (selectionChanged)="onSelectionChanged($event)"
       (gridReady)="onGridReady($event)"

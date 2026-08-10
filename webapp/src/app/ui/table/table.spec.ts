@@ -13,6 +13,7 @@ describe('Table', () => {
 
     fixture = TestBed.createComponent(Table);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('getRowId', (row: { id: unknown }) => String(row.id));
     await fixture.whenStable();
   });
 

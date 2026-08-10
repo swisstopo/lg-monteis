@@ -41,13 +41,14 @@ export default class SensorTable {
     // Re-fetch the currently visible pages whenever a sensor is created/updated elsewhere
     // (e.g. via the edit dialog) - the infinite row model otherwise has no way to know.
     effect(() => {
-      if (this.sensorService.sensorsChanged() > 0) {
+      if (this.sensorService.sensorsChanged()) {
         this.gridApi()?.refreshInfiniteCache();
+        this.sensorService.sensorsChanged.set(false);
       }
     });
   }
 
-  onGridReady(api: GridApi<SensorResponseDto>): void {
+  onGridReady(api: GridApi): void {
     this.gridApi.set(api);
   }
 
@@ -58,4 +59,6 @@ export default class SensorTable {
   onSelectionChanged(rows: SensorResponseDto[]): void {
     this.selectedSensorId.set(rows[0]?.id);
   }
+
+  protected getSensorRowId = (row: SensorResponseDto): string => String(row.id);
 }
