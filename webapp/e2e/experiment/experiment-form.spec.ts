@@ -18,7 +18,6 @@ test('should create experiment', async ({ page }) => {
   const uniqueId = crypto.randomUUID().substring(0, 8);
   await dialog.getByLabel('Experiment Name').fill(`E2E TEST ${uniqueId}`);
 
-  await dialog.getByLabel('Status').click();
   await page.getByRole('option', { name: 'Active' }).click();
 
   await dialog.getByLabel('Comment').fill('This is an E2E test experiment comment.');
@@ -41,9 +40,6 @@ test('should update experiment', async ({ page }) => {
   const uniqueId = crypto.randomUUID().substring(0, 8);
   await dialog.getByLabel('Experiment Name').fill(`E2E TEST UPDATED ${uniqueId}`);
 
-  await dialog.getByLabel('Status').click();
-  await page.getByRole('option', { name: 'Historic' }).click();
-
   await dialog.getByLabel('Comment').fill('Updated experiment comment.');
 
   await dialog.getByLabel('Start Date').fill('02/02/2030');
@@ -65,7 +61,6 @@ test('should fail to create existing experiment', async ({ page }) => {
 
   await dialog.getByLabel('Experiment Name').fill(experimentName);
 
-  await dialog.getByLabel('Status').click();
   await page.getByRole('option', { name: 'Active' }).click();
 
   await dialog.getByLabel('Start Date').fill('01/01/2030');
@@ -77,9 +72,6 @@ test('should fail to create existing experiment', async ({ page }) => {
 
   // Form should have reset, try to create another experiment with the same name
   await dialog.getByLabel('Experiment Name').fill(experimentName);
-
-  await dialog.getByLabel('Status').click();
-  await page.getByRole('option', { name: 'Historic' }).click();
 
   await dialog.getByLabel('Start Date').fill('03/03/2030');
   await dialog.getByLabel('End Date').fill('08/08/2030');

@@ -83,7 +83,6 @@ class ExperimentControllerTest {
             "A test experiment",
             new ExperimentDatesDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-            Status.ACTIVE,
             null);
 
     ExperimentResponseDto expectedResponseDto =
@@ -140,7 +139,6 @@ class ExperimentControllerTest {
             "Updated comment",
             new ExperimentDatesDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-            Status.ACTIVE,
             1);
 
     ExperimentResponseDto expectedResponseDto =
@@ -189,7 +187,6 @@ class ExperimentControllerTest {
             "A test experiment",
             new ExperimentDatesDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-            Status.ACTIVE,
             1);
 
     // when / then

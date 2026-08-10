@@ -31,5 +31,6 @@ public interface ExperimentJooqMapper {
   @Mapping(target = "experimentDates.experimentStart", source = "experimentStart")
   @Mapping(target = "experimentDates.experimentEnd", source = "experimentEnd")
   @Mapping(target = "sensorCount", ignore = true)
+  @Mapping(target = "status", ignore = true)
   ExperimentResponseDto toDto(ExperimentsRecord experimentsRecord);
 }

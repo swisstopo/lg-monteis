@@ -1,7 +1,8 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
-import static org.jooq.impl.DSL.*;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
+import static org.jooq.impl.DSL.row;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
@@ -9,9 +10,11 @@ import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQuery;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.ExperimentDatesDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
@@ -36,16 +39,19 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
   @Override
   @Transactional(readOnly = true)
   public ExperimentResponseDto getById(Long experimentId) {
-    // Note: The order of the fields selected here MUST exactly match the order of fields
-    // in the ExperimentResponseDto record constructor!
+    LocalDate now = LocalDate.now();
+
     return dsl.select(
             EXPERIMENTS.ID,
             EXPERIMENTS.NAME,
             EXPERIMENTS.COMMENT,
-            // Map the flat date columns into the nested ExperimentDatesDto record
             row(EXPERIMENTS.EXPERIMENT_START, EXPERIMENTS.EXPERIMENT_END)
                 .mapping(ExperimentDatesDto::new),
-            EXPERIMENTS.STATUS,
+            DSL.case_()
+                .when(EXPERIMENTS.EXPERIMENT_START.gt(now), DSL.inline(Status.UPCOMING.name()))
+                .when(EXPERIMENTS.EXPERIMENT_END.lt(now), DSL.inline(Status.HISTORIC.name()))
+                .otherwise(DSL.inline(Status.ACTIVE.name()))
+                .as("status"),
             EXPERIMENTS.VERSION,
             DSL.selectCount()
                 .from(EXPERIMENT_SENSOR)

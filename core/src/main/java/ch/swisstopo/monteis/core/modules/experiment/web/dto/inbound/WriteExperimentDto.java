@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound;
 
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
-import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.ExperimentDatesDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -19,7 +18,6 @@ public record WriteExperimentDto(
     @NotBlank @Size(min = 2, max = 50) String name,
     String comment,
     @NotNull @Valid ExperimentDatesDto experimentDates,
-    @NotNull Status status,
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
         @Null(groups = Create.class)
         @NotNull(groups = Update.class)
