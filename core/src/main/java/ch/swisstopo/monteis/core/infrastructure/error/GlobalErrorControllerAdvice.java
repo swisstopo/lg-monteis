@@ -18,16 +18,19 @@ import org.jooq.exception.DataChangedException;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
+import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
@@ -88,7 +91,39 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(payload);
   }
 
-  // todo: handle the exception of HandlerMethodValidationException here..
+  @ApiResponse(
+      responseCode = "400",
+      description = "Validation failure on request parameters (e.g. @RequestParam, @PathVariable).",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  @Override
+  protected ResponseEntity<@NonNull Object> handleHandlerMethodValidationException(
+      HandlerMethodValidationException ex,
+      @NonNull HttpHeaders headers,
+      @NonNull HttpStatusCode status,
+      @NonNull WebRequest request) {
+
+    String errorId = UUID.randomUUID().toString();
+    String details =
+        ex.getParameterValidationResults().stream()
+            .map(this::describeParameterValidationResult)
+            .collect(Collectors.joining("; "));
+
+    log.warn("Request parameter validation failed [ErrorID: {}]: {}", errorId, details);
+
+    ErrorDto payload = ErrorDto.global(Map.of("errorId", errorId));
+
+    return ResponseEntity.status(status).headers(headers).body(payload);
+  }
+
+  private String describeParameterValidationResult(ParameterValidationResult result) {
+    String parameterName = result.getMethodParameter().getParameterName();
+    String messages =
+        result.getResolvableErrors().stream()
+            .map(MessageSourceResolvable::getDefaultMessage)
+            .collect(Collectors.joining(", "));
+
+    return "%s=%s (%s)".formatted(parameterName, result.getArgument(), messages);
+  }
 
   @ApiResponse(
       responseCode = "422",
