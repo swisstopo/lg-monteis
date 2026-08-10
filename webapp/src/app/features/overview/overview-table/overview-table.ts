@@ -34,4 +34,7 @@ export default class OverviewTable {
   onWrappedRow(row: ReadSimpleMetricDto) {
     console.log(row);
   }
+
+  protected getMetricRowId = (row: ReadSimpleMetricDto): string =>
+    `${row.sensorId}-${row.timestamp}`;
 }

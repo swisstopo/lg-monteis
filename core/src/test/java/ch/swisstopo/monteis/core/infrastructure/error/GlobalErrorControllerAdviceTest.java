@@ -8,10 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import jakarta.validation.Constraint;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.lang.annotation.ElementType;
@@ -30,6 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @ControllerTest
@@ -102,6 +105,32 @@ class GlobalErrorControllerAdviceTest {
         .andExpect(
             jsonPath("$.params.errorId").exists()) // Ensures the UUID is generated for tracing
         .andExpect(jsonPath("$.params.errorId").isString());
+  }
+
+  @Test
+  void should_translate_invalid_paged_request_exception_return_400() throws Exception {
+    // given a request to an endpoint that throws an InvalidPagedRequestException
+
+    // when
+    var response = mockMvc.perform(get("/dummy/invalid-paged-request-error").with(jwt()));
+
+    // then
+    response
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
+  }
+
+  @Test
+  void should_reject_negative_start_row_with_400() throws Exception {
+    // when / then: Spring MVC intercepts invalid pagination parameter constraints before handler
+    // execution
+    mockMvc
+        .perform(
+            get("/dummy/paging")
+                .queryParam("startRow", "-1")
+                .queryParam("endRow", "20")
+                .with(jwt()))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
@@ -220,6 +249,18 @@ class GlobalErrorControllerAdviceTest {
     @GetMapping("/dummy/unexpected-error")
     public void throwUnexpectedError() {
       throw new RuntimeException("Simulated catastrophic failure, like a DB timeout");
+    }
+
+    @GetMapping("/dummy/invalid-paged-request-error")
+    public void throwInvalidPagedRequestError() {
+      throw new InvalidPagedRequestException("Unsupported text filter type: bogus");
+    }
+
+    @GetMapping("/dummy/paging")
+    public void getPaged(
+        @RequestParam(defaultValue = "0") @Min(0) int startRow,
+        @RequestParam(defaultValue = "50") @Min(1) int endRow) {
+      // Do nothing, Spring validates the @Min constraints
     }
 
     @PostMapping("/dummy/validate")

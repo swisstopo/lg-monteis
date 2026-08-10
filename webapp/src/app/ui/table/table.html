@@ -5,6 +5,10 @@
   [columnDefs]="columns()"
   [defaultColDef]="defaultColDef"
   [gridOptions]="mergedGridOptions()"
+  [rowModelType]="rowModelType()"
+  [datasource]="datasource()"
+  [cacheBlockSize]="cacheBlockSize()"
   (rowClicked)="onRowClicked($event)"
   (selectionChanged)="onSelectionChanged($event)"
+  (gridReady)="onGridReady($event)"
 ></ag-grid-angular>

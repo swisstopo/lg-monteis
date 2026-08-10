@@ -1,6 +1,9 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
@@ -13,6 +16,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeRespo
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
 import java.util.Map;
@@ -28,11 +32,17 @@ public class SensorController {
   private final SensorService service;
   private final SensorWebMapper mapper;
   private final SensorQuery sensorQuery;
+  private final PagedRequestParser pagedRequestParser;
 
-  public SensorController(SensorService service, SensorWebMapper mapper, SensorQuery sensorQuery) {
+  public SensorController(
+      SensorService service,
+      SensorWebMapper mapper,
+      SensorQuery sensorQuery,
+      PagedRequestParser pagedRequestParser) {
     this.service = service;
     this.mapper = mapper;
     this.sensorQuery = sensorQuery;
+    this.pagedRequestParser = pagedRequestParser;
   }
 
   @Operation(summary = "Get a sensor by id", description = "Retrieves a sensor by id")
@@ -100,10 +110,17 @@ public class SensorController {
     return ResponseEntity.status(HttpStatus.OK).body(sensorQuery.findAllTypes());
   }
 
-  @Operation(summary = "Get all sensors", description = "Retrieves a list of all sensors.")
+  @Operation(
+      summary = "Get sensors",
+      description = "Retrieves a page of sensors with optional sorting/filtering.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved sensors")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<List<SensorResponseDto>> findAllSensors() {
-    return ResponseEntity.status(HttpStatus.OK).body(sensorQuery.getAll());
+  public PagedResult<SensorResponseDto> getSensors(
+      @RequestParam @Min(0) int startRow,
+      @RequestParam @Min(0) int endRow,
+      @RequestParam(required = false) String sortModel,
+      @RequestParam(required = false) String filterModel) {
+    RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
+    return sensorQuery.getSensors(pagedRequestParser.parse(raw));
   }
 }

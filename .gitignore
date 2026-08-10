@@ -85,3 +85,6 @@ mise.toml
 
 # Security / Generated SBOMs
 sbom.spdx.json
+
+.claude
+.devcontainer

@@ -8,6 +8,9 @@ import static org.jooq.impl.DSL.row;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.FormulasRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorTypesRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorsRecord;
@@ -23,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
+import org.jooq.Field;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -30,6 +34,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class JooqSensorRepository implements SensorRepository, SensorQuery {
+
+  private static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
+      Map.of(
+          "code", SENSORS.CODE,
+          "name", SENSORS.NAME,
+          "type.name", SENSOR_TYPES.NAME,
+          "unit", SENSORS.UNIT,
+          "formula.expression", FORMULAS.EXPRESSION,
+          "coordinates.x", SENSORS.X,
+          "coordinates.y", SENSORS.Y,
+          "coordinates.z", SENSORS.Z,
+          "active", SENSORS.ACTIVE,
+          "comment", SENSORS.COMMENT);
+
   private final DSLContext dsl;
   private final SensorJooqMapper mapper;
 
@@ -67,27 +85,50 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
 
   @Override
   @Transactional(readOnly = true)
-  public List<SensorResponseDto> getAll() {
-    return dsl.select(
-            SENSORS.ID,
-            SENSORS.CODE,
-            SENSORS.NAME,
-            SENSORS.UNIT,
-            row(SENSOR_TYPES.ID, SENSOR_TYPES.NAME, SENSOR_TYPES.VERSION)
-                .mapping(SensorTypeResponseDto::new),
-            SENSORS.COMMENT,
-            row(SENSORS.X, SENSORS.Y, SENSORS.Z).mapping(CoordinatesDto::new),
-            row(SENSORS.LOWER_ALARM_LIMIT, SENSORS.UPPER_ALARM_LIMIT).mapping(AlarmLimitsDto::new),
-            SENSORS.ACTIVE,
-            row(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
-                .mapping(FormulaResponseDto::new),
-            SENSORS.VERSION)
-        .from(SENSORS)
-        .join(FORMULAS)
-        .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
-        .join(SENSOR_TYPES)
-        .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
-        .fetch(mapping(SensorResponseDto::new));
+  public PagedResult<SensorResponseDto> getSensors(PagedRequest request) {
+    // Default to a deterministic order so offset-based paging stays stable across separate
+    // requests (Postgres does not guarantee row order without an ORDER BY).
+    PagedRequestJooqTranslator.JooqPageCriteria criteria =
+        PagedRequestJooqTranslator.translate(request, COLUMNS_BY_COL_ID, SENSORS.ID.asc());
+
+    List<SensorResponseDto> data =
+        dsl.select(
+                SENSORS.ID,
+                SENSORS.CODE,
+                SENSORS.NAME,
+                SENSORS.UNIT,
+                row(SENSOR_TYPES.ID, SENSOR_TYPES.NAME, SENSOR_TYPES.VERSION)
+                    .mapping(SensorTypeResponseDto::new),
+                SENSORS.COMMENT,
+                row(SENSORS.X, SENSORS.Y, SENSORS.Z).mapping(CoordinatesDto::new),
+                row(SENSORS.LOWER_ALARM_LIMIT, SENSORS.UPPER_ALARM_LIMIT)
+                    .mapping(AlarmLimitsDto::new),
+                SENSORS.ACTIVE,
+                row(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
+                    .mapping(FormulaResponseDto::new),
+                SENSORS.VERSION)
+            .from(SENSORS)
+            .join(FORMULAS)
+            .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
+            .join(SENSOR_TYPES)
+            .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
+            .where(criteria.condition())
+            .orderBy(criteria.sortFields())
+            .limit(request.limit())
+            .offset(request.offset())
+            .fetch(mapping(SensorResponseDto::new));
+
+    int totalCount =
+        dsl.fetchCount(
+            dsl.select(SENSORS.ID)
+                .from(SENSORS)
+                .join(FORMULAS)
+                .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
+                .join(SENSOR_TYPES)
+                .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
+                .where(criteria.condition()));
+
+    return new PagedResult<>(data, totalCount);
   }
 
   @Override

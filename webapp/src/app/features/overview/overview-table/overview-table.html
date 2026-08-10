@@ -12,6 +12,7 @@
       class="custom-grid"
       [rows]="metricsResource.value() ?? []"
       [columns]="wrappedCols"
+      [getRowId]="getMetricRowId"
       (rowClicked)="onWrappedRow($event)"
     >
     </app-table>
