@@ -4,8 +4,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { catchError, throwError } from 'rxjs';
 import { ErrorDto } from '../generated';
-import { toErrorDtos } from './api-error.model';
 import { ToastService } from '../notifications/toast.service';
+import { toErrorDtos } from './api-error.model';
 
 /**
  * Shows a toast for every REST error with target `GLOBAL`, regardless of

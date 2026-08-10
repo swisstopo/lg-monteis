@@ -3,8 +3,8 @@ import { FieldTree } from '@angular/forms/signals';
 import { TranslateService } from '@ngx-translate/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorDto } from '../generated';
-import { FormErrorService } from './form-error.service';
 import { ToastService } from '../notifications/toast.service';
+import { FormErrorService } from './form-error.service';
 
 function mockField(): FieldTree<unknown> {
   return {} as unknown as FieldTree<unknown>;
