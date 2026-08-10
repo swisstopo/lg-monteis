@@ -52,7 +52,7 @@ registerChartJs();
   ],
   providers: [DatePipe],
 })
-export default class Chart {
+export class Chart {
   readonly dialogRef = inject<MatDialogRef<Chart>>(MatDialogRef, {
     optional: true,
   });

@@ -6,14 +6,13 @@ import { MatIcon } from '@angular/material/icon';
 import { MatFormField, MatInput } from '@angular/material/input';
 import { PermissionsService } from '../../../core/auth/permissions.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import Chart from '../../../ui/chart/chart';
+import { ChartComponent, ChartDataset, ChartOptions } from '../../../ui/chart';
 import {
   generateMockHumidityDataset,
   generateMockPressureDataset,
   generateMockStressRadialDataset,
   generateMockTemperatureDataset,
 } from '../../../ui/chart/chart-data-mock';
-import { ChartDataset, ChartOptions } from '../../../ui/chart/chart.types';
 import SensorEdit from '../sensor-edit/sensor-edit';
 
 @Component({
@@ -99,7 +98,7 @@ export class TableHeader {
       },
     };
 
-    this.dialog.open(Chart, {
+    this.dialog.open(ChartComponent, {
       width: '95vw',
       maxWidth: '100%',
       height: '95vh',
