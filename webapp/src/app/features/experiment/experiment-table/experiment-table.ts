@@ -4,7 +4,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
-import { TableHeader } from '../../../shared/table-header/table-header';
+import { TableHeader } from '../../../ui/table-header/table-header';
 import ExperimentEdit from '../../experiment/experiment-edit/experiment-edit';
 
 @Component({

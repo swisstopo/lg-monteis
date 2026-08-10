@@ -1,20 +1,18 @@
 <div class="metrics-panel">
   <app-table-header (searchAction)="onSearch($event)">
-    <div class="button-gap">
-      <button matButton="text" (click)="onDownload()">
-        <mat-icon fontIcon="download"></mat-icon>
-        {{ 'experiment.tableHeader.download' | translate }}
-      </button>
+    <button read-action matButton="text" (click)="onDownload()">
+      <mat-icon fontIcon="download"></mat-icon>
+      {{ 'experiment.tableHeader.download' | translate }}
+    </button>
 
-      <button matButton="tonal" (click)="onCreate()">
-        <mat-icon fontIcon="add"></mat-icon>
-        {{ 'experiment.tableHeader.create' | translate }}
-      </button>
+    <button write-action matButton="tonal" (click)="onCreate()">
+      <mat-icon fontIcon="add"></mat-icon>
+      {{ 'experiment.tableHeader.create' | translate }}
+    </button>
 
-      <button matButton="filled" [disabled]="!selectedExperimentId()" (click)="onEdit()">
-        <mat-icon fontIcon="edit"></mat-icon>
-        {{ 'experiment.tableHeader.edit' | translate }}
-      </button>
-    </div>
+    <button write-action matButton="filled" [disabled]="!selectedExperimentId()" (click)="onEdit()">
+      <mat-icon fontIcon="edit"></mat-icon>
+      {{ 'experiment.tableHeader.edit' | translate }}
+    </button>
   </app-table-header>
 </div>

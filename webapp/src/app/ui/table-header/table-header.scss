@@ -17,6 +17,11 @@
   border: 1px solid var(--mat-sys-outline-variant);
   border-bottom: none;
   border-radius: 2px 2px 0 0;
+
+  .header-actions {
+    gap: 0.75rem;
+    display: flex;
+  }
 }
 
 .search-field {
@@ -24,3 +29,4 @@
   --mat-form-field-container-height: 40px;
   --mat-form-field-container-vertical-padding: 8px;
 }
+

@@ -10,6 +10,9 @@
   </mat-form-field>
 
   <div class="header-actions">
-    <ng-content></ng-content>
+    <ng-content select="[read-action]"></ng-content>
+    @if (permissions.canWrite()) {
+      <ng-content select="[write-action]"></ng-content>
+    }
   </div>
 </div>

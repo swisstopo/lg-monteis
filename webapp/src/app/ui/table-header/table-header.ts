@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, output } from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, output} from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { MatFormField, MatInput, MatPrefix } from '@angular/material/input';
 import { TranslatePipe } from '@ngx-translate/core';
+import {PermissionsService} from '../../core/auth/permissions.service';
 
 @Component({
   selector: 'app-table-header',
@@ -12,6 +13,8 @@ import { TranslatePipe } from '@ngx-translate/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableHeader {
+  protected readonly permissions = inject(PermissionsService);
+
   translationPrefix = `tableHeader`;
 
   searchAction = output<string>();
