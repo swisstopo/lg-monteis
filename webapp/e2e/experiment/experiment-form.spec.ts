@@ -18,8 +18,6 @@ test('should create experiment', async ({ page }) => {
   const uniqueId = crypto.randomUUID().substring(0, 8);
   await dialog.getByLabel('Experiment Name').fill(`E2E TEST ${uniqueId}`);
 
-  await page.getByRole('option', { name: 'Active' }).click();
-
   await dialog.getByLabel('Comment').fill('This is an E2E test experiment comment.');
 
   // Using dates like 01/01 and 05/05 prevents locale formatting parsing errors in Playwright
@@ -60,8 +58,6 @@ test('should fail to create existing experiment', async ({ page }) => {
   const experimentName = `E2E TEST ${uniqueId}`;
 
   await dialog.getByLabel('Experiment Name').fill(experimentName);
-
-  await page.getByRole('option', { name: 'Active' }).click();
 
   await dialog.getByLabel('Start Date').fill('01/01/2030');
   await dialog.getByLabel('End Date').fill('05/05/2030');
