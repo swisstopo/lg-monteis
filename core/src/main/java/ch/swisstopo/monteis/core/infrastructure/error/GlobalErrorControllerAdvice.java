@@ -29,6 +29,7 @@ import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
@@ -102,15 +103,21 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
       @NonNull HttpStatusCode status,
       @NonNull WebRequest request) {
 
-    String errorId = UUID.randomUUID().toString();
+    HttpServletRequest servletRequest = ((ServletWebRequest) request).getRequest();
+    RequestErrorContext ctx = getErrorContext(servletRequest);
     String details =
         ex.getParameterValidationResults().stream()
             .map(this::describeParameterValidationResult)
             .collect(Collectors.joining("; "));
 
-    log.warn("Request parameter validation failed [ErrorID: {}]: {}", errorId, details);
+    log.warn(
+        "Request parameter validation failed at {} {} [ErrorID: {}]: {}",
+        ctx.method(),
+        ctx.uri(),
+        ctx.errorId(),
+        details);
 
-    ErrorDto payload = ErrorDto.global(Map.of("errorId", errorId));
+    ErrorDto payload = ErrorDto.global(Map.of(ERROR_ID, ctx.errorId()));
 
     return ResponseEntity.status(status).headers(headers).body(payload);
   }
