@@ -13,7 +13,7 @@ import { authInterceptor } from './core/auth/auth.interceptor';
 import { provideAuth } from './core/auth/provide-auth';
 import { provideAppDateConfig } from './core/date/date.provider';
 import { BASE_PATH } from './core/generated';
-import { restErrorInterceptor } from './shared/interceptors/rest-error.interceptors';
+import { restErrorInterceptor } from './core/http/rest-error.interceptors';
 
 export const appConfig: ApplicationConfig = {
   providers: [

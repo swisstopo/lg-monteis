@@ -1,8 +1,8 @@
 import { inject, Injectable } from '@angular/core';
 import { FieldTree } from '@angular/forms/signals';
 import { TranslateService } from '@ngx-translate/core';
-import { ErrorDto } from '../../core/generated';
-import { ToastService } from './toast.service';
+import { ErrorDto } from '../generated';
+import { ToastService } from '../notifications/toast.service';
 
 export interface FormFieldServerError {
   kind: 'serverError';
