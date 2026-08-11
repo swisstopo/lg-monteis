@@ -3,7 +3,7 @@ name: Build and Package Webapp Artifact
 on:
   push:
     branches:
-      - mon-83-build-frontend
+      - main
     paths:
       - 'webapp/**'
 
