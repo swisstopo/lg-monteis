@@ -6,8 +6,8 @@ kind: Kustomization
 namespace: monteis-prod
 
 resources:
-  - ../../../backend-base
-  - externalsecret-pipeline.yaml
+  # Pipeline component base (backend-base + pipeline-invariant externalsecret).
+  - ../../base
   - pdb-pipeline.yaml
 
 images:

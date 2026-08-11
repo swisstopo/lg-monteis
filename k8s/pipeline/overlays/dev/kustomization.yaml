@@ -4,8 +4,8 @@ kind: Kustomization
 namespace: monteis-dev
 
 resources:
-  - ../../../backend-base
-  - externalsecret-pipeline.yaml
+  # Pipeline component base (backend-base + pipeline-invariant externalsecret).
+  - ../../base
 
 # Image digest pinning (MANDATED: never :latest or bare semver tag).
 # CI release pipeline overwrites the digest below after each successful build.

@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Pipeline component base: env-invariant pipeline resources shared by every
+# pipeline overlay. Composes the cross-backend shared base (backend-base) and
+# adds the pipeline TimescaleDB ExternalSecret, defined ONCE here (its
+# remoteRef.key is patched per overlay) instead of duplicated per overlay.
+# Each pipeline/overlays/<stage> references ../../base and supplies only the
+# env-specific patches. Env-specific resources (pdb-pipeline.yaml, staging/prod
+# only) stay in the overlays.
+
+resources:
+  - ../../backend-base
+  - externalsecret-pipeline.yaml
