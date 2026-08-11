@@ -190,10 +190,10 @@ patches:
         value: core
       - op: replace
         path: /spec/data/0/remoteRef/key
-        value: monteis/prod/core/rds-credentials
+        value: monteis-prod/core/rds-credentials
       - op: replace
         path: /spec/data/1/remoteRef/key
-        value: monteis/prod/core/rds-credentials
+        value: monteis-prod/core/rds-credentials
 
   # ── Deployment — inject RDS creds env from the ESO-synced Secret (core-only) ──
   - target:
