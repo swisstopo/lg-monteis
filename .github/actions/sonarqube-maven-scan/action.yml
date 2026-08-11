@@ -8,6 +8,10 @@ inputs:
   sonar_host_url:
     description: 'Sonar host URL passed from workflow'
     required: true
+  enforce_quality_gate:
+    description: 'Whether to fail the job if the Sonar Quality Gate fails. Set to false for branch analysis where no gate should apply (e.g. main).'
+    required: false
+    default: 'true'
 
 runs:
   using: "composite"
@@ -21,6 +25,7 @@ runs:
         -Dsonar.host.url=${{ inputs.sonar_host_url }}
 
     - name: Sonar Quality Gate
+      if: inputs.enforce_quality_gate == 'true'
       id: sonarqube-quality-gate-check
       uses: SonarSource/sonarqube-quality-gate-action@v1.2.1
       with:

@@ -61,3 +61,4 @@ jobs:
         with:
           sonar_token: ${{ secrets.SONAR_TOKEN }}
           sonar_host_url: ${{ vars.SONAR_HOST_URL }}
+          enforce_quality_gate: 'false'
