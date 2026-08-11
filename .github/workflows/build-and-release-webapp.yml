@@ -50,21 +50,21 @@ jobs:
     if: needs.evaluate-version.outputs.is_tagged == 'false' && needs.evaluate-version.outputs.changed == 'true'
     runs-on: ubuntu-24.04
     steps:
-      - name: "[BUILD]: Checkout Code"
+      - name: "[PREPARE]: Checkout Code"
         uses: actions/checkout@v7
 
-      - name: "[BUILD]: Setup Java Environment"
+      - name: "[PREPARE]: Setup Java Environment"
         uses: ./.github/actions/setup-java-maven
 
-      - name: "[BUILD]: Setup Node Environment"
+      - name: "[PREPARE]: Setup Node Environment"
         uses: ./.github/actions/setup-node-pnpm
 
       # webapp's generated API client (src/app/core/generated, gitignored) is generated from
       # core's OpenAPI spec, so core must be built first (same as pr-gate.yml).
-      - name: "[BUILD]: Compile Internal Dependencies"
+      - name: "[GENERATE]: Compile Internal Dependencies"
         run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
 
-      - name: "[BUILD]: Generate API Client"
+      - name: "[GENERATE]: Generate API Client"
         working-directory: webapp
         run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
 
@@ -72,7 +72,7 @@ jobs:
         working-directory: webapp
         run: pnpm build --configuration production
 
-      - name: "[PACKAGE]: Create build archive"
+      - name: "[BUILD]: Create build archive"
         env:
           VERSION: ${{ needs.evaluate-version.outputs.version }}
         run: |
@@ -91,7 +91,7 @@ jobs:
 
       # CHANGE_ME once s3 is set up For now, just publish the build as a workflow artifact.
       - name: "[PUBLISH]: Upload build artifact"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: webapp-${{ needs.evaluate-version.outputs.version }}
           path: webapp-${{ needs.evaluate-version.outputs.version }}.zip
