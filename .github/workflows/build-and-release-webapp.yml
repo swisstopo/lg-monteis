@@ -1,0 +1,98 @@
+name: Build and Package Webapp Artifact
+
+on:
+  push:
+    branches:
+      - mon-83-build-frontend
+    paths:
+      - 'webapp/**'
+
+permissions:
+  contents: write # required for: git push tag
+
+env:
+  JAVA_VERSION: ${{ vars.JAVA_VERSION }}
+  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION }}
+  NODE_VERSION: ${{ vars.NODE_VERSION }}
+
+jobs:
+  evaluate-version:
+    name: Evaluate Tag for webapp
+    runs-on: ubuntu-24.04
+    outputs:
+      is_tagged: ${{ steps.semver.outputs.is_tagged }}
+      changed: ${{ steps.semver.outputs.changed }}
+      version: ${{ steps.semver.outputs.version }}
+      version_tag: ${{ steps.semver.outputs.version_tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Must fetch history so the bot can read the commits
+          filter: blob:none
+
+      # This is a dry run which is used later to set the github tag and have unique versioning
+      # change_path guards unnecessary execution!
+      - name: "[TAG]: Calculate Semantic Version"
+        id: semver
+        uses: paulhatch/semantic-version@v6.0.3
+        with:
+          tag_prefix: "webapp-v"
+          change_path: "webapp/"
+
+      - name: "[TAG]: Check if already tagged"
+        run: |
+          echo "is tagged: ${{ steps.semver.outputs.is_tagged }}"
+          echo "changed: ${{ steps.semver.outputs.changed }}"
+
+  build-and-package:
+    name: Build & Package webapp
+    needs: evaluate-version
+    if: needs.evaluate-version.outputs.is_tagged == 'false' && needs.evaluate-version.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "[BUILD]: Checkout Code"
+        uses: actions/checkout@v7
+
+      - name: "[BUILD]: Setup Java Environment"
+        uses: ./.github/actions/setup-java-maven
+
+      - name: "[BUILD]: Setup Node Environment"
+        uses: ./.github/actions/setup-node-pnpm
+
+      # webapp's generated API client (src/app/core/generated, gitignored) is generated from
+      # core's OpenAPI spec, so core must be built first (same as pr-gate.yml).
+      - name: "[BUILD]: Compile Internal Dependencies"
+        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
+
+      - name: "[BUILD]: Generate API Client"
+        working-directory: webapp
+        run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
+
+      - name: "[BUILD]: Build Angular App"
+        working-directory: webapp
+        run: pnpm build --configuration production
+
+      - name: "[PACKAGE]: Create build archive"
+        env:
+          VERSION: ${{ needs.evaluate-version.outputs.version }}
+        run: |
+          cd webapp/dist/webapp/browser
+          zip -r "$GITHUB_WORKSPACE/webapp-$VERSION.zip" .
+
+      - name: "[TAG]: Push Git Tag to GitHub"
+        env:
+          TAG: ${{ needs.evaluate-version.outputs.version_tag }}
+        run: |
+          echo "[INFO]: Tagging commit with $TAG"
+
+          # Create and push the tag
+          git tag $TAG
+          git push origin $TAG
+
+      # CHANGE_ME once s3 is set up For now, just publish the build as a workflow artifact.
+      - name: "[PUBLISH]: Upload build artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp-${{ needs.evaluate-version.outputs.version }}
+          path: webapp-${{ needs.evaluate-version.outputs.version }}.zip
+          retention-days: 3
