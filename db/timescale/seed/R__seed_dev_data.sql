@@ -24,7 +24,7 @@ FROM (
              round(((50 + 30 * sin(extract(epoch FROM gs.ts) / 3600.0 + s.phase_shift)))::numeric, 2) AS raw_value,
              round(((50 + 30 * sin(extract(epoch FROM gs.ts) / 3600.0 + s.phase_shift)) * 0.98)::numeric, 2) AS norm_value
          FROM generate_series(
-                      now() - interval '10 hours',
+                      now() - interval '365 days',
                       now(),
                       interval '5 minutes'
               ) AS gs(ts)

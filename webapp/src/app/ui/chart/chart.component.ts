@@ -36,6 +36,46 @@ import {
 
 registerChartJs();
 
+/**
+ * This component renders line or scatter charts.
+ *
+ * Minimal required data:
+ * - title: Renders dialog title
+ * - datasets: ChartDataset[] - array of datasets to render
+ * - options: ChartOptions - see @ChartTypes createTimeChartOptions | createLinearChartOptions
+ *
+ * Outputs:
+ * - pointClick: ChartPointEvent - emitted when a point is clicked
+ * - pointHover: ChartPointEvent - emitted when a point is hovered
+ * - rangeSelected: ChartRangeEvent - emitted when a range is selected
+ *
+ * Zooming always refetches data from the backend for the selected x-Axis range. Y-Axis zooming is
+ * handled by the plugin's default drag behaviour. The initial range is stored (and resettable.
+ *
+ * To render a line chart, you need to provide:
+ * - datasets: ChartDataset[] {
+ *     id: 'taupe_sensor_1',
+ *     label: 'Taupe Sensor 1',
+ *     data: [
+ *       { x: 10, y: 2.4 },
+ *       { x: 25, y: 2.8 },
+ *       { x: 50, y: 3.1 },
+ *       { x: 120, y: 4.5 },
+ *     ],
+ *     yAxisId: 'y',
+ *   };
+ * - options: ChartOptions = {
+ *       title: 'Taupe Cable Analysis',
+ *       xAxisLabel: 'Taupe cable length [cm]',
+ *       xAxisType: 'linear',
+ *       yAxisLabels: {
+ *         y: 'Relative Electric Permitivity',
+ *       },
+ *     };
+ *
+ * - type: 'line'
+ *
+ **/
 @Component({
   selector: 'app-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -68,6 +108,14 @@ export class ChartComponent {
   private lastHoverKey?: string;
   private readonly palette = signal<ChartThemePalette>({});
   private readonly viewReady = signal(false);
+  /**
+   * Y axes zoomed via the plugin's default drag behaviour.
+   * Since every dataset/options update rebuilds `scales` from scratch, these are re-applied on
+   * each render so the Y zoom survives the data refresh triggered by that X refetch.
+   */
+  private manualYRanges: Record<string, { min: number; max: number }> = {};
+  private initialDateRange?: { min: number; max: number };
+  private resetRange?: { min: number; max: number };
 
   constructor() {
     // key architectural consideration for for gpu references clean up
@@ -100,6 +148,10 @@ export class ChartComponent {
         return;
       }
       const config = buildChartConfig(this.type(), this.datasets(), this.options(), this.palette());
+      this.applyManualYRanges(config);
+      if (Object.keys(this.manualYRanges).length === 0) {
+        this.initialDateRange = this.computeDateRange(this.datasets());
+      }
       // Chart.js resolves dataset controllers at construction, so a type change requires a rebuild.
       if (this.instance && (this.instance.config as ChartConfiguration).type !== config.type) {
         this.instance.destroy();
@@ -114,9 +166,11 @@ export class ChartComponent {
   }
 
   public resetZoom(): void {
+    this.resetRange = this.initialDateRange;
     if (this.instance) {
       this.instance.resetZoom();
     }
+    this.manualYRanges = {};
   }
 
   private createChart(config: ChartConfiguration): void {
@@ -173,12 +227,50 @@ export class ChartComponent {
     };
   }
 
+  /**
+   * By the time `onZoomComplete` fires, the drag-zoom plugin has already applied its default
+   * behaviour to every axis matched by `mode: 'xy'` (one `chart.update()`, already paid for).
+   * The Y axes are left as the plugin zoomed them (and remembered in `manualYRanges` so they
+   * survive future re-renders); the X axis's resulting range is reported via `rangeSelected`
+   * instead, for the consumer to refetch, rather than kept as a client-side-only zoom.
+   */
   private handleZoomComplete(chart: ChartJs): void {
+    if (this.resetRange) {
+      this.rangeSelected.emit(this.resetRange);
+      this.resetRange = undefined;
+      return;
+    }
     const xScale = chart.scales['x'];
     if (!xScale) {
       return;
     }
+    Object.values(chart.scales)
+      .filter((scale) => scale.axis === 'y')
+      .forEach((scale) => {
+        this.manualYRanges[scale.id] = { min: scale.min, max: scale.max };
+      });
     this.rangeSelected.emit({ min: xScale.min, max: xScale.max });
+  }
+
+  private computeDateRange(datasets: ChartDataset[]): { min: number; max: number } | undefined {
+    const xs = datasets.flatMap((dataset) => dataset.data.map((point) => point.x));
+    if (xs.length === 0) {
+      return undefined;
+    }
+    return { min: Math.min(...xs), max: Math.max(...xs) };
+  }
+
+  private applyManualYRanges(config: ChartConfiguration): void {
+    const scales = config.options?.scales as Record<string, { min?: number; max?: number }>;
+    if (!scales) {
+      return;
+    }
+    for (const [axisId, range] of Object.entries(this.manualYRanges)) {
+      if (scales[axisId]) {
+        scales[axisId].min = range.min;
+        scales[axisId].max = range.max;
+      }
+    }
   }
 
   /**

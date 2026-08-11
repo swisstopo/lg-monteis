@@ -80,7 +80,7 @@ export function buildChartConfig(
     },
     options: {
       responsive: true,
-      maintainAspectRatio: options.maintainAspectRatio ?? false,
+      maintainAspectRatio: false,
       animation: false,
       plugins: {
         title: {
@@ -127,9 +127,9 @@ export function buildChartConfig(
             },
             drag: {
               enabled: true,
-              backgroundColor: 'rgba(66, 133, 244, 0.2)',
+              backgroundColor: 'rgb(9 4 4 / 0.2)',
               borderWidth: 1,
-              borderColor: 'rgba(66, 133, 244, 1)',
+              borderColor: 'rgb(0 0 0)',
             },
             mode: 'xy',
           },

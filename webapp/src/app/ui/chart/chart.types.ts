@@ -20,7 +20,6 @@ export interface ChartOptions {
   xAxisType?: 'linear' | 'time';
   yAxisLabels?: Record<string, string>;
   showLegend?: boolean;
-  maintainAspectRatio?: boolean;
 }
 
 export interface ChartPointEvent {
@@ -38,4 +37,36 @@ export interface ChartThemePalette {
   textColor?: string;
   gridColor?: string;
   seriesColors?: string[];
+}
+
+export interface TimeSeriesOptions {
+  title: string;
+  xAxisLabel?: string;
+  yAxisLabels: Record<string, string>;
+  subtitle?: string;
+  showLegend?: boolean;
+}
+
+export function createTimeChartOptions(input: TimeSeriesOptions): ChartOptions {
+  return {
+    ...input,
+    xAxisType: 'time',
+    showLegend: input.showLegend ?? true,
+  };
+}
+
+export interface LinearSeriesOptions {
+  title: string;
+  xAxisLabel?: string;
+  yAxisLabels: Record<string, string>;
+  subtitle?: string;
+  showLegend?: boolean;
+}
+
+export function createLinearChartOptions(input: LinearSeriesOptions): ChartOptions {
+  return {
+    ...input,
+    xAxisType: 'linear',
+    showLegend: input.showLegend ?? true,
+  };
 }

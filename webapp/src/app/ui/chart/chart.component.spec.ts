@@ -161,6 +161,258 @@ describe('Chart', () => {
     });
   });
 
+  describe('Y-axis zoom persistence', () => {
+    it('should store the initial date range when the chart first renders unzoomed data', async () => {
+      const initialRange = (component as any).initialDateRange;
+      expect(initialRange).toEqual({ min: 0, max: 1 });
+    });
+
+    it('should not update the initial date range when a zoomed refetch occurs', async () => {
+      const instance = (component as any).instance;
+      const mockChart = {
+        scales: {
+          x: { min: 5, max: 42 },
+          y: { id: 'y', axis: 'y', min: 10, max: 100 },
+        },
+      };
+
+      instance.options.plugins.zoom.zoom.onZoomComplete({ chart: mockChart });
+
+      const refetchedDataset: ChartDataset = {
+        id: 'sensor-1',
+        label: 'Sensor 1',
+        data: [{ x: 10, y: 20 }],
+      };
+
+      fixture.componentRef.setInput('datasets', [refetchedDataset]);
+      await fixture.whenStable();
+
+      expect((component as any).initialDateRange).toEqual({ min: 0, max: 1 });
+    });
+
+    it('should update the initial date range after reset and a new full dataset', async () => {
+      const instance = (component as any).instance;
+      const zoomedChart = {
+        scales: {
+          x: { min: 5, max: 42 },
+          y: { id: 'y', axis: 'y', min: 10, max: 100 },
+        },
+      };
+
+      instance.options.plugins.zoom.zoom.onZoomComplete({ chart: zoomedChart });
+
+      const unzoomedChart = {
+        scales: {
+          x: { min: 0, max: 100 },
+          y: { id: 'y', axis: 'y', min: 1, max: 200 },
+        },
+      };
+      instance.resetZoom = vi.fn(() => {
+        instance.options.plugins.zoom.zoom.onZoomComplete({ chart: unzoomedChart });
+      });
+      component.resetZoom();
+
+      const newDataset: ChartDataset = {
+        id: 'sensor-2',
+        label: 'Sensor 2',
+        data: [{ x: 100, y: 200 }],
+      };
+
+      fixture.componentRef.setInput('datasets', [newDataset]);
+      await fixture.whenStable();
+
+      expect((component as any).initialDateRange).toEqual({ min: 100, max: 100 });
+    });
+    it('should store the Y-axis zoom range when a drag-zoom selection completes', () => {
+      const instance = (component as any).instance;
+      const mockChart = {
+        scales: {
+          x: { min: 5, max: 42 },
+          y: { id: 'y', axis: 'y', min: 10, max: 100 },
+        },
+        resetZoom: vi.fn(),
+      };
+
+      instance.options.plugins.zoom.zoom.onZoomComplete({ chart: mockChart });
+
+      expect((component as any).manualYRanges).toEqual({
+        y: { min: 10, max: 100 },
+      });
+    });
+
+    it('should store multiple Y-axis zoom ranges keyed by axis id', () => {
+      const instance = (component as any).instance;
+      const mockChart = {
+        scales: {
+          x: { min: 5, max: 42 },
+          y: { id: 'y', axis: 'y', min: 10, max: 100 },
+          y2: { id: 'y2', axis: 'y', min: -50, max: 50 },
+        },
+        resetZoom: vi.fn(),
+      };
+
+      instance.options.plugins.zoom.zoom.onZoomComplete({ chart: mockChart });
+
+      expect((component as any).manualYRanges).toEqual({
+        y: { min: 10, max: 100 },
+        y2: { min: -50, max: 50 },
+      });
+    });
+
+    it('should apply stored Y-axis ranges to new chart scales when datasets change', async () => {
+      const instance = (component as any).instance;
+      const mockChart = {
+        scales: {
+          x: { min: 5, max: 42 },
+          y: { id: 'y', axis: 'y', min: 10, max: 100 },
+        },
+        resetZoom: vi.fn(),
+      };
+
+      instance.options.plugins.zoom.zoom.onZoomComplete({ chart: mockChart });
+
+      const newDataset: ChartDataset = {
+        id: 'sensor-2',
+        label: 'Sensor 2',
+        data: [{ x: 10, y: 42 }],
+        color: '#00ff00',
+      };
+
+      fixture.componentRef.setInput('datasets', [newDataset]);
+      await fixture.whenStable();
+
+      expect(instance.options.scales.y.min).toBe(10);
+      expect(instance.options.scales.y.max).toBe(100);
+    });
+
+    it('should keep applying Y-axis ranges across subsequent dataset updates', async () => {
+      const instance = (component as any).instance;
+      const mockChart = {
+        scales: {
+          x: { min: 5, max: 42 },
+          y: { id: 'y', axis: 'y', min: 10, max: 100 },
+        },
+        resetZoom: vi.fn(),
+      };
+
+      instance.options.plugins.zoom.zoom.onZoomComplete({ chart: mockChart });
+
+      const datasetA: ChartDataset = { id: 'a', label: 'A', data: [{ x: 1, y: 2 }] };
+      const datasetB: ChartDataset = { id: 'b', label: 'B', data: [{ x: 3, y: 4 }] };
+
+      fixture.componentRef.setInput('datasets', [datasetA]);
+      await fixture.whenStable();
+      expect(instance.options.scales.y.min).toBe(10);
+      expect(instance.options.scales.y.max).toBe(100);
+
+      fixture.componentRef.setInput('datasets', [datasetB]);
+      await fixture.whenStable();
+      expect(instance.options.scales.y.min).toBe(10);
+      expect(instance.options.scales.y.max).toBe(100);
+    });
+
+    it('should ignore stored Y-axis ranges for scales that no longer exist', async () => {
+      const instance = (component as any).instance;
+      (component as any).manualYRanges = {
+        y: { min: 10, max: 100 },
+        missing: { min: 0, max: 1 },
+      };
+
+      const newDataset: ChartDataset = {
+        id: 'sensor-2',
+        label: 'Sensor 2',
+        data: [{ x: 10, y: 42 }],
+        color: '#00ff00',
+      };
+
+      fixture.componentRef.setInput('datasets', [newDataset]);
+      await fixture.whenStable();
+
+      expect(instance.options.scales.y.min).toBe(10);
+      expect(instance.options.scales.y.max).toBe(100);
+      expect(instance.options.scales.missing).toBeUndefined();
+    });
+
+    it('should clear manual Y ranges and reset the chart when resetZoom is called', () => {
+      const instance = (component as any).instance;
+      const emitSpy = vi.spyOn(component.rangeSelected, 'emit');
+      const zoomedChart = {
+        scales: {
+          x: { min: 5, max: 42 },
+          y: { id: 'y', axis: 'y', min: 10, max: 100 },
+        },
+      };
+
+      instance.options.plugins.zoom.zoom.onZoomComplete({ chart: zoomedChart });
+      expect((component as any).manualYRanges).toEqual({
+        y: { min: 10, max: 100 },
+      });
+
+      const unzoomedChart = {
+        scales: {
+          x: { min: 0, max: 100 },
+          y: { id: 'y', axis: 'y', min: 1, max: 200 },
+        },
+      };
+      instance.resetZoom = vi.fn(() => {
+        instance.options.plugins.zoom.zoom.onZoomComplete({ chart: unzoomedChart });
+      });
+
+      component.resetZoom();
+
+      expect(emitSpy).toHaveBeenLastCalledWith((component as any).initialDateRange);
+      expect((component as any).manualYRanges).toEqual({});
+      expect(instance.resetZoom).toHaveBeenCalled();
+    });
+
+    it('should not re-apply old Y ranges after resetZoom and a dataset update', async () => {
+      const instance = (component as any).instance;
+      const zoomedChart = {
+        scales: {
+          x: { min: 5, max: 42 },
+          y: { id: 'y', axis: 'y', min: 10, max: 100 },
+        },
+      };
+
+      instance.options.plugins.zoom.zoom.onZoomComplete({ chart: zoomedChart });
+
+      const unzoomedChart = {
+        scales: {
+          x: { min: 0, max: 100 },
+          y: { id: 'y', axis: 'y', min: 1, max: 200 },
+        },
+      };
+      instance.resetZoom = vi.fn(() => {
+        instance.options.plugins.zoom.zoom.onZoomComplete({ chart: unzoomedChart });
+      });
+      component.resetZoom();
+
+      const newDataset: ChartDataset = {
+        id: 'sensor-2',
+        label: 'Sensor 2',
+        data: [{ x: 10, y: 42 }],
+        color: '#00ff00',
+      };
+
+      fixture.componentRef.setInput('datasets', [newDataset]);
+      await fixture.whenStable();
+
+      expect(instance.options.scales.y.min).toBeUndefined();
+      expect(instance.options.scales.y.max).toBeUndefined();
+    });
+
+    it('should not emit rangeSelected or persist Y ranges when the X scale is missing', () => {
+      const instance = (component as any).instance;
+      const emitSpy = vi.spyOn(component.rangeSelected, 'emit');
+      const mockChart = { scales: {}, resetZoom: vi.fn() };
+
+      instance.options.plugins.zoom.zoom.onZoomComplete({ chart: mockChart });
+
+      expect(emitSpy).not.toHaveBeenCalled();
+      expect((component as any).manualYRanges).toEqual({});
+    });
+  });
+
   describe('Reactivity and Updates', () => {
     it('should update the chart instance when dataset inputs change', async () => {
       const instance = (component as any).instance;

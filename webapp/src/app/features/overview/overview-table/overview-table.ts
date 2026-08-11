@@ -15,16 +15,13 @@ import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatLabel, MatSuffix } from '@angular/material/input';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
-import { ChartDataset } from 'chart.js';
 import { OverviewControllerService, ReadSimpleMetricDto } from '../../../core/generated';
-import { ChartComponent, ChartOptions, ChartRangeEvent } from '../../../ui/chart';
 import {
-  generateMockHumidityDataset,
-  generateMockPressureDataset,
-  generateMockStressRadialDataset,
-  generateMockTemperatureDataset,
-  generateTaupeDataset,
-} from '../../../ui/chart/chart-data-mock';
+  ChartComponent,
+  ChartOptions,
+  ChartRangeEvent,
+  createTimeChartOptions,
+} from '../../../ui/chart';
 import Table from '../../../ui/table/table';
 import { MesurementsService } from '../services/mesurements.service';
 import { createColumns } from './columns';
@@ -128,13 +125,14 @@ export default class OverviewTable {
       bindings: [
         inputBinding('title', () => title),
         inputBinding('datasets', () => this.mesurementsService.chartData.value()?.datasets ?? []),
-        inputBinding('options', (): ChartOptions => ({
-          title: title,
-          subtitle: 'Plot of measurements',
-          xAxisType: 'time',
-          xAxisLabel: 'Date',
-          yAxisLabels: this.mesurementsService.chartData.value()?.yAxisLabels ?? {},
-        })),
+        inputBinding('options', (): ChartOptions =>
+          createTimeChartOptions({
+            title: title,
+            xAxisLabel: 'Date',
+            yAxisLabels: this.mesurementsService.chartData.value()?.yAxisLabels ?? {},
+            subtitle: 'Plot of measurements',
+          }),
+        ),
         outputBinding('rangeSelected', (range) => this.onRangeSelected(<ChartRangeEvent>range)),
       ],
     });
@@ -150,76 +148,5 @@ export default class OverviewTable {
     const rangeToTimestamp = this.datePipe.transform(end, isoFormat)!;
 
     this.mesurementsService.getChartData(this.plottedIds(), rangeFromTimestamp, rangeToTimestamp);
-  }
-
-  //TODO remove
-  protected onPlotMock() {
-    const rangeFrom = this.datePipe.transform('2026-05-20');
-    const rangeTo = this.datePipe.transform('2026-06-24');
-    const datasets: ChartDataset[] = [
-      generateMockPressureDataset(),
-      generateMockStressRadialDataset(),
-      generateMockTemperatureDataset(),
-      generateMockHumidityDataset(),
-    ];
-    const title = this.i18nService.translate('chart.title', {
-      name: 'MyFancyExperiment',
-      rangeFrom: rangeFrom,
-      rangeTo: rangeTo,
-    })();
-    const options: ChartOptions = {
-      title: title,
-      subtitle: 'Plot of 666 measurements',
-      xAxisType: 'time',
-      xAxisLabel: 'Date',
-      yAxisLabels: {
-        y: 'Fluid Pressure [kPa]',
-        y2: 'Radial Stress [bar]',
-        y3: 'Temperature [°C]',
-        y4: 'Relative Humidity [%]',
-      },
-    };
-
-    this.dialog.open(ChartComponent, {
-      width: '95vw',
-      maxWidth: '100%',
-      height: '95vh',
-      maxHeight: '100%',
-      autoFocus: true,
-      bindings: [
-        inputBinding('title', () => title),
-        inputBinding('datasets', () => datasets),
-        inputBinding('options', () => options),
-        outputBinding('pointClick', (event) => console.log('click: ', event)),
-        outputBinding('pointHover', (event) => console.log('hover: ', event)),
-      ],
-    });
-  }
-
-  //TODO remove
-  protected onPlotLine() {
-    const taupeOptions: ChartOptions = {
-      title: 'Taupe Cable Analysis',
-      xAxisLabel: 'Taupe cable length [cm]',
-      yAxisLabels: {
-        y: 'Relative Electric Permitivity',
-      },
-    };
-
-    this.dialog.open(ChartComponent, {
-      width: '95vw',
-      maxWidth: '100%',
-      height: '95vh',
-      maxHeight: '100%',
-      autoFocus: true,
-      bindings: [
-        inputBinding('title', () => 'TaupeProfile on 2026-05-20'),
-        inputBinding('type', () => 'line'),
-        inputBinding('datasets', () => [generateTaupeDataset()]),
-        inputBinding('options', () => taupeOptions),
-        outputBinding('pointClick', (event) => console.log('click: ', event)),
-        outputBinding('pointHover', (event) => console.log('hover: ', event)),
-      ],
-    });
   }
 }
