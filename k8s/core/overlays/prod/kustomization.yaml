@@ -6,8 +6,8 @@ kind: Kustomization
 namespace: monteis-prod
 
 resources:
-  - ../../../backend-base
-  - ingress-core-prod.yaml
+  # Core component base (backend-base + core-invariant externalsecret + ingress).
+  - ../../base
   - pdb-core.yaml
 
 images:
@@ -17,6 +17,14 @@ images:
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
 
 patches:
+  # ── Ingress host (base ingress-core.yaml carries REPLACED-IN-OVERLAY) ─────────
+  - target:
+      kind: Ingress
+      name: core
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: TODO-prod.swisstopo-monteis-test.swisstopo.cloud
   - target:
       kind: Deployment
       name: REPLACED-IN-OVERLAY

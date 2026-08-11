@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Core component base: env-invariant core resources shared by every core
+# overlay. Composes the cross-backend shared base (backend-base) and adds the
+# resources that are core-specific but identical across environments, so they
+# are defined ONCE here instead of duplicated per overlay:
+#   - externalsecret-core.yaml  (RDS creds; remoteRef.key patched per overlay)
+#   - ingress-core.yaml         (host patched per overlay)
+# Each core/overlays/<stage> references ../../base and supplies only the
+# env-specific patches (namespace, image digest, ARNs, host, remoteRef.key).
+# Env-specific resources (pdb-core.yaml, staging/prod only) stay in the overlays.
+
+resources:
+  - ../../backend-base
+  - externalsecret-core.yaml
+  - ingress-core.yaml

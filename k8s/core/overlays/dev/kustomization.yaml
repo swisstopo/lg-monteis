@@ -4,8 +4,8 @@ kind: Kustomization
 namespace: monteis-dev
 
 resources:
-  - ../../../backend-base
-  - ingress-core.yaml
+  # Core component base (backend-base + core-invariant externalsecret + ingress).
+  - ../../base
 
 # Image digest pinning (MANDATED: never :latest or bare semver tag).
 # The CI release pipeline (Paketo build -> ECR -> kustomize edit set image)
@@ -18,6 +18,14 @@ images:
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
 
 patches:
+  # ── Ingress host (base ingress-core.yaml carries REPLACED-IN-OVERLAY) ─────────
+  - target:
+      kind: Ingress
+      name: core
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: dev.swisstopo-monteis-test.swisstopo.cloud
   # ── Deployment ──────────────────────────────────────────────────────────────
   - target:
       kind: Deployment

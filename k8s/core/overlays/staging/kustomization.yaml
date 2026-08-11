@@ -7,8 +7,8 @@ kind: Kustomization
 namespace: monteis-staging
 
 resources:
-  - ../../../backend-base
-  - ingress-core-staging.yaml
+  # Core component base (backend-base + core-invariant externalsecret + ingress).
+  - ../../base
   - pdb-core.yaml
 
 images:
