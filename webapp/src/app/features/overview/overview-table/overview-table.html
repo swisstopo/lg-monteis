@@ -8,6 +8,32 @@
   } @else if (metricsResource.error()) {
     <p class="error-text">{{ 'measurements.error' | translate }}</p>
   } @else {
+    <mat-form-field>
+      <mat-label>Enter a date range</mat-label>
+
+      <mat-date-range-input [rangePicker]="picker">
+        <input matStartDate [formField]="rangeForm.start" placeholder="Start date" />
+        <input matEndDate [formField]="rangeForm.end" placeholder="End date" />
+      </mat-date-range-input>
+      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-date-range-picker #picker></mat-date-range-picker>
+
+      @if (rangeForm.start().touched() && rangeForm.start().invalid()) {
+        <mat-error>Start date is required</mat-error>
+      }
+      @if (rangeForm.end().touched() && rangeForm.end().invalid()) {
+        <mat-error>End date is required</mat-error>
+      }
+    </mat-form-field>
+    <button
+      matButton="filled"
+      (click)="onPlot()"
+      [disabled]="mesurementsService.chartData.isLoading()"
+    >
+      >
+      <mat-icon fontIcon="add_chart"></mat-icon>
+      {{ 'sensor.tableHeader.plot' | translate }}
+    </button>
     <app-table
       class="custom-grid"
       [rows]="metricsResource.value() ?? []"

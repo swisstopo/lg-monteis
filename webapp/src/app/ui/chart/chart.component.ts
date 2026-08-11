@@ -20,6 +20,7 @@ import {
   MatDialogTitle,
 } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
+import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ActiveElement, ChartConfiguration, ChartEvent, Chart as ChartJs } from 'chart.js';
 import { buildChartConfig } from './chart-config.builder';
@@ -47,6 +48,7 @@ registerChartJs();
     MatButton,
     MatDialogClose,
     MatIcon,
+    MatProgressSpinner,
     TranslatePipe,
   ],
 })
@@ -96,7 +98,7 @@ export class ChartComponent {
     });
 
     effect(() => {
-      if (!this.viewReady()) {
+      if (!this.viewReady() || this.datasets().length === 0) {
         return;
       }
       const config = buildChartConfig(this.type(), this.datasets(), this.options(), this.palette());
@@ -136,7 +138,10 @@ export class ChartComponent {
       return;
     }
     const next = this.withEventHandlers(config);
+
     // Mutate the properties of the existing data object to prevent complete rerendering
+    (this.instance.config as ChartConfiguration).type = next.type;
+    this.instance.data.labels = next.data.labels;
     this.instance.data.datasets = next.data.datasets;
 
     this.instance.options = next.options ?? {};

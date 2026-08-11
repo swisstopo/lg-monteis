@@ -20,9 +20,4 @@
       {{ 'sensor.tableHeader.edit' | translate }}
     </button>
   }
-
-  <button matButton="filled" [disabled]="selectedSensorId() === undefined" (click)="onPlot()">
-    <mat-icon fontIcon="add_chart"></mat-icon>
-    {{ 'sensor.tableHeader.plot' | translate }}
-  </button>
 </div>

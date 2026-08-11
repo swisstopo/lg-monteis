@@ -3,7 +3,13 @@
 </h2>
 <mat-dialog-content>
   <div class="chart-container">
-    <canvas #canvas></canvas>
+    @if (datasets().length === 0) {
+      <div class="loading-overlay">
+        <mat-progress-spinner mode="indeterminate" diameter="48"> </mat-progress-spinner>
+        <p class="loading-text">{{ 'measurements.loading' | translate }}</p>
+      </div>
+    }
+    <canvas #canvas [style.visibility]="datasets().length === 0 ? 'hidden' : 'visible'"></canvas>
   </div>
 </mat-dialog-content>
 <mat-dialog-actions>
