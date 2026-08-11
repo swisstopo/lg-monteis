@@ -156,9 +156,6 @@ patches:
         path: /data/CORE_META_DB_JDBC_URL
         value: TODO-PROD-RDS-JDBC-URL
       - op: add
-        path: /data/CORE_APP_META_DB_USER
-        value: rds_iam
-      - op: add
         path: /data/KC_ISSUER_URI
         value: TODO-PROD-KC-ISSUER-URI
       - op: add
@@ -182,3 +179,37 @@ patches:
       - op: replace
         path: /spec/provider/aws/role
         value: TODO-PROD-CORE-SM-READER-ARN
+
+  # ── ExternalSecret — RDS core credentials ───────────────────────────────────
+  - target:
+      kind: ExternalSecret
+      name: core-rds
+    patch: |-
+      - op: replace
+        path: /spec/secretStoreRef/name
+        value: core
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: monteis/prod/core/rds-credentials
+      - op: replace
+        path: /spec/data/1/remoteRef/key
+        value: monteis/prod/core/rds-credentials
+
+  # ── Deployment — inject RDS creds env from the ESO-synced Secret (core-only) ──
+  - target:
+      kind: Deployment
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: CORE_APP_META_DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: core-rds-credentials
+                key: username
+          - name: CORE_APP_META_DB_PWD
+            valueFrom:
+              secretKeyRef:
+                name: core-rds-credentials
+                key: password

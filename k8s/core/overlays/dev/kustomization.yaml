@@ -152,6 +152,7 @@ patches:
       - op: replace
         path: /metadata/name
         value: configmap-core
+      # TODO(outputs): terraform output msk_bootstrap_brokers_sasl_iam
       - op: replace
         path: /data/SPRING_KAFKA_BOOTSTRAP_SERVERS
         value: REPLACED-BY-OUTPUTS
@@ -161,12 +162,10 @@ patches:
       - op: replace
         path: /data/SPRING_KAFKA_PROPERTIES_SASL_MECHANISM
         value: AWS_MSK_IAM
+      # TODO(outputs): terraform output rds_endpoint -> jdbc:postgresql://<endpoint>/<META_DB_NAME>
       - op: add
         path: /data/CORE_META_DB_JDBC_URL
         value: REPLACED-BY-OUTPUTS
-      - op: add
-        path: /data/CORE_APP_META_DB_USER
-        value: rds_iam
       - op: add
         path: /data/KC_ISSUER_URI
         value: REPLACED-BY-OUTPUTS
@@ -188,8 +187,40 @@ patches:
       - op: replace
         path: /spec/provider/aws/region
         value: eu-central-1
-      # TODO(outputs): replace with actual ARN from lg-monteis-infra outputs.tf
-      # arn:aws:iam::789130777196:role/monteis/dev/core-sm-reader-dev
       - op: replace
         path: /spec/provider/aws/role
-        value: REPLACED-BY-OUTPUTS
+        value: arn:aws:iam::789130777196:role/monteis/dev/core-sm-reader-dev
+
+  # ── ExternalSecret — RDS core credentials ───────────────────────────────────
+  - target:
+      kind: ExternalSecret
+      name: core-rds
+    patch: |-
+      - op: replace
+        path: /spec/secretStoreRef/name
+        value: core
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: monteis/dev/core/rds-credentials
+      - op: replace
+        path: /spec/data/1/remoteRef/key
+        value: monteis/dev/core/rds-credentials
+
+  # ── Deployment — inject RDS creds env from the ESO-synced Secret (core-only) ──
+  - target:
+      kind: Deployment
+      name: REPLACED-IN-OVERLAY
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: CORE_APP_META_DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: core-rds-credentials
+                key: username
+          - name: CORE_APP_META_DB_PWD
+            valueFrom:
+              secretKeyRef:
+                name: core-rds-credentials
+                key: password
