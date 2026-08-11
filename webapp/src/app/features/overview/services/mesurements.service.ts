@@ -23,7 +23,7 @@ export class MesurementsService {
   readonly chartData = resource<LoadedChartData, ChartRequest | undefined>({
     params: () => this.chartsRequest(),
     loader: async ({ params }) => {
-      if (!params?.ids.length) return Promise.reject(new Error(translate('chart.error.noIds')()));
+      if (!params?.ids.length) throw new Error(translate('chart.error.noIds')());
 
       const rawData = await firstValueFrom(
         this.api.getChartsData(params.ids, params.rangeFrom, params.rangeTo),
@@ -45,6 +45,8 @@ export class MesurementsService {
   }
 
   mapApiToChartDatasets(apiResponses: ChartDataResponseDto[]): ChartDataset[] {
+    const axisIdsByUnit = this.buildAxisIdsByUnit(apiResponses);
+
     return apiResponses.map((sensor, index) => {
       const data: ChartPoint[] = (sensor.data ?? []).map((item) => ({
         x: Date.parse(item.timestamp!),
@@ -55,26 +57,34 @@ export class MesurementsService {
         id: sensor.id ?? `sensor-${index}`,
         label: `${sensor.sensorName ?? 'Unknown'} (${sensor.sensorCode ?? ''}) [${sensor.unit ?? ''}]`,
         data: data,
-        yAxisId: this.getAxisId(index),
+        yAxisId: axisIdsByUnit.get(sensor.unit ?? ''),
       };
     });
   }
 
-  getAxisId(index: number): string {
-    return index === 0 ? 'y' : `y${index + 1}`;
-  }
-
   buildDynamicYAxisLabels(apiResponses: ChartDataResponseDto[]): Record<string, string> {
+    const axisIdsByUnit = this.buildAxisIdsByUnit(apiResponses);
     const labels: Record<string, string> = {};
 
-    apiResponses.forEach((sensor, index) => {
-      const axisId = this.getAxisId(index);
-      const sensorName = sensor.sensorName ?? sensor.sensorCode ?? `Sensor ${index + 1}`;
-      const unit = sensor.unit ? ` ${sensor.unit}` : '';
-
-      labels[axisId] = `${unit}`;
+    axisIdsByUnit.forEach((axisId, unit) => {
+      labels[axisId] = unit ? `${unit}` : '';
     });
 
     return labels;
+  }
+
+  /** Groups sensors by unit so datasets sharing the same unit reuse a single Y axis. */
+  private buildAxisIdsByUnit(apiResponses: ChartDataResponseDto[]): Map<string, string> {
+    const axisIdsByUnit = new Map<string, string>();
+
+    apiResponses.forEach((sensor) => {
+      const unit = sensor.unit ?? '';
+      if (axisIdsByUnit.has(unit)) return;
+
+      const axisId = axisIdsByUnit.size === 0 ? 'y' : `y${axisIdsByUnit.size + 1}`;
+      axisIdsByUnit.set(unit, axisId);
+    });
+
+    return axisIdsByUnit;
   }
 }

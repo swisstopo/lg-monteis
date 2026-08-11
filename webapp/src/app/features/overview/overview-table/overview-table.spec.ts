@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { of } from 'rxjs';
@@ -23,6 +24,7 @@ describe('SensorTable', () => {
         },
         WorkbenchView,
         provideTranslateService(),
+        provideNativeDateAdapter(),
       ],
     }).compileComponents();
 

@@ -1,5 +1,7 @@
 import { ChartDataset } from './chart.types';
 
+// TODO: remove mock data
+
 export interface PressurePlateau {
   fromDate: string;
   toDate: string;

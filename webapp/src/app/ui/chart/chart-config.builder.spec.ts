@@ -147,7 +147,7 @@ describe('buildChartConfig', () => {
 
       const zoomPlugin = (config.options?.plugins as any)?.zoom?.zoom;
       expect(zoomPlugin).toBeDefined();
-      expect(zoomPlugin.wheel.enabled).toBe(true);
+      expect(zoomPlugin.wheel.enabled).toBe(false);
       expect(zoomPlugin.drag.enabled).toBe(true);
       expect(zoomPlugin.pinch.enabled).toBe(false);
     });

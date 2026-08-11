@@ -146,6 +146,19 @@ describe('Chart', () => {
 
       expect(emitSpy).not.toHaveBeenCalled();
     });
+
+    it('should emit rangeSelected with the exact axis bounds when a drag-zoom selection completes', () => {
+      const instance = (component as any).instance;
+      const emitSpy = vi.spyOn(component.rangeSelected, 'emit');
+      const mockChart = { scales: { x: { min: 5, max: 42 } }, resetZoom: vi.fn() };
+
+      instance.options.plugins.zoom.zoom.onZoomComplete({ chart: mockChart });
+
+      expect(emitSpy).toHaveBeenCalledWith({ min: 5, max: 42 });
+      // No manual resetZoom(): forcing an extra full-dataset render here is what caused the
+      // browser to stall while the (still large) pre-refetch dataset was still in place.
+      expect(mockChart.resetZoom).not.toHaveBeenCalled();
+    });
   });
 
   describe('Reactivity and Updates', () => {

@@ -18,6 +18,9 @@ export function buildChartConfig(
   const scales: ChartJsScales = {
     x: {
       type: options.xAxisType === 'time' ? 'time' : 'linear',
+      // Keep the axis (and therefore the drag-zoom selection) pinned to the exact data/selection
+      // range instead of Chart.js's default of expanding it to the nearest tick (e.g. whole days).
+      bounds: 'data',
       time: {
         tooltipFormat: 'PPpp',
         displayFormats: {
@@ -117,7 +120,7 @@ export function buildChartConfig(
         zoom: {
           zoom: {
             wheel: {
-              enabled: true,
+              enabled: false,
             },
             pinch: {
               enabled: false,

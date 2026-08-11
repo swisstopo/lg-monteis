@@ -189,6 +189,9 @@
     "measurements": "Measurements"
   },
   "chart": {
+    "error": {
+      "noIds": "No sensor ids provided"
+    },
     "title": "{{name}} | {{rangeFrom}} to {{rangeTo}}",
     "button": {
       "cancel": "Close",

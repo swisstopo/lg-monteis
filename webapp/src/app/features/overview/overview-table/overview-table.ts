@@ -3,7 +3,6 @@ import { Component, effect, inject, inputBinding, outputBinding, signal } from '
 import { rxResource } from '@angular/core/rxjs-interop';
 import { form, FormField, required, schema } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
-import { provideNativeDateAdapter } from '@angular/material/core';
 import {
   MatDatepickerToggle,
   MatDateRangeInput,
@@ -18,7 +17,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { ChartDataset } from 'chart.js';
 import { OverviewControllerService, ReadSimpleMetricDto } from '../../../core/generated';
-import { ChartComponent, ChartOptions } from '../../../ui/chart';
+import { ChartComponent, ChartOptions, ChartRangeEvent } from '../../../ui/chart';
 import {
   generateMockHumidityDataset,
   generateMockPressureDataset,
@@ -53,7 +52,7 @@ interface DateRangeModel {
     FormField,
     MatError,
   ],
-  providers: [DatePipe, provideNativeDateAdapter()],
+  providers: [DatePipe],
   templateUrl: './overview-table.html',
   styleUrl: './overview-table.scss',
 })
@@ -62,6 +61,7 @@ export default class OverviewTable {
   private readonly i18nService = inject(TranslateService);
   private readonly dialog = inject(MatDialog);
   protected readonly mesurementsService = inject(MesurementsService);
+  protected readonly overviewService = inject(OverviewControllerService);
 
   readonly dateRangeModel = signal<DateRangeModel>({
     start: null,
@@ -76,24 +76,24 @@ export default class OverviewTable {
     }),
   );
 
-  resetRange(): void {
-    this.dateRangeModel.set({ start: null, end: null });
-  }
-
-  protected overviewService = inject(OverviewControllerService);
   protected metricsResource = rxResource({
     stream: () => this.overviewService.getMetrics(50),
   });
 
   protected wrappedCols = createColumns(this.datePipe);
 
-  private readonly dataSet = this.mesurementsService.chartData.value();
+  /** Ids of the sensors currently plotted, kept so a zoom selection can refetch a narrower range. */
+  private readonly plottedIds = signal<number[]>([]);
 
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
       view.title = this.i18nService.instant('tab.overview');
     });
+  }
+
+  resetRange(): void {
+    this.dateRangeModel.set({ start: null, end: null });
   }
 
   onWrappedRow(row: ReadSimpleMetricDto) {
@@ -104,31 +104,20 @@ export default class OverviewTable {
     `${row.sensorId}-${row.timestamp}`;
 
   protected onPlot() {
-    const rangeFromTimestamp = this.dateRangeModel().start!.toISOString();
-    const rangeToTimestamp = this.dateRangeModel().end!.toISOString();
-    const rangeFrom = this.datePipe.transform(rangeFromTimestamp);
-    const rangeTo = this.datePipe.transform(rangeToTimestamp);
+    const start = this.dateRangeModel().start!;
+    const end = this.dateRangeModel().end!;
 
-    this.mesurementsService.getChartData([1, 2, 3], rangeFromTimestamp, rangeToTimestamp);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    this.plottedIds.set([1, 2, 3, 5]);
+    this.fetchChartData(start, end);
 
     const title = this.i18nService.translate('chart.title', {
       name: 'MyFancyExperiment',
-      rangeFrom: rangeFrom,
-      rangeTo: rangeTo,
+      rangeFrom: this.datePipe.transform(start),
+      rangeTo: this.datePipe.transform(end),
     })();
-
-    const options: ChartOptions = {
-      title: title,
-      subtitle: 'Plot of 666 measurements',
-      xAxisType: 'time',
-      xAxisLabel: 'Date',
-      yAxisLabels: {
-        y: 'Fluid Pressure [KELVIN]',
-        y2: 'Radial Stress [bar]',
-        y3: 'Temperature [°C]',
-        y4: 'Relative Humidity [%]',
-      },
-    };
 
     this.dialog.open(ChartComponent, {
       width: '95vw',
@@ -146,12 +135,24 @@ export default class OverviewTable {
           xAxisLabel: 'Date',
           yAxisLabels: this.mesurementsService.chartData.value()?.yAxisLabels ?? {},
         })),
-        outputBinding('pointClick', (event) => console.log('click: ', event)),
-        outputBinding('pointHover', (event) => console.log('hover: ', event)),
+        outputBinding('rangeSelected', (range) => this.onRangeSelected(<ChartRangeEvent>range)),
       ],
     });
   }
 
+  private onRangeSelected(range: ChartRangeEvent): void {
+    this.fetchChartData(new Date(range.min), new Date(range.max));
+  }
+
+  private fetchChartData(start: Date, end: Date): void {
+    const isoFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ";
+    const rangeFromTimestamp = this.datePipe.transform(start, isoFormat)!;
+    const rangeToTimestamp = this.datePipe.transform(end, isoFormat)!;
+
+    this.mesurementsService.getChartData(this.plottedIds(), rangeFromTimestamp, rangeToTimestamp);
+  }
+
+  //TODO remove
   protected onPlotMock() {
     const rangeFrom = this.datePipe.transform('2026-05-20');
     const rangeTo = this.datePipe.transform('2026-06-24');
@@ -195,6 +196,7 @@ export default class OverviewTable {
     });
   }
 
+  //TODO remove
   protected onPlotLine() {
     const taupeOptions: ChartOptions = {
       title: 'Taupe Cable Analysis',

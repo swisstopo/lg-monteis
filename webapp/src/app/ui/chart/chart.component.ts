@@ -16,7 +16,6 @@ import {
   MatDialogActions,
   MatDialogClose,
   MatDialogContent,
-  MatDialogRef,
   MatDialogTitle,
 } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
@@ -30,6 +29,7 @@ import {
   ChartDataset,
   ChartOptions,
   ChartPointEvent,
+  ChartRangeEvent,
   ChartThemePalette,
   ChartType,
 } from './chart.types';
@@ -53,9 +53,6 @@ registerChartJs();
   ],
 })
 export class ChartComponent {
-  readonly dialogRef = inject<MatDialogRef<ChartComponent>>(MatDialogRef, {
-    optional: true,
-  });
   private readonly destroyRef = inject(DestroyRef);
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   readonly title = input.required<string>();
@@ -65,6 +62,7 @@ export class ChartComponent {
 
   readonly pointClick = output<ChartPointEvent>();
   readonly pointHover = output<ChartPointEvent>();
+  readonly rangeSelected = output<ChartRangeEvent>();
 
   private instance?: ChartJs;
   private lastHoverKey?: string;
@@ -128,10 +126,10 @@ export class ChartComponent {
 
   /**
    * Updates the chart configuration
-   *     // For real-time streaming - if ever a requirement we will need to update the inner array directly:
-   *     // this.instance.data.datasets[i].data.push(newPoint);
-   *     // this.instance.data.labels.push(newLabel);
-   *     // this.instance.update('quiet'); // 'quiet' skips animations
+   *     For real-time streaming - if ever a requirement we will need to update the inner array directly:
+   *     this.instance.data.datasets[i].data.push(newPoint);
+   *     this.instance.data.labels.push(newLabel);
+   *     this.instance.update('quiet'); // 'quiet' skips animations
    */
   private updateChart(config: ChartConfiguration): void {
     if (!this.instance) {
@@ -154,14 +152,33 @@ export class ChartComponent {
    * config itself to survive updates.
    */
   private withEventHandlers(config: ChartConfiguration): ChartConfiguration {
+    const plugins = config.options?.plugins ?? {};
     return {
       ...config,
       options: {
         ...config.options,
         onClick: (event, elements) => this.emitPointEvent(event, elements, this.pointClick),
         onHover: (event, elements) => this.emitHoverEvent(event, elements),
+        plugins: {
+          ...plugins,
+          zoom: {
+            ...plugins.zoom,
+            zoom: {
+              ...plugins.zoom?.zoom,
+              onZoomComplete: ({ chart }: { chart: ChartJs }) => this.handleZoomComplete(chart),
+            },
+          },
+        },
       },
     };
+  }
+
+  private handleZoomComplete(chart: ChartJs): void {
+    const xScale = chart.scales['x'];
+    if (!xScale) {
+      return;
+    }
+    this.rangeSelected.emit({ min: xScale.min, max: xScale.max });
   }
 
   /**

@@ -29,6 +29,11 @@ export interface ChartPointEvent {
   point: ChartPoint;
 }
 
+export interface ChartRangeEvent {
+  min: number;
+  max: number;
+}
+
 export interface ChartThemePalette {
   textColor?: string;
   gridColor?: string;
