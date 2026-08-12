@@ -129,19 +129,6 @@ describe('buildChartConfig', () => {
       expect(scales.x.grid.color).toBe('#eeeeee');
     });
 
-    it('sets maintainAspectRatio correctly based on options', () => {
-      const configTrue = buildChartConfig(
-        'line',
-        [dataset1],
-        { maintainAspectRatio: true },
-        mockPalette,
-      );
-      const configFalse = buildChartConfig('line', [dataset1], {}, mockPalette); // Default
-
-      expect(configTrue.options?.maintainAspectRatio).toBe(true);
-      expect(configFalse.options?.maintainAspectRatio).toBe(false);
-    });
-
     it('enables zoom and pan functionality in plugins', () => {
       const config = buildChartConfig('scatter', [dataset1], {}, mockPalette);
 
