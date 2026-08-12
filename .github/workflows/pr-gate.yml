@@ -129,6 +129,32 @@ jobs:
       - name: Check frontend formatting
         run: pnpm run format:check
 
+  lint-frontend:
+    name: Lint Frontend
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: webapp
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node Environment (Hits Cache)
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Run ESLint and Generate Report
+        # Run eslint and output as JSON.
+        # Using `continue-on-error` ensures the pipeline continues so SonarQube can process the failures!
+        run: pnpm exec eslint src/app -f json -o eslint-report.json
+        continue-on-error: true
+
+      - name: Upload ESLint Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: eslint-report
+          path: webapp/eslint-report.json
+          retention-days: 1
+
   # noinspection YAMLSchemaValidation
   license-governance:
     name: Enforce Licenses

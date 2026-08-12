@@ -23,9 +23,9 @@ import {
   SensorTypeResponseDto,
   WriteSensorDto,
 } from '../../../core/generated';
-import { toErrorDtos } from '../../../shared/models/api-error.model';
-import { FormErrorService } from '../../../shared/services/form-error.service';
-import { ToastService } from '../../../shared/services/toast.service';
+import { toErrorDtos } from '../../../core/http/api-error.model';
+import { ToastService } from '../../../core/notifications/toast.service';
+import { FormErrorService } from '../../../core/utils/form-error.service';
 import { getUnitMetadata, Unit } from '../models/sensor.model';
 import { SensorService } from '../services/sensor.service';
 
@@ -145,10 +145,6 @@ export default class SensorEdit {
       );
     }
   });
-
-  protected close(): void {
-    this.dialogRef?.close();
-  }
 
   readonly domainModel = signal<SensorResponseDto>({});
   private readonly formModel = linkedSignal({

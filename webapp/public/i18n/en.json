@@ -157,7 +157,8 @@
       "search": "Search",
       "download": "Download",
       "create": "Create Sensor",
-      "edit": "Edit Sensor"
+      "edit": "Edit Sensor",
+      "plot": "Plot"
     },
     "success": "Sensor saved successfully.",
     "error": {
@@ -186,6 +187,19 @@
     "sensor": "Sensor",
     "setup": "Setup",
     "measurements": "Measurements"
+  },
+  "chart": {
+    "error": {
+      "noIds": "No sensor ids provided",
+      "invalidData": "Invalid data provided",
+      "unspecified": "Failed to load the requested data."
+    },
+    "title": "{{name}} | {{rangeFrom}} to {{rangeTo}}",
+    "subtitle": "Plot of {{count}} mesurements",
+    "button": {
+      "cancel": "Close",
+      "resetZoom": "Reset Zoom"
+    }
   },
   "tab": {
     "sensor": "Setup Sensors ({{count}})",

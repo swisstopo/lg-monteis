@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ToastService } from '../services/toast.service';
+import { ToastService } from '../notifications/toast.service';
 import { restErrorInterceptor } from './rest-error.interceptors';
 
 describe('restErrorInterceptor', () => {

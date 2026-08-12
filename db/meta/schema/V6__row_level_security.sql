@@ -69,3 +69,4 @@ WHERE r.sensor_id = ANY (
 );
 
 GRANT SELECT ON sensor_reading_secured TO core_app;
+ALTER FOREIGN TABLE raw_sensor_reading OPTIONS (ADD use_remote_estimate 'true');
