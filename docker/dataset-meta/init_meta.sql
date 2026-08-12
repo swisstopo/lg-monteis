@@ -25,7 +25,7 @@ GRANT USAGE, SELECT ON SEQUENCES TO core_app;
 -- Setup a connection to the foreign database (timescale db)
 CREATE SERVER timescale_server
 FOREIGN DATA WRAPPER postgres_fdw
-OPTIONS (host 'ts_db', port '5432', dbname 'monteis-tsdb');
+OPTIONS (host 'ts_db', port '5432', dbname 'monteis-tsdb', keep_connections 'on');
 -- Map the current user (core_app) to the user of timescale, only read permission on specific tables
 -- Corresponds to ${FDW_READ_USER} and ${FDW_READ_PWD}
 CREATE USER MAPPING IF NOT EXISTS FOR core_app

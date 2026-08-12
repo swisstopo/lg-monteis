@@ -11,3 +11,5 @@ CREATE TABLE experiment_sensor (
                                    sensor_id BIGINT NOT NULL REFERENCES sensors (id) ON DELETE CASCADE,
                                    PRIMARY KEY (experiment_id, sensor_id)
 );
+
+CREATE INDEX experiment_sensor_sensor_id_idx ON experiment_sensor (sensor_id);

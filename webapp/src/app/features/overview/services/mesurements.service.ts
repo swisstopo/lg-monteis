@@ -37,7 +37,7 @@ export class MesurementsService {
         // one call per sensor, parallelized
         const responses = await Promise.all(
           params.ids.map((id) =>
-            firstValueFrom(this.api.getChartsData([id], params.rangeFrom, params.rangeTo)),
+            firstValueFrom(this.api.getChartData(id, params.rangeFrom, params.rangeTo)),
           ),
         );
         // each response is ChartDataResponseDto[], so flatten them

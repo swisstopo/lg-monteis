@@ -2,14 +2,15 @@ package ch.swisstopo.monteis.core.modules.measurement.query;
 
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import java.time.OffsetDateTime;
-import java.util.List;
+import java.util.Optional;
 
 public interface MeasurementQuery {
 
   /**
-   * Fetches all relevant measurements according to its params
-   * @return all information needed for rendering as ChartDataResponseDto
+   * Fetches one sensor's measurements at full resolution for the given range.
+   *
+   * @return the chart series, or empty when the sensor does not exist or is not visible to the
+   *     caller under row-level security
    */
-  List<ChartDataResponseDto> findMeasurements(
-      List<Long> ids, OffsetDateTime from, OffsetDateTime to);
+  Optional<ChartDataResponseDto> findMeasurements(Long id, OffsetDateTime from, OffsetDateTime to);
 }

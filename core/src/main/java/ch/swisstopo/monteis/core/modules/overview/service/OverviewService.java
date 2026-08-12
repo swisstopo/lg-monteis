@@ -21,14 +21,8 @@ public class OverviewService {
   public List<ReadSimpleMetricDto> fetchRecentMetrics(int limit) {
     List<ReadSimpleMetricDto> results = repository.fetchRecentMetrics(limit);
 
-    if (!results.isEmpty()) {
-      for (ReadSimpleMetricDto result : results) {
-        if (log.isDebugEnabled()) {
-          log.debug("Fetched the following record: {}", result.normValue());
-        }
-      }
-    } else {
-      log.error("fetching worked but nothing found");
+    if (results.isEmpty()) {
+      log.warn("Recent metrics query returned no rows");
     }
     return results;
   }

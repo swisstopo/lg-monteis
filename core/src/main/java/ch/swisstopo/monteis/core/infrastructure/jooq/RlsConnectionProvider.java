@@ -62,19 +62,20 @@ public class RlsConnectionProvider implements ConnectionProvider {
     }
 
     // set config for current connection
-    setConfig(connection, "app.read_all", String.valueOf(readAll));
-    setConfig(connection, "app.user_experiment_ids", experimentIdsCsv);
+    setConfig(connection, String.valueOf(readAll), experimentIdsCsv);
   }
 
   // IMPORTANT: use set_config in order to have config for the current transaction only!
-  private void setConfig(Connection connection, String setting, String value) {
-    try (PreparedStatement statement =
-        connection.prepareStatement("SELECT set_config(?, ?, true)")) {
-      statement.setString(1, setting);
-      statement.setString(2, value);
+  private static final String SET_RLS_CONTEXT =
+      "SELECT set_config('app.read_all', ?, true), set_config('app.user_experiment_ids', ?, true)";
+
+  private void setConfig(Connection connection, String readAll, String experimentIdsCsv) {
+    try (PreparedStatement statement = connection.prepareStatement(SET_RLS_CONTEXT)) {
+      statement.setString(1, readAll);
+      statement.setString(2, experimentIdsCsv);
       statement.execute();
     } catch (SQLException e) {
-      throw new DataAccessException("Failed to set config " + setting, e);
+      throw new DataAccessException("Failed to set RLS context", e);
     }
   }
 }
