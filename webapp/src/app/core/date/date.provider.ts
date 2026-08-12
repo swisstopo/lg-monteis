@@ -3,6 +3,8 @@ import { EnvironmentProviders, LOCALE_ID, makeEnvironmentProviders } from '@angu
 import { DateAdapter, MAT_DATE_FORMATS } from '@angular/material/core';
 import { IsoDateAdapter } from './iso-date.adapter';
 
+export const APP_ISO_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ";
+
 export const APP_DATE_FORMATS = {
   parse: {
     dateInput: 'yyyy-MM-dd',

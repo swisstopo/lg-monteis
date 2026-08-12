@@ -15,6 +15,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatLabel, MatSuffix } from '@angular/material/input';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { APP_ISO_TIMESTAMP_FORMAT } from '../../../core/date/date.provider';
 import { OverviewControllerService, ReadSimpleMetricDto } from '../../../core/generated';
 import { FormErrorService } from '../../../core/utils/form-error.service';
 import {
@@ -115,6 +116,7 @@ export default class OverviewTable {
     `${row.sensorId}-${row.timestamp}`;
 
   protected onPlot() {
+    //L118-L125 should be replaced by proper table implementation logic
     const start = this.dateRangeModel().start!;
     const end = this.dateRangeModel().end!;
 
@@ -122,10 +124,12 @@ export default class OverviewTable {
     end.setHours(23, 59, 59, 999);
 
     this.plottedIds.set([1, 2, 3, 5]);
+    //
+
     this.fetchChartData(start, end);
 
     const title = this.i18nService.translate('chart.title', {
-      name: 'MyFancyExperiment',
+      name: 'MyFancyExperiment', // should be replaced by experiment name
       rangeFrom: this.datePipe.transform(start),
       rangeTo: this.datePipe.transform(end),
     })();
@@ -144,7 +148,9 @@ export default class OverviewTable {
             title: title,
             xAxisLabel: 'Date',
             yAxisLabels: this.mesurementsService.chartData.value()?.yAxisLabels ?? {},
-            subtitle: 'Plot of measurements',
+            subtitle: this.i18nService.translate('chart.subtitle', {
+              count: this.mesurementsService.chartData.value()?.count ?? '',
+            })(),
           }),
         ),
         outputBinding('rangeSelected', (range) => this.onRangeSelected(<ChartRangeEvent>range)),
@@ -157,9 +163,8 @@ export default class OverviewTable {
   }
 
   private fetchChartData(start: Date, end: Date): void {
-    const isoFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ";
-    const rangeFromTimestamp = this.datePipe.transform(start, isoFormat)!;
-    const rangeToTimestamp = this.datePipe.transform(end, isoFormat)!;
+    const rangeFromTimestamp = this.datePipe.transform(start, APP_ISO_TIMESTAMP_FORMAT)!;
+    const rangeToTimestamp = this.datePipe.transform(end, APP_ISO_TIMESTAMP_FORMAT)!;
 
     this.mesurementsService.getChartData(this.plottedIds(), rangeFromTimestamp, rangeToTimestamp);
   }

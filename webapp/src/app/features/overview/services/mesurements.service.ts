@@ -16,6 +16,7 @@ interface ChartRequest {
 }
 
 interface LoadedChartData {
+  count: number;
   datasets: ChartDataset[];
   yAxisLabels: Record<string, string>;
 }
@@ -38,6 +39,7 @@ export class MesurementsService {
         );
 
         return {
+          count: 666, // total in response
           datasets: this.mapDtoToChartDatasets(rawData),
           yAxisLabels: this.buildDynamicYAxisLabels(rawData),
         };

@@ -195,6 +195,7 @@
       "unspecified": "Failed to load the requested data."
     },
     "title": "{{name}} | {{rangeFrom}} to {{rangeTo}}",
+    "subtitle": "Plot of {{count}} mesurements",
     "button": {
       "cancel": "Close",
       "resetZoom": "Reset Zoom"
