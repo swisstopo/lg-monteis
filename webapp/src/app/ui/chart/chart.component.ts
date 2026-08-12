@@ -119,6 +119,7 @@ export class ChartComponent {
   private initialDateRange?: { min: number; max: number };
   private resetRange?: { min: number; max: number };
   readonly dragZoomEnabled = signal(true);
+  private pendingZoomAnimation = false;
 
   constructor() {
     // key architectural consideration for for gpu references clean up
@@ -162,9 +163,11 @@ export class ChartComponent {
         this.instance = undefined;
       }
       if (this.instance) {
-        this.updateChart(config);
+        this.updateChart(config, this.pendingZoomAnimation ? 'zoom' : undefined);
+        this.pendingZoomAnimation = false;
       } else {
         this.createChart(config);
+        this.pendingZoomAnimation = false;
       }
     });
   }
@@ -174,6 +177,7 @@ export class ChartComponent {
    */
 
   public resetZoom(): void {
+    this.pendingZoomAnimation = true;
     this.resetRange = this.initialDateRange;
     if (this.instance) {
       this.instance.resetZoom();
@@ -184,10 +188,12 @@ export class ChartComponent {
   private readonly zoomFactor = 2;
 
   public zoomIn(): void {
+    this.pendingZoomAnimation = true;
     this.zoomRange(1 / this.zoomFactor);
   }
 
   public zoomOut(): void {
+    this.pendingZoomAnimation = true;
     this.zoomRange(this.zoomFactor);
   }
 
@@ -238,7 +244,7 @@ export class ChartComponent {
    *     this.instance.data.labels.push(newLabel);
    *     this.instance.update('quiet'); // 'quiet' skips animations
    */
-  private updateChart(config: ChartConfiguration): void {
+  private updateChart(config: ChartConfiguration, mode?: 'zoom'): void {
     if (!this.instance) {
       return;
     }
@@ -250,7 +256,7 @@ export class ChartComponent {
     this.instance.data.datasets = next.data.datasets;
 
     this.instance.options = next.options ?? {};
-    this.instance.update('zoom');
+    this.instance.update(mode);
   }
 
   /**
@@ -288,6 +294,7 @@ export class ChartComponent {
    * instead, for the consumer to refetch, rather than kept as a client-side-only zoom.
    */
   private handleZoomComplete(chart: ChartJs): void {
+    this.pendingZoomAnimation = true;
     if (this.resetRange) {
       this.rangeSelected.emit(this.resetRange);
       this.resetRange = undefined;

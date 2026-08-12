@@ -76,7 +76,7 @@ export class MesurementsService {
 
       return {
         id: sensor.id ?? `sensor-${index}`,
-        label: `${sensor.sensorName ?? 'Unknown'} (${sensor.sensorCode ?? ''}) [${sensor.unit ?? ''}]`,
+        label: `${sensor.sensorCode ?? 'unknown'} [${sensor.unit ?? ''}]`,
         data: data,
         yAxisId: axisIdsByUnit.get(sensor.unit ?? ''),
       };

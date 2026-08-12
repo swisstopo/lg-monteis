@@ -3,6 +3,7 @@ import type {
   ChartDataset as ChartJsDataset,
   ChartOptions as ChartJsOptions,
 } from 'chart.js';
+import { format } from 'date-fns';
 import { ChartDataset, ChartOptions, ChartThemePalette, ChartType } from './chart.types';
 
 type ChartJsScales = NonNullable<ChartJsOptions<ChartType>['scales']>;
@@ -81,7 +82,15 @@ export function buildChartConfig(
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: false,
+      animation: { duration: 0 },
+      transitions: {
+        zoom: {
+          animation: {
+            duration: 400,
+            easing: 'easeOutCubic',
+          },
+        },
+      },
       elements: {
         point: {
           radius: 2,
@@ -123,6 +132,33 @@ export function buildChartConfig(
             pointStyle: 'circle',
             color: palette.textColor,
             padding: 20,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          displayColors: false,
+          backgroundColor: (context) => {
+            const dataPoint = context.tooltip.dataPoints?.[0];
+            if (!dataPoint) {
+              return 'rgba(0, 0, 0, 0.8)';
+            }
+            const color = dataPoint.dataset.borderColor ?? dataPoint.dataset.backgroundColor;
+            return typeof color === 'string' ? color : 'rgba(0, 0, 0, 0.8)';
+          },
+          callbacks: {
+            title: (tooltipItems): string => {
+              const value = tooltipItems[0].parsed.x as number;
+              return format(value, 'yyyy-MM-dd HH:mm:ss');
+            },
+            label: (context): string[] => {
+              const yAxisId = (context.dataset as { yAxisID?: string }).yAxisID ?? 'y';
+              const scaleOptions = context.chart.scales[yAxisId]?.options as
+                { title?: { text?: string } } | undefined;
+              const yAxisTitle = scaleOptions?.title?.text;
+              const value = context.parsed.y !== null ? `${context.parsed.y}` : '';
+              const valueWithUnit = yAxisTitle ? `${value} ${yAxisTitle}` : value;
+              return [valueWithUnit, context.dataset.label ?? ''];
+            },
           },
         },
         zoom: {

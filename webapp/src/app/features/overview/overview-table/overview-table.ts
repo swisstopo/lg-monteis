@@ -1,5 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { Component, effect, inject, inputBinding, outputBinding, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  inputBinding,
+  outputBinding,
+  signal,
+} from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { form, FormField, required, schema } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
@@ -134,6 +142,20 @@ export default class OverviewTable {
       rangeTo: this.datePipe.transform(end),
     })();
 
+    // use computed to avoid re-creating the chart options on every change
+    // angular's inputBinding normally re-evaluates on every change
+    const chartOptions = computed((): ChartOptions => {
+      const data = this.mesurementsService.chartData.value();
+      return createTimeChartOptions({
+        title,
+        xAxisLabel: 'Date',
+        yAxisLabels: data?.yAxisLabels ?? {},
+        subtitle: this.i18nService.translate('chart.subtitle', {
+          count: data?.count ?? '',
+        })(),
+      });
+    });
+
     this.dialog.open(ChartComponent, {
       width: '95vw',
       maxWidth: '100%',
@@ -143,16 +165,7 @@ export default class OverviewTable {
       bindings: [
         inputBinding('title', () => title),
         inputBinding('datasets', () => this.mesurementsService.chartData.value()?.datasets ?? []),
-        inputBinding('options', (): ChartOptions =>
-          createTimeChartOptions({
-            title: title,
-            xAxisLabel: 'Date',
-            yAxisLabels: this.mesurementsService.chartData.value()?.yAxisLabels ?? {},
-            subtitle: this.i18nService.translate('chart.subtitle', {
-              count: this.mesurementsService.chartData.value()?.count ?? '',
-            })(),
-          }),
-        ),
+        inputBinding('options', chartOptions),
         outputBinding('rangeSelected', (range) => this.onRangeSelected(<ChartRangeEvent>range)),
       ],
     });
