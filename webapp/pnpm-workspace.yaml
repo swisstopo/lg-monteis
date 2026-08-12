@@ -20,7 +20,7 @@ overrides:
   # GHSA-frvp-7c67-39w9 (@hono/node-server path traversal), GHSA-9mqv-5hh9-4cgg (@hono/node-server DoS via aborted WebSocket); pulled in by @modelcontextprotocol/sdk via @angular/cli
   '@hono/node-server@^1': 2.0.10
   # CVE-2026-14257 / GHSA-rgw5-rvv9-x895 (brace-expansion DoS); pulled in by minimatch@9 via ts-morph/@analogjs/vite-plugin-angular
-  brace-expansion@^2: 2.1.4
+  brace-expansion@^2: 5.0.9
   # CVE-2026-14257 / GHSA-rgw5-rvv9-x895 (brace-expansion DoS); pulled in by minimatch@10 via eslint/typescript-eslint/glob
   brace-expansion@^5: 5.0.9
   # CVE-2026-18446 (fast-uri host confusion); pulled in by ajv via eslint/typescript-eslint
