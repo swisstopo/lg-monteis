@@ -190,7 +190,9 @@
   },
   "chart": {
     "error": {
-      "noIds": "No sensor ids provided"
+      "noIds": "No sensor ids provided",
+      "invalidData": "Invalid data provided",
+      "unspecified": "Failed to load the requested data."
     },
     "title": "{{name}} | {{rangeFrom}} to {{rangeTo}}",
     "button": {

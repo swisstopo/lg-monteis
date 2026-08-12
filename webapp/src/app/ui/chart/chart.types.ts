@@ -37,6 +37,8 @@ export interface ChartThemePalette {
   textColor?: string;
   gridColor?: string;
   seriesColors?: string[];
+  dragBorderColor?: string;
+  dragBackgroundColor?: string;
 }
 
 export interface TimeSeriesOptions {

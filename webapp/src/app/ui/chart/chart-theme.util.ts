@@ -49,6 +49,8 @@ export function resolveThemePalette(element: HTMLElement): ChartThemePalette {
   return {
     textColor: resolveCssVariableColor(element, '--mat-sys-on-surface'),
     gridColor: resolveCssVariableColor(element, '--mat-sys-surface-container-highest'),
+    dragBackgroundColor: resolveCssVariableColor(element, '--mat-sys-surface-container-highest'),
+    dragBorderColor: resolveCssVariableColor(element, '--mat-sys-on-surface'),
 
     // Build the array by resolving the CSS variables we defined in SCSS
     seriesColors: [

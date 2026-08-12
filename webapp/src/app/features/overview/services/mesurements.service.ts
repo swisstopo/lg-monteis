@@ -1,7 +1,12 @@
 import { inject, Injectable, resource, signal } from '@angular/core';
-import { translate } from '@ngx-translate/core';
+import { translate, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
-import { ChartDataResponseDto, MeasurementControllerService } from '../../../core/generated';
+import {
+  ChartDataResponseDto,
+  ErrorDto,
+  MeasurementControllerService,
+} from '../../../core/generated';
+import { toErrorDtos } from '../../../core/http/api-error.model';
 import { ChartDataset, ChartPoint } from '../../../ui/chart';
 
 interface ChartRequest {
@@ -18,21 +23,28 @@ interface LoadedChartData {
 @Injectable({ providedIn: 'root' })
 export class MesurementsService {
   private readonly api = inject(MeasurementControllerService);
+  private readonly i18nService = inject(TranslateService);
   private readonly chartsRequest = signal<ChartRequest | undefined>(undefined);
+  readonly error = signal<ErrorDto[] | undefined>(undefined);
 
   readonly chartData = resource<LoadedChartData, ChartRequest | undefined>({
     params: () => this.chartsRequest(),
     loader: async ({ params }) => {
-      if (!params?.ids.length) throw new Error(translate('chart.error.noIds')());
+      try {
+        if (!params?.ids.length) throw new Error(translate('chart.error.noIds')());
 
-      const rawData = await firstValueFrom(
-        this.api.getChartsData(params.ids, params.rangeFrom, params.rangeTo),
-      );
+        const rawData = await firstValueFrom(
+          this.api.getChartsData(params.ids, params.rangeFrom, params.rangeTo),
+        );
 
-      return {
-        datasets: this.mapApiToChartDatasets(rawData),
-        yAxisLabels: this.buildDynamicYAxisLabels(rawData),
-      };
+        return {
+          datasets: this.mapDtoToChartDatasets(rawData),
+          yAxisLabels: this.buildDynamicYAxisLabels(rawData),
+        };
+      } catch (error) {
+        this.error.set(toErrorDtos(error));
+        throw error;
+      }
     },
   });
 
@@ -44,14 +56,16 @@ export class MesurementsService {
     this.chartsRequest.set({ ids: ids, rangeFrom: rangeFrom, rangeTo: rangeTo });
   }
 
-  mapApiToChartDatasets(apiResponses: ChartDataResponseDto[]): ChartDataset[] {
+  private mapDtoToChartDatasets(apiResponses: ChartDataResponseDto[]): ChartDataset[] {
     const axisIdsByUnit = this.buildAxisIdsByUnit(apiResponses);
 
     return apiResponses.map((sensor, index) => {
-      const data: ChartPoint[] = (sensor.data ?? []).map((item) => ({
-        x: Date.parse(item.timestamp!),
-        y: item.value!,
-      }));
+      const data: ChartPoint[] = (sensor.data ?? []).map((item) => {
+        if (item.timestamp === undefined || item.value === undefined) {
+          throw new Error(this.i18nService.translate('chart.error.invalidData')());
+        }
+        return { x: Date.parse(item.timestamp!), y: item.value! };
+      });
 
       return {
         id: sensor.id ?? `sensor-${index}`,
@@ -62,7 +76,7 @@ export class MesurementsService {
     });
   }
 
-  buildDynamicYAxisLabels(apiResponses: ChartDataResponseDto[]): Record<string, string> {
+  private buildDynamicYAxisLabels(apiResponses: ChartDataResponseDto[]): Record<string, string> {
     const axisIdsByUnit = this.buildAxisIdsByUnit(apiResponses);
     const labels: Record<string, string> = {};
 

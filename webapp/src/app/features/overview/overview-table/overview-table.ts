@@ -16,6 +16,7 @@ import { MatError, MatFormField, MatLabel, MatSuffix } from '@angular/material/i
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { OverviewControllerService, ReadSimpleMetricDto } from '../../../core/generated';
+import { FormErrorService } from '../../../core/utils/form-error.service';
 import {
   ChartComponent,
   ChartOptions,
@@ -59,7 +60,8 @@ export default class OverviewTable {
   private readonly dialog = inject(MatDialog);
   protected readonly mesurementsService = inject(MesurementsService);
   protected readonly overviewService = inject(OverviewControllerService);
-
+  private readonly formErrorService = inject(FormErrorService);
+  readonly serviceError = this.mesurementsService.error;
   readonly dateRangeModel = signal<DateRangeModel>({
     start: null,
     end: null,
@@ -86,6 +88,18 @@ export default class OverviewTable {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
       view.title = this.i18nService.instant('tab.overview');
+    });
+
+    effect(() => {
+      const errors = this.mesurementsService.error();
+      if (errors) {
+        this.formErrorService.mapApiErrorsToFormErrors(
+          errors,
+          this.rangeForm,
+          'chart.error.unspecified.message',
+        );
+        this.dialog.closeAll();
+      }
     });
   }
 

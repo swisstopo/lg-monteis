@@ -127,9 +127,9 @@ export function buildChartConfig(
             },
             drag: {
               enabled: true,
-              backgroundColor: 'rgb(9 4 4 / 0.2)',
+              backgroundColor: palette.dragBackgroundColor,
               borderWidth: 1,
-              borderColor: 'rgb(0 0 0)',
+              borderColor: palette.dragBorderColor,
             },
             mode: 'xy',
           },
