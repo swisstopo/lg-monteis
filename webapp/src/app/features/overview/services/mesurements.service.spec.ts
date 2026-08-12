@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ChartDataResponseDto, MeasurementControllerService } from '../../../core/generated';
 import { MesurementsService } from './mesurements.service';
 
-function setup(getChartsData: () => Observable<ChartDataResponseDto[]>) {
+function setup(getChartsData: (ids: number[]) => Observable<ChartDataResponseDto[]>) {
   TestBed.configureTestingModule({
     providers: [
       MesurementsService,
@@ -41,8 +41,9 @@ describe('MesurementsService', () => {
 
     service.getChartData([1, 2], '2024-01-01', '2024-01-02');
 
-    await vi.waitFor(() => expect(getChartsData).toHaveBeenCalled());
-    expect(getChartsData).toHaveBeenCalledWith([1, 2], '2024-01-01', '2024-01-02');
+    await vi.waitFor(() => expect(getChartsData).toHaveBeenCalledTimes(2));
+    expect(getChartsData).toHaveBeenCalledWith([1], '2024-01-01', '2024-01-02');
+    expect(getChartsData).toHaveBeenCalledWith([2], '2024-01-01', '2024-01-02');
   });
 
   it('maps sensors into datasets and groups y-axes by unit', async () => {
@@ -71,7 +72,7 @@ describe('MesurementsService', () => {
         data: [],
       },
     ];
-    const service = setup(() => of(apiResponses));
+    const service = setup((ids) => of(apiResponses.filter((response) => response.id === ids[0])));
 
     service.getChartData([1, 2, 3], '2024-01-01', '2024-01-02');
 
