@@ -1,0 +1,43 @@
+<div class="chart-toolbar" [class.drag-disabled]="!dragZoomEnabled()">
+  <button
+    matIconButton
+    [class.active]="dragZoomEnabled()"
+    [matTooltip]="'chart.tooltip.dragZoom' | translate"
+    matTooltipPosition="left"
+    (click)="toggleDragZoom.emit()"
+  >
+    <mat-icon fontIcon="highlight_alt"></mat-icon>
+  </button>
+  <button
+    matIconButton
+    [matTooltip]="'chart.tooltip.zoomIn' | translate"
+    matTooltipPosition="left"
+    (click)="zoomIn.emit()"
+  >
+    <mat-icon fontIcon="zoom_in"></mat-icon>
+  </button>
+  <button
+    matIconButton
+    [matTooltip]="'chart.tooltip.zoomOut' | translate"
+    matTooltipPosition="left"
+    (click)="zoomOut.emit()"
+  >
+    <mat-icon fontIcon="zoom_out"></mat-icon>
+  </button>
+  <button
+    matIconButton
+    [matTooltip]="'chart.tooltip.resetZoom' | translate"
+    matTooltipPosition="left"
+    (click)="resetZoom.emit()"
+  >
+    <mat-icon fontIcon="search_off"></mat-icon>
+  </button>
+  <button
+    matIconButton
+    [matTooltip]="'chart.tooltip.download' | translate"
+    matTooltipPosition="left"
+    (click)="download.emit()"
+  >
+    <mat-icon fontIcon="file_download"></mat-icon>
+  </button>
+</div>

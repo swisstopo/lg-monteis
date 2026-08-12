@@ -34,14 +34,19 @@ export class MesurementsService {
       try {
         if (!params?.ids.length) throw new Error(translate('chart.error.noIds')());
 
-        const rawData = await firstValueFrom(
-          this.api.getChartsData(params.ids, params.rangeFrom, params.rangeTo),
+        // one call per sensor, parallelized
+        const responses = await Promise.all(
+          params.ids.map((id) =>
+            firstValueFrom(this.api.getChartsData([id], params.rangeFrom, params.rangeTo)),
+          ),
         );
+        // each response is ChartDataResponseDto[], so flatten them
+        const allSensors = responses.flat();
 
         return {
-          count: 666, // total in response
-          datasets: this.mapDtoToChartDatasets(rawData),
-          yAxisLabels: this.buildDynamicYAxisLabels(rawData),
+          count: allSensors.reduce((sum, sensor) => sum + (sensor.data?.length ?? 0), 0),
+          datasets: this.mapDtoToChartDatasets(allSensors),
+          yAxisLabels: this.buildDynamicYAxisLabels(allSensors),
         };
       } catch (error) {
         this.error.set(toErrorDtos(error));

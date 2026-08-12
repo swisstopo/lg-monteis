@@ -157,8 +157,7 @@
       "search": "Search",
       "download": "Download",
       "create": "Create Sensor",
-      "edit": "Edit Sensor",
-      "plot": "Plot"
+      "edit": "Edit Sensor"
     },
     "success": "Sensor saved successfully.",
     "error": {
@@ -199,6 +198,13 @@
     "button": {
       "cancel": "Close",
       "resetZoom": "Reset Zoom"
+    },
+    "tooltip": {
+      "dragZoom": "Drag to zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "download": "Download chart"
     }
   },
   "tab": {

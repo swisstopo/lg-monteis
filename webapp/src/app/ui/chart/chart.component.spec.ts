@@ -39,17 +39,21 @@ vi.mock('chart.js', async (importOriginal) => {
     config: any;
     data: any;
     options: any;
+    scales: any;
 
     constructor(_canvas: unknown, config: any) {
       this.config = config;
       this.data = config.data;
       this.options = config.options;
+      this.scales = {};
     }
 
     // Spies for lifecycle methods
     destroy = vi.fn();
     update = vi.fn();
     resetZoom = vi.fn();
+    zoom = vi.fn();
+    toBase64Image = vi.fn().mockReturnValue('data:image/png;base64,mock');
   }
 
   return {
@@ -158,6 +162,81 @@ describe('Chart', () => {
       // No manual resetZoom(): forcing an extra full-dataset render here is what caused the
       // browser to stall while the (still large) pre-refetch dataset was still in place.
       expect(mockChart.resetZoom).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Toolbar actions', () => {
+    it('renders five toolbar icon buttons', () => {
+      const buttons = fixture.nativeElement.querySelectorAll('.chart-toolbar button');
+      expect(buttons).toHaveLength(5);
+    });
+
+    it('should emit a smaller range when zoomIn() is invoked', () => {
+      const instance = (component as any).instance;
+      instance.scales = { x: { min: 0, max: 100 } };
+      (component as any).initialDateRange = { min: 0, max: 100 };
+      const emitSpy = vi.spyOn(component.rangeSelected, 'emit');
+
+      component.zoomIn();
+
+      const emitted = emitSpy.mock.calls[0][0];
+      expect(emitted.min).toBeGreaterThan(0);
+      expect(emitted.max).toBeLessThan(100);
+    });
+
+    it('should emit a larger range when zoomOut() is invoked', () => {
+      const instance = (component as any).instance;
+      instance.scales = { x: { min: 10, max: 90 } };
+      (component as any).initialDateRange = { min: 0, max: 100 };
+      const emitSpy = vi.spyOn(component.rangeSelected, 'emit');
+
+      component.zoomOut();
+
+      expect(emitSpy).toHaveBeenCalledWith({ min: 6, max: 94 });
+    });
+
+    it('should reset the chart and clear Y ranges when the toolbar reset button is clicked', () => {
+      const instance = (component as any).instance;
+      instance.resetZoom = vi.fn();
+      (component as any).manualYRanges = { y: { min: 10, max: 100 } };
+
+      component.resetZoom();
+
+      expect(instance.resetZoom).toHaveBeenCalled();
+      expect((component as any).manualYRanges).toEqual({});
+    });
+
+    it('should toggle the drag-zoom mode when toggleDragZoom() is invoked', () => {
+      const instance = (component as any).instance;
+      instance.update = vi.fn();
+      expect(instance.options.plugins.zoom.zoom.drag.enabled).toBe(true);
+
+      component.toggleDragZoom();
+
+      expect(component.dragZoomEnabled()).toBe(false);
+      expect(instance.options.plugins.zoom.zoom.drag.enabled).toBe(false);
+      expect(instance.update).toHaveBeenCalledWith('none');
+    });
+
+    it('should download the chart as a PNG when downloadChart() is invoked', () => {
+      const instance = (component as any).instance;
+      const createElementSpy = vi.spyOn(document, 'createElement');
+      const clickSpy = vi.fn();
+      createElementSpy.mockReturnValue({
+        href: '',
+        download: '',
+        click: clickSpy,
+      } as unknown as HTMLAnchorElement);
+
+      try {
+        component.downloadChart();
+
+        expect(instance.toBase64Image).toHaveBeenCalledWith('image/png');
+        expect(createElementSpy).toHaveBeenCalledWith('a');
+        expect(clickSpy).toHaveBeenCalled();
+      } finally {
+        createElementSpy.mockRestore();
+      }
     });
   });
 

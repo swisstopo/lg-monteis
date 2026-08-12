@@ -82,6 +82,14 @@ export function buildChartConfig(
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
+      elements: {
+        point: {
+          radius: 2,
+        },
+        line: {
+          borderWidth: 2,
+        },
+      },
       plugins: {
         title: {
           display: !!options.title,

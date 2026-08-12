@@ -25,6 +25,7 @@ import { ActiveElement, ChartConfiguration, ChartEvent, Chart as ChartJs } from 
 import { buildChartConfig } from './chart-config.builder';
 import { registerChartJs } from './chart-registry';
 import { resolveThemePalette } from './chart-theme.util';
+import { ChartToolbarComponent } from './chart-toolbar/chart-toolbar.component';
 import {
   ChartDataset,
   ChartOptions,
@@ -90,6 +91,7 @@ registerChartJs();
     MatIcon,
     MatProgressSpinner,
     TranslatePipe,
+    ChartToolbarComponent,
   ],
 })
 export class ChartComponent {
@@ -116,6 +118,7 @@ export class ChartComponent {
   private manualYRanges: Record<string, { min: number; max: number }> = {};
   private initialDateRange?: { min: number; max: number };
   private resetRange?: { min: number; max: number };
+  readonly dragZoomEnabled = signal(true);
 
   constructor() {
     // key architectural consideration for for gpu references clean up
@@ -148,6 +151,7 @@ export class ChartComponent {
         return;
       }
       const config = buildChartConfig(this.type(), this.datasets(), this.options(), this.palette());
+      this.applyDragZoom(config);
       this.applyManualYRanges(config);
       if (Object.keys(this.manualYRanges).length === 0) {
         this.initialDateRange = this.computeDateRange(this.datasets());
@@ -165,12 +169,61 @@ export class ChartComponent {
     });
   }
 
+  /**
+   * toolbar actions
+   */
+
   public resetZoom(): void {
     this.resetRange = this.initialDateRange;
     if (this.instance) {
       this.instance.resetZoom();
     }
     this.manualYRanges = {};
+  }
+
+  private readonly zoomFactor = 2;
+
+  public zoomIn(): void {
+    this.zoomRange(1 / this.zoomFactor);
+  }
+
+  public zoomOut(): void {
+    this.zoomRange(this.zoomFactor);
+  }
+
+  public toggleDragZoom(): void {
+    this.dragZoomEnabled.update((enabled) => !enabled);
+  }
+
+  public downloadChart(): void {
+    if (!this.instance) {
+      return;
+    }
+    const image = this.instance.toBase64Image('image/png');
+    const link = document.createElement('a');
+    link.href = image;
+    link.download = `${this.title()}.png`;
+    link.click();
+  }
+
+  private zoomRange(factor: number): void {
+    if (!this.instance || !this.initialDateRange) {
+      return;
+    }
+    const xScale = this.instance.scales['x'];
+    if (!xScale) {
+      return;
+    }
+    const currentMin = xScale.min;
+    const currentMax = xScale.max;
+    const center = (currentMin + currentMax) / 2;
+    const newRange = (currentMax - currentMin) * factor;
+    const halfRange = newRange / 2;
+
+    const min = Math.max(this.initialDateRange.min, center - halfRange);
+    const max = Math.min(this.initialDateRange.max, center + halfRange);
+
+    this.rangeSelected.emit({ min, max });
   }
 
   private createChart(config: ChartConfiguration): void {
@@ -271,6 +324,17 @@ export class ChartComponent {
         scales[axisId].max = range.max;
       }
     }
+  }
+
+  private applyDragZoom(config: ChartConfiguration): void {
+    const zoomOptions = config.options?.plugins?.zoom?.zoom;
+    if (!zoomOptions || typeof zoomOptions !== 'object') {
+      return;
+    }
+    (zoomOptions as { drag?: { enabled?: boolean } }).drag = {
+      ...(zoomOptions as { drag?: object }).drag,
+      enabled: this.dragZoomEnabled(),
+    };
   }
 
   /**
