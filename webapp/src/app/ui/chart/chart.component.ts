@@ -250,7 +250,7 @@ export class ChartComponent {
     this.instance.data.datasets = next.data.datasets;
 
     this.instance.options = next.options ?? {};
-    this.instance.update();
+    this.instance.update('zoom');
   }
 
   /**
