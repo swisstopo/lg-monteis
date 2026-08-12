@@ -117,6 +117,14 @@ export class ChartComponent {
    */
   private manualYRanges: Record<string, { min: number; max: number }> = {};
   private initialDateRange?: { min: number; max: number };
+  /**
+   * Set whenever the current initial range needs to be (re-)captured from the next unzoomed
+   * dataset render, i.e. on first load and after an explicit resetZoom(). This must not be tied
+   * to `manualYRanges` emptiness: X-only zooms (zoomIn/zoomOut/drag) never touch `manualYRanges`,
+   * but they do trigger a dataset refetch, which would otherwise overwrite the true initial range
+   * with the narrowed one and make zoomOut() unable to expand past the current view.
+   */
+  private captureInitialRange = true;
   private resetRange?: { min: number; max: number };
   readonly dragZoomEnabled = signal(true);
   private pendingZoomAnimation = false;
@@ -154,8 +162,9 @@ export class ChartComponent {
       const config = buildChartConfig(this.type(), this.datasets(), this.options(), this.palette());
       this.applyDragZoom(config);
       this.applyManualYRanges(config);
-      if (Object.keys(this.manualYRanges).length === 0) {
+      if (this.captureInitialRange) {
         this.initialDateRange = this.computeDateRange(this.datasets());
+        this.captureInitialRange = false;
       }
       // Chart.js resolves dataset controllers at construction, so a type change requires a rebuild.
       if (this.instance && (this.instance.config as ChartConfiguration).type !== config.type) {
@@ -183,6 +192,7 @@ export class ChartComponent {
       this.instance.resetZoom();
     }
     this.manualYRanges = {};
+    this.captureInitialRange = true;
   }
 
   private readonly zoomFactor = 2;

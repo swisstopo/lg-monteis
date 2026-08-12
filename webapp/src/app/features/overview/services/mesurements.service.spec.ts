@@ -80,9 +80,9 @@ describe('MesurementsService', () => {
     const result = service.chartData.value()!;
 
     expect(result.datasets).toEqual([
-      { id: 1, label: 'Temperature (T1) [KELVIN]', data: [], yAxisId: 'y' },
-      { id: 2, label: 'Distance (D1) [METER]', data: [], yAxisId: 'y2' },
-      { id: 3, label: 'Temperature 2 (T2) [KELVIN]', data: [], yAxisId: 'y' },
+      { id: 1, label: 'T1 [KELVIN]', data: [], yAxisId: 'y' },
+      { id: 2, label: 'D1 [METER]', data: [], yAxisId: 'y2' },
+      { id: 3, label: 'T2 [KELVIN]', data: [], yAxisId: 'y' },
     ]);
     expect(result.yAxisLabels).toEqual({ y: 'KELVIN', y2: 'METER' });
     expect(service.error()).toBeUndefined();
@@ -98,7 +98,7 @@ describe('MesurementsService', () => {
     const result = service.chartData.value()!;
 
     expect(result.datasets).toEqual([
-      { id: 'sensor-0', label: 'Unknown () []', data: [], yAxisId: 'y' },
+      { id: 'sensor-0', label: 'unknown []', data: [], yAxisId: 'y' },
     ]);
     expect(result.yAxisLabels).toEqual({ y: '' });
   });
@@ -125,7 +125,7 @@ describe('MesurementsService', () => {
     expect(service.chartData.value()!.datasets).toEqual([
       {
         id: 1,
-        label: 'Temperature (T1) [KELVIN]',
+        label: 'T1 [KELVIN]',
         data: [
           { x: Date.parse('2024-01-01T00:00:00Z'), y: 10 },
           { x: Date.parse('2024-01-01T01:00:00Z'), y: 12 },

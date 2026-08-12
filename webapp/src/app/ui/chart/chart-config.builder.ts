@@ -140,24 +140,24 @@ export function buildChartConfig(
           backgroundColor: (context) => {
             const dataPoint = context.tooltip.dataPoints?.[0];
             if (!dataPoint) {
-              return 'rgba(0, 0, 0, 0.8)';
+              return palette.textColor;
             }
             const color = dataPoint.dataset.borderColor ?? dataPoint.dataset.backgroundColor;
-            return typeof color === 'string' ? color : 'rgba(0, 0, 0, 0.8)';
+            return typeof color === 'string' ? color : palette.textColor;
           },
           callbacks: {
-            title: (tooltipItems): string => {
-              const value = tooltipItems[0].parsed.x as number;
-              return format(value, 'yyyy-MM-dd HH:mm:ss');
-            },
             label: (context): string[] => {
               const yAxisId = (context.dataset as { yAxisID?: string }).yAxisID ?? 'y';
               const scaleOptions = context.chart.scales[yAxisId]?.options as
                 { title?: { text?: string } } | undefined;
               const yAxisTitle = scaleOptions?.title?.text;
-              const value = context.parsed.y !== null ? `${context.parsed.y}` : '';
-              const valueWithUnit = yAxisTitle ? `${value} ${yAxisTitle}` : value;
-              return [valueWithUnit, context.dataset.label ?? ''];
+              const date =
+                context.parsed.x !== null
+                  ? format(context.parsed.x as number, 'yyyy-MM-dd HH:mm:ss')
+                  : '';
+              const value = context.parsed.y !== null ? `${context.parsed.y} ${yAxisTitle}` : '';
+              const datasetLabel = context.dataset.label ?? '';
+              return [date, value, '', datasetLabel];
             },
           },
         },

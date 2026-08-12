@@ -265,6 +265,29 @@ describe('Chart', () => {
       expect((component as any).initialDateRange).toEqual({ min: 0, max: 1 });
     });
 
+    it('should not update the initial date range when a button-triggered X zoom refetch occurs', async () => {
+      const instance = (component as any).instance;
+      instance.scales = { x: { min: 0, max: 1 } };
+
+      component.zoomIn();
+
+      const refetchedDataset: ChartDataset = {
+        id: 'sensor-1',
+        label: 'Sensor 1',
+        data: [{ x: 0.25, y: 2 }],
+      };
+      fixture.componentRef.setInput('datasets', [refetchedDataset]);
+      await fixture.whenStable();
+
+      expect((component as any).initialDateRange).toEqual({ min: 0, max: 1 });
+
+      instance.scales = { x: { min: 0.25, max: 0.25 } };
+      const emitSpy = vi.spyOn(component.rangeSelected, 'emit');
+      component.zoomOut();
+
+      expect(emitSpy).toHaveBeenCalledWith({ min: 0, max: 1 });
+    });
+
     it('should update the initial date range after reset and a new full dataset', async () => {
       const instance = (component as any).instance;
       const zoomedChart = {

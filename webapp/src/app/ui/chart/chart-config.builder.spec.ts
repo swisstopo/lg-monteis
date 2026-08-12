@@ -139,4 +139,51 @@ describe('buildChartConfig', () => {
       expect(zoomPlugin.pinch.enabled).toBe(false);
     });
   });
+
+  describe('Tooltip Configuration', () => {
+    it('does not render a tooltip title', () => {
+      const config = buildChartConfig('line', [dataset1], {});
+
+      const titleCallback = (config.options?.plugins as any)?.tooltip?.callbacks?.title;
+      expect(titleCallback).toBeUndefined();
+    });
+
+    it('renders date, value, y-axis title, empty row, and dataset label in tooltip body', () => {
+      const config = buildChartConfig('line', [dataset1], {
+        yAxisLabels: { y: 'Pressure' },
+      });
+
+      const labelCallback = (config.options?.plugins as any)?.tooltip?.callbacks?.label;
+      const labels = labelCallback({
+        dataset: { label: 'Sensor 1', yAxisID: 'y' },
+        parsed: { x: 0, y: 2.4 },
+        chart: {
+          scales: {
+            y: { options: { title: { text: 'Pressure' } } },
+          },
+        },
+      } as any);
+
+      expect(labels[0]).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+      expect(labels.slice(1)).toEqual(['2.4 Pressure', '', 'Sensor 1']);
+    });
+
+    it('renders date, value, empty row, and dataset label when no y-axis title is configured', () => {
+      const config = buildChartConfig('line', [dataset1], {});
+
+      const labelCallback = (config.options?.plugins as any)?.tooltip?.callbacks?.label;
+      const labels = labelCallback({
+        dataset: { label: 'Sensor 1', yAxisID: 'y' },
+        parsed: { x: 0, y: 2.4 },
+        chart: {
+          scales: {
+            y: { options: { title: { text: '' } } },
+          },
+        },
+      } as any);
+
+      expect(labels[0]).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+      expect(labels.slice(1)).toEqual(['2.4 ', '', 'Sensor 1']);
+    });
+  });
 });
