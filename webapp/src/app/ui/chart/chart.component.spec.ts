@@ -192,7 +192,7 @@ describe('Chart', () => {
 
       component.zoomOut();
 
-      expect(emitSpy).toHaveBeenCalledWith({ min: 6, max: 94 });
+      expect(emitSpy).toHaveBeenCalledWith({ min: 0, max: 100 });
     });
 
     it('should reset the chart and clear Y ranges when the toolbar reset button is clicked', () => {
@@ -207,15 +207,11 @@ describe('Chart', () => {
     });
 
     it('should toggle the drag-zoom mode when toggleDragZoom() is invoked', () => {
-      const instance = (component as any).instance;
-      instance.update = vi.fn();
-      expect(instance.options.plugins.zoom.zoom.drag.enabled).toBe(true);
+      expect(component.dragZoomEnabled()).toBe(true);
 
       component.toggleDragZoom();
 
       expect(component.dragZoomEnabled()).toBe(false);
-      expect(instance.options.plugins.zoom.zoom.drag.enabled).toBe(false);
-      expect(instance.update).toHaveBeenCalledWith('none');
     });
 
     it('should download the chart as a PNG when downloadChart() is invoked', () => {

@@ -81,15 +81,7 @@ export function buildChartConfig(
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 0 },
-      transitions: {
-        zoom: {
-          animation: {
-            duration: 400,
-            easing: 'easeOutQuad',
-          },
-        },
-      },
+      animation: false,
       elements: {
         point: {
           radius: 2,
