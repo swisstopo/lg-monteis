@@ -5,12 +5,18 @@ import { describe, expect, it, vi } from 'vitest';
 import { ChartDataResponseDto, MeasurementControllerService } from '../../../core/generated';
 import { MesurementsService } from './mesurements.service';
 
-function setup(getChartsData: (ids: number[]) => Observable<ChartDataResponseDto[]>) {
+function setup(
+  getChartData: (
+    id: number,
+    rangeFrom: string,
+    rangeTo: string,
+  ) => Observable<ChartDataResponseDto[]>,
+) {
   TestBed.configureTestingModule({
     providers: [
       MesurementsService,
       provideTranslateService(),
-      { provide: MeasurementControllerService, useValue: { getChartsData } },
+      { provide: MeasurementControllerService, useValue: { getChartData } },
     ],
   });
   return TestBed.inject(MesurementsService);
@@ -18,32 +24,32 @@ function setup(getChartsData: (ids: number[]) => Observable<ChartDataResponseDto
 
 describe('MesurementsService', () => {
   it('starts idle without fetching anything', () => {
-    const getChartsData = vi.fn().mockReturnValue(of([]));
-    const service = setup(getChartsData);
+    const getChartData = vi.fn().mockReturnValue(of([]));
+    const service = setup(getChartData);
 
     expect(service.chartData.value()).toBeUndefined();
-    expect(getChartsData).not.toHaveBeenCalled();
+    expect(getChartData).not.toHaveBeenCalled();
   });
 
   it('does not call the API when given an empty list of ids', () => {
-    const getChartsData = vi.fn().mockReturnValue(of([]));
-    const service = setup(getChartsData);
+    const getChartData = vi.fn().mockReturnValue(of([]));
+    const service = setup(getChartData);
 
     service.getChartData([], '2024-01-01', '2024-01-02');
 
-    expect(getChartsData).not.toHaveBeenCalled();
+    expect(getChartData).not.toHaveBeenCalled();
     expect(service.chartData.value()).toBeUndefined();
   });
 
   it('fetches chart data for the given ids and date range', async () => {
-    const getChartsData = vi.fn().mockReturnValue(of([]));
-    const service = setup(getChartsData);
+    const getChartData = vi.fn().mockReturnValue(of([]));
+    const service = setup(getChartData);
 
     service.getChartData([1, 2], '2024-01-01', '2024-01-02');
 
-    await vi.waitFor(() => expect(getChartsData).toHaveBeenCalledTimes(2));
-    expect(getChartsData).toHaveBeenCalledWith([1], '2024-01-01', '2024-01-02');
-    expect(getChartsData).toHaveBeenCalledWith([2], '2024-01-01', '2024-01-02');
+    await vi.waitFor(() => expect(getChartData).toHaveBeenCalledTimes(2));
+    expect(getChartData).toHaveBeenCalledWith(1, '2024-01-01', '2024-01-02');
+    expect(getChartData).toHaveBeenCalledWith(2, '2024-01-01', '2024-01-02');
   });
 
   it('maps sensors into datasets and groups y-axes by unit', async () => {
@@ -72,7 +78,7 @@ describe('MesurementsService', () => {
         data: [],
       },
     ];
-    const service = setup((ids) => of(apiResponses.filter((response) => response.id === ids[0])));
+    const service = setup((id) => of(apiResponses.filter((response) => response.id === id)));
 
     service.getChartData([1, 2, 3], '2024-01-01', '2024-01-02');
 
@@ -136,23 +142,33 @@ describe('MesurementsService', () => {
     expect(service.error()).toBeUndefined();
   });
 
-  it('rejects and records an error when a data point is missing timestamp/value', async () => {
+  it('drops malformed data points instead of failing the whole chart', async () => {
     const apiResponses: ChartDataResponseDto[] = [
       {
         id: 1,
         sensorName: 'Temperature',
         sensorCode: 'T1',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
-        data: [{ timestamp: undefined, value: 10 }],
+        data: [
+          { timestamp: undefined, value: 10 },
+          { timestamp: '2024-01-01T00:00:00Z', value: 12 },
+        ],
       },
     ];
     const service = setup(() => of(apiResponses));
 
     service.getChartData([1], '2024-01-01', '2024-01-02');
 
-    await vi.waitFor(() => expect(service.chartData.status()).toBe('error'));
-    expect(service.chartData.hasValue()).toBe(false);
-    expect(service.error()).toBeDefined();
+    await vi.waitFor(() => expect(service.chartData.value()).toBeDefined());
+    expect(service.chartData.value()!.datasets).toEqual([
+      {
+        id: 1,
+        label: 'T1 [KELVIN]',
+        data: [{ x: Date.parse('2024-01-01T00:00:00Z'), y: 12 }],
+        yAxisId: 'y',
+      },
+    ]);
+    expect(service.error()).toBeUndefined();
   });
 
   it('surfaces an error when the API call fails', async () => {

@@ -165,7 +165,7 @@ export class ChartComponent {
       this.applyDragZoom(config);
       this.applyManualYRanges(config);
       if (this.captureInitialRange) {
-        this.initialDateRange = this.computeDateRange(this.datasets()); // TODO
+        this.initialDateRange = this.computeDateRange(this.datasets());
         this.captureInitialRange = false;
       }
       // Chart.js resolves dataset controllers at construction, so a type change requires a rebuild.
