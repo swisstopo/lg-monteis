@@ -12,24 +12,24 @@ public interface ExperimentJooqMapper {
 
   // --- Parent Experiment Graph Mapping ---
 
-  @Mapping(target = "period.start", source = "experimentStart")
-  @Mapping(target = "period.end", source = "experimentEnd")
+  @Mapping(target = "period.start", source = "start")
+  @Mapping(target = "period.end", source = "end")
   @Mapping(target = "owner", ignore = true)
   Experiment toDomain(ExperimentsRecord experimentsRecord);
 
-  @Mapping(target = "experimentStart", source = "period.start")
-  @Mapping(target = "experimentEnd", source = "period.end")
+  @Mapping(target = "start", source = "period.start")
+  @Mapping(target = "end", source = "period.end")
   ExperimentsRecord toRecord(Experiment domain);
 
-  @Mapping(target = "experimentStart", source = "period.start")
-  @Mapping(target = "experimentEnd", source = "period.end")
+  @Mapping(target = "start", source = "period.start")
+  @Mapping(target = "end", source = "period.end")
   void updateRecordFromDomain(
       Experiment experiment, @MappingTarget ExperimentsRecord experimentsRecord);
 
   // --- Parent Experiment Graph Mapping ---
 
-  @Mapping(target = "period.start", source = "experimentStart")
-  @Mapping(target = "period.end", source = "experimentEnd")
+  @Mapping(target = "period.start", source = "start")
+  @Mapping(target = "period.end", source = "end")
   @Mapping(target = "sensorCount", ignore = true)
   @Mapping(target = "status", ignore = true)
   ExperimentResponseDto toDto(ExperimentsRecord experimentsRecord);

@@ -47,10 +47,10 @@ VALUES
 
 -- 4. Insert Experiments
 INSERT INTO experiments (
-    id, name, comment,
-    version, owner,
-    experiment_start,
-    experiment_end
+    "id", "name", "comment",
+    "version", "owner",
+    "start",
+    "end"
 )
 VALUES
     (1, 'Mont Terri Alpha', 'Initial temperature and pressure survey', 1, 'User1',

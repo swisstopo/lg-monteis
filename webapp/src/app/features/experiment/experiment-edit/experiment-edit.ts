@@ -21,9 +21,9 @@ import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ExperimentResponseDto, WriteExperimentDto } from '../../../core/generated';
-import { toErrorDtos } from '../../../shared/models/api-error.model';
-import { FormErrorService } from '../../../shared/services/form-error.service';
-import { ToastService } from '../../../shared/services/toast.service';
+import { toErrorDtos } from '../../../core/http/api-error.model';
+import { ToastService } from '../../../core/notifications/toast.service';
+import { FormErrorService } from '../../../core/utils/form-error.service';
 import { ExperimentService } from '../services/experiment.service';
 
 interface ExperimentFormData {

@@ -2,7 +2,7 @@ import { Injectable, inject, resource, signal } from '@angular/core';
 import { translate } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { ErrorDto, ExperimentControllerService, WriteExperimentDto } from '../../../core/generated';
-import { toErrorDtos } from '../../../shared/models/api-error.model';
+import { toErrorDtos } from '../../../core/http/api-error.model';
 
 @Injectable({ providedIn: 'root' })
 export class ExperimentService {
