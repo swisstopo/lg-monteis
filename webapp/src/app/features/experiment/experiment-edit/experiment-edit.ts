@@ -200,10 +200,12 @@ export default class ExperimentEdit {
   }
 
   private buildPayload(formData: ExperimentFormData): WriteExperimentDto {
+    const cleanedComment = formData.comment?.trim() || undefined;
+
     return {
       id: this.experiment()?.id ?? undefined,
       name: formData.name,
-      comment: formData.comment,
+      comment: cleanedComment,
       period: {
         start: this.toLocalDateString(formData.period.start),
         end: this.toLocalDateString(formData.period.end),

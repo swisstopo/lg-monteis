@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound;
 
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
+import ch.swisstopo.monteis.core.infrastructure.validation.NullOrNotBlank;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
@@ -19,7 +20,7 @@ public record WriteSensorDto(
         Long id,
     @NotBlank String code,
     @NotBlank @Size(min = 2, max = 50) String name,
-    String comment,
+    @NullOrNotBlank String comment,
     @NotNull Unit unit,
     @NotNull @Valid WriteSensorTypeDto type,
     @NotNull @Valid CoordinatesDto coordinates,

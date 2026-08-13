@@ -14,6 +14,5 @@ public interface ExperimentWebMapper {
 
   // --- Outbound Domain -> API Serialization DTO Mappings ---
   @Mapping(target = "sensorCount", ignore = true)
-  @Mapping(target = "status", ignore = true)
   ExperimentResponseDto toDto(Experiment domain);
 }

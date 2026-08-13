@@ -48,9 +48,10 @@ class ExperimentTest {
     Period dates = period;
     String description = "This is a rebuilt experiment";
     Integer version = 1;
+    Status status = Status.ACTIVE;
 
     // when
-    Experiment experiment = new Experiment(id, name, owner, dates, description, version);
+    Experiment experiment = new Experiment(id, name, owner, dates, description, version, status);
 
     // then
     assertAll(
@@ -58,6 +59,7 @@ class ExperimentTest {
         () -> assertEquals(name, experiment.getName(), "Name should be mapped correctly"),
         () -> assertEquals(owner, experiment.getOwner(), "Owner should be mapped correctly"),
         () -> assertEquals(dates, experiment.getPeriod(), "Dates should be mapped correctly"),
+        () -> assertEquals(status, experiment.getStatus(), "Status should be mapped correctly"),
         () ->
             assertEquals(
                 description,
