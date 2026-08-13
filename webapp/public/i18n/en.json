@@ -175,6 +175,32 @@
     "loading": "Streaming logs from database...",
     "error": "Failed to connect to the backend server.",
     "plot": "Plot",
+    "form": {
+      "startDate": {
+        "label": "Start Date",
+        "validation": {
+          "required": "Start date is required"
+        }
+      },
+      "startTime": {
+        "label": "Start Time",
+        "validation": {
+          "required": "Start time is required (HH:mm)"
+        }
+      },
+      "endDate": {
+        "label": "End Time",
+        "validation": {
+          "required": "End date is required"
+        }
+      },
+      "endTime": {
+        "label": "End Time",
+        "validation": {
+          "required": "End time is required (HH:mm)"
+        }
+      }
+    },
     "column": {
       "sensorId": "Sensor ID",
       "timestamp": "Timestamp",

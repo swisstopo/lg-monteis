@@ -8,12 +8,17 @@ export const APP_ISO_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ";
 export const APP_DATE_FORMATS = {
   parse: {
     dateInput: 'yyyy-MM-dd',
+    // MatTimepicker requires `parse.timeInput`, `display.timeInput` and
+    // `display.timeOptionLabel`; `IsoDateAdapter` maps 'HH:mm' to strict 24h format.
+    timeInput: 'HH:mm',
   },
   display: {
     dateInput: 'yyyy-MM-dd',
     monthYearLabel: 'MMM yyyy',
     dateA11yLabel: 'LL',
     monthYearA11yLabel: 'MMMM yyyy',
+    timeInput: 'HH:mm',
+    timeOptionLabel: 'HH:mm',
   },
 };
 

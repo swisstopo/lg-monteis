@@ -1,7 +1,12 @@
 import { Injectable } from '@angular/core';
 import { NativeDateAdapter } from '@angular/material/core';
+
+/** Matches a strict 24h `HH:mm` (optionally `:ss`) time string. */
+const ISO_TIME_REGEX = /^(\d{1,2}):([0-5]\d)(?::([0-5]\d))?$/;
+
 /*
- * This adapter enforces the ISO date format (yyyy-MM-dd) for material date inputs.
+ * This adapter enforces the ISO date format (yyyy-MM-dd) for material date inputs
+ * and the 24h ISO time format (HH:mm) for material time inputs.
  * It extends the NativeDateAdapter to provide custom formatting and parsing.
  */
 @Injectable()
@@ -19,8 +24,38 @@ export class IsoDateAdapter extends NativeDateAdapter {
       return `${year}-${month}-${day}`;
     }
 
+    // Force 24h time for the timepicker input and its dropdown option labels. The native
+    // adapter delegates to `Intl.DateTimeFormat`, which renders AM/PM for 12h locales.
+    if (displayFormat === 'HH:mm' || displayFormat === 'HH:mm:ss') {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      if (displayFormat === 'HH:mm:ss') {
+        return `${hours}:${minutes}:${String(date.getSeconds()).padStart(2, '0')}`;
+      }
+      return `${hours}:${minutes}`;
+    }
+
     // Fallback to native adapter for header labels ('MMM yyyy', 'LL', etc.)
     return super.format(date, displayFormat);
+  }
+
+  /**
+   * Parses strictly 24h `HH:mm[:ss]` input, rejecting AM/PM suffixes that the native adapter
+   * would otherwise accept (e.g. '9:30 PM'), so typed input matches the displayed format.
+   */
+  override parseTime(value: unknown, parseFormat: string | string[]): Date | null {
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = value.trim().match(ISO_TIME_REGEX);
+      if (parsed) {
+        const [, rawHours, rawMinutes, rawSeconds] = parsed;
+        const hours = Number(rawHours);
+        if (hours <= 23) {
+          return this.setTime(this.today(), hours, Number(rawMinutes), Number(rawSeconds ?? 0));
+        }
+      }
+      return this.invalid(); // Signals to Material that the input is invalid
+    }
+    return super.parseTime(value, parseFormat);
   }
 
   override parse(value: unknown, parseFormat: string | string[]): Date | null {
