@@ -213,6 +213,9 @@
         }
       }
     },
+    "sensorCount": {
+      "label": "Amount of sensors"
+    },
     "success": "Experiment saved successfully.",
     "error": {
       "unspecified": {

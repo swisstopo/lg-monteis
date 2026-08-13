@@ -4,27 +4,67 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { GridApi } from 'ag-grid-community';
+import { ExperimentResponseDto } from '../../../core/generated';
 import { TableHeader } from '../../../ui/table-header/table-header';
+import { createPagedDatasource } from '../../../ui/table/paged-datasource.factory';
+import Table from '../../../ui/table/table';
 import ExperimentEdit from '../../experiment/experiment-edit/experiment-edit';
+import { ExperimentService } from '../services/experiment.service';
+import { createColumns } from './columns';
 
 @Component({
   selector: 'app-experiment-table',
-  imports: [TableHeader, TableHeader, MatButton, MatIcon, TranslatePipe],
+  imports: [TableHeader, MatButton, MatIcon, TranslatePipe, Table],
   templateUrl: './experiment-table.html',
   styleUrl: './experiment-table.scss',
 })
 export default class ExperimentTable {
   private readonly dialog = inject(MatDialog);
+  protected experimentService = inject(ExperimentService);
   private readonly i18nService = inject(TranslateService);
 
-  protected selectedExperimentId = signal<number | undefined>(1);
   readonly searchTerm = signal<string>('');
+
+  protected wrappedCols = createColumns();
+  protected selectedExperimentId = signal<number | undefined>(undefined);
+  protected totalCount = signal<number | undefined>(undefined);
+  protected loadError = signal(false);
+  private readonly gridApi = signal<GridApi | undefined>(undefined);
+
+  protected datasource = createPagedDatasource(
+    (params) => this.experimentService.getExperiments(params),
+    this.totalCount,
+    this.loadError,
+  );
 
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
-    effect(() => {});
-    const count = 1;
-    view.title = this.i18nService.instant('tab.experiment', { count });
+    effect(() => {
+      const count = this.totalCount() ?? 0;
+      view.title = this.i18nService.instant('tab.experiment', { count });
+    });
+
+    // Re-fetch the currently visible pages whenever a experiment is created/updated elsewhere
+    // (e.g. via the edit dialog) - the infinite row model otherwise has no way to know.
+    effect(() => {
+      if (this.experimentService.experimentsChanged()) {
+        this.gridApi()?.refreshInfiniteCache();
+        this.experimentService.experimentsChanged.set(false);
+      }
+    });
+  }
+
+  onGridReady(api: GridApi): void {
+    this.gridApi.set(api);
+  }
+
+  onWrappedRow(row: ExperimentResponseDto) {
+    console.log(row);
+  }
+
+  onSelectionChanged(rows: ExperimentResponseDto[]): void {
+    this.selectedExperimentId.set(rows[0]?.id);
   }
 
   onCreate(): void {
@@ -50,4 +90,6 @@ export default class ExperimentTable {
   onSearch(term: string): void {
     this.searchTerm.set(term);
   }
+
+  protected getExperimentRowId = (row: ExperimentResponseDto): string => String(row.id);
 }

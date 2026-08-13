@@ -94,7 +94,7 @@ public class ExperimentController {
       description = "Retrieves a page of experiments with optional sorting/filtering.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved experiments")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-  public PagedResult<ExperimentResponseDto> getSensors(
+  public PagedResult<ExperimentResponseDto> getExperiments(
       @RequestParam @Min(0) int startRow,
       @RequestParam @Min(0) int endRow,
       @RequestParam(required = false) String sortModel,
