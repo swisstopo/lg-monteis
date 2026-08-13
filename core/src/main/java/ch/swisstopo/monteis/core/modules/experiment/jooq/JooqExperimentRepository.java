@@ -10,9 +10,11 @@ import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
+import org.jooq.Field;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -20,6 +22,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class JooqExperimentRepository implements ExperimentRepository {
+
+  private static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
+      Map.of(
+          "id", EXPERIMENTS.ID,
+          "name", EXPERIMENTS.NAME,
+          "start", EXPERIMENTS.START,
+          "end", EXPERIMENTS.END,
+          "version", EXPERIMENTS.VERSION,
+          "comment", EXPERIMENTS.COMMENT);
 
   private final DSLContext dsl;
   private final ExperimentJooqMapper mapper;
@@ -58,6 +69,45 @@ public class JooqExperimentRepository implements ExperimentRepository {
                     experiment.get(EXPERIMENTS.COMMENT),
                     experiment.get(EXPERIMENTS.VERSION),
                     experiment.get("sensorCount", Integer.class)));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PagedResult<ExperimentResponseDto> getExperiments(PagedRequest request) {
+    LocalDate now = LocalDate.now();
+
+    // Default to a deterministic order so offset-based paging stays stable across separate
+    // requests (Postgres does not guarantee row order without an ORDER BY).
+    PagedRequestJooqTranslator.JooqPageCriteria criteria =
+        PagedRequestJooqTranslator.translate(request, COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
+
+    List<ExperimentResponseDto> data =
+        dsl.select(
+                EXPERIMENTS.ID,
+                EXPERIMENTS.NAME,
+                EXPERIMENTS.COMMENT,
+                row(EXPERIMENTS.START, EXPERIMENTS.END).mapping(PeriodDto::new),
+                DSL.case_()
+                    .when(EXPERIMENTS.START.gt(now), DSL.inline(Status.UPCOMING.name()))
+                    .when(EXPERIMENTS.END.lt(now), DSL.inline(Status.HISTORIC.name()))
+                    .otherwise(DSL.inline(Status.ACTIVE.name()))
+                    .as("status"),
+                EXPERIMENTS.VERSION,
+                DSL.selectCount()
+                    .from(EXPERIMENT_SENSOR)
+                    .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
+                    .asField("sensorCount"))
+            .from(EXPERIMENTS)
+            .where(criteria.condition())
+            .orderBy(criteria.sortFields())
+            .limit(request.limit())
+            .offset(request.offset())
+            .fetchInto(ExperimentResponseDto.class);
+
+    int totalCount =
+        dsl.fetchCount(dsl.select(EXPERIMENTS.ID).from(EXPERIMENTS).where(criteria.condition()));
+
+    return new PagedResult<>(data, totalCount);
   }
 
   @Override
