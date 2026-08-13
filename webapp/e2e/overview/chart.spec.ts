@@ -3,10 +3,10 @@ import { loginAsAdmin } from '../support/login';
 
 // Both time fields use the same 'HH:mm' placeholder, so locate all four range fields by their
 // label instead (matching the convention in e2e/sensor/sensor-form.spec.ts).
-const startDate = (page: Page) => page.getByLabel('Start date', { exact: true });
-const endDate = (page: Page) => page.getByLabel('End date', { exact: true });
-const startTime = (page: Page) => page.getByLabel('Start time', { exact: true });
-const endTime = (page: Page) => page.getByLabel('End time', { exact: true });
+const startDate = (page: Page) => page.getByLabel('Start Date', { exact: true });
+const endDate = (page: Page) => page.getByLabel('End Date', { exact: true });
+const startTime = (page: Page) => page.getByLabel('Start Time', { exact: true });
+const endTime = (page: Page) => page.getByLabel('End Time', { exact: true });
 
 async function fillRange(page: Page): Promise<void> {
   await startDate(page).fill('2026-07-01');

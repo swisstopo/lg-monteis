@@ -189,7 +189,7 @@
         }
       },
       "endDate": {
-        "label": "End Time",
+        "label": "End Date",
         "validation": {
           "required": "End date is required"
         }
