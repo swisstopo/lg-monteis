@@ -1,11 +1,13 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 import static org.jooq.impl.DSL.row;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
@@ -15,9 +17,11 @@ import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQuery;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
+import org.jooq.Field;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.core.Authentication;
@@ -27,6 +31,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepository {
+
+  private static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
+      Map.of(
+          "id", EXPERIMENTS.ID,
+          "name", EXPERIMENTS.NAME,
+          "start", EXPERIMENTS.START,
+          "end", EXPERIMENTS.END,
+          "version", EXPERIMENTS.VERSION,
+          "comment", EXPERIMENTS.COMMENT);
 
   private final DSLContext dsl;
   private final ExperimentJooqMapper mapper;
@@ -59,6 +72,45 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
         .from(EXPERIMENTS)
         .where(EXPERIMENTS.ID.eq(experimentId))
         .fetchOneInto(ExperimentResponseDto.class);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PagedResult<ExperimentResponseDto> getExperiments(PagedRequest request) {
+    LocalDate now = LocalDate.now();
+
+    // Default to a deterministic order so offset-based paging stays stable across separate
+    // requests (Postgres does not guarantee row order without an ORDER BY).
+    PagedRequestJooqTranslator.JooqPageCriteria criteria =
+        PagedRequestJooqTranslator.translate(request, COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
+
+    List<ExperimentResponseDto> data =
+        dsl.select(
+                EXPERIMENTS.ID,
+                EXPERIMENTS.NAME,
+                EXPERIMENTS.COMMENT,
+                row(EXPERIMENTS.START, EXPERIMENTS.END).mapping(PeriodDto::new),
+                DSL.case_()
+                    .when(EXPERIMENTS.START.gt(now), DSL.inline(Status.UPCOMING.name()))
+                    .when(EXPERIMENTS.END.lt(now), DSL.inline(Status.HISTORIC.name()))
+                    .otherwise(DSL.inline(Status.ACTIVE.name()))
+                    .as("status"),
+                EXPERIMENTS.VERSION,
+                DSL.selectCount()
+                    .from(EXPERIMENT_SENSOR)
+                    .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
+                    .asField("sensorCount"))
+            .from(EXPERIMENTS)
+            .where(criteria.condition())
+            .orderBy(criteria.sortFields())
+            .limit(request.limit())
+            .offset(request.offset())
+            .fetchInto(ExperimentResponseDto.class);
+
+    int totalCount =
+        dsl.fetchCount(dsl.select(EXPERIMENTS.ID).from(EXPERIMENTS).where(criteria.condition()));
+
+    return new PagedResult<>(data, totalCount);
   }
 
   @Override
