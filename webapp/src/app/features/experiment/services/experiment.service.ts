@@ -1,14 +1,19 @@
 import { Injectable, inject, resource, signal } from '@angular/core';
 import { translate } from '@ngx-translate/core';
+import { IGetRowsParams } from 'ag-grid-community';
 import { firstValueFrom } from 'rxjs';
 import { ErrorDto, ExperimentControllerService, WriteExperimentDto } from '../../../core/generated';
 import { toErrorDtos } from '../../../core/http/api-error.model';
+import { toPagedRequestParams } from '../../../ui/table/paged-request.mapper';
 
 @Injectable({ providedIn: 'root' })
 export class ExperimentService {
   private readonly api = inject(ExperimentControllerService);
   private readonly experimentRequest = signal<{ id: number | undefined }>({ id: undefined });
   readonly error = signal<ErrorDto[] | undefined>(undefined);
+  // Bumped whenever a sensor is created/updated, so the sensor table can refresh its
+  // ag-grid infinite row model cache - ag-grid has no way to detect that on its own.
+  readonly experimentsChanged = signal(false);
 
   readonly experiment = resource({
     params: () => this.experimentRequest(),
@@ -29,7 +34,9 @@ export class ExperimentService {
 
   async createExperiment(experiment: WriteExperimentDto) {
     try {
-      return await firstValueFrom(this.api.createExperiment(experiment));
+      const result = await firstValueFrom(this.api.createExperiment(experiment));
+      this.experimentsChanged.set(true);
+      return result;
     } catch (err) {
       this.error.set(toErrorDtos(err));
       throw err;
@@ -38,10 +45,17 @@ export class ExperimentService {
 
   async updateExperiment(id: number, experiment: WriteExperimentDto) {
     try {
-      return await firstValueFrom(this.api.updateExperiment(id, experiment));
+      const result = await firstValueFrom(this.api.updateExperiment(id, experiment));
+      this.experimentsChanged.set(true);
+      return result;
     } catch (err) {
       this.error.set(toErrorDtos(err));
       throw err;
     }
+  }
+
+  getExperiments(params: IGetRowsParams) {
+    const { startRow, endRow, sortModel, filterModel } = toPagedRequestParams(params);
+    return firstValueFrom(this.api.getExperiments(startRow, endRow, sortModel, filterModel));
   }
 }
