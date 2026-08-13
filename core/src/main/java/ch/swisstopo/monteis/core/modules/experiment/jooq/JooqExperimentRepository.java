@@ -45,10 +45,10 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
             EXPERIMENTS.ID,
             EXPERIMENTS.NAME,
             EXPERIMENTS.COMMENT,
-            row(EXPERIMENTS.EXPERIMENT_START, EXPERIMENTS.EXPERIMENT_END).mapping(PeriodDto::new),
+            row(EXPERIMENTS.START, EXPERIMENTS.END).mapping(PeriodDto::new),
             DSL.case_()
-                .when(EXPERIMENTS.EXPERIMENT_START.gt(now), DSL.inline(Status.UPCOMING.name()))
-                .when(EXPERIMENTS.EXPERIMENT_END.lt(now), DSL.inline(Status.HISTORIC.name()))
+                .when(EXPERIMENTS.START.gt(now), DSL.inline(Status.UPCOMING.name()))
+                .when(EXPERIMENTS.END.lt(now), DSL.inline(Status.HISTORIC.name()))
                 .otherwise(DSL.inline(Status.ACTIVE.name()))
                 .as("status"),
             EXPERIMENTS.VERSION,

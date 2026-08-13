@@ -1,8 +1,11 @@
 CREATE TABLE experiments (
-                             id BIGSERIAL PRIMARY KEY,
-                             name TEXT UNIQUE NOT NULL,
-                             description TEXT,
-                             version INTEGER NOT NULL DEFAULT 1
+                             "id" BIGSERIAL PRIMARY KEY,
+                             "name" TEXT UNIQUE NOT NULL,
+                             "owner" TEXT NOT NULL,
+                             "start" DATE NOT NULL,
+                             "end" DATE NOT NULL,
+                             "comment" TEXT,
+                             "version" INTEGER NOT NULL DEFAULT 1
 );
 
 -- Many-to-Many Join Table

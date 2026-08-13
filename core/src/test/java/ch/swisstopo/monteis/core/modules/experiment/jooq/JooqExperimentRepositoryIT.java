@@ -170,7 +170,6 @@ class JooqExperimentRepositoryIT {
 
           // Mutate domain object
           savedExperiment.setName("NEW-NAME");
-          savedExperiment.setOwner("New Owner");
           savedExperiment.setComment("Updated comment");
 
           // Act
@@ -299,8 +298,8 @@ class JooqExperimentRepositoryIT {
             dsl.insertInto(EXPERIMENTS)
                 .set(EXPERIMENTS.NAME, name)
                 .set(EXPERIMENTS.COMMENT, comment)
-                .set(EXPERIMENTS.EXPERIMENT_START, start)
-                .set(EXPERIMENTS.EXPERIMENT_END, end)
+                .set(EXPERIMENTS.START, start)
+                .set(EXPERIMENTS.END, end)
                 .set(EXPERIMENTS.OWNER, "owner")
                 .returning(EXPERIMENTS.ID)
                 .fetchOne())
