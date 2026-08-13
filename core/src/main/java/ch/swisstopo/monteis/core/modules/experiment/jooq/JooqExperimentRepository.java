@@ -27,9 +27,8 @@ public class JooqExperimentRepository implements ExperimentRepository {
       Map.of(
           "id", EXPERIMENTS.ID,
           "name", EXPERIMENTS.NAME,
-          "start", EXPERIMENTS.START,
-          "end", EXPERIMENTS.END,
-          "version", EXPERIMENTS.VERSION,
+          "period.start", EXPERIMENTS.START,
+          "period.end", EXPERIMENTS.END,
           "comment", EXPERIMENTS.COMMENT);
 
   private final DSLContext dsl;
