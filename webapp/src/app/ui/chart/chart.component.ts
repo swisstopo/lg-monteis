@@ -163,7 +163,7 @@ export class ChartComponent {
       this.applyDragZoom(config);
       this.applyManualYRanges(config);
       if (this.captureInitialRange) {
-        // this.initialDateRange = this.computeDateRange(this.datasets()); // TODO
+        this.initialDateRange = this.computeDateRange(this.datasets()); // TODO
         this.captureInitialRange = false;
       }
       // Chart.js resolves dataset controllers at construction, so a type change requires a rebuild.
@@ -322,12 +322,26 @@ export class ChartComponent {
     this.rangeSelected.emit({ min: xScale.min, max: xScale.max });
   }
 
+  //
   private computeDateRange(datasets: ChartDataset[]): { min: number; max: number } | undefined {
-    const xs = datasets.flatMap((dataset) => dataset.data.map((point) => point.x));
-    if (xs.length === 0) {
-      return undefined;
+    let min = Infinity;
+    let max = -Infinity;
+    let hasData = false;
+
+    for (const dataset of datasets) {
+      const data = dataset.data;
+      if (data.length === 0) continue;
+
+      // Assuming time-series data is sorted from the backend (Fastest O(D) execution)
+      const localMin = data[0].x;
+      const localMax = data[data.length - 1].x;
+
+      if (localMin < min) min = localMin;
+      if (localMax > max) max = localMax;
+      hasData = true;
     }
-    return { min: Math.min(...xs), max: Math.max(...xs) };
+
+    return hasData ? { min, max } : undefined;
   }
 
   private applyManualYRanges(config: ChartConfiguration): void {

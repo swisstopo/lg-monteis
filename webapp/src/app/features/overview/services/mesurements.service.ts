@@ -1,6 +1,6 @@
-import { inject, Injectable, resource, signal } from '@angular/core';
+import { computed, inject, Injectable, resource, signal } from '@angular/core';
 import { translate, TranslateService } from '@ngx-translate/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
 import {
   ChartDataResponseDto,
   ErrorDto,
@@ -26,32 +26,34 @@ export class MesurementsService {
   private readonly api = inject(MeasurementControllerService);
   private readonly i18nService = inject(TranslateService);
   private readonly chartsRequest = signal<ChartRequest | undefined>(undefined);
-  readonly error = signal<ErrorDto[] | undefined>(undefined);
+  readonly error = computed<ErrorDto[] | undefined>(() => {
+    const err = this.chartData.error();
+    return err ? toErrorDtos(err) : undefined;
+  });
 
   readonly chartData = resource<LoadedChartData, ChartRequest | undefined>({
     params: () => this.chartsRequest(),
-    loader: async ({ params }) => {
-      try {
-        if (!params?.ids.length) throw new Error(translate('chart.error.noIds')());
+    loader: async ({ params, abortSignal }) => {
+      if (!params?.ids.length) throw new Error(translate('chart.error.noIds')());
 
-        // one call per sensor, parallelized
-        const responses = await Promise.all(
-          params.ids.map((id) =>
-            firstValueFrom(this.api.getChartData(id, params.rangeFrom, params.rangeTo)),
+      // one call per sensor, parallelized
+      const responses = await Promise.all(
+        params.ids.map((id) =>
+          firstValueFrom(
+            this.api
+              .getChartData(id, params.rangeFrom, params.rangeTo)
+              .pipe(takeUntil(fromEvent(abortSignal, 'abort'))),
           ),
-        );
-        // each response is ChartDataResponseDto[], so flatten them
-        const allSensors = responses.flat();
+        ),
+      );
+      // each response is ChartDataResponseDto[], so flatten them
+      const allSensors = responses.flat();
 
-        return {
-          count: allSensors.reduce((sum, sensor) => sum + (sensor.data?.length ?? 0), 0),
-          datasets: this.mapDtoToChartDatasets(allSensors),
-          yAxisLabels: this.buildDynamicYAxisLabels(allSensors),
-        };
-      } catch (error) {
-        this.error.set(toErrorDtos(error));
-        throw error;
-      }
+      return {
+        count: allSensors.reduce((sum, sensor) => sum + (sensor.data?.length ?? 0), 0),
+        datasets: this.mapDtoToChartDatasets(allSensors),
+        yAxisLabels: this.buildDynamicYAxisLabels(allSensors),
+      };
     },
   });
 

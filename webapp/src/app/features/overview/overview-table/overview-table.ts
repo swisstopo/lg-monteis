@@ -124,17 +124,22 @@ export default class OverviewTable {
     `${row.sensorId}-${row.timestamp}`;
 
   protected onPlot() {
+    if (this.rangeForm().invalid()) {
+      this.rangeForm().markAsTouched();
+      return;
+    }
+    const { start, end } = this.dateRangeModel();
+    if (!start || !end) return;
+
     //L118-L125 should be replaced by proper table implementation logic
-    const start = this.dateRangeModel().start!;
-    const end = this.dateRangeModel().end!;
-
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-
+    const rangeStart = new Date(start);
+    rangeStart.setHours(0, 0, 0, 0);
+    const rangeEnd = new Date(end);
+    rangeEnd.setHours(23, 59, 59, 999);
     this.plottedIds.set([1, 2, 3, 5]);
     //
 
-    this.fetchChartData(start, end);
+    this.fetchChartData(rangeStart, rangeEnd);
 
     const title = this.i18nService.translate('chart.title', {
       name: 'MyFancyExperiment', // should be replaced by experiment name

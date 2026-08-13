@@ -82,15 +82,7 @@ export function buildChartConfig(
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 0 },
-      transitions: {
-        zoom: {
-          animation: {
-            duration: 400,
-            easing: 'easeOutCubic',
-          },
-        },
-      },
+      animation: false,
       elements: {
         point: {
           radius: 2,
@@ -133,6 +125,12 @@ export function buildChartConfig(
             color: palette.textColor,
             padding: 20,
           },
+        },
+        decimation: {
+          // only relevant for line-charts (no effect on scatter)
+          enabled: true,
+          algorithm: 'lttb',
+          threshold: 1000, // 2 samples per horizontal pixel is plenty
         },
         tooltip: {
           enabled: true,
@@ -200,6 +198,7 @@ function buildDataset(
     backgroundColor: color,
     showLine: type === 'line',
     parsing: false, // performance optimization but requires data to match exact format
+    normalized: true,
     yAxisID: dataset.yAxisId ?? 'y',
   } satisfies ChartJsDataset<ChartType>;
 }
