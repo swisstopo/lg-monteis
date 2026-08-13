@@ -1,6 +1,6 @@
-import { inject, Injectable, resource, signal } from '@angular/core';
+import { computed, inject, Injectable, resource, signal } from '@angular/core';
 import { translate, TranslateService } from '@ngx-translate/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
 import {
   ChartDataResponseDto,
   ErrorDto,
@@ -24,29 +24,39 @@ interface LoadedChartData {
 @Injectable({ providedIn: 'root' })
 export class MesurementsService {
   private readonly api = inject(MeasurementControllerService);
-  private readonly i18nService = inject(TranslateService);
+  private readonly translateService = inject(TranslateService);
   private readonly chartsRequest = signal<ChartRequest | undefined>(undefined);
-  readonly error = signal<ErrorDto[] | undefined>(undefined);
+  readonly error = computed<ErrorDto[] | undefined>(() => {
+    const err = this.chartData.error();
+    return err ? toErrorDtos(err) : undefined;
+  });
 
   readonly chartData = resource<LoadedChartData, ChartRequest | undefined>({
     params: () => this.chartsRequest(),
-    loader: async ({ params }) => {
-      try {
-        if (!params?.ids.length) throw new Error(translate('chart.error.noIds')());
+    loader: async ({ params, abortSignal }) => {
+      if (!params?.ids.length) throw new Error(translate('chart.error.noIds')());
 
-        const rawData = await firstValueFrom(
-          this.api.getChartsData(params.ids, params.rangeFrom, params.rangeTo),
-        );
+      // one call per sensor, parallelized
+      const responses = await Promise.all(
+        params.ids.map((id) =>
+          firstValueFrom(
+            this.api
+              .getChartData(id, params.rangeFrom, params.rangeTo)
+              .pipe(takeUntil(fromEvent(abortSignal, 'abort'))),
+          ),
+        ),
+      );
+      // each response is ChartDataResponseDto[], so flatten them
+      const allSensors = responses.flat();
 
-        return {
-          count: 666, // total in response
-          datasets: this.mapDtoToChartDatasets(rawData),
-          yAxisLabels: this.buildDynamicYAxisLabels(rawData),
-        };
-      } catch (error) {
-        this.error.set(toErrorDtos(error));
-        throw error;
-      }
+      const axisIdsByUnit = this.buildAxisIdsByUnit(allSensors);
+      const datasets = this.mapDtoToChartDatasets(allSensors, axisIdsByUnit);
+
+      return {
+        count: datasets.reduce((sum, d) => sum + d.data.length, 0),
+        datasets,
+        yAxisLabels: this.buildYAxisLabels(axisIdsByUnit),
+      };
     },
   });
 
@@ -58,34 +68,34 @@ export class MesurementsService {
     this.chartsRequest.set({ ids: ids, rangeFrom: rangeFrom, rangeTo: rangeTo });
   }
 
-  private mapDtoToChartDatasets(apiResponses: ChartDataResponseDto[]): ChartDataset[] {
-    const axisIdsByUnit = this.buildAxisIdsByUnit(apiResponses);
-
+  private mapDtoToChartDatasets(
+    apiResponses: ChartDataResponseDto[],
+    axisIdsByUnit: Map<string, string>,
+  ): ChartDataset[] {
     return apiResponses.map((sensor, index) => {
-      const data: ChartPoint[] = (sensor.data ?? []).map((item) => {
+      // use flatMap to safely filter out bad points without crashing the whole chart
+      const data: ChartPoint[] = (sensor.data ?? []).flatMap((item) => {
         if (item.timestamp === undefined || item.value === undefined) {
-          throw new Error(this.i18nService.translate('chart.error.invalidData')());
+          console.warn(`[Telemetry] Dropped malformed point for sensor ${sensor.sensorCode}`);
+          return [];
         }
-        return { x: Date.parse(item.timestamp!), y: item.value! };
+        return [{ x: Date.parse(item.timestamp), y: item.value }];
       });
 
       return {
         id: sensor.id ?? `sensor-${index}`,
-        label: `${sensor.sensorName ?? 'Unknown'} (${sensor.sensorCode ?? ''}) [${sensor.unit ?? ''}]`,
+        label: `${sensor.sensorCode ?? 'unknown'} [${sensor.unit ?? ''}]`,
         data: data,
         yAxisId: axisIdsByUnit.get(sensor.unit ?? ''),
       };
     });
   }
 
-  private buildDynamicYAxisLabels(apiResponses: ChartDataResponseDto[]): Record<string, string> {
-    const axisIdsByUnit = this.buildAxisIdsByUnit(apiResponses);
+  private buildYAxisLabels(axisIdsByUnit: Map<string, string>): Record<string, string> {
     const labels: Record<string, string> = {};
-
     axisIdsByUnit.forEach((axisId, unit) => {
       labels[axisId] = unit ? `${unit}` : '';
     });
-
     return labels;
   }
 

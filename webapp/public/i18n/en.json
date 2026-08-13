@@ -157,8 +157,7 @@
       "search": "Search",
       "download": "Download",
       "create": "Create Sensor",
-      "edit": "Edit Sensor",
-      "plot": "Plot"
+      "edit": "Edit Sensor"
     },
     "success": "Sensor saved successfully.",
     "error": {
@@ -175,6 +174,33 @@
     "heading": "AG Grid - Database Records",
     "loading": "Streaming logs from database...",
     "error": "Failed to connect to the backend server.",
+    "plot": "Plot",
+    "form": {
+      "startDate": {
+        "label": "Start Date",
+        "validation": {
+          "required": "Start date is required"
+        }
+      },
+      "startTime": {
+        "label": "Start Time",
+        "validation": {
+          "required": "Start time is required (HH:mm)"
+        }
+      },
+      "endDate": {
+        "label": "End Date",
+        "validation": {
+          "required": "End date is required"
+        }
+      },
+      "endTime": {
+        "label": "End Time",
+        "validation": {
+          "required": "End time is required (HH:mm)"
+        }
+      }
+    },
     "column": {
       "sensorId": "Sensor ID",
       "timestamp": "Timestamp",
@@ -199,6 +225,13 @@
     "button": {
       "cancel": "Close",
       "resetZoom": "Reset Zoom"
+    },
+    "tooltip": {
+      "dragZoom": "Drag to zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "download": "Download chart"
     }
   },
   "tab": {

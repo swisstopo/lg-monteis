@@ -9,6 +9,7 @@ import {
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { MatButton } from '@angular/material/button';
@@ -25,6 +26,7 @@ import { ActiveElement, ChartConfiguration, ChartEvent, Chart as ChartJs } from 
 import { buildChartConfig } from './chart-config.builder';
 import { registerChartJs } from './chart-registry';
 import { resolveThemePalette } from './chart-theme.util';
+import { ChartToolbarComponent } from './chart-toolbar/chart-toolbar.component';
 import {
   ChartDataset,
   ChartOptions,
@@ -90,6 +92,7 @@ registerChartJs();
     MatIcon,
     MatProgressSpinner,
     TranslatePipe,
+    ChartToolbarComponent,
   ],
 })
 export class ChartComponent {
@@ -106,6 +109,7 @@ export class ChartComponent {
 
   private instance?: ChartJs;
   private lastHoverKey?: string;
+  private hoverRafId?: number;
   private readonly palette = signal<ChartThemePalette>({});
   private readonly viewReady = signal(false);
   /**
@@ -115,7 +119,17 @@ export class ChartComponent {
    */
   private manualYRanges: Record<string, { min: number; max: number }> = {};
   private initialDateRange?: { min: number; max: number };
+  /**
+   * Set whenever the current initial range needs to be (re-)captured from the next unzoomed
+   * dataset render, i.e. on first load and after an explicit resetZoom(). This must not be tied
+   * to `manualYRanges` emptiness: X-only zooms (zoomIn/zoomOut/drag) never touch `manualYRanges`,
+   * but they do trigger a dataset refetch, which would otherwise overwrite the true initial range
+   * with the narrowed one and make zoomOut() unable to expand past the current view.
+   */
+  private captureInitialRange = true;
   private resetRange?: { min: number; max: number };
+  readonly dragZoomEnabled = signal(true);
+  private readonly renderMode = signal<'zoom' | undefined>(undefined);
 
   constructor() {
     // key architectural consideration for for gpu references clean up
@@ -148,29 +162,86 @@ export class ChartComponent {
         return;
       }
       const config = buildChartConfig(this.type(), this.datasets(), this.options(), this.palette());
+      this.applyDragZoom(config);
       this.applyManualYRanges(config);
-      if (Object.keys(this.manualYRanges).length === 0) {
+      if (this.captureInitialRange) {
         this.initialDateRange = this.computeDateRange(this.datasets());
+        this.captureInitialRange = false;
       }
       // Chart.js resolves dataset controllers at construction, so a type change requires a rebuild.
       if (this.instance && (this.instance.config as ChartConfiguration).type !== config.type) {
         this.instance.destroy();
         this.instance = undefined;
       }
+      const mode = this.renderMode();
       if (this.instance) {
-        this.updateChart(config);
+        this.updateChart(config, mode);
       } else {
         this.createChart(config);
       }
+      untracked(() => this.renderMode.set(undefined));
     });
   }
 
+  /**
+   * toolbar actions
+   */
+
   public resetZoom(): void {
+    this.renderMode.set('zoom');
     this.resetRange = this.initialDateRange;
     if (this.instance) {
       this.instance.resetZoom();
     }
     this.manualYRanges = {};
+    this.captureInitialRange = true;
+  }
+
+  private readonly zoomFactor = 2;
+
+  public zoomIn(): void {
+    this.renderMode.set('zoom');
+    this.zoomRange(1 / this.zoomFactor);
+  }
+
+  public zoomOut(): void {
+    this.renderMode.set('zoom');
+    this.zoomRange(this.zoomFactor);
+  }
+
+  public toggleDragZoom(): void {
+    this.dragZoomEnabled.update((enabled) => !enabled);
+  }
+
+  public downloadChart(): void {
+    if (!this.instance) {
+      return;
+    }
+    const image = this.instance.toBase64Image('image/png');
+    const link = document.createElement('a');
+    link.href = image;
+    link.download = `${this.title()}.png`;
+    link.click();
+  }
+
+  private zoomRange(factor: number): void {
+    if (!this.instance || !this.initialDateRange) {
+      return;
+    }
+    const xScale = this.instance.scales['x'];
+    if (!xScale) {
+      return;
+    }
+    const currentMin = xScale.min;
+    const currentMax = xScale.max;
+    const center = (currentMin + currentMax) / 2;
+    const newRange = (currentMax - currentMin) * factor;
+    const halfRange = newRange / 2;
+
+    const min = Math.max(this.initialDateRange.min, center - halfRange);
+    const max = Math.min(this.initialDateRange.max, center + halfRange);
+
+    this.rangeSelected.emit({ min, max });
   }
 
   private createChart(config: ChartConfiguration): void {
@@ -185,7 +256,7 @@ export class ChartComponent {
    *     this.instance.data.labels.push(newLabel);
    *     this.instance.update('quiet'); // 'quiet' skips animations
    */
-  private updateChart(config: ChartConfiguration): void {
+  private updateChart(config: ChartConfiguration, mode?: 'zoom'): void {
     if (!this.instance) {
       return;
     }
@@ -197,7 +268,7 @@ export class ChartComponent {
     this.instance.data.datasets = next.data.datasets;
 
     this.instance.options = next.options ?? {};
-    this.instance.update();
+    this.instance.update(mode);
   }
 
   /**
@@ -235,11 +306,17 @@ export class ChartComponent {
    * instead, for the consumer to refetch, rather than kept as a client-side-only zoom.
    */
   private handleZoomComplete(chart: ChartJs): void {
-    if (this.resetRange) {
-      this.rangeSelected.emit(this.resetRange);
-      this.resetRange = undefined;
+    this.renderMode.set('zoom');
+
+    // FIX: "Pop" the value immediately so queued drag events can't consume it
+    const queuedResetRange = this.resetRange;
+    this.resetRange = undefined;
+
+    if (queuedResetRange) {
+      this.rangeSelected.emit(queuedResetRange);
       return;
     }
+
     const xScale = chart.scales['x'];
     if (!xScale) {
       return;
@@ -253,11 +330,24 @@ export class ChartComponent {
   }
 
   private computeDateRange(datasets: ChartDataset[]): { min: number; max: number } | undefined {
-    const xs = datasets.flatMap((dataset) => dataset.data.map((point) => point.x));
-    if (xs.length === 0) {
-      return undefined;
+    let min = Infinity;
+    let max = -Infinity;
+    let hasData = false;
+    // use for-loop for performance
+    for (const dataset of datasets) {
+      const data = dataset.data;
+      if (data.length === 0) continue;
+
+      // Assuming time-series data is sorted from the backend (Fastest O(D) execution)
+      const localMin = data[0].x;
+      const localMax = data[data.length - 1].x;
+
+      if (localMin < min) min = localMin;
+      if (localMax > max) max = localMax;
+      hasData = true;
     }
-    return { min: Math.min(...xs), max: Math.max(...xs) };
+
+    return hasData ? { min, max } : undefined;
   }
 
   private applyManualYRanges(config: ChartConfiguration): void {
@@ -273,6 +363,17 @@ export class ChartComponent {
     }
   }
 
+  private applyDragZoom(config: ChartConfiguration): void {
+    const zoomOptions = config.options?.plugins?.zoom?.zoom;
+    if (!zoomOptions || typeof zoomOptions !== 'object') {
+      return;
+    }
+    (zoomOptions as { drag?: { enabled?: boolean } }).drag = {
+      ...(zoomOptions as { drag?: object }).drag,
+      enabled: this.dragZoomEnabled(),
+    };
+  }
+
   /**
    * Chart.js fires `onHover` on every mousemove, so repeated events for the same point are
    * filtered out to avoid needlessly notifying consumers.
@@ -284,7 +385,14 @@ export class ChartComponent {
       return;
     }
     this.lastHoverKey = key;
-    this.emitPointEvent(event, elements, this.pointHover);
+    if (this.hoverRafId) {
+      cancelAnimationFrame(this.hoverRafId);
+    }
+
+    this.hoverRafId = requestAnimationFrame(() => {
+      this.emitPointEvent(event, elements, this.pointHover);
+      this.hoverRafId = undefined;
+    });
   }
 
   private emitPointEvent(

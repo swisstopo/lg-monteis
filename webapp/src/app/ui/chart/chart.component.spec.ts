@@ -39,17 +39,21 @@ vi.mock('chart.js', async (importOriginal) => {
     config: any;
     data: any;
     options: any;
+    scales: any;
 
     constructor(_canvas: unknown, config: any) {
       this.config = config;
       this.data = config.data;
       this.options = config.options;
+      this.scales = {};
     }
 
     // Spies for lifecycle methods
     destroy = vi.fn();
     update = vi.fn();
     resetZoom = vi.fn();
+    zoom = vi.fn();
+    toBase64Image = vi.fn().mockReturnValue('data:image/png;base64,mock');
   }
 
   return {
@@ -161,6 +165,77 @@ describe('Chart', () => {
     });
   });
 
+  describe('Toolbar actions', () => {
+    it('renders five toolbar icon buttons', () => {
+      const buttons = fixture.nativeElement.querySelectorAll('.chart-toolbar button');
+      expect(buttons).toHaveLength(5);
+    });
+
+    it('should emit a smaller range when zoomIn() is invoked', () => {
+      const instance = (component as any).instance;
+      instance.scales = { x: { min: 0, max: 100 } };
+      (component as any).initialDateRange = { min: 0, max: 100 };
+      const emitSpy = vi.spyOn(component.rangeSelected, 'emit');
+
+      component.zoomIn();
+
+      const emitted = emitSpy.mock.calls[0][0];
+      expect(emitted.min).toBeGreaterThan(0);
+      expect(emitted.max).toBeLessThan(100);
+    });
+
+    it('should emit a larger range when zoomOut() is invoked', () => {
+      const instance = (component as any).instance;
+      instance.scales = { x: { min: 10, max: 90 } };
+      (component as any).initialDateRange = { min: 0, max: 100 };
+      const emitSpy = vi.spyOn(component.rangeSelected, 'emit');
+
+      component.zoomOut();
+
+      expect(emitSpy).toHaveBeenCalledWith({ min: 0, max: 100 });
+    });
+
+    it('should reset the chart and clear Y ranges when the toolbar reset button is clicked', () => {
+      const instance = (component as any).instance;
+      instance.resetZoom = vi.fn();
+      (component as any).manualYRanges = { y: { min: 10, max: 100 } };
+
+      component.resetZoom();
+
+      expect(instance.resetZoom).toHaveBeenCalled();
+      expect((component as any).manualYRanges).toEqual({});
+    });
+
+    it('should toggle the drag-zoom mode when toggleDragZoom() is invoked', () => {
+      expect(component.dragZoomEnabled()).toBe(true);
+
+      component.toggleDragZoom();
+
+      expect(component.dragZoomEnabled()).toBe(false);
+    });
+
+    it('should download the chart as a PNG when downloadChart() is invoked', () => {
+      const instance = (component as any).instance;
+      const createElementSpy = vi.spyOn(document, 'createElement');
+      const clickSpy = vi.fn();
+      createElementSpy.mockReturnValue({
+        href: '',
+        download: '',
+        click: clickSpy,
+      } as unknown as HTMLAnchorElement);
+
+      try {
+        component.downloadChart();
+
+        expect(instance.toBase64Image).toHaveBeenCalledWith('image/png');
+        expect(createElementSpy).toHaveBeenCalledWith('a');
+        expect(clickSpy).toHaveBeenCalled();
+      } finally {
+        createElementSpy.mockRestore();
+      }
+    });
+  });
+
   describe('Y-axis zoom persistence', () => {
     it('should store the initial date range when the chart first renders unzoomed data', async () => {
       const initialRange = (component as any).initialDateRange;
@@ -187,6 +262,30 @@ describe('Chart', () => {
       fixture.componentRef.setInput('datasets', [refetchedDataset]);
       await fixture.whenStable();
 
+      expect((component as any).initialDateRange).toEqual({ min: 0, max: 1 });
+    });
+
+    it('should not update the initial date range when a button-triggered X zoom refetch occurs', async () => {
+      const instance = (component as any).instance;
+      instance.scales = { x: { min: 0, max: 1 } };
+
+      component.zoomIn();
+
+      const refetchedDataset: ChartDataset = {
+        id: 'sensor-1',
+        label: 'Sensor 1',
+        data: [{ x: 0.25, y: 2 }],
+      };
+      fixture.componentRef.setInput('datasets', [refetchedDataset]);
+      await fixture.whenStable();
+
+      expect((component as any).initialDateRange).toEqual({ min: 0, max: 1 });
+
+      instance.scales = { x: { min: 0.25, max: 0.25 } };
+      const emitSpy = vi.spyOn(component.rangeSelected, 'emit');
+      component.zoomOut();
+
+      expect(emitSpy).toHaveBeenCalledWith({ min: 0.25, max: 0.25 });
       expect((component as any).initialDateRange).toEqual({ min: 0, max: 1 });
     });
 

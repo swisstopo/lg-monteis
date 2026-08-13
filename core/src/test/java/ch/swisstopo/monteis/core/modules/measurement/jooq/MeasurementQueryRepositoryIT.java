@@ -12,6 +12,7 @@ import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDt
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.jooq.DSLContext;
 import org.jooq.Record3;
 import org.junit.jupiter.api.Test;
@@ -30,10 +31,14 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>FLOW-Admin (id 5) — no experiment, admin-only
  * </ul>
  *
- * <p>Each of these sensors has readings spaced 5 minutes apart, spanning the 10 hours before the
- * seed migration ran, so a sufficiently wide {@code [from, to]} window reliably covers all of
- * them regardless of when in the test run this class executes. Tests run as admin unless the
+ * <p>Each of these sensors has readings spaced 5 minutes apart, spanning the 365 days before the
+ * seed migration ran, so a sufficiently wide {@code [from, to]} window reliably covers all of them
+ * regardless of when in the test run this class executes. Tests run as admin unless the
  * row-level-security behavior itself is under test.
+ *
+ * <p>The repository reads one sensor per call and returns an empty {@link Optional} both when the
+ * sensor does not exist and when row-level security hides it, so that the API cannot be used to
+ * probe for the existence of sensors the caller may not see.
  */
 @IT
 class MeasurementQueryRepositoryIT {
@@ -57,12 +62,12 @@ class MeasurementQueryRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Act
-          List<ChartDataResponseDto> results =
-              repository.findMeasurements(List.of(TEMP_1), wideFrom, wideTo);
+          Optional<ChartDataResponseDto> result =
+              repository.findMeasurements(TEMP_1, wideFrom, wideTo);
 
           // Assert
-          assertEquals(1, results.size());
-          ChartDataResponseDto dto = results.getFirst();
+          assertTrue(result.isPresent());
+          ChartDataResponseDto dto = result.get();
           assertEquals(TEMP_1, dto.id());
           assertEquals("TEMP-1", dto.sensorCode());
           assertEquals("monteis-001", dto.sensorName());
@@ -76,8 +81,7 @@ class MeasurementQueryRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Act
-          List<ChartPointDto> points =
-              repository.findMeasurements(List.of(TEMP_1), wideFrom, wideTo).getFirst().data();
+          List<ChartPointDto> points = dataOf(TEMP_1, wideFrom, wideTo);
 
           // Assert
           for (int i = 0; i < points.size() - 1; i++) {
@@ -113,12 +117,7 @@ class MeasurementQueryRepositoryIT {
           assertNotEquals(rawValue, normValue, "Fixture assumption: raw and norm values differ");
 
           // Act: fetch exactly that one reading through the repository
-          ChartPointDto point =
-              repository
-                  .findMeasurements(List.of(TEMP_1), timestamp, timestamp)
-                  .getFirst()
-                  .data()
-                  .getFirst();
+          ChartPointDto point = dataOf(TEMP_1, timestamp, timestamp).getFirst();
 
           // Assert
           assertEquals(normValue, point.value());
@@ -127,24 +126,24 @@ class MeasurementQueryRepositoryIT {
 
   @Test
   @Transactional
-  void should_return_multiple_sensors_when_multiple_ids_given() {
+  void should_resolve_each_sensor_independently() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
-          // Act
-          List<ChartDataResponseDto> results =
-              repository.findMeasurements(List.of(TEMP_1, DISP_2), wideFrom, wideTo);
+          // Act: the endpoint serves one sensor per call, so each id resolves on its own
+          Optional<ChartDataResponseDto> temp =
+              repository.findMeasurements(TEMP_1, wideFrom, wideTo);
+          Optional<ChartDataResponseDto> disp =
+              repository.findMeasurements(DISP_2, wideFrom, wideTo);
 
           // Assert
-          assertEquals(2, results.size());
-          List<String> codes = results.stream().map(ChartDataResponseDto::sensorCode).toList();
-          assertTrue(codes.contains("TEMP-1"));
-          assertTrue(codes.contains("DISP-2"));
+          assertEquals("TEMP-1", temp.orElseThrow().sensorCode());
+          assertEquals("DISP-2", disp.orElseThrow().sensorCode());
         });
   }
 
   @Test
   @Transactional
-  void should_include_sensor_with_empty_data_when_no_readings_in_range() {
+  void should_return_sensor_with_empty_data_when_no_readings_in_range() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange: a window far in the future, after every seeded reading
@@ -152,56 +151,20 @@ class MeasurementQueryRepositoryIT {
           OffsetDateTime futureTo = futureFrom.plusHours(1);
 
           // Act
-          List<ChartDataResponseDto> results =
-              repository.findMeasurements(List.of(TEMP_1), futureFrom, futureTo);
+          Optional<ChartDataResponseDto> result =
+              repository.findMeasurements(TEMP_1, futureFrom, futureTo);
 
           // Assert: the sensor itself is still returned, just with no data points
-          assertEquals(1, results.size());
-          assertTrue(results.getFirst().data().isEmpty());
+          assertTrue(result.isPresent());
+          assertTrue(result.get().data().isEmpty());
         });
   }
 
   @Test
   @Transactional
-  void should_omit_sensor_entirely_when_id_does_not_exist() {
+  void should_return_empty_when_id_does_not_exist() {
     SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Act
-          List<ChartDataResponseDto> results =
-              repository.findMeasurements(List.of(NON_EXISTENT_ID), wideFrom, wideTo);
-
-          // Assert
-          assertTrue(results.isEmpty());
-        });
-  }
-
-  @Test
-  @Transactional
-  void should_return_empty_list_when_ids_is_empty() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Act
-          List<ChartDataResponseDto> results =
-              repository.findMeasurements(List.of(), wideFrom, wideTo);
-
-          // Assert
-          assertTrue(results.isEmpty());
-        });
-  }
-
-  @Test
-  @Transactional
-  void should_only_return_requested_ids_even_when_other_sensors_exist() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Act
-          List<ChartDataResponseDto> results =
-              repository.findMeasurements(List.of(TEMP_1), wideFrom, wideTo);
-
-          // Assert: seed data has 5+ sensors, only the requested one must come back
-          assertEquals(1, results.size());
-          assertEquals("TEMP-1", results.getFirst().sensorCode());
-        });
+        () -> assertTrue(repository.findMeasurements(NON_EXISTENT_ID, wideFrom, wideTo).isEmpty()));
   }
 
   @Test
@@ -209,14 +172,8 @@ class MeasurementQueryRepositoryIT {
   void should_exclude_admin_only_sensor_for_regular_user_without_access() {
     SecurityContextTestSupport.runAsUser(
         EXPERIMENT_1_ONLY,
-        () -> {
-          // Act: FLOW-Admin belongs to no experiment, explicitly requesting its id must not help
-          List<ChartDataResponseDto> results =
-              repository.findMeasurements(List.of(FLOW_ADMIN), wideFrom, wideTo);
-
-          // Assert
-          assertTrue(results.isEmpty());
-        });
+        // FLOW-Admin belongs to no experiment, explicitly requesting its id must not help
+        () -> assertTrue(repository.findMeasurements(FLOW_ADMIN, wideFrom, wideTo).isEmpty()));
   }
 
   @Test
@@ -226,13 +183,13 @@ class MeasurementQueryRepositoryIT {
         EXPERIMENT_1_ONLY,
         () -> {
           // Act: TEMP-1 belongs to experiment 1
-          List<ChartDataResponseDto> results =
-              repository.findMeasurements(List.of(TEMP_1), wideFrom, wideTo);
+          Optional<ChartDataResponseDto> result =
+              repository.findMeasurements(TEMP_1, wideFrom, wideTo);
 
           // Assert
-          assertEquals(1, results.size());
-          assertEquals("TEMP-1", results.getFirst().sensorCode());
-          assertFalse(results.getFirst().data().isEmpty());
+          assertTrue(result.isPresent());
+          assertEquals("TEMP-1", result.get().sensorCode());
+          assertFalse(result.get().data().isEmpty());
         });
   }
 
@@ -242,13 +199,13 @@ class MeasurementQueryRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Act
-          List<ChartDataResponseDto> results =
-              repository.findMeasurements(List.of(FLOW_ADMIN), wideFrom, wideTo);
+          Optional<ChartDataResponseDto> result =
+              repository.findMeasurements(FLOW_ADMIN, wideFrom, wideTo);
 
           // Assert
-          assertEquals(1, results.size());
-          assertEquals("FLOW-Admin", results.getFirst().sensorCode());
-          assertFalse(results.getFirst().data().isEmpty());
+          assertTrue(result.isPresent());
+          assertEquals("FLOW-Admin", result.get().sensorCode());
+          assertFalse(result.get().data().isEmpty());
         });
   }
 
@@ -257,13 +214,27 @@ class MeasurementQueryRepositoryIT {
   void should_exclude_sensor_from_other_experiment_for_regular_user() {
     SecurityContextTestSupport.runAsUser(
         EXPERIMENT_1_ONLY,
-        () -> {
-          // Act: DISP-2 belongs only to experiment 2
-          List<ChartDataResponseDto> results =
-              repository.findMeasurements(List.of(DISP_2), wideFrom, wideTo);
+        // DISP-2 belongs only to experiment 2
+        () -> assertTrue(repository.findMeasurements(DISP_2, wideFrom, wideTo).isEmpty()));
+  }
 
-          // Assert
-          assertTrue(results.isEmpty());
+  /**
+   * Guards the row-level-security boundary at the reading level rather than the sensor level: a
+   * caller who cannot see DISP-2 must also not see any of its readings leak into another sensor's
+   * series through the secured view's join.
+   */
+  @Test
+  @Transactional
+  void should_not_leak_readings_of_invisible_sensors_through_the_secured_view() {
+    SecurityContextTestSupport.runAsUser(
+        EXPERIMENT_1_ONLY,
+        () -> {
+          List<String> visibleCodes =
+              dsl.selectDistinct(SENSOR_READING_SECURED.SENSOR_ID)
+                  .from(SENSOR_READING_SECURED)
+                  .fetch(SENSOR_READING_SECURED.SENSOR_ID);
+
+          assertEquals(List.of("PRESS-1&2", "TEMP-1"), visibleCodes.stream().sorted().toList());
         });
   }
 
@@ -273,17 +244,11 @@ class MeasurementQueryRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          ChartPointDto earliestPoint =
-              repository
-                  .findMeasurements(List.of(TEMP_1), wideFrom, wideTo)
-                  .getFirst()
-                  .data()
-                  .getFirst();
+          ChartPointDto earliestPoint = dataOf(TEMP_1, wideFrom, wideTo).getFirst();
           OffsetDateTime boundary = earliestPoint.timestamp();
 
           // Act: from == to == the reading's exact timestamp
-          List<ChartPointDto> points =
-              repository.findMeasurements(List.of(TEMP_1), boundary, boundary).getFirst().data();
+          List<ChartPointDto> points = dataOf(TEMP_1, boundary, boundary);
 
           // Assert
           assertEquals(1, points.size());
@@ -298,19 +263,11 @@ class MeasurementQueryRepositoryIT {
         () -> {
           // Arrange
           OffsetDateTime earliestTimestamp =
-              repository
-                  .findMeasurements(List.of(TEMP_1), wideFrom, wideTo)
-                  .getFirst()
-                  .data()
-                  .getFirst()
-                  .timestamp();
+              dataOf(TEMP_1, wideFrom, wideTo).getFirst().timestamp();
 
           // Act: `to` lands one microsecond (the column's precision) before the earliest reading
           List<ChartPointDto> points =
-              repository
-                  .findMeasurements(List.of(TEMP_1), wideFrom, earliestTimestamp.minusNanos(1_000))
-                  .getFirst()
-                  .data();
+              dataOf(TEMP_1, wideFrom, earliestTimestamp.minusNanos(1_000));
 
           // Assert
           assertTrue(points.isEmpty());
@@ -323,19 +280,17 @@ class MeasurementQueryRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          List<ChartPointDto> allPoints =
-              repository.findMeasurements(List.of(TEMP_1), wideFrom, wideTo).getFirst().data();
-          OffsetDateTime latestTimestamp = allPoints.getLast().timestamp();
+          OffsetDateTime latestTimestamp = dataOf(TEMP_1, wideFrom, wideTo).getLast().timestamp();
 
           // Act: `from` lands one microsecond (the column's precision) after the latest reading
-          List<ChartPointDto> points =
-              repository
-                  .findMeasurements(List.of(TEMP_1), latestTimestamp.plusNanos(1_000), wideTo)
-                  .getFirst()
-                  .data();
+          List<ChartPointDto> points = dataOf(TEMP_1, latestTimestamp.plusNanos(1_000), wideTo);
 
           // Assert
           assertTrue(points.isEmpty());
         });
+  }
+
+  private List<ChartPointDto> dataOf(Long id, OffsetDateTime from, OffsetDateTime to) {
+    return repository.findMeasurements(id, from, to).orElseThrow().data();
   }
 }

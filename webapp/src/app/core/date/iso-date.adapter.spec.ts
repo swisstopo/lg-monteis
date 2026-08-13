@@ -46,6 +46,85 @@ describe('IsoDateAdapter', () => {
       expect(result).not.toBe('2026-08-06');
       expect(result).toContain('2026'); // Will likely be 'Aug 2026'
     });
+
+    it('should format time as 24h HH:mm without an AM/PM suffix', () => {
+      // 21:30 would render as '9:30 PM' via the native Intl-based implementation
+      const date = new Date(2026, 7, 6, 21, 30);
+
+      const result = adapter.format(date, 'HH:mm');
+
+      expect(result).toBe('21:30');
+      expect(result).not.toMatch(/[AP]M/i);
+    });
+
+    it('should pad single-digit hours and minutes when formatting HH:mm', () => {
+      const date = new Date(2026, 7, 6, 9, 5);
+      expect(adapter.format(date, 'HH:mm')).toBe('09:05');
+    });
+
+    it('should format midnight as 00:00 rather than 12:00 AM', () => {
+      const date = new Date(2026, 7, 6, 0, 0);
+      expect(adapter.format(date, 'HH:mm')).toBe('00:00');
+    });
+
+    it('should include seconds when displayFormat is HH:mm:ss', () => {
+      const date = new Date(2026, 7, 6, 23, 59, 7);
+      expect(adapter.format(date, 'HH:mm:ss')).toBe('23:59:07');
+    });
+
+    it('should return an empty string for invalid dates when formatting time', () => {
+      expect(adapter.format(null as any, 'HH:mm')).toBe('');
+      expect(adapter.format(new Date('invalid'), 'HH:mm')).toBe('');
+    });
+  });
+
+  describe('parseTime()', () => {
+    it('should parse a 24h HH:mm string, keeping hours and minutes', () => {
+      const result = adapter.parseTime('21:30', 'HH:mm') as Date;
+
+      expect(adapter.isValid(result)).toBeTruthy();
+      expect(result.getHours()).toBe(21);
+      expect(result.getMinutes()).toBe(30);
+    });
+
+    it('should parse an unpadded hour', () => {
+      const result = adapter.parseTime('9:05', 'HH:mm') as Date;
+
+      expect(adapter.isValid(result)).toBeTruthy();
+      expect(result.getHours()).toBe(9);
+      expect(result.getMinutes()).toBe(5);
+    });
+
+    it('should parse an optional seconds component', () => {
+      const result = adapter.parseTime('23:59:07', 'HH:mm') as Date;
+
+      expect(adapter.isValid(result)).toBeTruthy();
+      expect(result.getHours()).toBe(23);
+      expect(result.getMinutes()).toBe(59);
+      expect(result.getSeconds()).toBe(7);
+    });
+
+    it('should reject AM/PM input that the native adapter would otherwise accept', () => {
+      const result = adapter.parseTime('9:30 PM', 'HH:mm') as Date;
+      expect(adapter.isValid(result)).toBeFalsy();
+    });
+
+    it('should reject out-of-range hours and minutes', () => {
+      expect(adapter.isValid(adapter.parseTime('24:00', 'HH:mm') as Date)).toBeFalsy();
+      expect(adapter.isValid(adapter.parseTime('12:60', 'HH:mm') as Date)).toBeFalsy();
+    });
+
+    it('should reject malformed time strings', () => {
+      expect(adapter.isValid(adapter.parseTime('not-a-time', 'HH:mm') as Date)).toBeFalsy();
+      expect(adapter.isValid(adapter.parseTime('1230', 'HH:mm') as Date)).toBeFalsy();
+    });
+
+    it('should fallback to NativeDateAdapter for empty and non-string values', () => {
+      expect(adapter.parseTime('', 'HH:mm')).toBeNull();
+
+      const existingDate = new Date(2026, 7, 6, 21, 30);
+      expect(adapter.parseTime(existingDate, 'HH:mm')).toEqual(existingDate);
+    });
   });
 
   describe('parse()', () => {

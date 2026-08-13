@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FieldTree } from '@angular/forms/signals';
 import { TranslateService } from '@ngx-translate/core';
@@ -22,7 +23,7 @@ describe('FormErrorService', () => {
         {
           provide: TranslateService,
           useValue: {
-            instant: vi.fn((key: string) => `translated:${key}`),
+            translate: vi.fn((key: string) => signal(`translated:${key}`)),
           },
         },
       ],

@@ -102,7 +102,7 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
 export default class SensorEdit {
   private readonly sensorService = inject(SensorService);
   private readonly toastService = inject(ToastService);
-  private readonly i18nService = inject(TranslateService);
+  private readonly translateService = inject(TranslateService);
   private readonly formErrorService = inject(FormErrorService);
   readonly dialogRef = inject<MatDialogRef<SensorEdit>>(MatDialogRef, {
     optional: true,
@@ -120,8 +120,8 @@ export default class SensorEdit {
   sensor = signal<SensorResponseDto | undefined>(undefined);
   title = computed(() =>
     this.sensorId()
-      ? this.i18nService.translate('sensor.edit.title.edit')()
-      : this.i18nService.translate('sensor.edit.title.create')(),
+      ? this.translateService.translate('sensor.edit.title.edit')()
+      : this.translateService.translate('sensor.edit.title.create')(),
   );
 
   private readonly syncSelectedSensor = effect(() => {
@@ -208,7 +208,7 @@ export default class SensorEdit {
       if (lower > upper) {
         return {
           kind: 'bounds',
-          message: this.i18nService.translate('sensor.alarmLimit.from.validation.bounds')(),
+          message: this.translateService.translate('sensor.alarmLimit.from.validation.bounds')(),
         };
       }
       return undefined;
@@ -219,7 +219,7 @@ export default class SensorEdit {
       if (upper < lower) {
         return {
           kind: 'bounds',
-          message: this.i18nService.translate('sensor.alarmLimit.to.validation.bounds')(),
+          message: this.translateService.translate('sensor.alarmLimit.to.validation.bounds')(),
         };
       }
       return undefined;
@@ -276,7 +276,7 @@ export default class SensorEdit {
         this.allFormulas.reload();
         this.allTypes.reload();
 
-        this.toastService.success(this.i18nService.instant('sensor.success'));
+        this.toastService.success(this.translateService.translate('sensor.success')());
 
         if (resetAfter) {
           this.resetForm();

@@ -17,7 +17,7 @@ import { createColumns } from './columns';
 })
 export default class SensorTable {
   protected sensorService = inject(SensorService);
-  private readonly i18nService = inject(TranslateService);
+  private readonly translateService = inject(TranslateService);
 
   protected wrappedCols = createColumns();
   protected selectedSensorId = signal<number | undefined>(undefined);
@@ -35,7 +35,7 @@ export default class SensorTable {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
       const count = this.totalCount() ?? 0;
-      view.title = this.i18nService.instant('tab.sensor', { count });
+      view.title = this.translateService.translate('tab.sensor', { count })();
     });
 
     // Re-fetch the currently visible pages whenever a sensor is created/updated elsewhere

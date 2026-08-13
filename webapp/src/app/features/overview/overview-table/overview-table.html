@@ -8,22 +8,60 @@
   } @else if (metricsResource.error()) {
     <p class="error-text">{{ 'measurements.error' | translate }}</p>
   } @else {
-    <!--    /* remove as soon as table is properly implemented */-->
     <mat-form-field>
-      <mat-label>Enter a date range</mat-label>
-
-      <mat-date-range-input [rangePicker]="picker">
-        <input matStartDate [formField]="rangeForm.start" placeholder="Start date" />
-        <input matEndDate [formField]="rangeForm.end" placeholder="End date" />
-      </mat-date-range-input>
-      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-      <mat-date-range-picker #picker></mat-date-range-picker>
-
-      @if (rangeForm.start().touched() && rangeForm.start().invalid()) {
-        <mat-error>Start date is required</mat-error>
+      <mat-label>{{ 'measurements.form.startDate.label' | translate }}</mat-label>
+      <input
+        matInput
+        [matDatepicker]="startPicker"
+        [formField]="rangeForm.start.date"
+        placeholder="Start date"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+      <mat-datepicker #startPicker></mat-datepicker>
+      @if (rangeForm.start.date().touched() && rangeForm.start.date().invalid()) {
+        <mat-error>{{ 'measurements.form.startDate.validation.required' | translate }}</mat-error>
       }
-      @if (rangeForm.end().touched() && rangeForm.end().invalid()) {
-        <mat-error>End date is required</mat-error>
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>{{ 'measurements.form.startTime.label' | translate }}</mat-label>
+      <input
+        matInput
+        [matTimepicker]="startTimePicker"
+        [formField]="rangeForm.start.time"
+        placeholder="HH:mm"
+      />
+      <mat-timepicker-toggle matIconSuffix [for]="startTimePicker"></mat-timepicker-toggle>
+      <mat-timepicker #startTimePicker></mat-timepicker>
+      @if (rangeForm.start.time().touched() && rangeForm.start.time().invalid()) {
+        <mat-error>{{ 'measurements.form.startTime.validation.required' | translate }}</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>{{ 'measurements.form.endDate.label' | translate }}</mat-label>
+      <input
+        matInput
+        [matDatepicker]="endPicker"
+        [formField]="rangeForm.end.date"
+        placeholder="End date"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+      <mat-datepicker #endPicker></mat-datepicker>
+      @if (rangeForm.end.date().touched() && rangeForm.end.date().invalid()) {
+        <mat-error>{{ 'measurements.form.endDate.validation.required' | translate }}</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>{{ 'measurements.form.endTime.label' | translate }}</mat-label>
+      <input
+        matInput
+        [matTimepicker]="endTimePicker"
+        [formField]="rangeForm.end.time"
+        placeholder="HH:mm"
+      />
+      <mat-timepicker-toggle matIconSuffix [for]="endTimePicker"></mat-timepicker-toggle>
+      <mat-timepicker #endTimePicker></mat-timepicker>
+      @if (rangeForm.end.time().touched() && rangeForm.end.time().invalid()) {
+        <mat-error>{{ 'measurements.form.endTime.validation.required' | translate }}</mat-error>
       }
     </mat-form-field>
     <button
@@ -32,10 +70,11 @@
       [disabled]="mesurementsService.chartData.isLoading()"
     >
       <mat-icon fontIcon="add_chart"></mat-icon>
-      {{ 'sensor.tableHeader.plot' | translate }}
+      {{ 'measurements.plot' | translate }}
     </button>
     <app-table
       class="custom-grid"
+      [multiple]="true"
       [rows]="metricsResource.value() ?? []"
       [columns]="wrappedCols"
       [getRowId]="getMetricRowId"

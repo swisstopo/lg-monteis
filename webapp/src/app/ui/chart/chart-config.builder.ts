@@ -3,6 +3,7 @@ import type {
   ChartDataset as ChartJsDataset,
   ChartOptions as ChartJsOptions,
 } from 'chart.js';
+import { format } from 'date-fns';
 import { ChartDataset, ChartOptions, ChartThemePalette, ChartType } from './chart.types';
 
 type ChartJsScales = NonNullable<ChartJsOptions<ChartType>['scales']>;
@@ -82,6 +83,18 @@ export function buildChartConfig(
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
+      elements: {
+        point: {
+          radius: 2,
+        },
+        line: {
+          borderWidth: 2,
+        },
+      },
+      interaction: {
+        mode: 'nearest',
+        intersect: false,
+      },
       plugins: {
         title: {
           display: !!options.title,
@@ -115,6 +128,40 @@ export function buildChartConfig(
             pointStyle: 'circle',
             color: palette.textColor,
             padding: 20,
+          },
+        },
+        decimation: {
+          // only relevant for line-charts (no effect on scatter)
+          enabled: true,
+          algorithm: 'lttb',
+          threshold: 1000, // 2 samples per horizontal pixel is plenty
+        },
+        tooltip: {
+          enabled: true,
+          displayColors: false,
+          backgroundColor: (context) => {
+            const dataPoint = context.tooltip.dataPoints?.[0];
+            if (!dataPoint) {
+              return palette.textColor;
+            }
+            const color = dataPoint.dataset.borderColor ?? dataPoint.dataset.backgroundColor;
+            return typeof color === 'string' ? color : palette.textColor;
+          },
+          callbacks: {
+            label: (context): string[] => {
+              const yAxisId = (context.dataset as { yAxisID?: string }).yAxisID ?? 'y';
+              const scaleOptions = context.chart.scales[yAxisId]?.options as
+                { title?: { text?: string } } | undefined;
+              const yAxisTitle = scaleOptions?.title?.text;
+              const date =
+                context.parsed.x !== null
+                  ? format(context.parsed.x as number, 'yyyy-MM-dd HH:mm:ss')
+                  : '';
+              const yAxisUnit = yAxisTitle ? ` ${yAxisTitle}` : '';
+              const value = context.parsed.y !== null ? `${context.parsed.y}${yAxisUnit}` : '';
+              const datasetLabel = context.dataset.label ?? '';
+              return [date, value, '', datasetLabel];
+            },
           },
         },
         zoom: {
@@ -156,6 +203,7 @@ function buildDataset(
     backgroundColor: color,
     showLine: type === 'line',
     parsing: false, // performance optimization but requires data to match exact format
+    normalized: true,
     yAxisID: dataset.yAxisId ?? 'y',
   } satisfies ChartJsDataset<ChartType>;
 }

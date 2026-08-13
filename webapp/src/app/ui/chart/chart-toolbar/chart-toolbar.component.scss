@@ -1,0 +1,21 @@
+:host {
+  align-content: center;
+}
+
+.chart-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1rem 1rem 2rem;
+  flex-shrink: 0;
+
+  button {
+    border: 1px solid var(--mat-sys-primary);
+  }
+
+  button.active {
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-background);
+  }
+}

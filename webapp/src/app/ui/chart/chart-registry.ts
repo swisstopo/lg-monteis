@@ -1,5 +1,6 @@
 import {
   Chart,
+  Decimation,
   Legend,
   LinearScale,
   LineController,
@@ -24,6 +25,7 @@ export function registerChartJs(): void {
     return;
   }
   Chart.register(
+    Decimation,
     LineController,
     ScatterController,
     LinearScale,
