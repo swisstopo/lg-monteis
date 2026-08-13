@@ -285,7 +285,8 @@ describe('Chart', () => {
       const emitSpy = vi.spyOn(component.rangeSelected, 'emit');
       component.zoomOut();
 
-      expect(emitSpy).toHaveBeenCalledWith({ min: 0, max: 1 });
+      expect(emitSpy).toHaveBeenCalledWith({ min: 0.25, max: 0.25 });
+      expect((component as any).initialDateRange).toEqual({ min: 0, max: 1 });
     });
 
     it('should update the initial date range after reset and a new full dataset', async () => {

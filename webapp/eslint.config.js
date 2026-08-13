@@ -27,6 +27,22 @@ module.exports = defineConfig([
           ],
         },
       ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          // Targets any method call named "instant"
+          selector: "CallExpression[callee.property.name='translateService.instant']",
+          message:
+            'Avoid using static .instant() for translations. Use the reactive .translate()() signal or the TranslatePipe instead to ensure the UI updates automatically on language changes.',
+        },
+        'error',
+        {
+          // Targets any method call named "instant"
+          selector: "CallExpression[callee.property.name='i18nService.instant']",
+          message:
+            'Avoid using static .instant() for translations. Use the reactive .translate()() signal or the TranslatePipe instead to ensure the UI updates automatically on language changes.',
+        },
+      ],
     },
   },
   {

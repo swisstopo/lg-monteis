@@ -183,7 +183,7 @@ describe('buildChartConfig', () => {
       } as any);
 
       expect(labels[0]).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
-      expect(labels.slice(1)).toEqual(['2.4 ', '', 'Sensor 1']);
+      expect(labels.slice(1)).toEqual(['2.4', '', 'Sensor 1']);
     });
   });
 });

@@ -91,6 +91,10 @@ export function buildChartConfig(
           borderWidth: 2,
         },
       },
+      interaction: {
+        mode: 'nearest',
+        intersect: false,
+      },
       plugins: {
         title: {
           display: !!options.title,
@@ -153,7 +157,8 @@ export function buildChartConfig(
                 context.parsed.x !== null
                   ? format(context.parsed.x as number, 'yyyy-MM-dd HH:mm:ss')
                   : '';
-              const value = context.parsed.y !== null ? `${context.parsed.y} ${yAxisTitle}` : '';
+              const yAxisUnit = yAxisTitle ? ` ${yAxisTitle}` : '';
+              const value = context.parsed.y !== null ? `${context.parsed.y}${yAxisUnit}` : '';
               const datasetLabel = context.dataset.label ?? '';
               return [date, value, '', datasetLabel];
             },

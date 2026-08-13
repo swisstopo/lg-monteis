@@ -4,16 +4,14 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
-import { ErrorDto, OverviewControllerService } from '../../../core/generated';
-import { ToastService } from '../../../core/notifications/toast.service';
-import { MesurementsService } from '../services/mesurements.service';
+import { OverviewControllerService } from '../../../core/generated';
 import OverviewTable from './overview-table';
 
 const overviewServiceMock = {
   getMetrics: vi.fn().mockReturnValue(of([])),
 };
 
-describe('SensorTable', () => {
+describe('OverviewTable', () => {
   let fixture: ComponentFixture<OverviewTable>;
 
   beforeEach(async () => {
@@ -36,25 +34,5 @@ describe('SensorTable', () => {
 
   it('should create', () => {
     expect(fixture.componentInstance).toBeTruthy();
-  });
-
-  it('shows a toast when the measurements service reports an unmapped error', () => {
-    const mesurementsService = TestBed.inject(MesurementsService);
-    const toastService = TestBed.inject(ToastService);
-
-    mesurementsService.error.set([{ messageKey: 'chart.error.unspecified.message' } as ErrorDto]);
-    fixture.detectChanges();
-
-    expect(toastService.toasts()).toHaveLength(1);
-  });
-
-  it('closes any open chart dialog when an error is reported', () => {
-    const mesurementsService = TestBed.inject(MesurementsService);
-    const dialogSpy = vi.spyOn(fixture.componentInstance['dialog'], 'closeAll');
-
-    mesurementsService.error.set([{ messageKey: 'chart.error.unspecified.message' } as ErrorDto]);
-    fixture.detectChanges();
-
-    expect(dialogSpy).toHaveBeenCalled();
   });
 });

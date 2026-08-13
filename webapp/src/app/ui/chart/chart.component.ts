@@ -9,6 +9,7 @@ import {
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { MatButton } from '@angular/material/button';
@@ -108,6 +109,7 @@ export class ChartComponent {
 
   private instance?: ChartJs;
   private lastHoverKey?: string;
+  private hoverRafId?: number;
   private readonly palette = signal<ChartThemePalette>({});
   private readonly viewReady = signal(false);
   /**
@@ -127,7 +129,7 @@ export class ChartComponent {
   private captureInitialRange = true;
   private resetRange?: { min: number; max: number };
   readonly dragZoomEnabled = signal(true);
-  private pendingZoomAnimation = false;
+  private readonly renderMode = signal<'zoom' | undefined>(undefined);
 
   constructor() {
     // key architectural consideration for for gpu references clean up
@@ -171,13 +173,13 @@ export class ChartComponent {
         this.instance.destroy();
         this.instance = undefined;
       }
+      const mode = this.renderMode();
       if (this.instance) {
-        this.updateChart(config, this.pendingZoomAnimation ? 'zoom' : undefined);
-        this.pendingZoomAnimation = false;
+        this.updateChart(config, mode);
       } else {
         this.createChart(config);
-        this.pendingZoomAnimation = false;
       }
+      untracked(() => this.renderMode.set(undefined));
     });
   }
 
@@ -186,7 +188,7 @@ export class ChartComponent {
    */
 
   public resetZoom(): void {
-    this.pendingZoomAnimation = true;
+    this.renderMode.set('zoom');
     this.resetRange = this.initialDateRange;
     if (this.instance) {
       this.instance.resetZoom();
@@ -198,12 +200,12 @@ export class ChartComponent {
   private readonly zoomFactor = 2;
 
   public zoomIn(): void {
-    this.pendingZoomAnimation = true;
+    this.renderMode.set('zoom');
     this.zoomRange(1 / this.zoomFactor);
   }
 
   public zoomOut(): void {
-    this.pendingZoomAnimation = true;
+    this.renderMode.set('zoom');
     this.zoomRange(this.zoomFactor);
   }
 
@@ -304,12 +306,17 @@ export class ChartComponent {
    * instead, for the consumer to refetch, rather than kept as a client-side-only zoom.
    */
   private handleZoomComplete(chart: ChartJs): void {
-    this.pendingZoomAnimation = true;
-    if (this.resetRange) {
-      this.rangeSelected.emit(this.resetRange);
-      this.resetRange = undefined;
+    this.renderMode.set('zoom');
+
+    // FIX: "Pop" the value immediately so queued drag events can't consume it
+    const queuedResetRange = this.resetRange;
+    this.resetRange = undefined;
+
+    if (queuedResetRange) {
+      this.rangeSelected.emit(queuedResetRange);
       return;
     }
+
     const xScale = chart.scales['x'];
     if (!xScale) {
       return;
@@ -322,12 +329,11 @@ export class ChartComponent {
     this.rangeSelected.emit({ min: xScale.min, max: xScale.max });
   }
 
-  //
   private computeDateRange(datasets: ChartDataset[]): { min: number; max: number } | undefined {
     let min = Infinity;
     let max = -Infinity;
     let hasData = false;
-
+    // use for-loop for performance
     for (const dataset of datasets) {
       const data = dataset.data;
       if (data.length === 0) continue;
@@ -379,7 +385,14 @@ export class ChartComponent {
       return;
     }
     this.lastHoverKey = key;
-    this.emitPointEvent(event, elements, this.pointHover);
+    if (this.hoverRafId) {
+      cancelAnimationFrame(this.hoverRafId);
+    }
+
+    this.hoverRafId = requestAnimationFrame(() => {
+      this.emitPointEvent(event, elements, this.pointHover);
+      this.hoverRafId = undefined;
+    });
   }
 
   private emitPointEvent(

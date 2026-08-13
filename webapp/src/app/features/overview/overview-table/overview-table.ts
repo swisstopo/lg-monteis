@@ -65,12 +65,13 @@ interface DateRangeModel {
 })
 export default class OverviewTable {
   private readonly datePipe = inject(DatePipe);
-  private readonly i18nService = inject(TranslateService);
+  private readonly translateService = inject(TranslateService);
   private readonly dialog = inject(MatDialog);
   protected readonly mesurementsService = inject(MesurementsService);
   protected readonly overviewService = inject(OverviewControllerService);
   private readonly formErrorService = inject(FormErrorService);
   readonly serviceError = this.mesurementsService.error;
+  private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
   readonly dateRangeModel = signal<DateRangeModel>({
     start: null,
     end: null,
@@ -96,7 +97,7 @@ export default class OverviewTable {
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
-      view.title = this.i18nService.instant('tab.overview');
+      view.title = this.translateService.translate('tab.overview')();
     });
 
     effect(() => {
@@ -141,21 +142,25 @@ export default class OverviewTable {
 
     this.fetchChartData(rangeStart, rangeEnd);
 
-    const title = this.i18nService.translate('chart.title', {
-      name: 'MyFancyExperiment', // should be replaced by experiment name
-      rangeFrom: this.datePipe.transform(start),
-      rangeTo: this.datePipe.transform(end),
-    })();
+    const title = computed((): string => {
+      const range = this.currentRange();
+      if (!range) return '';
 
+      return this.translateService.translate('chart.title', {
+        name: 'MyFancyExperiment',
+        rangeFrom: this.datePipe.transform(range.start),
+        rangeTo: this.datePipe.transform(range.end),
+      })();
+    });
     // use computed to avoid re-creating the chart options on every change
     // angular's inputBinding normally re-evaluates on every change
     const chartOptions = computed((): ChartOptions => {
       const data = this.mesurementsService.chartData.value();
       return createTimeChartOptions({
-        title,
+        title: title(),
         xAxisLabel: 'Date',
         yAxisLabels: data?.yAxisLabels ?? {},
-        subtitle: this.i18nService.translate('chart.subtitle', {
+        subtitle: this.translateService.translate('chart.subtitle', {
           count: data?.count ?? '',
         })(),
       });
@@ -168,7 +173,7 @@ export default class OverviewTable {
       maxHeight: '100%',
       autoFocus: true,
       bindings: [
-        inputBinding('title', () => title),
+        inputBinding('title', () => title()),
         inputBinding('datasets', () => this.mesurementsService.chartData.value()?.datasets ?? []),
         inputBinding('options', chartOptions),
         outputBinding('rangeSelected', (range) => this.onRangeSelected(<ChartRangeEvent>range)),
@@ -181,6 +186,7 @@ export default class OverviewTable {
   }
 
   private fetchChartData(start: Date, end: Date): void {
+    this.currentRange.set({ start, end });
     const rangeFromTimestamp = this.datePipe.transform(start, APP_ISO_TIMESTAMP_FORMAT)!;
     const rangeToTimestamp = this.datePipe.transform(end, APP_ISO_TIMESTAMP_FORMAT)!;
 

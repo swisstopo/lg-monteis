@@ -1,5 +1,6 @@
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
 import { OAuthService } from 'angular-oauth2-oidc';
@@ -23,7 +24,7 @@ describe('restErrorInterceptor', () => {
         provideHttpClientTesting(),
         { provide: ToastService, useValue: toastService },
         { provide: OAuthService, useValue: oauthService },
-        { provide: TranslateService, useValue: { instant: (key: string) => key } },
+        { provide: TranslateService, useValue: { translate: (key: string) => signal(key) } },
       ],
     });
 
