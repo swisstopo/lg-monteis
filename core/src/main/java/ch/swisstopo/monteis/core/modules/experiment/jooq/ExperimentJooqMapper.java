@@ -15,6 +15,7 @@ public interface ExperimentJooqMapper {
   @Mapping(target = "period.start", source = "start")
   @Mapping(target = "period.end", source = "end")
   @Mapping(target = "owner", ignore = true)
+  @Mapping(target = "status", ignore = true)
   Experiment toDomain(ExperimentsRecord experimentsRecord);
 
   @Mapping(target = "start", source = "period.start")
