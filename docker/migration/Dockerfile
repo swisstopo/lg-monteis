@@ -16,7 +16,8 @@
 # (Flyway must not write under /flyway at runtime).
 # ─────────────────────────────────────────────────────────────────────────────
 
-FROM flyway/flyway:sha256:0d37ec97d373da37d31a96ff65f86ac8394ba9a003fc3c938de0c1721f523ec2 # v12.4.0 (matches lg-monteis flyway-core)
+# v12.4.0 (matches lg-monteis flyway-core) comment above FROM statement, otherwise it confuses the comment as an arg
+FROM flyway/flyway@sha256:0d37ec97d373da37d31a96ff65f86ac8394ba9a003fc3c938de0c1721f523ec2
 
 # ── Copy schema-only SQL files ─────────────────────────────────────────────────
 # db/meta/schema  → /flyway/sql/meta  (RDS Meta DB versioned migrations V__*.sql)
