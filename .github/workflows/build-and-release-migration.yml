@@ -1,0 +1,121 @@
+name: Build and Push Migration Image
+
+# Triggers on changes to the schema SQL files or the Dockerfile itself.
+# Seed directories (db/*/seed) are intentionally excluded from the trigger path —
+# they are not baked into the image (Q3 decision).
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'db/meta/schema/**'
+      - 'db/timescale/schema/**'
+      - 'docker/migration/Dockerfile'
+
+permissions:
+  contents: write # required for: git push tag
+  id-token: write # required for: aws-actions/amazon-ecr-login
+
+jobs:
+  evaluate-version:
+    name: Evaluate Tag for migration
+    runs-on: ubuntu-24.04
+    env:
+      SERVICE: migration
+    outputs:
+      is_tagged: ${{ steps.semver.outputs.is_tagged }}
+      changed: ${{ steps.semver.outputs.changed }}
+      version: ${{ steps.semver.outputs.version }}
+      version_tag: ${{ steps.semver.outputs.version_tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Must fetch history so the bot can read the commits
+          filter: blob:none
+
+      # Scoped to schema dirs + Dockerfile; seed dirs excluded (not baked).
+      - name: "[TAG]: Calculate Semantic Version"
+        id: semver
+        uses: paulhatch/semantic-version@v6.0.3
+        with:
+          tag_prefix: "${{ env.SERVICE }}-v"
+          change_path: "db/meta/schema db/timescale/schema docker/migration/Dockerfile"
+
+      - name: "[TAG]: Check if already tagged"
+        run: |
+          echo "is tagged: ${{ steps.semver.outputs.is_tagged }}"
+          echo "changed: ${{ steps.semver.outputs.changed }}"
+
+  build-and-push:
+    name: Build & Push migration
+    needs: evaluate-version
+    # Execute only when there are unreleased changes in the scoped paths.
+    if: needs.evaluate-version.outputs.is_tagged == 'false' && needs.evaluate-version.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # required for: git push tag
+      id-token: write # required for: aws-actions/amazon-ecr-login
+    env:
+      SERVICE: migration
+    steps:
+      - name: "[AWS]: Configure AWS Credentials"
+        uses: aws-actions/configure-aws-credentials@v6.2.3
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ECR_PUSH }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: "[AWS]: Additional steps"
+        run: |
+          aws sts get-caller-identity
+
+      - name: "[AWS]: Login to Amazon ECR"
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2.1.6
+
+      - name: "[BUILD]: Checkout Code"
+        uses: actions/checkout@v7
+
+      # core/pipeline use Cloud Native Buildpacks (mvn spring-boot:build-image).
+      # The migration image is a plain Dockerfile FROM flyway/flyway — buildpacks
+      # are not applicable to a non-JVM base image.
+      - name: "[BUILD]: Build Migration Docker Image"
+        env:
+          VERSION: ${{ needs.evaluate-version.outputs.version }}
+        run: |
+          docker build \
+            --file docker/migration/Dockerfile \
+            --tag local-registry/${{ env.SERVICE }}:$VERSION \
+            .
+
+      - name: "[SECURITY]: Run Trivy Image Scan"
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'local-registry/${{ env.SERVICE }}:${{ needs.evaluate-version.outputs.version }}'
+          scan-type: 'image'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore'
+
+      - name: "[PUSH]: Tag and push docker image to Amazon ECR"
+        env:
+          REGISTRY: ${{ vars.AWS_ECR_REGISTRY }}
+          REPOSITORY: ${{ env.SERVICE }}
+          VERSION: ${{ needs.evaluate-version.outputs.version }}
+        run: |
+          # Tag the locally built image with the ECR registry path + SemVer
+          docker tag local-registry/${{ env.SERVICE }}:$VERSION ${REGISTRY}/${REPOSITORY}:$VERSION
+
+          # Push the tag to AWS ECR
+          docker push ${REGISTRY}/${REPOSITORY}:$VERSION
+
+      - name: "[TAG]: Push Git Tag to GitHub"
+        env:
+          TAG: ${{ needs.evaluate-version.outputs.version_tag }}
+        run: |
+          echo "[INFO]: Tagging commit with $TAG"
+
+          # Create and push the tag
+          git tag $TAG
+          git push origin $TAG
