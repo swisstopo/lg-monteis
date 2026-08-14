@@ -3,7 +3,7 @@ import { translate } from '@ngx-translate/core';
 import { IGetRowsParams } from 'ag-grid-community';
 import { firstValueFrom } from 'rxjs';
 import { ErrorDto, SensorControllerService, WriteSensorDto } from '../../../core/generated';
-import { toErrorDtos } from '../../../shared/models/api-error.model';
+import { toErrorDtos } from '../../../core/http/api-error.model';
 import { toPagedRequestParams } from '../../../ui/table/paged-request.mapper';
 
 @Injectable({ providedIn: 'root' })

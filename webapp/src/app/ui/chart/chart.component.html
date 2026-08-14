@@ -1,0 +1,29 @@
+<h2 mat-dialog-title>
+  {{ title() }}
+</h2>
+<mat-dialog-content>
+  <div class="chart-layout">
+    <div class="chart-area">
+      @if (datasets().length === 0) {
+        <div class="loading-overlay">
+          <mat-progress-spinner mode="indeterminate" diameter="48"> </mat-progress-spinner>
+        </div>
+      }
+      <canvas #canvas [style.visibility]="datasets().length === 0 ? 'hidden' : 'visible'"></canvas>
+    </div>
+    <app-chart-toolbar
+      [dragZoomEnabled]="dragZoomEnabled()"
+      (toggleDragZoom)="toggleDragZoom()"
+      (zoomIn)="zoomIn()"
+      (zoomOut)="zoomOut()"
+      (resetZoom)="resetZoom()"
+      (download)="downloadChart()"
+    ></app-chart-toolbar>
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button matButton mat-dialog-close>
+    <mat-icon fontIcon="cancel"></mat-icon>
+    {{ 'chart.button.cancel' | translate }}
+  </button>
+</mat-dialog-actions>

@@ -1,8 +1,8 @@
 import { inject, Injectable } from '@angular/core';
 import { FieldTree } from '@angular/forms/signals';
 import { TranslateService } from '@ngx-translate/core';
-import { ErrorDto } from '../../core/generated';
-import { ToastService } from './toast.service';
+import { ErrorDto } from '../generated';
+import { ToastService } from '../notifications/toast.service';
 
 export interface FormFieldServerError {
   kind: 'serverError';
@@ -17,7 +17,7 @@ export interface FormFieldServerError {
  */
 @Injectable({ providedIn: 'root' })
 export class FormErrorService {
-  private readonly i18nService = inject(TranslateService);
+  private readonly translateService = inject(TranslateService);
   private readonly toastService = inject(ToastService);
 
   mapApiErrorsToFormErrors<TForm extends FieldTree<unknown>>(
@@ -43,12 +43,14 @@ export class FormErrorService {
         if (mappedField) {
           return {
             kind: 'serverError' as const,
-            message: this.i18nService.instant(err.messageKey ?? fallbackMessageKey),
+            message: this.translateService.translate(err.messageKey ?? fallbackMessageKey)(),
             fieldTree: mappedField,
           };
         }
 
-        this.toastService.error(this.i18nService.instant(err.messageKey ?? fallbackMessageKey));
+        this.toastService.error(
+          this.translateService.translate(err.messageKey ?? fallbackMessageKey)(),
+        );
         return undefined;
       })
       .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined);
