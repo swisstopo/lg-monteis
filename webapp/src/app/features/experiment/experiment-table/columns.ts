@@ -42,7 +42,7 @@ export function createColumns(): TableColumn<ExperimentResponseDto>[] {
       field: 'period.start',
       headerName: i18n.translate('experiment.period.start.label')(),
       sortable: true,
-      filter: false,
+      filter: true,
       filterParams: SINGLE_CONDITION_FILTER_PARAMS,
       valueFormatter: (params) => {
         return params.value ? new Date(params.value).toLocaleDateString() : '';
@@ -52,7 +52,7 @@ export function createColumns(): TableColumn<ExperimentResponseDto>[] {
       field: 'period.end',
       headerName: i18n.translate('experiment.period.end.label')(),
       sortable: true,
-      filter: false,
+      filter: true,
       filterParams: SINGLE_CONDITION_FILTER_PARAMS,
       valueFormatter: (params) => {
         return params.value ? new Date(params.value).toLocaleDateString() : '';
