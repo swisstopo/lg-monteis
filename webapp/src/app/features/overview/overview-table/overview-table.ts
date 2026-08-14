@@ -93,10 +93,10 @@ export default class OverviewTable {
   private readonly datePipe = inject(DatePipe);
   private readonly translateService = inject(TranslateService);
   private readonly dialog = inject(MatDialog);
-  protected readonly mesurementsService = inject(MesurementsService);
+  protected readonly measurementsService = inject(MesurementsService);
   protected readonly overviewService = inject(OverviewControllerService);
   private readonly formErrorService = inject(FormErrorService);
-  readonly serviceError = this.mesurementsService.error;
+  readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
   readonly dateRangeModel = signal<DateRangeModel>({
     start: { date: null, time: atTime(0, 0) },
@@ -128,7 +128,7 @@ export default class OverviewTable {
     });
 
     effect(() => {
-      const errors = this.mesurementsService.error();
+      const errors = this.measurementsService.error();
       if (errors) {
         this.formErrorService.mapApiErrorsToFormErrors(
           errors,
@@ -182,7 +182,7 @@ export default class OverviewTable {
     // use computed to avoid re-creating the chart options on every change
     // angular's inputBinding normally re-evaluates on every change
     const chartOptions = computed((): ChartOptions => {
-      const data = this.mesurementsService.chartData.value();
+      const data = this.measurementsService.chartData.value();
       return createTimeChartOptions({
         title: title(),
         xAxisLabel: 'Date',
@@ -201,7 +201,7 @@ export default class OverviewTable {
       autoFocus: true,
       bindings: [
         inputBinding('title', () => title()),
-        inputBinding('datasets', () => this.mesurementsService.chartData.value()?.datasets ?? []),
+        inputBinding('datasets', () => this.measurementsService.chartData.value()?.datasets ?? []),
         inputBinding('options', chartOptions),
         outputBinding('rangeSelected', (range) => this.onRangeSelected(<ChartRangeEvent>range)),
       ],
@@ -217,6 +217,6 @@ export default class OverviewTable {
     const rangeFromTimestamp = this.datePipe.transform(start, APP_ISO_TIMESTAMP_FORMAT)!;
     const rangeToTimestamp = this.datePipe.transform(end, APP_ISO_TIMESTAMP_FORMAT)!;
 
-    this.mesurementsService.getChartData(this.plottedIds(), rangeFromTimestamp, rangeToTimestamp);
+    this.measurementsService.getChartData(this.plottedIds(), rangeFromTimestamp, rangeToTimestamp);
   }
 }

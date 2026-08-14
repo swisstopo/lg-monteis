@@ -14,6 +14,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
@@ -283,7 +284,96 @@ class JooqExperimentRepositoryIT {
         });
   }
 
+  @Test
+  @Transactional
+  void should_filter_paged_experiments_by_text_contains() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          createExperimentWithDsl(
+              "UniqueTextFilterName",
+              "Filter test comment",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
+          createExperimentWithDsl(
+              "Other Name",
+              "Other comment",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
+
+          ch.swisstopo.monteis.core.infrastructure.query.PagedRequest request =
+              new ch.swisstopo.monteis.core.infrastructure.query.PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "name",
+                      new ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel(
+                          "contains", "uniquetextfilter", null)));
+
+          // Act
+          ch.swisstopo.monteis.core.infrastructure.query.PagedResult<ExperimentResponseDto> result =
+              repository.getExperiments(request);
+
+          // Assert
+          assertEquals(1, result.totalCount());
+          assertEquals("UniqueTextFilterName", result.rows().getFirst().name());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_sort_paged_experiments_by_text_column_descending() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          createExperimentWithDsl(
+              "AAA_SORT_TEST",
+              "Sort test A",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
+          createExperimentWithDsl(
+              "ZZZ_SORT_TEST",
+              "Sort test Z",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
+
+          // Scope to just our two experiments via a filter, so the sort assertion doesn't
+          // depend on how many other rows happen to be seeded ahead of a fixed-size page.
+          ch.swisstopo.monteis.core.infrastructure.query.PagedRequest request =
+              new ch.swisstopo.monteis.core.infrastructure.query.PagedRequest(
+                  0,
+                  10,
+                  List.of(
+                      new ch.swisstopo.monteis.core.infrastructure.query.SortModelItem(
+                          "name",
+                          ch.swisstopo.monteis.core.infrastructure.query.SortDirection.DESC)),
+                  Map.of(
+                      "name",
+                      new ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel(
+                          "contains", "_SORT_TEST", null)));
+
+          // Act
+          List<ExperimentResponseDto> rows = repository.getExperiments(request).rows();
+
+          // Assert: among our two experiments, the Z one must come first in descending order
+          int indexOfZ = indexOfExperimentName(rows, "ZZZ_SORT_TEST");
+          int indexOfA = indexOfExperimentName(rows, "AAA_SORT_TEST");
+          assertTrue(
+              indexOfZ < indexOfA, "ZZZ_SORT_TEST should sort before AAA_SORT_TEST in DESC order");
+        });
+  }
+
   // --- Helper Methods ---
+
+  private int indexOfExperimentName(List<ExperimentResponseDto> rows, String name) {
+    for (int i = 0; i < rows.size(); i++) {
+      if (rows.get(i).name().equals(name)) {
+        return i;
+      }
+    }
+    throw new AssertionError("Expected to find experiment with name " + name);
+  }
 
   /**
    * Helper to quickly build a valid domain Experiment for repository testing.
