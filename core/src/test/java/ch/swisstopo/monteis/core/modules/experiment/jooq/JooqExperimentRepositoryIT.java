@@ -384,12 +384,12 @@ class JooqExperimentRepositoryIT {
                           "contains", "uniquetextfilter", null)));
 
           // Act
-          ch.swisstopo.monteis.core.infrastructure.query.PagedResult<ExperimentResponseDto> result =
+          ch.swisstopo.monteis.core.infrastructure.query.PagedResult<Experiment> result =
               repository.getExperiments(request);
 
           // Assert
           assertEquals(1, result.totalCount());
-          assertEquals("UniqueTextFilterName", result.rows().getFirst().name());
+          assertEquals("UniqueTextFilterName", result.rows().getFirst().getName());
         });
   }
 
@@ -426,7 +426,7 @@ class JooqExperimentRepositoryIT {
                           "contains", "_SORT_TEST", null)));
 
           // Act
-          List<ExperimentResponseDto> rows = repository.getExperiments(request).rows();
+          List<Experiment> rows = repository.getExperiments(request).rows();
 
           // Assert: among our two experiments, the Z one must come first in descending order
           int indexOfZ = indexOfExperimentName(rows, "ZZZ_SORT_TEST");
