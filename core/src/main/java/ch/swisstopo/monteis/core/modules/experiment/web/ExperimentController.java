@@ -104,6 +104,7 @@ public class ExperimentController {
       @RequestParam(required = false) String sortModel,
       @RequestParam(required = false) String filterModel) {
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
-    return service.getExperiments(pagedRequestParser.parse(raw));
+    PagedResult<Experiment> domainResult = service.getExperiments(pagedRequestParser.parse(raw));
+    return mapper.toPagedDto(domainResult);
   }
 }
