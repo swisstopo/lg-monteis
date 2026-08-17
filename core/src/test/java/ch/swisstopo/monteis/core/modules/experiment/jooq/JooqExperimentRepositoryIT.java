@@ -10,7 +10,6 @@ import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import java.time.LocalDate;
 import java.time.Month;
@@ -54,12 +53,16 @@ class JooqExperimentRepositoryIT {
                   LocalDate.of(2024, Month.DECEMBER, 31));
 
           // Act
-          ExperimentResponseDto details = repository.getById(experimentId);
+          Experiment details = repository.getById(experimentId);
 
           // Assert
-          assertEquals(experimentId, details.id());
-          assertEquals("Experiment Without Sensors", details.name());
-          assertEquals("No sensors attached", details.comment());
+          assertNotNull(details);
+          assertEquals(experimentId, details.getId());
+          assertEquals("Experiment Without Sensors", details.getName());
+          assertEquals("No sensors attached", details.getComment());
+          assertEquals(LocalDate.of(2024, Month.JANUARY, 1), details.getPeriod().start());
+          assertEquals(LocalDate.of(2024, Month.DECEMBER, 31), details.getPeriod().end());
+          assertEquals(0, details.getSensorCount(), "Should map 0 sensors accurately");
         });
   }
 
@@ -82,10 +85,13 @@ class JooqExperimentRepositoryIT {
           linkSensorToExperiment(experimentId, sensor2.getId());
 
           // Act
-          ExperimentResponseDto details = repository.getById(experimentId);
+          Experiment details = repository.getById(experimentId);
 
           // Assert
-          assertEquals(2, details.sensorCount());
+          assertNotNull(details);
+          assertEquals(experimentId, details.getId());
+          assertEquals("Experiment With Sensors", details.getName());
+          assertEquals(2, details.getSensorCount(), "Should correctly count linked sensors");
         });
   }
 
@@ -95,7 +101,7 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Act
-          ExperimentResponseDto details = repository.getById(999999L);
+          Experiment details = repository.getById(999999L);
 
           // Assert
           assertNull(details, "Non-existent experiment should resolve to null");
@@ -143,9 +149,9 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          Experiment uniqueExperiment = buildDummyDomainExperiment("Uniqe_Experiment", "Owner_1");
+          Experiment uniqueExperiment = buildDummyDomainExperiment("Unique_Experiment", "Owner_1");
           Experiment nonUniqueExperiment =
-              buildDummyDomainExperiment("Uniqe_Experiment", "Owner_1");
+              buildDummyDomainExperiment("Unique_Experiment", "Owner_1");
           repository.create(uniqueExperiment);
 
           // Act & Assert
@@ -215,7 +221,7 @@ class JooqExperimentRepositoryIT {
         () -> {
           // Arrange
           Experiment ghostExperiment = buildDummyDomainExperiment("GHOST-EXP", "Ghost Owner");
-          ghostExperiment.setId(99999L);
+          ghostExperiment.setId(99999L); // non-existent ID
 
           // Act & Assert
           ObjectBusinessValidationException exception =

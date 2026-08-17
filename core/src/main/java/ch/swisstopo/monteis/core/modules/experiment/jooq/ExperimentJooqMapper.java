@@ -31,7 +31,5 @@ public interface ExperimentJooqMapper {
 
   @Mapping(target = "period.start", source = "start")
   @Mapping(target = "period.end", source = "end")
-  @Mapping(target = "sensorCount", ignore = true)
-  @Mapping(target = "status", ignore = true)
   ExperimentResponseDto toDto(ExperimentsRecord experimentsRecord);
 }

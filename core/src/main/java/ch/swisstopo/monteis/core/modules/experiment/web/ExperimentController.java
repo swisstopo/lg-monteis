@@ -4,7 +4,6 @@ import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidati
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
-import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQuery;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
@@ -22,22 +21,19 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/experiments")
 public class ExperimentController {
-  private final ExperimentQuery experimentQuery;
   private final ExperimentService service;
   private final ExperimentWebMapper mapper;
 
-  public ExperimentController(
-      ExperimentService service, ExperimentWebMapper mapper, ExperimentQuery experimentQuery) {
+  public ExperimentController(ExperimentService service, ExperimentWebMapper mapper) {
     this.service = service;
     this.mapper = mapper;
-    this.experimentQuery = experimentQuery;
   }
 
   @Operation(summary = "Get a experiment by id", description = "Retrieves a experiment by id")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
   @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExperimentResponseDto> getExperiment(@PathVariable @Positive Long id) {
-    return ResponseEntity.ok(experimentQuery.getById(id));
+    return ResponseEntity.ok(mapper.toDto(service.getById(id)));
   }
 
   @Operation(

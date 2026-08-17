@@ -6,16 +6,14 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
-import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQuery;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
@@ -38,13 +36,22 @@ class ExperimentControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @MockitoBean private ExperimentService service;
-  @MockitoBean private ExperimentQuery queryService;
 
   @MockitoBean private ExperimentWebMapper mapper;
 
   @Test
   void should_route_get_experiment_and_verify_output() throws Exception {
     // given
+    Experiment expectedExperiment =
+        new Experiment(
+            1L,
+            "EXP-01",
+            new Period(
+                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
+            "A test experiment",
+            2,
+            1);
+
     ExperimentResponseDto expectedResponseDto =
         new ExperimentResponseDto(
             1L,
@@ -53,10 +60,13 @@ class ExperimentControllerTest {
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
-            2,
+            0,
             1);
 
-    given(queryService.getById(1L)).willReturn(expectedResponseDto);
+    expectedExperiment.calculateAndSetStatus(LocalDate.now());
+
+    given(service.getById(1L)).willReturn(expectedExperiment);
+    given(mapper.toDto(expectedExperiment)).willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -67,15 +77,13 @@ class ExperimentControllerTest {
         .andExpect(jsonPath("$.comment").value(expectedResponseDto.comment()))
         .andExpect(jsonPath("$.status").value(expectedResponseDto.status().name()));
 
-    // Verify the read flow bypasses the service/mapper entirely
-    then(queryService).should().getById(1L);
-    then(service).shouldHaveNoInteractions();
-    then(mapper).shouldHaveNoInteractions();
+    then(service).should().getById(1L);
+    then(mapper).should().toDto(expectedExperiment);
   }
 
   @Test
   void should_route_create_experiment_and_verify_output() throws Exception {
-    // given: Instantiate DTOs for input and expected output
+    // given
     WriteExperimentDto requestDto =
         new WriteExperimentDto(
             null,
@@ -96,7 +104,6 @@ class ExperimentControllerTest {
             0,
             1);
 
-    // Strictly mock the domain object
     Experiment mockDomain = mock(Experiment.class);
 
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);

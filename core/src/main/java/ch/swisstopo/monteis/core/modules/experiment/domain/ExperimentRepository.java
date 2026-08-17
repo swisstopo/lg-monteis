@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.domain;
 
+import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import java.util.stream.Stream;
 
 /**
@@ -10,8 +11,6 @@ import java.util.stream.Stream;
  * and domain reconstruction. It works solely with rich domain objects to ensure
  * business invariants are protected.
  * <p>
- * Do not add UI-specific read methods here. For read-only operations that return
- * DTOs, see {@link ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQuery}.
  */
 public interface ExperimentRepository {
   /**
@@ -36,4 +35,12 @@ public interface ExperimentRepository {
    * @return a stream of all experiments which are not yet audited
    */
   Stream<Experiment> streamUnauditedExperiments();
+
+  /**
+   * Retrieves an experiment by its ID, projected straight into a {@link ExperimentResponseDto}.
+   *
+   * @param id the ID of the experiment to retrieve
+   * @return the experiment response DTO
+   */
+  Experiment getById(Long id);
 }

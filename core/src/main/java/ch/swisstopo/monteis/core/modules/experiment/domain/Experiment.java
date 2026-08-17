@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.experiment.domain;
 
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
+import java.time.LocalDate;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
 
@@ -16,10 +17,10 @@ public class Experiment implements Auditable {
   private Period period;
   private String comment;
   private Integer version;
+  private Integer sensorCount;
 
   /**
    * Constructor for creating a NEW Experiment from a web request.
-   * ID and Version are omitted as they are handled by the infrastructure layer.
    */
   @SuppressWarnings("java:S107")
   @Default
@@ -35,23 +36,28 @@ public class Experiment implements Auditable {
    */
   @SuppressWarnings("java:S107")
   public Experiment(
-      Long id,
-      String name,
-      String owner,
-      Period period,
-      String comment,
-      Integer version,
-      Status status) {
+      Long id, String name, Period period, String comment, Integer version, Integer sensorCount) {
     this.id = id;
     this.name = name;
-    this.owner = owner;
     this.period = period;
     this.comment = comment;
     this.version = version;
-    this.status = status;
+    this.sensorCount = sensorCount;
   }
 
-  // --- Getters and Setters ---
+  public void calculateAndSetStatus(LocalDate today) {
+    if (period == null || period.start() == null || period.end() == null) {
+      return;
+    }
+
+    if (period.end().isBefore(today)) {
+      this.status = Status.HISTORIC;
+    } else if (period.start().isAfter(today)) {
+      this.status = Status.UPCOMING;
+    } else {
+      this.status = Status.ACTIVE;
+    }
+  }
 
   public Long getId() {
     return id;
@@ -75,6 +81,14 @@ public class Experiment implements Auditable {
 
   public void setOwner(String owner) {
     this.owner = owner;
+  }
+
+  public Status getStatus() {
+    return status;
+  }
+
+  public void setStatus(Status status) {
+    this.status = status;
   }
 
   public Period getPeriod() {
@@ -101,11 +115,11 @@ public class Experiment implements Auditable {
     this.version = version;
   }
 
-  public Status getStatus() {
-    return status;
+  public Integer getSensorCount() {
+    return sensorCount;
   }
 
-  public void setStatus(Status status) {
-    this.status = status;
+  public void setSensorCount(Integer sensorCount) {
+    this.sensorCount = sensorCount;
   }
 }

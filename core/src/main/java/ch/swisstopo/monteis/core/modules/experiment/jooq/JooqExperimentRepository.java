@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
-import static org.jooq.impl.DSL.row;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
@@ -10,11 +9,7 @@ import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
-import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
-import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentQuery;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
-import java.time.LocalDate;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
@@ -26,7 +21,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepository {
+public class JooqExperimentRepository implements ExperimentRepository {
 
   private final DSLContext dsl;
   private final ExperimentJooqMapper mapper;
@@ -38,19 +33,14 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
 
   @Override
   @Transactional(readOnly = true)
-  public ExperimentResponseDto getById(Long experimentId) {
-    LocalDate now = LocalDate.now();
+  public Experiment getById(Long experimentId) {
 
     return dsl.select(
             EXPERIMENTS.ID,
             EXPERIMENTS.NAME,
+            EXPERIMENTS.START,
+            EXPERIMENTS.END,
             EXPERIMENTS.COMMENT,
-            row(EXPERIMENTS.START, EXPERIMENTS.END).mapping(PeriodDto::new),
-            DSL.case_()
-                .when(EXPERIMENTS.START.gt(now), DSL.inline(Status.UPCOMING.name()))
-                .when(EXPERIMENTS.END.lt(now), DSL.inline(Status.HISTORIC.name()))
-                .otherwise(DSL.inline(Status.ACTIVE.name()))
-                .as("status"),
             EXPERIMENTS.VERSION,
             DSL.selectCount()
                 .from(EXPERIMENT_SENSOR)
@@ -58,13 +48,21 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
                 .asField("sensorCount"))
         .from(EXPERIMENTS)
         .where(EXPERIMENTS.ID.eq(experimentId))
-        .fetchOneInto(ExperimentResponseDto.class);
+        .fetchOne(
+            record ->
+                new Experiment(
+                    record.get(EXPERIMENTS.ID),
+                    record.get(EXPERIMENTS.NAME),
+                    new Period(record.get(EXPERIMENTS.START), record.get(EXPERIMENTS.END)),
+                    record.get(EXPERIMENTS.COMMENT),
+                    record.get(EXPERIMENTS.VERSION),
+                    record.get("sensorCount", Integer.class)));
   }
 
   @Override
   @Transactional
   public Experiment create(Experiment experiment) {
-    String currentUser = getCurrentUser();
+    String currentUser = getCurrentUserHandle();
 
     ExperimentsRecord createdExperiment = mapper.toRecord(experiment);
     dsl.attach(createdExperiment);
@@ -84,7 +82,7 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
   @Override
   @Transactional
   public Experiment update(Experiment experiment) {
-    String currentUser = getCurrentUser();
+    String currentUser = getCurrentUserHandle();
     // fetch existing
     ExperimentsRecord updatedRecord =
         dsl.selectFrom(EXPERIMENTS).where(EXPERIMENTS.ID.eq(experiment.getId())).fetchOne();
@@ -127,7 +125,7 @@ public class JooqExperimentRepository implements ExperimentQuery, ExperimentRepo
             });
   }
 
-  private String getCurrentUser() {
+  private String getCurrentUserHandle() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication != null
         && authentication.getPrincipal() instanceof MonteisPrincipal principal) {
