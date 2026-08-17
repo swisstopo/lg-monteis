@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, effect, inject, inputBinding, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -16,17 +17,19 @@ import { createColumns } from './columns';
 @Component({
   selector: 'app-experiment-table',
   imports: [TableHeader, MatButton, MatIcon, TranslatePipe, Table],
+  providers: [DatePipe],
   templateUrl: './experiment-table.html',
   styleUrl: './experiment-table.scss',
 })
 export default class ExperimentTable {
+  private readonly datePipe = inject(DatePipe);
   private readonly dialog = inject(MatDialog);
   protected experimentService = inject(ExperimentService);
   private readonly i18nService = inject(TranslateService);
 
   readonly searchTerm = signal<string>('');
 
-  protected wrappedCols = createColumns();
+  protected wrappedCols = createColumns(this.datePipe);
   protected selectedExperimentId = signal<number | undefined>(undefined);
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
