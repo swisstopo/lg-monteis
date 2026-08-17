@@ -72,25 +72,20 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
   @Override
   @Transactional(readOnly = true)
-  public PagedResult<ExperimentResponseDto> getExperiments(PagedRequest request) {
-    LocalDate now = LocalDate.now();
+  public PagedResult<Experiment> getExperiments(PagedRequest request) {
 
     // Default to a deterministic order so offset-based paging stays stable across separate
     // requests (Postgres does not guarantee row order without an ORDER BY).
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
         PagedRequestJooqTranslator.translate(request, COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
 
-    List<ExperimentResponseDto> data =
+    List<Experiment> data =
         dsl.select(
                 EXPERIMENTS.ID,
                 EXPERIMENTS.NAME,
+                EXPERIMENTS.START,
+                EXPERIMENTS.END,
                 EXPERIMENTS.COMMENT,
-                row(EXPERIMENTS.START, EXPERIMENTS.END).mapping(PeriodDto::new),
-                DSL.case_()
-                    .when(EXPERIMENTS.START.gt(now), DSL.inline(Status.UPCOMING.name()))
-                    .when(EXPERIMENTS.END.lt(now), DSL.inline(Status.HISTORIC.name()))
-                    .otherwise(DSL.inline(Status.ACTIVE.name()))
-                    .as("status"),
                 EXPERIMENTS.VERSION,
                 DSL.selectCount()
                     .from(EXPERIMENT_SENSOR)
@@ -101,7 +96,16 @@ public class JooqExperimentRepository implements ExperimentRepository {
             .orderBy(criteria.sortFields())
             .limit(request.limit())
             .offset(request.offset())
-            .fetchInto(ExperimentResponseDto.class);
+            .fetch(
+                experiment ->
+                    new Experiment(
+                        experiment.get(EXPERIMENTS.ID),
+                        experiment.get(EXPERIMENTS.NAME),
+                        new Period(
+                            experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
+                        experiment.get(EXPERIMENTS.COMMENT),
+                        experiment.get(EXPERIMENTS.VERSION),
+                        experiment.get("sensorCount", Integer.class)));
 
     int totalCount =
         dsl.fetchCount(dsl.select(EXPERIMENTS.ID).from(EXPERIMENTS).where(criteria.condition()));
