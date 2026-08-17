@@ -41,6 +41,13 @@
     <jacoco.version>0.8.15</jacoco.version>
     <testcontainers-keycloak.version>4.3.1</testcontainers-keycloak.version>
 
+    <!-- Override the Spring Boot BOM's managed flyway.version so the test-scoped
+         flyway-core + flyway-database-postgresql (Testcontainers validation) and the
+         flyway-maven-plugin (jOOQ codegen) match the migration image runner (MON-87:
+         docker/migration builds FROM flyway/flyway 12.11.0-alpine). Keeps validator ==
+         runner so CI actually exercises the version that migrates cloud RDS/TimescaleDB. -->
+    <flyway.version>12.11.0</flyway.version>
+
     <jooq.codegen.skip>false</jooq.codegen.skip>
   </properties>
 
