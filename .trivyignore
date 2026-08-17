@@ -3,33 +3,3 @@
 
 # Waiting for Paketo buildpacks to update Go to 1.26.5
 CVE-2026-39822
-
-# ── MON-87 migration image (docker/migration/Dockerfile) ────────────────────────
-# The stock flyway/flyway base bundles JDBC drivers for databases MONTEIS does not use
-# (SQL Server, Cassandra, Couchbase, GCP Spanner, Databricks, Mongo, ...). Those unused
-# drivers + their netty / httpcore5 / shaded-jackson transitive jars carry HIGH CVEs
-# for code paths the Postgres-only migration Job never loads. We waive them by id here
-# CVEs in the Postgres driver, the flyway engine, the JRE, or the OS are
-# deliberately NOT listed and still fail the gate.
-# Re-audit this list whenever the flyway base image digest is bumped.
-#
-# com.microsoft.sqlserver:mssql-jdbc (SQL Server driver)
-CVE-2025-59250
-# io.netty — netty-handler / netty-codec-http(2) / netty-codec-compression
-# (Cassandra / Couchbase / GCP Spanner transports)
-CVE-2026-44249
-CVE-2026-45416
-CVE-2026-50010
-CVE-2026-55831
-CVE-2026-55833
-CVE-2026-56745
-CVE-2026-56819
-CVE-2026-59901
-# org.apache.httpcomponents.core5:httpcore5 / httpcore5-h2 (Cassandra driver)
-CVE-2026-54399
-CVE-2026-54428
-# jackson 2.18.7 SHADED inside databricks-jdbc (flyway's own jackson 2.22.0/3.1.4,
-# used by the Postgres migration path, is a different version and is NOT affected)
-CVE-2026-54512
-CVE-2026-54513
-GHSA-r7wm-3cxj-wff9
