@@ -1,5 +1,7 @@
 package ch.swisstopo.monteis.core.modules.experiment.domain;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import java.util.stream.Stream;
 
@@ -43,4 +45,12 @@ public interface ExperimentRepository {
    * @return the experiment response DTO
    */
   Experiment getById(Long id);
+
+  /**
+   * Retrieves a page of experiments, projected straight into {@link ExperimentResponseDto}s.
+   *
+   * @param request the requested page, together with an optional sort/filter model
+   * @return the requested page of experiments together with the total row count
+   */
+  PagedResult<Experiment> getExperiments(PagedRequest request);
 }
