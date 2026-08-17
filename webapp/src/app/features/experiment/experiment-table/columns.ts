@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { ExperimentResponseDto } from '../../../core/generated';
@@ -9,7 +10,7 @@ import StatusEnum = ExperimentResponseDto.StatusEnum;
 // with what the backend can translate.
 const SINGLE_CONDITION_FILTER_PARAMS = { maxNumConditions: 1 };
 
-export function createColumns(): TableColumn<ExperimentResponseDto>[] {
+export function createColumns(datePipe: DatePipe): TableColumn<ExperimentResponseDto>[] {
   const i18n = inject(TranslateService);
 
   return [
@@ -44,9 +45,7 @@ export function createColumns(): TableColumn<ExperimentResponseDto>[] {
       sortable: true,
       filter: true,
       filterParams: SINGLE_CONDITION_FILTER_PARAMS,
-      valueFormatter: (params) => {
-        return params.value ? new Date(params.value).toLocaleDateString() : '';
-      },
+      valueFormatter: (params) => datePipe.transform(params.value) ?? '',
     },
     {
       field: 'period.end',
@@ -54,9 +53,7 @@ export function createColumns(): TableColumn<ExperimentResponseDto>[] {
       sortable: true,
       filter: true,
       filterParams: SINGLE_CONDITION_FILTER_PARAMS,
-      valueFormatter: (params) => {
-        return params.value ? new Date(params.value).toLocaleDateString() : '';
-      },
+      valueFormatter: (params) => datePipe.transform(params.value) ?? '',
     },
     {
       field: 'sensorCount',
