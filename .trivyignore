@@ -1,5 +1,18 @@
 # A list of security issues only relevant for Image scanning!
 # It is prohibited to ignore CVEs from source code dependencies, use with caution!
 
-# Waiting for Paketo buildpacks to update Go to 1.26.5
-CVE-2026-39822
+# Waiting for Paketo buildpacks to ship a builder built against a patched Go
+# (currently on Go 1.26.5 via paketobuildpacks/builder-jammy-java-tiny, which is
+# already unpinned/latest — there is no newer builder to bump to yet). These are
+# HIGH CVEs in the Go stdlib used by the CNB lifecycle/buildpack helper binaries
+# baked into the image (cnb/lifecycle/launcher, bellsoft-liberica helper,
+# ca-certificates helper, spring-boot helper) — not application code.
+# Re-check this list whenever Paketo publishes a builder update.
+CVE-2026-33818
+CVE-2026-39821
+CVE-2026-46600
+CVE-2026-56853
+CVE-2026-56858
+CVE-2026-56859
+CVE-2026-56860
+CVE-2026-56862
