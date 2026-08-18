@@ -24,7 +24,11 @@ public class TransformationOrchestrator {
   }
 
   public SensorReadingRecord transform(
-      String sensorId, Double rawValue, String rawTimestamp, ActiveSensorConfig activeConfig) {
+      String sensorId,
+      Double rawValue,
+      String rawTimestamp,
+      ActiveSensorConfig activeConfig,
+      ProcessingOrigin origin) {
     OffsetDateTime timestamp;
     try {
       timestamp =
@@ -35,17 +39,22 @@ public class TransformationOrchestrator {
           "Invalid epoch timestamp format: '" + rawTimestamp + "'", e, rawValue);
     }
 
-    return transform(sensorId, rawValue, timestamp, activeConfig);
+    return transform(sensorId, rawValue, timestamp, activeConfig, origin);
   }
 
   public SensorReadingRecord transform(
-      String sensorId, Double rawValue, OffsetDateTime timestamp, ActiveSensorConfig activeConfig) {
+      String sensorId,
+      Double rawValue,
+      OffsetDateTime timestamp,
+      ActiveSensorConfig activeConfig,
+      ProcessingOrigin origin) {
     // 1. Standardize the value
     Double standardizedToSI = siStandardizer.standardizeToSI(rawValue, activeConfig);
 
     // 2. Validate the value
     BoundStatus status =
-        boundsValidator.evaluateBounds(sensorId, standardizedToSI, activeConfig.getConfig());
+        boundsValidator.evaluateBounds(
+            sensorId, standardizedToSI, activeConfig.getConfig(), origin);
 
     // 3. Map to jOOQ record
     SensorReadingRecord sensorReading = new SensorReadingRecord();

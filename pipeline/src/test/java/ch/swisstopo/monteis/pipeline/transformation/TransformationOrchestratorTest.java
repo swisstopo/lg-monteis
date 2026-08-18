@@ -45,12 +45,15 @@ class TransformationOrchestratorTest {
 
     given(activeConfig.getConfig()).willReturn(sensorConfig);
     given(siStandardizer.standardizeToSI(rawValue, activeConfig)).willReturn(standardizedValue);
-    given(boundsValidator.evaluateBounds("deviceA", standardizedValue, sensorConfig))
+    given(
+            boundsValidator.evaluateBounds(
+                "deviceA", standardizedValue, sensorConfig, ProcessingOrigin.INGEST))
         .willReturn(BoundStatus.OK);
 
     // when
     SensorReadingRecord result =
-        orchestrator.transform("deviceA", rawValue, rawTimestamp, activeConfig);
+        orchestrator.transform(
+            "deviceA", rawValue, rawTimestamp, activeConfig, ProcessingOrigin.INGEST);
 
     // then
     assertThat(result.getSensorId()).isEqualTo("deviceA");
@@ -74,7 +77,9 @@ class TransformationOrchestratorTest {
     TransformationException exception =
         assertThrows(
             TransformationException.class,
-            () -> orchestrator.transform("deviceA", 15.5, invalidTimestamp, activeConfig));
+            () ->
+                orchestrator.transform(
+                    "deviceA", 15.5, invalidTimestamp, activeConfig, ProcessingOrigin.INGEST));
 
     // then
     assertThat(exception.getMessage()).contains("Invalid epoch timestamp format: 'not-a-number'");
@@ -92,12 +97,15 @@ class TransformationOrchestratorTest {
 
     given(activeConfig.getConfig()).willReturn(sensorConfig);
     given(siStandardizer.standardizeToSI(rawValue, activeConfig)).willReturn(standardizedValue);
-    given(boundsValidator.evaluateBounds("deviceA", standardizedValue, sensorConfig))
+    given(
+            boundsValidator.evaluateBounds(
+                "deviceA", standardizedValue, sensorConfig, ProcessingOrigin.INGEST))
         .willReturn(BoundStatus.TOO_HIGH);
 
     // when
     SensorReadingRecord result =
-        orchestrator.transform("deviceA", rawValue, defaultTimestamp, activeConfig);
+        orchestrator.transform(
+            "deviceA", rawValue, defaultTimestamp, activeConfig, ProcessingOrigin.INGEST);
 
     // then
     assertThat(result.getStatus()).isEqualTo(RangeCategory.too_high);
@@ -111,12 +119,15 @@ class TransformationOrchestratorTest {
 
     given(activeConfig.getConfig()).willReturn(sensorConfig);
     given(siStandardizer.standardizeToSI(rawValue, activeConfig)).willReturn(standardizedValue);
-    given(boundsValidator.evaluateBounds("deviceA", standardizedValue, sensorConfig))
+    given(
+            boundsValidator.evaluateBounds(
+                "deviceA", standardizedValue, sensorConfig, ProcessingOrigin.INGEST))
         .willReturn(BoundStatus.TOO_LOW);
 
     // when
     SensorReadingRecord result =
-        orchestrator.transform("deviceA", rawValue, defaultTimestamp, activeConfig);
+        orchestrator.transform(
+            "deviceA", rawValue, defaultTimestamp, activeConfig, ProcessingOrigin.INGEST);
 
     // then
     assertThat(result.getStatus()).isEqualTo(RangeCategory.too_low);
@@ -137,7 +148,9 @@ class TransformationOrchestratorTest {
     TransformationException exception =
         assertThrows(
             TransformationException.class,
-            () -> orchestrator.transform("deviceA", rawValue, defaultTimestamp, activeConfig));
+            () ->
+                orchestrator.transform(
+                    "deviceA", rawValue, defaultTimestamp, activeConfig, ProcessingOrigin.INGEST));
 
     // then
     assertThat(exception).isSameAs(expectedException);
