@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.then;
 import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent;
 import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent.BoundType;
+import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -41,7 +42,8 @@ class BoundsValidatorTest {
     SensorConfig config = new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1);
 
     // when
-    BoundStatus status = boundsValidator.evaluateBounds("deviceA", 50.0, config);
+    BoundStatus status =
+        boundsValidator.evaluateBounds("deviceA", 50.0, config, ProcessingOrigin.INGEST);
 
     // then
     assertThat(status).isEqualTo(BoundStatus.OK);
@@ -54,7 +56,8 @@ class BoundsValidatorTest {
     SensorConfig config = new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1);
 
     // when
-    BoundStatus status = boundsValidator.evaluateBounds("deviceA", 150.5, config);
+    BoundStatus status =
+        boundsValidator.evaluateBounds("deviceA", 150.5, config, ProcessingOrigin.INGEST);
 
     // then
     assertThat(status).isEqualTo(BoundStatus.TOO_HIGH);
@@ -75,7 +78,8 @@ class BoundsValidatorTest {
     SensorConfig config = new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1);
 
     // when
-    BoundStatus status = boundsValidator.evaluateBounds("deviceB", -25.0, config);
+    BoundStatus status =
+        boundsValidator.evaluateBounds("deviceB", -25.0, config, ProcessingOrigin.INGEST);
 
     // then
     assertThat(status).isEqualTo(BoundStatus.TOO_LOW);
@@ -88,5 +92,33 @@ class BoundsValidatorTest {
     assertThat(event.limitViolated()).isEqualTo(-10.0);
     assertThat(event.boundType()).isEqualTo(BoundType.LOWER);
     assertThat(event.timestamp()).isEqualTo(fixedTimestamp);
+  }
+
+  @Test
+  void should_return_too_high_but_not_publish_event_when_reprocessing() {
+    // given
+    SensorConfig config = new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1);
+
+    // when
+    BoundStatus status =
+        boundsValidator.evaluateBounds("deviceA", 150.5, config, ProcessingOrigin.REPROCESS);
+
+    // then
+    assertThat(status).isEqualTo(BoundStatus.TOO_HIGH);
+    then(eventPublisher).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_return_too_low_but_not_publish_event_when_reprocessing() {
+    // given
+    SensorConfig config = new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1);
+
+    // when
+    BoundStatus status =
+        boundsValidator.evaluateBounds("deviceB", -25.0, config, ProcessingOrigin.REPROCESS);
+
+    // then
+    assertThat(status).isEqualTo(BoundStatus.TOO_LOW);
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 }

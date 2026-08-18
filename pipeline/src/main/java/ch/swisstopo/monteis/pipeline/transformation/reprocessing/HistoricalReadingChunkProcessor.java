@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
+import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
@@ -53,7 +54,8 @@ public class HistoricalReadingChunkProcessor {
                         reading.getSensorId(),
                         reading.getRawValue(),
                         reading.getTimestamp(), // This is already an OffsetDateTime from DB
-                        activeSensorConfig);
+                        activeSensorConfig,
+                        ProcessingOrigin.REPROCESS);
                   } catch (TransformationException ex) {
                     log.error(
                         "POISON PILL REPROCESSING: Math failed for historical record of sensor {}."
