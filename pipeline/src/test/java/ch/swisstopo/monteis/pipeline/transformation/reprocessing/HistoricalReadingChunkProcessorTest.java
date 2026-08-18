@@ -10,6 +10,7 @@ import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
+import ch.swisstopo.monteis.pipeline.transformation.ChunkProcessingResult;
 import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
@@ -69,14 +70,15 @@ class HistoricalReadingChunkProcessorTest {
     ActiveSensorConfig config =
         new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 2));
 
-    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize))
+    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize, null))
         .willReturn(List.of());
 
     // when
-    int processedCount = chunkService.processNextChunk(config);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
 
     // then
-    assertThat(processedCount).isZero();
+    assertThat(result.processedCount()).isZero();
+    assertThat(result.cursor()).isNull();
     then(transformationOrchestrator).shouldHaveNoInteractions();
     then(sensorReadingRepository).should(never()).bulkUpdate(any());
   }
@@ -91,7 +93,7 @@ class HistoricalReadingChunkProcessorTest {
     SensorReadingRecord oldRecord =
         new SensorReadingRecord(timestamp, "deviceA", 10.0, 15.0, (short) 1, RangeCategory.correct);
 
-    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize))
+    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize, null))
         .willReturn(List.of(oldRecord));
 
     SensorReadingRecord transformedRecord =
@@ -103,10 +105,11 @@ class HistoricalReadingChunkProcessorTest {
         .willReturn(transformedRecord);
 
     // when
-    int processedCount = chunkService.processNextChunk(config);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
 
     // then
-    assertThat(processedCount).isEqualTo(1);
+    assertThat(result.processedCount()).isEqualTo(1);
+    assertThat(result.cursor()).isEqualTo(timestamp);
 
     then(sensorReadingRepository).should().bulkUpdate(dbRecordsCaptor.capture());
     assertThat(dbRecordsCaptor.getValue()).containsExactly(transformedRecord);
@@ -125,7 +128,7 @@ class HistoricalReadingChunkProcessorTest {
         new SensorReadingRecord(
             timestamp, "deviceB", -999.0, 5.0, (short) 1, RangeCategory.correct);
 
-    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize))
+    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize, null))
         .willReturn(List.of(poisonRecord));
 
     TransformationException ex = mock(TransformationException.class);
@@ -137,10 +140,11 @@ class HistoricalReadingChunkProcessorTest {
         .willThrow(ex);
 
     // when
-    int processedCount = chunkService.processNextChunk(config);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
 
     // then
-    assertThat(processedCount).isEqualTo(1);
+    assertThat(result.processedCount()).isEqualTo(1);
+    assertThat(result.cursor()).isEqualTo(timestamp);
 
     then(sensorReadingRepository).should().bulkUpdate(dbRecordsCaptor.capture());
 
