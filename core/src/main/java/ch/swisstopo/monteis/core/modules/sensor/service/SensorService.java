@@ -4,6 +4,7 @@ import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,9 +26,16 @@ public class SensorService {
 
   @AuditChanges
   public Sensor updateSensor(Sensor sensor) {
+    Sensor before = repository.findById(sensor.getId()).orElse(null);
     Sensor updated = repository.update(sensor);
-    // TODO MON-28: Only publish change when reprocessing is necessary
-    configPublisher.publish(updated);
+    if (before == null || changeTriggersReprocessing(before, updated)) {
+      configPublisher.publish(updated);
+    }
     return updated;
+  }
+
+  private boolean changeTriggersReprocessing(Sensor before, Sensor after) {
+    return !Objects.equals(before.getFormula().getExpression(), after.getFormula().getExpression())
+        || !Objects.equals(before.getAlarmLimits(), after.getAlarmLimits());
   }
 }

@@ -25,6 +25,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseD
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.jooq.DSLContext;
@@ -262,6 +263,37 @@ class JooqSensorRepositoryIT {
           // Assert
           assertEquals("New Name", updatedSensor.getName());
           assertEquals("x * 3", updatedSensor.getFormula().getExpression());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_find_sensor_by_id() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Sensor savedSensor =
+              repository.create(createDummySensor("FIND-001", "Find Sensor", "x * 2"));
+
+          // Act
+          Optional<Sensor> found = repository.findById(savedSensor.getId());
+
+          // Assert
+          assertTrue(found.isPresent());
+          assertEquals("FIND-001", found.get().getCode());
+          assertEquals("x * 2", found.get().getFormula().getExpression());
+          assertEquals(0.0, found.get().getAlarmLimits().lower());
+          assertEquals(100.0, found.get().getAlarmLimits().upper());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_return_empty_when_sensor_not_found_by_id() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Act & Assert
+          assertTrue(repository.findById(Long.MAX_VALUE).isEmpty());
         });
   }
 
