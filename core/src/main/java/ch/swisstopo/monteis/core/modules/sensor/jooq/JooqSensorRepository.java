@@ -24,6 +24,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseD
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -193,6 +194,22 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
     }
 
     return mapper.toDomain(updatedRecord, formulaRecord, typeRecord);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<Sensor> findById(Long id) {
+    return dsl.select(SENSORS.fields())
+        .select(FORMULAS.fields())
+        .select(SENSOR_TYPES.fields())
+        .from(SENSORS)
+        .join(FORMULAS)
+        .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
+        .join(SENSOR_TYPES)
+        .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
+        .where(SENSORS.ID.eq(id))
+        .fetchOptional(
+            r -> mapper.toDomain(r.into(SENSORS), r.into(FORMULAS), r.into(SENSOR_TYPES)));
   }
 
   private FormulasRecord findOrCreateFormulaByExpression(String expression) {

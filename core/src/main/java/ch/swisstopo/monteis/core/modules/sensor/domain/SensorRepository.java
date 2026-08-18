@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -29,6 +30,14 @@ public interface SensorRepository {
    * @return the updated sensor instance including DB managed state such as version
    */
   Sensor update(Sensor sensor);
+
+  /**
+   * Retrieves the domain {@link Sensor} for the given id, if it exists.
+   *
+   * @param id the sensor id
+   * @return the sensor, or empty if no sensor with this id exists
+   */
+  Optional<Sensor> findById(Long id);
 
   /**
    * Retrieves all unaudited sensors
