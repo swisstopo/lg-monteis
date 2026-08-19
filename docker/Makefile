@@ -1,7 +1,7 @@
 .PHONY: core pipeline all down logs
 
 core:
-	@echo "[INFO]: Starting Core infrastructure (Databases seeded, Kafka inactive)..."
+	@echo "[INFO]: Starting Core infrastructure (Databases seeded, Kafka active)..."
 	docker compose --profile core up -d
 
 # Starts Pipeline dependencies: ts_db, Kafka, Connect (ts_db NOT seeded)
