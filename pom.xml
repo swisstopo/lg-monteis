@@ -40,6 +40,7 @@
     <archunit-junit5.version>1.5.0</archunit-junit5.version>
     <jacoco.version>0.8.15</jacoco.version>
     <testcontainers-keycloak.version>4.3.1</testcontainers-keycloak.version>
+    <aws-msk-iam-auth.version>2.3.7</aws-msk-iam-auth.version>
 
     <!-- Override the Spring Boot BOM's managed flyway.version so the test-scoped
          flyway-core + flyway-database-postgresql (Testcontainers validation) and the
@@ -132,6 +133,12 @@
         <artifactId>testcontainers-keycloak</artifactId>
         <version>${testcontainers-keycloak.version}</version>
         <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>software.amazon.msk</groupId>
+        <artifactId>aws-msk-iam-auth</artifactId>
+        <version>${aws-msk-iam-auth.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
