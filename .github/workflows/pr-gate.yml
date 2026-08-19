@@ -27,6 +27,7 @@ env:
   TEST_CONTAINER_IMAGE: ${{ vars.TEST_CONTAINER_IMAGE }}
   TIMESCALE_DB_IMAGE: ${{ vars.TIMESCALE_DB_IMAGE }}
   POSTGRES_DB_IMAGE: ${{ vars.POSTGRES_DB_IMAGE }}
+  KAFKA_IMAGE: ${{ vars.KAFKA_IMAGE }}
 
 permissions: read-all
 
@@ -361,7 +362,7 @@ jobs:
       file_list: ${{ steps.generate-file-list.outputs.file_list }}
     steps:
       - uses: actions/checkout@v7
-      
+
       - parallel:
         - name: Setup Java Environment (Hits Cache)
           uses: ./.github/actions/setup-java-maven
@@ -455,6 +456,11 @@ jobs:
             uses: ./.github/actions/global-docker-cache
             with:
               image: ${{ env.POSTGRES_DB_IMAGE }}
+
+          - name: Load Kafka Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.KAFKA_IMAGE }}
 
       - name: Download e2e build context
         uses: actions/download-artifact@v8
