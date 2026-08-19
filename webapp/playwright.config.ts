@@ -55,8 +55,9 @@ export default defineConfig({
       // immediately, well before Postgres/Keycloak are actually up.
       url: 'http://localhost:8080/actuator/health',
       reuseExistingServer: !process.env.CI,
-      // Booting Postgres + a JVM-based Keycloak Testcontainer is slower than a plain backend start.
-      timeout: 180_000,
+      // Booting 2x Postgres, a JVM-based Keycloak Testcontainer, and a Kafka Testcontainer is
+      // slower than a plain backend start.
+      timeout: 300_000,
     },
     {
       // Uses the `e2e` build configuration, which serves public/e2e/env.json as env.json (the
