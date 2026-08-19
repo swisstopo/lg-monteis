@@ -96,6 +96,8 @@ make core
 
 ```
 
+This also starts a local Kafka broker, used by Core to publish sensor-config change events.
+
 **Pipeline Service**
 
 Initializes the pipeline backend service. You can choose to start it clean or pre-loaded with test data:
