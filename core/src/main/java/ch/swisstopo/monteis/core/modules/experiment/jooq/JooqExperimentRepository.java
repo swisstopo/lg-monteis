@@ -5,7 +5,7 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.security.SecurityUtils;
+import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
@@ -23,10 +23,13 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
   private final DSLContext dsl;
   private final ExperimentJooqMapper mapper;
+  private final CurrentUserProvider currentUserProvider;
 
-  public JooqExperimentRepository(DSLContext dsl, ExperimentJooqMapper mapper) {
+  public JooqExperimentRepository(
+      DSLContext dsl, ExperimentJooqMapper mapper, CurrentUserProvider currentUserProvider) {
     this.mapper = mapper;
     this.dsl = dsl;
+    this.currentUserProvider = currentUserProvider;
   }
 
   @Override
@@ -60,7 +63,8 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Override
   @Transactional
   public Experiment create(Experiment experiment) {
-    String currentUser = SecurityUtils.getCurrentUserHandle();
+    @SuppressWarnings("java:S2325")
+    String currentUser = currentUserProvider.getCurrentUserHandle();
 
     ExperimentsRecord createdExperiment = mapper.toRecord(experiment);
     dsl.attach(createdExperiment);
