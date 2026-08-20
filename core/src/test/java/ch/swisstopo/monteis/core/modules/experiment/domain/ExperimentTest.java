@@ -43,8 +43,7 @@ class ExperimentTest {
         () ->
             assertNull(
                 experiment.getSensorCount(),
-                "SensorCount should be null for a newly created experiment"),
-        () -> assertNull(experiment.getStatus(), "Status should be null initially"));
+                "SensorCount should be null for a newly created experiment"));
   }
 
   @Test
@@ -85,13 +84,14 @@ class ExperimentTest {
   void should_update_fields_using_setters() {
     // given
     Experiment experiment = new Experiment("Initial", "Owner", standardPeriod, "Desc");
-    Period newPeriod = new Period(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31));
+    Period newPeriod =
+        new Period(LocalDate.of(2025, Month.JANUARY, 1), LocalDate.of(2025, Month.DECEMBER, 31));
 
     // when
     experiment.setId(99L);
     experiment.setName("Updated Name");
     experiment.setOwner("Updated Owner");
-    experiment.setStatus(Status.ACTIVE);
+    experiment.getStatus(referenceToday);
     experiment.setPeriod(newPeriod);
     experiment.setComment("Updated Comment");
     experiment.setVersion(2);
@@ -102,7 +102,7 @@ class ExperimentTest {
         () -> assertEquals(99L, experiment.getId()),
         () -> assertEquals("Updated Name", experiment.getName()),
         () -> assertEquals("Updated Owner", experiment.getOwner()),
-        () -> assertEquals(Status.ACTIVE, experiment.getStatus()),
+        () -> assertEquals(Status.UPCOMING, experiment.getStatus(referenceToday)),
         () -> assertEquals(newPeriod, experiment.getPeriod()),
         () -> assertEquals("Updated Comment", experiment.getComment()),
         () -> assertEquals(2, experiment.getVersion()),
@@ -112,58 +112,67 @@ class ExperimentTest {
   @Test
   void should_set_status_to_historic_when_end_date_is_before_today() {
     // given
-    Period historicPeriod = new Period(LocalDate.of(2022, 1, 1), LocalDate.of(2023, 1, 1));
+    Period historicPeriod =
+        new Period(LocalDate.of(2022, Month.JANUARY, 1), LocalDate.of(2023, Month.JANUARY, 1));
     Experiment experiment = new Experiment("Name", "Owner", historicPeriod, "Desc");
 
     // when
-    experiment.calculateAndSetStatus(referenceToday);
+    experiment.getStatus(referenceToday);
 
     // then
-    assertEquals(Status.HISTORIC, experiment.getStatus());
+    assertEquals(Status.HISTORIC, experiment.getStatus(referenceToday));
   }
 
   @Test
   void should_set_status_to_upcoming_when_start_date_is_after_today() {
     // given
-    Period upcomingPeriod = new Period(LocalDate.of(2025, 1, 1), LocalDate.of(2026, 1, 1));
+    Period upcomingPeriod =
+        new Period(LocalDate.of(2025, Month.JANUARY, 1), LocalDate.of(2026, 1, 1));
     Experiment experiment = new Experiment("Name", "Owner", upcomingPeriod, "Desc");
 
     // when
-    experiment.calculateAndSetStatus(referenceToday);
+    experiment.getStatus(referenceToday);
 
     // then
-    assertEquals(Status.UPCOMING, experiment.getStatus());
+    assertEquals(Status.UPCOMING, experiment.getStatus(referenceToday));
   }
 
   @Test
   void should_set_status_to_active_when_today_is_between_start_and_end_dates() {
     // given
-    Period activePeriod = new Period(LocalDate.of(2024, 1, 1), LocalDate.of(2025, 1, 1));
+    Period activePeriod =
+        new Period(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2025, 1, 1));
     Experiment experiment = new Experiment("Name", "Owner", activePeriod, "Desc");
 
     // when
-    experiment.calculateAndSetStatus(referenceToday); // reference is 2024-06-15
+    experiment.getStatus(referenceToday); // reference is 2024-06-15
 
     // then
-    assertEquals(Status.ACTIVE, experiment.getStatus());
+    assertEquals(Status.ACTIVE, experiment.getStatus(referenceToday));
   }
 
   @Test
   void should_set_status_to_active_when_today_is_exactly_start_or_end_date() {
     // given
-    LocalDate start = LocalDate.of(2024, 6, 15);
-    LocalDate end = LocalDate.of(2024, 12, 15);
+    LocalDate start = LocalDate.of(2024, Month.JUNE, 15);
+    LocalDate end = LocalDate.of(2024, Month.DECEMBER, 15);
     Period period = new Period(start, end);
     Experiment experiment = new Experiment("Name", "Owner", period, "Desc");
 
     // when (testing start boundary)
-    experiment.calculateAndSetStatus(start);
+    experiment.getStatus(start);
     // then
-    assertEquals(Status.ACTIVE, experiment.getStatus(), "Should be active exactly on start date");
+    assertEquals(
+        Status.ACTIVE,
+        experiment.getStatus(referenceToday),
+        "Should be active exactly on start date");
 
     // when (testing end boundary)
-    experiment.calculateAndSetStatus(end);
+    experiment.getStatus(end);
     // then
-    assertEquals(Status.ACTIVE, experiment.getStatus(), "Should be active exactly on end date");
+    assertEquals(
+        Status.ACTIVE,
+        experiment.getStatus(referenceToday),
+        "Should be active exactly on end date");
   }
 }

@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
@@ -39,6 +40,8 @@ class ExperimentControllerTest {
 
   @MockitoBean private ExperimentWebMapper mapper;
 
+  private final LocalDate referenceToday = LocalDate.of(2024, Month.JUNE, 15);
+
   @Test
   void should_route_get_experiment_and_verify_output() throws Exception {
     // given
@@ -63,10 +66,11 @@ class ExperimentControllerTest {
             0,
             1);
 
-    expectedExperiment.calculateAndSetStatus(LocalDate.now());
+    expectedExperiment.getStatus(referenceToday);
 
     given(service.getById(1L)).willReturn(expectedExperiment);
-    given(mapper.toDto(expectedExperiment)).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(expectedExperiment), any(LocalDate.class)))
+        .willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -78,7 +82,7 @@ class ExperimentControllerTest {
         .andExpect(jsonPath("$.status").value(expectedResponseDto.status().name()));
 
     then(service).should().getById(1L);
-    then(mapper).should().toDto(expectedExperiment);
+    then(mapper).should().toDto(eq(expectedExperiment), any(LocalDate.class));
   }
 
   @Test
@@ -108,7 +112,7 @@ class ExperimentControllerTest {
 
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(service.createExperiment(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(mockDomain)).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -130,7 +134,7 @@ class ExperimentControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteExperimentDto.class));
     then(service).should().createExperiment(mockDomain);
-    then(mapper).should().toDto(mockDomain);
+    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
   }
 
   @Test
@@ -160,7 +164,7 @@ class ExperimentControllerTest {
 
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(service.updateExperiment(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(mockDomain)).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -178,7 +182,7 @@ class ExperimentControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteExperimentDto.class));
     then(service).should().updateExperiment(mockDomain);
-    then(mapper).should().toDto(mockDomain);
+    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
   }
 
   @Test

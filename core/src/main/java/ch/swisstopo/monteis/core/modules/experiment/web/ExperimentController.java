@@ -11,6 +11,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Positive;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,17 +25,20 @@ import org.springframework.web.bind.annotation.*;
 public class ExperimentController {
   private final ExperimentService service;
   private final ExperimentWebMapper mapper;
+  private final Clock clock;
 
-  public ExperimentController(ExperimentService service, ExperimentWebMapper mapper) {
+  public ExperimentController(ExperimentService service, ExperimentWebMapper mapper, Clock clock) {
     this.service = service;
     this.mapper = mapper;
+    this.clock = clock;
   }
 
   @Operation(summary = "Get a experiment by id", description = "Retrieves a experiment by id")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
   @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExperimentResponseDto> getExperiment(@PathVariable @Positive Long id) {
-    return ResponseEntity.ok(mapper.toDto(service.getById(id)));
+    LocalDate today = LocalDate.now(clock);
+    return ResponseEntity.ok(mapper.toDto(service.getById(id), today));
   }
 
   @Operation(
@@ -48,9 +53,10 @@ public class ExperimentController {
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExperimentResponseDto> createExperiment(
       @Validated(Create.class) @RequestBody WriteExperimentDto dto) {
+    LocalDate today = LocalDate.now(clock);
 
     Experiment createdExperiment = service.createExperiment(mapper.toDomain(dto));
-    return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDto(createdExperiment));
+    return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDto(createdExperiment, today));
   }
 
   @Operation(
@@ -71,8 +77,9 @@ public class ExperimentController {
       throw new ObjectBusinessValidationException(
           "id.validation.mismatch", Map.of("pathId", id, "id", dto.id()));
     }
+    LocalDate today = LocalDate.now(clock);
 
     Experiment updated = service.updateExperiment(mapper.toDomain(dto));
-    return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated));
+    return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated, today));
   }
 }

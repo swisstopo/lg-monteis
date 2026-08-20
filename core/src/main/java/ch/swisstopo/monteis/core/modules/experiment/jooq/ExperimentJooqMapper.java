@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -26,10 +25,4 @@ public interface ExperimentJooqMapper {
   @Mapping(target = "end", source = "period.end")
   void updateRecordFromDomain(
       Experiment experiment, @MappingTarget ExperimentsRecord experimentsRecord);
-
-  // --- Parent Experiment Graph Mapping ---
-
-  @Mapping(target = "period.start", source = "start")
-  @Mapping(target = "period.end", source = "end")
-  ExperimentResponseDto toDto(ExperimentsRecord experimentsRecord);
 }

@@ -3,6 +3,8 @@ package ch.swisstopo.monteis.core.modules.experiment.web;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
+import java.time.LocalDate;
+import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -14,5 +16,6 @@ public interface ExperimentWebMapper {
   Experiment toDomain(WriteExperimentDto dto);
 
   // --- Outbound Domain -> API Serialization DTO Mappings ---
-  ExperimentResponseDto toDto(Experiment domain);
+  @Mapping(target = "status", expression = "java(domain.getStatus(today))")
+  ExperimentResponseDto toDto(Experiment domain, @Context LocalDate today);
 }

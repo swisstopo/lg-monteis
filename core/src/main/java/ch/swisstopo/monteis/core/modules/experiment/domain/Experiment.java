@@ -22,7 +22,6 @@ public class Experiment implements Auditable {
   /**
    * Constructor for creating a NEW Experiment from a web request.
    */
-  @SuppressWarnings("java:S107")
   @Default
   public Experiment(String name, String owner, Period period, String comment) {
     this.name = name;
@@ -34,7 +33,6 @@ public class Experiment implements Auditable {
   /**
    * Constructor for REBUILDING an existing Experiment from the database (jOOQ).
    */
-  @SuppressWarnings("java:S107")
   public Experiment(
       Long id, String name, Period period, String comment, Integer version, Integer sensorCount) {
     this.id = id;
@@ -45,18 +43,10 @@ public class Experiment implements Auditable {
     this.sensorCount = sensorCount;
   }
 
-  public void calculateAndSetStatus(LocalDate today) {
-    if (period == null || period.start() == null || period.end() == null) {
-      return;
-    }
-
-    if (period.end().isBefore(today)) {
-      this.status = Status.HISTORIC;
-    } else if (period.start().isAfter(today)) {
-      this.status = Status.UPCOMING;
-    } else {
-      this.status = Status.ACTIVE;
-    }
+  public Status getStatus(LocalDate today) {
+    if (period.start() != null && today.isBefore(period.start())) return Status.UPCOMING;
+    if (period.end() != null && today.isAfter(period.end())) return Status.HISTORIC;
+    return Status.ACTIVE;
   }
 
   public Long getId() {
@@ -81,14 +71,6 @@ public class Experiment implements Auditable {
 
   public void setOwner(String owner) {
     this.owner = owner;
-  }
-
-  public Status getStatus() {
-    return status;
-  }
-
-  public void setStatus(Status status) {
-    this.status = status;
   }
 
   public Period getPeriod() {

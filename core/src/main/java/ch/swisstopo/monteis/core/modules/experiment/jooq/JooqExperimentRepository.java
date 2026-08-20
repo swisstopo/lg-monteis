@@ -49,14 +49,14 @@ public class JooqExperimentRepository implements ExperimentRepository {
         .from(EXPERIMENTS)
         .where(EXPERIMENTS.ID.eq(experimentId))
         .fetchOne(
-            record ->
+            experiment ->
                 new Experiment(
-                    record.get(EXPERIMENTS.ID),
-                    record.get(EXPERIMENTS.NAME),
-                    new Period(record.get(EXPERIMENTS.START), record.get(EXPERIMENTS.END)),
-                    record.get(EXPERIMENTS.COMMENT),
-                    record.get(EXPERIMENTS.VERSION),
-                    record.get("sensorCount", Integer.class)));
+                    experiment.get(EXPERIMENTS.ID),
+                    experiment.get(EXPERIMENTS.NAME),
+                    new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
+                    experiment.get(EXPERIMENTS.COMMENT),
+                    experiment.get(EXPERIMENTS.VERSION),
+                    experiment.get("sensorCount", Integer.class)));
   }
 
   @Override
