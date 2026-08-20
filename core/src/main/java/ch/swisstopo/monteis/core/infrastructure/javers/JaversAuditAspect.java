@@ -1,11 +1,10 @@
 package ch.swisstopo.monteis.core.infrastructure.javers;
 
-import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
+import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
+import java.util.Optional;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.javers.core.Javers;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 @Aspect
@@ -13,9 +12,11 @@ import org.springframework.stereotype.Component;
 public class JaversAuditAspect {
 
   private final Javers javers;
+  private final CurrentUserProvider currentUserProvider;
 
-  public JaversAuditAspect(Javers javers) {
+  public JaversAuditAspect(Javers javers, CurrentUserProvider currentUserProvider) {
     this.javers = javers;
+    this.currentUserProvider = currentUserProvider;
   }
 
   @AfterReturning(pointcut = "@annotation(AuditChanges)", returning = "result")
@@ -25,12 +26,9 @@ public class JaversAuditAspect {
       return;
     }
 
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    String currentUser = "SYSTEM";
-    if (authentication != null
-        && authentication.getPrincipal() instanceof MonteisPrincipal principal) {
-      currentUser = principal.getSubject().toString();
-    }
+    @SuppressWarnings("java:S2325")
+    String currentUser =
+        Optional.ofNullable(currentUserProvider.getCurrentUserHandle()).orElse("SYSTEM");
 
     javers.commit(currentUser, result);
   }

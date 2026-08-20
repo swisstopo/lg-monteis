@@ -1,23 +1,31 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, inputBinding, signal } from '@angular/core';
+import { MatButton } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIcon } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { GridApi } from 'ag-grid-community';
 import { SensorResponseDto } from '../../../core/generated';
+import { TableHeader } from '../../../ui/table-header/table-header';
 import { createPagedDatasource } from '../../../ui/table/paged-datasource.factory';
 import Table from '../../../ui/table/table';
+import SensorEdit from '../sensor-edit/sensor-edit';
 import { SensorService } from '../services/sensor.service';
-import { TableHeader } from '../table-header/table-header';
 import { createColumns } from './columns';
 
 @Component({
   selector: 'app-sensor-table',
-  imports: [Table, TableHeader, TranslatePipe],
+  imports: [Table, TableHeader, TranslatePipe, MatIcon, MatButton],
   templateUrl: './sensor-table.html',
   styleUrl: './sensor-table.scss',
 })
 export default class SensorTable {
+  private readonly dialog = inject(MatDialog);
   protected sensorService = inject(SensorService);
+  protected readonly SensorEdit = SensorEdit;
   private readonly translateService = inject(TranslateService);
+
+  readonly searchTerm = signal<string>('');
 
   protected wrappedCols = createColumns();
   protected selectedSensorId = signal<number | undefined>(undefined);
@@ -58,6 +66,30 @@ export default class SensorTable {
 
   onSelectionChanged(rows: SensorResponseDto[]): void {
     this.selectedSensorId.set(rows[0]?.id);
+  }
+
+  onCreate(): void {
+    this.dialog.open(SensorEdit, { width: '60vw', maxWidth: '1200px', autoFocus: true });
+  }
+
+  onEdit(): void {
+    const sensorId = this.selectedSensorId();
+    if (sensorId === undefined) return;
+
+    this.dialog.open(SensorEdit, {
+      width: '60vw',
+      maxWidth: '1200px',
+      autoFocus: true,
+      bindings: [inputBinding('sensorId', () => sensorId)],
+    });
+  }
+
+  onDownload(): void {
+    // Not implemented yet.
+  }
+
+  onSearch(term: string): void {
+    this.searchTerm.set(term);
   }
 
   protected getSensorRowId = (row: SensorResponseDto): string => String(row.id);
