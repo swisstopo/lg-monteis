@@ -1,25 +1,41 @@
 package ch.swisstopo.monteis.core.modules.sensor.service;
 
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
+import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SensorService {
   private final SensorRepository repository;
+  private final SensorConfigPublisher configPublisher;
 
-  public SensorService(SensorRepository repository) {
+  public SensorService(SensorRepository repository, SensorConfigPublisher configPublisher) {
     this.repository = repository;
+    this.configPublisher = configPublisher;
   }
 
   @AuditChanges
   public Sensor createSensor(Sensor sensor) {
-    return repository.create(sensor);
+    Sensor created = repository.create(sensor);
+    configPublisher.publish(created); // a brand-new sensor always needs its config announced
+    return created;
   }
 
   @AuditChanges
   public Sensor updateSensor(Sensor sensor) {
-    return repository.update(sensor);
+    Sensor before = repository.findById(sensor.getId()).orElse(null);
+    Sensor updated = repository.update(sensor);
+    if (before == null || changeTriggersReprocessing(before, updated)) {
+      configPublisher.publish(updated);
+    }
+    return updated;
+  }
+
+  private boolean changeTriggersReprocessing(Sensor before, Sensor after) {
+    return !Objects.equals(before.getFormula().getExpression(), after.getFormula().getExpression())
+        || !Objects.equals(before.getAlarmLimits(), after.getAlarmLimits());
   }
 }

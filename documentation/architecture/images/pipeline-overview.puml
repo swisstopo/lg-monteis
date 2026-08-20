@@ -96,7 +96,7 @@ Canonical -right-> Aggregator : "Ausser bei Updates"
 Meta <-up-> CoreAPI
 
 ' Alerts
-Validator -left-> KafkaAlert
+Validator -left-> KafkaAlert : "Nur bei Live-Ingestion"
 
 ' Persistence
 Writer -down-> TSDB : "Speichere normalisierte Werte"

@@ -48,6 +48,8 @@ node "Externe Umsysteme" {
     component "BIM / Fulcrum / Citavi" as Umsysteme
 }
 
+queue "Compacted Topic\n[internal-sensor-config]" as SensorConfigTopic
+
 Client -down-> Security : " HTTPS Request"
 Security -down-> Controllers : " Validiere Zugriff"
 
@@ -58,5 +60,6 @@ Repos -down---> Database : " SQL\n(Metadaten & Sensorik)"
 Repos -down---> FileStorage : " S3 API\n(IFC/Uploads)"
 
 Services -left-> Umsysteme : " REST / Webhooks"
+Services -right-> SensorConfigTopic : " Publish Sensor Config\n(Key=SensorID; Update nur bei Formel-/Grenzwert-Änderung)"
 
 @enduml

@@ -276,8 +276,10 @@ Die Architektur nutzt eine strikte Trennung der Topics, um die Verarbeitung zu e
 | `solexperts_to_swisstopo` | Extern | Das Quell-Topic des Partners. Besitzt **6 Partitionen**.
 | `internal-raw-solexperts` | Lokal | 1:1 Spiegelung des externen Topics durch MirrorMaker 2 (mit SMT RegexRouter). Dient als lokaler Puffer.
 | `internal-normalized` | Lokal | Enthält die abgeflachten, aufbereiteten Daten im kanonischen Format, produziert vom Adapter.
-| `internal-sensor-config` | Lokal (Compacted) | Wird von der Core API befüllt (`cleanup.policy=compact`). Dient als Source-of-Truth für den In-Memory-Cache der Worker (`SensorConfigCache`) und als Trigger für das Reprocessing.
+| `internal-sensor-config` | Lokal (Compacted) | Wird von der Core API befüllt (`cleanup.policy=compact`) — beim Erstellen eines Sensors immer, bei Aktualisierung nur wenn sich Formel oder Grenzwerte ändern. Dient als Source-of-Truth für den In-Memory-Cache der Worker (`SensorConfigCache`) und als Trigger für das Reprocessing.
 |===
+
+NOTE: Die `version` eines Sensors wird über den jOOQ-Optimistic-Locking-Mechanismus bei *jeder* Aktualisierung erhöht — unabhängig davon, ob diese Änderung eine Publikation auslöst. Da nur Formel- oder Grenzwert-Änderungen publiziert werden, können auf dem Topic `internal-sensor-config` daher Versionssprünge auftreten (z. B. Version 1 gefolgt von Version 4, wenn zwischenzeitliche Aktualisierungen wie eine Namensänderung keine Publikation ausgelöst haben). Dies ist beabsichtigt und unkritisch: Das Reprocessing (siehe `SensorReadingRepository`) vergleicht Versionen ausschliesslich mit einem strikten `<`-Operator und setzt keine lückenlose Versionsfolge voraus.
 
 ==== Skalierungsstrategien (High Throughput)
 
@@ -333,7 +335,7 @@ Um die Belegungsdauer wertvoller Datenbankverbindungen im HikariCP-Pool zu minim
 Da das Triggern der Reprozessierung ereignisgesteuert über das Topic `internal-sensor-config` erfolgt, greift auf Infrastrukturebene ein natürlicher Schutz vor Nebenläufigkeitskonflikten. Sämtliche Konfigurations-Updates werden zwingend mit der eindeutigen `sensor_id` als Kafka-Message-Key publiziert. Durch die intrinsischen Eigenschaften von Partitioned Kafka Consumer Groups garantiert der Broker, dass alle Events für einen spezifischen Sensor strikt sequenziell und stets von genau demselben Konsumenten-Thread verarbeitet werden. Parallele, kollidierende Reprocess-Flows für dieselben Zeitreihendaten (Write Skews oder Lost Updates über Pod-Grenzen hinweg) sind somit architektonisch ausgeschlossen, weshalb auf der Datenbankebene auf zusätzliche, aufwändige Sperrmechanismen (wie Pessimistic oder Optimistic DB-Locking) verzichtet wird.
 
 * **Iteratives Chunking (JVM-Speichersicherheit):**
-Um Out-Of-Memory-Fehler (OOM) auf den Kubernetes-Pods zu vermeiden, wird die Verarbeitung über eine dynamische `do-while`-Schleife im Orchestrator gesteuert. Jede Abfrage erzwingt ein striktes, über die `application.properties` konfigurierbares `LIMIT` (z. B. 1000 Datensätze pro Chunk). Die Schleife iteriert so lange, bis die Anzahl der geladenen Datensätze `0` erreicht.
+Um Out-Of-Memory-Fehler (OOM) auf den Kubernetes-Pods zu vermeiden, wird die Verarbeitung über eine dynamische `do-while`-Schleife im Orchestrator gesteuert. Jede Abfrage erzwingt ein striktes, über die `application.properties` konfigurierbares `LIMIT` (z. B. 1000 Datensätze pro Chunk) und nutzt einen Cursor auf Basis des ältesten `timestamp` des vorherigen Chunks (`ORDER BY timestamp DESC`), um direkt an der letzten Position fortzusetzen statt bereits verarbeitete Zeilen erneut zu scannen — dies verhindert Überlappungen oder Lücken zwischen aufeinanderfolgenden Chunks. Die Schleife iteriert so lange, bis die Anzahl der geladenen Datensätze `0` erreicht.
 
 * **Poison Pill Handling (Die Endlosschleifen-Falle):**
 Schlägt die mathematische Transformation eines historischen Datensatzes fehl (z. B. durch eine Division durch Null aufgrund korrupter Rohwerte), darf dieser Datensatz unter keinen Umständen unmodifiziert übersprungen werden. Andernfalls würde die SQL-Abfrage dieselbe fehlerhafte Zeile im nächsten Chunk-Durchlauf erneut laden, was in einer Endlosschleife resultieren würde.
@@ -698,7 +700,7 @@ Das Backend wird strikt in verschiedene Test-Ebenen unterteilt (Test-Pyramide), 
 Um die isolierten Komponenten-Tests zu komplementieren und das Zusammenspiel des gesamten Systems (Frontend + Backend + Datenbank) zu validieren, setzen wir ebenenübergreifende E2E-Tests ein.
 
 * **Technologie:** **Playwright**
-* **Infrastruktur & Setup:** Um eine verlässliche und reproduzierbare Testumgebung für die E2E-Tests zu schaffen, implementieren wir ein dediziertes **Spring Boot Testing-Profil**. Startet man das Backend mit diesem Profil, fährt es automatisch die benötigten Testcontainers (PostgreSQL & TimeScaleDB) hoch und befüllt sie via Flyway. Das Frontend kann anschliessend gegen dieses vollständig gekapselte Backend getestet werden.
+* **Infrastruktur & Setup:** Um eine verlässliche und reproduzierbare Testumgebung für die E2E-Tests zu schaffen, implementieren wir ein dediziertes **Spring Boot Testing-Profil**. Startet man das Backend mit diesem Profil, fährt es automatisch die benötigten Testcontainers (PostgreSQL, TimeScaleDB und Kafka) hoch und befüllt sie via Flyway, wodurch auch der Sensor-Config-Publish-Flow (`internal-sensor-config`) End-to-End getestet werden kann. Das Frontend kann anschliessend gegen dieses vollständig gekapselte Backend getestet werden.
 * **Fokus:** Getestet wird das Verhalten der Applikation anhand der wichtigsten User-Workflows (z. B. Sensor-Filterung, Sensor erstellen, Experiment erstellen, etc.). Auch hier steht das funktionale Verhalten im Vordergrund, nicht das Layout.
 
 === Entwickler-Workflow & CI/CD Pipeline

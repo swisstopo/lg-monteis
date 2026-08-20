@@ -1,12 +1,16 @@
 package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
+import ch.swisstopo.monteis.pipeline.transformation.ChunkProcessingResult;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -46,8 +50,15 @@ class SensorReprocessingOrchestratorTest {
 
     given(sensorReadingRepository.checkOldSensorData(config.getConfig())).willReturn(true);
 
+    OffsetDateTime firstCursor = OffsetDateTime.now().minusMinutes(1);
+    OffsetDateTime secondCursor = OffsetDateTime.now().minusMinutes(2);
+
     // Simulate returning 100 records on the first call, 50 on the second, and 0 on the third
-    given(chunkService.processNextChunk(config)).willReturn(100, 50, 0);
+    given(chunkService.processNextChunk(eq(config), any()))
+        .willReturn(
+            new ChunkProcessingResult(100, firstCursor),
+            new ChunkProcessingResult(50, secondCursor),
+            new ChunkProcessingResult(0, secondCursor));
 
     // when
     sensorReprocessingOrchestrator.checkAndReprocessHistoricalData(config);
@@ -56,6 +67,11 @@ class SensorReprocessingOrchestratorTest {
     then(sensorReadingRepository).should().checkOldSensorData(config.getConfig());
 
     // The do-while loop should have executed exactly 3 times before terminating
-    then(chunkService).should(times(3)).processNextChunk(config);
+    then(chunkService).should(times(3)).processNextChunk(eq(config), any());
+
+    // Each call must resume from the cursor returned by the previous one, starting at null
+    then(chunkService).should().processNextChunk(config, null);
+    then(chunkService).should().processNextChunk(config, firstCursor);
+    then(chunkService).should().processNextChunk(config, secondCursor);
   }
 }
