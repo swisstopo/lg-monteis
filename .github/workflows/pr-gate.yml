@@ -355,11 +355,36 @@ jobs:
   prepare-e2e-tests:
     name: Prepare E2E test file to run
     if: contains(github.event.pull_request.labels.*.name, 'e2e-tests')
+    needs: warmup-caches
     runs-on: ubuntu-24.04
     outputs:
       file_list: ${{ steps.generate-file-list.outputs.file_list }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Setup Java Environment (Hits Cache)
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Setup Node Environment (Hits Cache)
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Generate Sources
+        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
+
+      - name: Generate API
+        working-directory: webapp
+        run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
+
+      - name: Upload e2e build context
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-build-context
+          retention-days: 1
+          path: |
+            **/target/classes/**
+            **/target/test-classes/**
+            core/target/openapi/openapi.json
+            webapp/src/app/core/generated/**
 
       - name: Install jq (JSON processor)
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -420,16 +445,16 @@ jobs:
             with:
               image: ${{ env.POSTGRES_DB_IMAGE }}
 
-      - name: Generate Sources
-        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
+      - name: Download e2e build context
+        uses: actions/download-artifact@v8
+        with:
+          name: e2e-build-context
 
-      - name: Install Node Modules and Playwright
-        working-directory: webapp
-        run: pnpm exec playwright install chromium firefox webkit --with-deps
-
-      - name: Generate API
-        working-directory: webapp
-        run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
+      - name: Setup Playwright (Chromium Firefox WebKit)
+        uses: ./.github/actions/setup-playwright
+        with:
+          browsers: 'chromium firefox webkit'
+          with-deps: 'true'
 
       - name: Run all e2e tests
         working-directory: webapp
