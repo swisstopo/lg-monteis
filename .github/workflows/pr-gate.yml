@@ -368,6 +368,16 @@ jobs:
       - name: Setup Node Environment (Hits Cache)
         uses: ./.github/actions/setup-node-pnpm
 
+      # Warm the browser + apt-.deb caches once, before the matrix fans out.
+      # run-e2e-tests legs `needs:` this job, so they start after the caches are
+      # saved and all hit — no per-leg cold-download outlier on the first run of
+      # a new Playwright version.
+      - name: Warm Playwright caches (browsers + OS deps)
+        uses: ./.github/actions/setup-playwright
+        with:
+          browsers: 'chromium firefox webkit'
+          with-deps: 'true'
+
       - name: Generate Sources
         run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
 
