@@ -1,11 +1,10 @@
 package ch.swisstopo.monteis.core.infrastructure.javers;
 
-import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
+import ch.swisstopo.monteis.core.infrastructure.security.SecurityUtils;
+import java.util.Optional;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.javers.core.Javers;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 @Aspect
@@ -25,12 +24,7 @@ public class JaversAuditAspect {
       return;
     }
 
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    String currentUser = "SYSTEM";
-    if (authentication != null
-        && authentication.getPrincipal() instanceof MonteisPrincipal principal) {
-      currentUser = principal.getSubject().toString();
-    }
+    String currentUser = Optional.ofNullable(SecurityUtils.getCurrentUserHandle()).orElse("SYSTEM");
 
     javers.commit(currentUser, result);
   }

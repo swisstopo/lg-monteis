@@ -5,7 +5,7 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
+import ch.swisstopo.monteis.core.infrastructure.security.SecurityUtils;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
@@ -15,8 +15,6 @@ import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,7 +60,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Override
   @Transactional
   public Experiment create(Experiment experiment) {
-    String currentUser = getCurrentUserHandle();
+    String currentUser = SecurityUtils.getCurrentUserHandle();
 
     ExperimentsRecord createdExperiment = mapper.toRecord(experiment);
     dsl.attach(createdExperiment);
@@ -121,14 +119,5 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
               return mapper.toDomain(experimentsRecord);
             });
-  }
-
-  private String getCurrentUserHandle() {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication != null
-        && authentication.getPrincipal() instanceof MonteisPrincipal principal) {
-      return principal.getSubject().toString();
-    }
-    return null;
   }
 }
