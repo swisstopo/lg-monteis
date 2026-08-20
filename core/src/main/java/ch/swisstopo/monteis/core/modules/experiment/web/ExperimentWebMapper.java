@@ -20,5 +20,6 @@ public interface ExperimentWebMapper {
   ExperimentResponseDto toDto(Experiment domain, @Context LocalDate today);
 
   // --- Paged Ounbound Domain -> Paged API Serialization DTO Mappings ---
-  PagedResult<ExperimentResponseDto> toPagedDto(PagedResult<Experiment> pagedResult);
+  PagedResult<ExperimentResponseDto> toPagedDto(
+      PagedResult<Experiment> pagedResult, @Context LocalDate today);
 }
