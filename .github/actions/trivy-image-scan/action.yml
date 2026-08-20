@@ -1,0 +1,26 @@
+name: 'Trivy Image Scan'
+description: >-
+  Scans a locally-built container image for OS-layer (and image-baked)
+  CRITICAL/HIGH vulnerabilities and fails on findings. The scan contract is baked
+  in and MUST stay identical to the post-merge release scan
+  (reusable__build-push-image.yml) so a PR fails iff the post-merge image build
+  would fail — one contract, no pre/post drift.
+
+inputs:
+  image-ref:
+    description: 'Local image reference to scan (e.g. local-scan/core:<sha>)'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Trivy image scan
+      uses: aquasecurity/trivy-action@v0.36.0
+      with:
+        image-ref: ${{ inputs.image-ref }}
+        scan-type: 'image'
+        format: 'table'
+        exit-code: '1'
+        ignore-unfixed: true
+        severity: 'CRITICAL,HIGH'
+        trivyignores: '.trivyignore'
