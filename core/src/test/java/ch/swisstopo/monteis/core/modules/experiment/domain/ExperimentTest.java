@@ -127,7 +127,7 @@ class ExperimentTest {
   void should_set_status_to_upcoming_when_start_date_is_after_today() {
     // given
     Period upcomingPeriod =
-        new Period(LocalDate.of(2025, Month.JANUARY, 1), LocalDate.of(2026, 1, 1));
+        new Period(LocalDate.of(2025, Month.JANUARY, 1), LocalDate.of(2026, Month.JANUARY, 1));
     Experiment experiment = new Experiment("Name", "Owner", upcomingPeriod, "Desc");
 
     // when
@@ -141,7 +141,7 @@ class ExperimentTest {
   void should_set_status_to_active_when_today_is_between_start_and_end_dates() {
     // given
     Period activePeriod =
-        new Period(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2025, 1, 1));
+        new Period(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2025, Month.JANUARY, 1));
     Experiment experiment = new Experiment("Name", "Owner", activePeriod, "Desc");
 
     // when

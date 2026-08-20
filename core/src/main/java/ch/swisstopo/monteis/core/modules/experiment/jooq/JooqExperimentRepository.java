@@ -82,7 +82,6 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Override
   @Transactional
   public Experiment update(Experiment experiment) {
-    String currentUser = getCurrentUserHandle();
     // fetch existing
     ExperimentsRecord updatedRecord =
         dsl.selectFrom(EXPERIMENTS).where(EXPERIMENTS.ID.eq(experiment.getId())).fetchOne();
@@ -92,7 +91,6 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
     // map new properties to existing
     mapper.updateRecordFromDomain(experiment, updatedRecord);
-    updatedRecord.setOwner(currentUser);
 
     try {
       updatedRecord.update();

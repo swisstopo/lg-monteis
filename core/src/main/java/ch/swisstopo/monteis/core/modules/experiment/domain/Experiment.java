@@ -13,7 +13,6 @@ public class Experiment implements Auditable {
   @Id private Long id;
   private String name;
   private String owner;
-  private Status status;
   private Period period;
   private String comment;
   private Integer version;

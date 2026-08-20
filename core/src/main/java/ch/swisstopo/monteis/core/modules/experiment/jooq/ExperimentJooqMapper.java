@@ -14,7 +14,7 @@ public interface ExperimentJooqMapper {
   @Mapping(target = "period.start", source = "start")
   @Mapping(target = "period.end", source = "end")
   @Mapping(target = "owner", ignore = true)
-  @Mapping(target = "status", ignore = true)
+  @Mapping(target = "sensorCount", ignore = true)
   Experiment toDomain(ExperimentsRecord experimentsRecord);
 
   @Mapping(target = "start", source = "period.start")
@@ -23,6 +23,7 @@ public interface ExperimentJooqMapper {
 
   @Mapping(target = "start", source = "period.start")
   @Mapping(target = "end", source = "period.end")
+  @Mapping(target = "owner", ignore = true)
   void updateRecordFromDomain(
       Experiment experiment, @MappingTarget ExperimentsRecord experimentsRecord);
 }

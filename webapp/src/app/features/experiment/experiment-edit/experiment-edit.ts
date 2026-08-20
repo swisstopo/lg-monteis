@@ -20,6 +20,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { formatDate } from 'date-fns';
 import { ExperimentResponseDto, WriteExperimentDto } from '../../../core/generated';
 import { toErrorDtos } from '../../../core/http/api-error.model';
 import { ToastService } from '../../../core/notifications/toast.service';
@@ -71,7 +72,7 @@ function domainModelToFormModel(domainModel: ExperimentResponseDto): ExperimentF
 export default class ExperimentEdit {
   private readonly experimentService = inject(ExperimentService);
   private readonly toastService = inject(ToastService);
-  private readonly i18nService = inject(TranslateService);
+  private readonly translateService = inject(TranslateService);
   private readonly formErrorService = inject(FormErrorService);
   readonly dialogRef = inject<MatDialogRef<ExperimentEdit>>(MatDialogRef, {
     optional: true,
@@ -82,8 +83,8 @@ export default class ExperimentEdit {
   experiment = signal<ExperimentResponseDto | undefined>(undefined);
   title = computed(() =>
     this.experimentId()
-      ? this.i18nService.translate('experiment.edit.title.edit')()
-      : this.i18nService.translate('experiment.edit.title.create')(),
+      ? this.translateService.translate('experiment.edit.title.edit')()
+      : this.translateService.translate('experiment.edit.title.create')(),
   );
 
   private readonly syncSelectedExperiment = effect(() => {
@@ -142,7 +143,9 @@ export default class ExperimentEdit {
       if (start > end) {
         return {
           kind: 'bounds',
-          message: this.i18nService.translate('experiment.experimentDate.from.validation.bounds')(),
+          message: this.translateService.translate(
+            'experiment.experimentDate.from.validation.bounds',
+          )(),
         };
       }
       return undefined;
@@ -153,7 +156,9 @@ export default class ExperimentEdit {
       if (end < start) {
         return {
           kind: 'bounds',
-          message: this.i18nService.translate('experiment.experimentDate.to.validation.bounds')(),
+          message: this.translateService.translate(
+            'experiment.experimentDate.to.validation.bounds',
+          )(),
         };
       }
       return undefined;
@@ -175,7 +180,7 @@ export default class ExperimentEdit {
       try {
         await this.saveExperiment(experiment);
 
-        this.toastService.success(this.i18nService.instant('experiment.success'));
+        this.toastService.success(this.translateService.instant('experiment.success'));
 
         if (resetAfter) {
           this.resetForm();
@@ -207,8 +212,8 @@ export default class ExperimentEdit {
       name: formData.name,
       comment: cleanedComment,
       period: {
-        start: this.toLocalDateString(formData.period.start),
-        end: this.toLocalDateString(formData.period.end),
+        start: formatDate(formData.period.start, 'yyyy-MM-dd'),
+        end: formatDate(formData.period.end, 'yyyy-MM-dd'),
       },
       version: this.experiment()?.version ?? undefined,
     };
@@ -220,11 +225,5 @@ export default class ExperimentEdit {
     } else {
       return await this.experimentService.createExperiment(experiment);
     }
-  }
-
-  private toLocalDateString(date: Date): string {
-    const offset = date.getTimezoneOffset();
-    const localDate = new Date(date.getTime() - offset * 60 * 1000);
-    return localDate.toISOString().split('T')[0];
   }
 }

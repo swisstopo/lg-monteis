@@ -12,7 +12,6 @@ import org.mapstruct.Mapping;
 public interface ExperimentWebMapper {
   // --- Inbound API DTO -> Core Rich Domain Object Mappings ---
   @Mapping(target = "owner", ignore = true)
-  @Mapping(target = "status", ignore = true)
   Experiment toDomain(WriteExperimentDto dto);
 
   // --- Outbound Domain -> API Serialization DTO Mappings ---

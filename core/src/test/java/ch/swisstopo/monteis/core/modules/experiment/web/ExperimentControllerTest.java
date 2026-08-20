@@ -20,8 +20,8 @@ import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperim
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.LocalDate;
-import java.time.Month;
+import java.time.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -39,6 +39,17 @@ class ExperimentControllerTest {
   @MockitoBean private ExperimentService service;
 
   @MockitoBean private ExperimentWebMapper mapper;
+
+  @MockitoBean private Clock clock;
+
+  @BeforeEach
+  void setUpClock() {
+    // Set up LocalDate.now(clock) to be the exact date
+    Clock fixedClock = Clock.fixed(Instant.parse("2024-01-01T12:00:00Z"), ZoneId.of("UTC"));
+
+    given(clock.instant()).willReturn(fixedClock.instant());
+    given(clock.getZone()).willReturn(fixedClock.getZone());
+  }
 
   private final LocalDate referenceToday = LocalDate.of(2024, Month.JUNE, 15);
 
