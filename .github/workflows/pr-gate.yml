@@ -113,14 +113,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Java Environment (Hits Cache)
-        uses: ./.github/actions/setup-java-maven
-
-      - name: Compile internal dependencies
-        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
-
-      - name: Build Spring Boot image (buildpacks)
-        run: mvn -pl ${{ matrix.service }} spring-boot:build-image -Dspring-boot.build-image.imageName=local-scan/${{ matrix.service }}:${{ github.sha }} -DskipTests
+      - name: Build Spring Boot image
+        uses: ./.github/actions/build-image
+        with:
+          service: ${{ matrix.service }}
+          image-ref: 'local-scan/${{ matrix.service }}:${{ github.sha }}'
 
       - name: Trivy image scan (OS layer)
         uses: ./.github/actions/trivy-image-scan
