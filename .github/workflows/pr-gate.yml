@@ -315,9 +315,10 @@ jobs:
       - name: Generate Sources
         run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
 
-      - name: Install Node Modules and Playwright
-        working-directory: webapp
-        run: pnpm exec playwright install chromium --with-deps
+      - name: Setup Playwright (Chromium)
+        uses: ./.github/actions/setup-playwright
+        with:
+          browsers: chromium
 
       - name: Generate API
         working-directory: webapp
