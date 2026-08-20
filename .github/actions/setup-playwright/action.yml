@@ -1,0 +1,62 @@
+name: 'Setup Playwright'
+description: 'Installs Playwright browsers with caching. Requires setup-node-pnpm to have run first.'
+
+inputs:
+  browsers:
+    description: 'Browsers to install (space-separated)'
+    required: false
+    default: 'chromium'
+  with-deps:
+    description: >-
+      Install Playwright OS dependencies via apt (--with-deps / install-deps).
+      Default false: on ubuntu-24.04 the chromium runtime libraries are already
+      present on the runner, and --with-deps only pulls extra fonts from a
+      throttled apt mirror (observed 21 MB @ 23 kB/s = ~15 min). Set true only
+      for a browser/engine whose real libraries are NOT preinstalled (verify
+      against the job log first).
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Resolve Playwright version
+      id: pw
+      shell: bash
+      working-directory: webapp
+      run: |
+        VERSION=$(pnpm exec playwright --version | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+        if [ -z "$VERSION" ]; then
+          echo "::error::Could not resolve Playwright version from 'pnpm exec playwright --version'" >&2
+          exit 1
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Cache Playwright browsers
+      id: pw-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ steps.pw.outputs.version }}-${{ inputs.browsers }}
+
+    # Cache miss: download the browser binaries (fast CDN, ~10s). Append
+    # --with-deps ONLY when explicitly requested — see the with-deps input note.
+    - name: Install Playwright browsers (no OS deps)
+      if: steps.pw-cache.outputs.cache-hit != 'true' && inputs.with-deps != 'true'
+      shell: bash
+      working-directory: webapp
+      run: pnpm exec playwright install ${{ inputs.browsers }}  # browsers is a space-separated list; intentional word-split into positional args
+
+    - name: Install Playwright browsers and OS dependencies
+      if: steps.pw-cache.outputs.cache-hit != 'true' && inputs.with-deps == 'true'
+      shell: bash
+      working-directory: webapp
+      run: pnpm exec playwright install ${{ inputs.browsers }} --with-deps  # word-split intentional
+
+    # Cache hit: browsers restored. Only touch apt if OS deps were explicitly
+    # requested (they do not persist across runner VMs). Default path is a no-op.
+    - name: Install Playwright OS dependencies (cache hit)
+      if: steps.pw-cache.outputs.cache-hit == 'true' && inputs.with-deps == 'true'
+      shell: bash
+      working-directory: webapp
+      run: pnpm exec playwright install-deps ${{ inputs.browsers }}  # word-split intentional
