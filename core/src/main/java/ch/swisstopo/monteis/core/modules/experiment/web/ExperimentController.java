@@ -103,8 +103,10 @@ public class ExperimentController {
       @RequestParam @Min(0) int endRow,
       @RequestParam(required = false) String sortModel,
       @RequestParam(required = false) String filterModel) {
+    LocalDate today = LocalDate.now(clock);
+
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
     PagedResult<Experiment> domainResult = service.getExperiments(pagedRequestParser.parse(raw));
-    return mapper.toPagedDto(domainResult);
+    return mapper.toPagedDto(domainResult, today);
   }
 }

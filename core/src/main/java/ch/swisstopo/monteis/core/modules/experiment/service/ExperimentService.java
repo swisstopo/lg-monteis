@@ -30,15 +30,6 @@ public class ExperimentService {
   }
 
   public PagedResult<Experiment> getExperiments(PagedRequest pagedRequest) {
-    PagedResult<Experiment> pagedResult = repository.getExperiments(pagedRequest);
-
-    if (pagedResult != null && pagedResult.rows() != null) {
-      LocalDate today = LocalDate.now();
-
-      // Use .rows() to access the list inside your record
-      pagedResult.rows().forEach(experiment -> experiment.calculateAndSetStatus(today));
-    }
-
-    return pagedResult;
+    return repository.getExperiments(pagedRequest);
   }
 }
