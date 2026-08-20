@@ -698,7 +698,7 @@ Das Backend wird strikt in verschiedene Test-Ebenen unterteilt (Test-Pyramide), 
 Um die isolierten Komponenten-Tests zu komplementieren und das Zusammenspiel des gesamten Systems (Frontend + Backend + Datenbank) zu validieren, setzen wir ebenenübergreifende E2E-Tests ein.
 
 * **Technologie:** **Playwright**
-* **Infrastruktur & Setup:** Um eine verlässliche und reproduzierbare Testumgebung für die E2E-Tests zu schaffen, implementieren wir ein dediziertes **Spring Boot Testing-Profil**. Startet man das Backend mit diesem Profil, fährt es automatisch die benötigten Testcontainers (PostgreSQL & TimeScaleDB) hoch und befüllt sie via Flyway. Das Frontend kann anschliessend gegen dieses vollständig gekapselte Backend getestet werden.
+* **Infrastruktur & Setup:** Um eine verlässliche und reproduzierbare Testumgebung für die E2E-Tests zu schaffen, implementieren wir ein dediziertes **Spring Boot Testing-Profil**. Startet man das Backend mit diesem Profil, fährt es automatisch die benötigten Testcontainers (PostgreSQL, TimeScaleDB und Kafka) hoch und befüllt sie via Flyway, wodurch auch der Sensor-Config-Publish-Flow (`internal-sensor-config`) End-to-End getestet werden kann. Das Frontend kann anschliessend gegen dieses vollständig gekapselte Backend getestet werden.
 * **Fokus:** Getestet wird das Verhalten der Applikation anhand der wichtigsten User-Workflows (z. B. Sensor-Filterung, Sensor erstellen, Experiment erstellen, etc.). Auch hier steht das funktionale Verhalten im Vordergrund, nicht das Layout.
 
 === Entwickler-Workflow & CI/CD Pipeline

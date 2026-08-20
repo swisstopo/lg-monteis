@@ -27,6 +27,7 @@ env:
   TEST_CONTAINER_IMAGE: ${{ vars.TEST_CONTAINER_IMAGE }}
   TIMESCALE_DB_IMAGE: ${{ vars.TIMESCALE_DB_IMAGE }}
   POSTGRES_DB_IMAGE: ${{ vars.POSTGRES_DB_IMAGE }}
+  KAFKA_IMAGE: ${{ vars.KAFKA_IMAGE }}
 
 permissions: read-all
 
@@ -394,6 +395,11 @@ jobs:
             uses: ./.github/actions/global-docker-cache
             with:
               image: ${{ env.POSTGRES_DB_IMAGE }}
+
+          - name: Load Kafka Docker Cache
+            uses: ./.github/actions/global-docker-cache
+            with:
+              image: ${{ env.KAFKA_IMAGE }}
 
       - name: Generate Sources
         run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false

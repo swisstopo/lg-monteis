@@ -5,6 +5,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 
+import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class SensorServiceTest {
   @Mock private SensorRepository repository;
+  @Mock private SensorConfigPublisher configPublisher;
 
   @InjectMocks private SensorService service;
 
@@ -32,6 +34,7 @@ class SensorServiceTest {
 
     // then
     then(repository).should().create(inputSensor);
+    then(configPublisher).should().publish(expectedSensor);
     assertEquals(expectedSensor, actualSensor);
   }
 
@@ -48,6 +51,7 @@ class SensorServiceTest {
 
     // then
     then(repository).should().update(inputSensor);
+    then(configPublisher).should().publish(expectedSensor);
     assertEquals(expectedSensor, actualSensor);
   }
 }
