@@ -1,0 +1,93 @@
+name: 'Setup Playwright'
+description: 'Installs Playwright browsers with caching. Requires setup-node-pnpm to have run first.'
+
+inputs:
+  browsers:
+    description: 'Browsers to install (space-separated)'
+    required: false
+    default: 'chromium'
+  with-deps:
+    description: >-
+      Install Playwright OS dependencies via apt (--with-deps / install-deps).
+      Default false: on ubuntu-24.04 the chromium runtime libraries are already
+      present on the runner, and --with-deps only pulls extra fonts from a
+      throttled apt mirror (observed 21 MB @ 23 kB/s = ~15 min). Set true only
+      for a browser/engine whose real libraries are NOT preinstalled (verify
+      against the job log first).
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Resolve Playwright version
+      id: pw
+      shell: bash
+      working-directory: webapp
+      run: |
+        VERSION=$(pnpm exec playwright --version | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+        if [ -z "$VERSION" ]; then
+          echo "::error::Could not resolve Playwright version from 'pnpm exec playwright --version'" >&2
+          exit 1
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Cache Playwright browsers
+      id: pw-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ steps.pw.outputs.version }}-${{ inputs.browsers }}
+
+    # apt-.deb archive cache (ADR-1): active only when with-deps=true. Staged in
+    # a user-owned dir to avoid caching root-owned /var/cache/apt/archives directly.
+    # Key on Playwright version + OS — the OS-dep set is stable per PW version.
+    - name: Cache Playwright apt .deb archives
+      id: apt-cache
+      if: inputs.with-deps == 'true'
+      uses: actions/cache@v6
+      with:
+        path: ~/pw-apt-cache
+        key: ${{ runner.os }}-playwright-aptdeb-${{ steps.pw.outputs.version }}
+
+    # Pre-seed: copy cached .debs into /var/cache/apt/archives so apt uses them
+    # instead of downloading. Runs on both browser-cache paths (miss and hit).
+    - name: Pre-seed apt archive cache
+      if: inputs.with-deps == 'true'
+      shell: bash
+      run: |
+        sudo mkdir -p /var/cache/apt/archives
+        sudo cp ~/pw-apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+
+    # Cache miss: download the browser binaries (fast CDN, ~10s). Append
+    # --with-deps ONLY when explicitly requested — see the with-deps input note.
+    - name: Install Playwright browsers (no OS deps)
+      if: steps.pw-cache.outputs.cache-hit != 'true' && inputs.with-deps != 'true'
+      shell: bash
+      working-directory: webapp
+      run: pnpm exec playwright install ${{ inputs.browsers }}  # browsers is a space-separated list; intentional word-split into positional args
+
+    - name: Install Playwright browsers and OS dependencies
+      if: steps.pw-cache.outputs.cache-hit != 'true' && inputs.with-deps == 'true'
+      shell: bash
+      working-directory: webapp
+      run: pnpm exec playwright install ${{ inputs.browsers }} --with-deps  # word-split intentional
+
+    # Cache hit: browsers restored. Only touch apt if OS deps were explicitly
+    # requested (they do not persist across runner VMs). Default path is a no-op.
+    - name: Install Playwright OS dependencies (cache hit)
+      if: steps.pw-cache.outputs.cache-hit == 'true' && inputs.with-deps == 'true'
+      shell: bash
+      working-directory: webapp
+      run: pnpm exec playwright install-deps ${{ inputs.browsers }}  # word-split intentional
+
+    # Post-capture: copy all .debs from /var/cache/apt/archives into the user-owned
+    # staging dir so actions/cache can save them. Chown required: apt writes as root.
+    # Runs on both browser-cache paths after OS-dep install completes.
+    - name: Capture apt .deb archives for cache
+      if: inputs.with-deps == 'true'
+      shell: bash
+      run: |
+        mkdir -p ~/pw-apt-cache
+        sudo cp /var/cache/apt/archives/*.deb ~/pw-apt-cache/ 2>/dev/null || true
+        sudo chown -R "$(id -u):$(id -g)" ~/pw-apt-cache

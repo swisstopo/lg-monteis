@@ -74,30 +74,16 @@ jobs:
       - name: "[BUILD]: Checkout Code"
         uses: actions/checkout@v7
 
-      - name: "[BUILD]: Setup Java Environment"
-        uses: ./.github/actions/setup-java-maven
-
-      - name: "[BUILD]: Compile Internal Dependencies"
-        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
-
       - name: "[BUILD]: Build Spring Boot Image"
-        env:
-          VERSION: ${{ needs.evaluate-version.outputs.version }}
-        run: |
-          mvn -pl ${{ env.SERVICE }} spring-boot:build-image \
-            -Dspring-boot.build-image.imageName=local-registry/${{ env.SERVICE }}:$VERSION \
-            -DskipTests
+        uses: ./.github/actions/build-image
+        with:
+          service: ${{ env.SERVICE }}
+          image-ref: 'local-registry/${{ env.SERVICE }}:${{ needs.evaluate-version.outputs.version }}'
 
       - name: "[SECURITY]: Run Trivy Image Scan"
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: ./.github/actions/trivy-image-scan
         with:
           image-ref: 'local-registry/${{ env.SERVICE }}:${{ needs.evaluate-version.outputs.version }}'
-          scan-type: 'image'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
-          trivyignores: '.trivyignore'
 
       - name: "[PUSH]: Tag and push docker image to Amazon ECR"
         env:

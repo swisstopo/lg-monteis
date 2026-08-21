@@ -80,8 +80,8 @@ jobs:
       - name: Download Maven Dependencies
         run: mvn dependency:go-offline
 
-  security-scan:
-    name: Trivy Security Scan
+  security-scan-source-tree:
+    name: Trivy Security Scan Source Tree
     needs: warmup-caches
     runs-on: ubuntu-24.04
     permissions:
@@ -99,6 +99,30 @@ jobs:
 
       - name: Execute Security Scan
         uses: ./.github/actions/trivy-scan
+
+  security-scan-os-layer-pre-release:
+    name: Trivy Security Scan OS Layer (Pre-Release)
+    needs: warmup-caches
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [core, pipeline]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build Spring Boot image
+        uses: ./.github/actions/build-image
+        with:
+          service: ${{ matrix.service }}
+          image-ref: 'local-scan/${{ matrix.service }}:${{ github.sha }}'
+
+      - name: Trivy image scan (OS layer)
+        uses: ./.github/actions/trivy-image-scan
+        with:
+          image-ref: 'local-scan/${{ matrix.service }}:${{ github.sha }}'
 
   format-backend:
     name: Format Backend
@@ -315,9 +339,10 @@ jobs:
       - name: Generate Sources
         run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
 
-      - name: Install Node Modules and Playwright
-        working-directory: webapp
-        run: pnpm exec playwright install chromium --with-deps
+      - name: Setup Playwright (Chromium)
+        uses: ./.github/actions/setup-playwright
+        with:
+          browsers: chromium
 
       - name: Generate API
         working-directory: webapp
@@ -330,11 +355,47 @@ jobs:
   prepare-e2e-tests:
     name: Prepare E2E test file to run
     if: contains(github.event.pull_request.labels.*.name, 'e2e-tests')
+    needs: warmup-caches
     runs-on: ubuntu-24.04
     outputs:
       file_list: ${{ steps.generate-file-list.outputs.file_list }}
     steps:
       - uses: actions/checkout@v7
+      
+      - parallel:
+        - name: Setup Java Environment (Hits Cache)
+          uses: ./.github/actions/setup-java-maven
+
+        - name: Setup Node Environment (Hits Cache)
+          uses: ./.github/actions/setup-node-pnpm
+
+      # Warm the browser + apt-.deb caches once, before the matrix fans out.
+      # run-e2e-tests legs `needs:` this job, so they start after the caches are
+      # saved and all hit — no per-leg cold-download outlier on the first run of
+      # a new Playwright version.
+      - name: Warm Playwright caches (browsers + OS deps)
+        uses: ./.github/actions/setup-playwright
+        with:
+          browsers: 'chromium firefox webkit'
+          with-deps: 'true'
+
+      - name: Generate Sources
+        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
+
+      - name: Generate API
+        working-directory: webapp
+        run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
+
+      - name: Upload e2e build context
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-build-context
+          retention-days: 1
+          path: |
+            **/target/classes/**
+            **/target/test-classes/**
+            core/target/openapi/openapi.json
+            webapp/src/app/core/generated/**
 
       - name: Install jq (JSON processor)
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -395,16 +456,16 @@ jobs:
             with:
               image: ${{ env.POSTGRES_DB_IMAGE }}
 
-      - name: Generate Sources
-        run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
+      - name: Download e2e build context
+        uses: actions/download-artifact@v8
+        with:
+          name: e2e-build-context
 
-      - name: Install Node Modules and Playwright
-        working-directory: webapp
-        run: pnpm exec playwright install chromium firefox webkit --with-deps
-
-      - name: Generate API
-        working-directory: webapp
-        run: pnpm exec openapi-generator-cli generate -g typescript-angular -i ../core/target/openapi/openapi.json -o src/app/core/generated
+      - name: Setup Playwright (Chromium Firefox WebKit)
+        uses: ./.github/actions/setup-playwright
+        with:
+          browsers: 'chromium firefox webkit'
+          with-deps: 'true'
 
       - name: Run all e2e tests
         working-directory: webapp

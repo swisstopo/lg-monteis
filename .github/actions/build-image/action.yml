@@ -1,0 +1,32 @@
+name: 'Build Spring Boot Image'
+description: >-
+  Builds a service's Spring Boot container image via Cloud Native Buildpacks,
+  reusing the warm Maven cache. Shared by the pre-merge OS-layer scan
+  (pr-gate.yml) and the post-merge release build (reusable__build-push-image.yml)
+  so the image assembly is identical in both — one build path, no drift.
+  Requires the repository to be checked out first.
+
+inputs:
+  service:
+    description: 'Maven module / service to build (e.g. core, pipeline)'
+    required: true
+  image-ref:
+    description: 'Image name:tag to build into the local Docker daemon'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Java Environment (Hits Cache)
+      uses: ./.github/actions/setup-java-maven
+
+    - name: Compile internal dependencies
+      shell: bash
+      run: mvn -T 2C install -DskipTests -Dopenapi.codegen.skip=false
+
+    - name: Build Spring Boot image (buildpacks)
+      shell: bash
+      run: >-
+        mvn -pl ${{ inputs.service }} spring-boot:build-image
+        -Dspring-boot.build-image.imageName=${{ inputs.image-ref }}
+        -DskipTests

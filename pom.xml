@@ -49,6 +49,15 @@
          runner so CI actually exercises the version that migrates cloud RDS/TimescaleDB. -->
     <flyway.version>12.11.0</flyway.version>
 
+    <!-- Override the Spring Boot BOM's managed netty.version to pull the patched
+         io.netty 4.2.16.Final. Fixes 5 HIGH DoS CVEs in netty-codec-* baked into
+         the runtime image (CVE-2026-59901 compression bzip2 infinite loop;
+         CVE-2026-55831/-55833/-56745 codec-http SPDY DoS; CVE-2026-56819 codec-http2
+         HTTP/2 DATA-frame memory leak), caught by the pre-release image scan. These
+         are source-dependency CVEs, so they are fixed here, never waived in
+         .trivyignore. Drop this override once the Spring Boot BOM manages >= 4.2.16. -->
+    <netty.version>4.2.16.Final</netty.version>
+
     <jooq.codegen.skip>false</jooq.codegen.skip>
   </properties>
 
