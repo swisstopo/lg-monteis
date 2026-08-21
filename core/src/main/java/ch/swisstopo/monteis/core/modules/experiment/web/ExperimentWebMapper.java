@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
@@ -17,4 +18,8 @@ public interface ExperimentWebMapper {
   // --- Outbound Domain -> API Serialization DTO Mappings ---
   @Mapping(target = "status", expression = "java(domain.getStatus(today))")
   ExperimentResponseDto toDto(Experiment domain, @Context LocalDate today);
+
+  // --- Paged Ounbound Domain -> Paged API Serialization DTO Mappings ---
+  PagedResult<ExperimentResponseDto> toPagedDto(
+      PagedResult<Experiment> pagedResult, @Context LocalDate today);
 }
