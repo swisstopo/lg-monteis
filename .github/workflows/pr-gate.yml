@@ -361,12 +361,13 @@ jobs:
       file_list: ${{ steps.generate-file-list.outputs.file_list }}
     steps:
       - uses: actions/checkout@v7
+      
+      - parallel:
+        - name: Setup Java Environment (Hits Cache)
+          uses: ./.github/actions/setup-java-maven
 
-      - name: Setup Java Environment (Hits Cache)
-        uses: ./.github/actions/setup-java-maven
-
-      - name: Setup Node Environment (Hits Cache)
-        uses: ./.github/actions/setup-node-pnpm
+        - name: Setup Node Environment (Hits Cache)
+          uses: ./.github/actions/setup-node-pnpm
 
       # Warm the browser + apt-.deb caches once, before the matrix fans out.
       # run-e2e-tests legs `needs:` this job, so they start after the caches are
