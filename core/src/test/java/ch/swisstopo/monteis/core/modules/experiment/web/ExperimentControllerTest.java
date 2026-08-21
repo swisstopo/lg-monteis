@@ -11,7 +11,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
@@ -22,6 +24,8 @@ import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.*;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,49 +102,58 @@ class ExperimentControllerTest {
     then(mapper).should().toDto(eq(expectedExperiment), any(LocalDate.class));
   }
 
-  //  @Test
-  //  void should_route_get_experiments_and_return_paged_result() throws Exception {
-  //    // given
-  //    ExperimentResponseDto dto1 =
-  //        new ExperimentResponseDto(
-  //            1L,
-  //            "EXP-01",
-  //            "A test experiment",
-  //            new PeriodDto(
-  //                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-  //            Status.ACTIVE,
-  //            2,
-  //            1);
-  //
-  //    given(pagedRequestParser.parse(any()))
-  //        .willReturn(
-  //            new ch.swisstopo.monteis.core.infrastructure.query.PagedRequest(
-  //                0, 20, java.util.List.of(), java.util.Map.of()));
-  //    given(queryService.getExperiments(any()))
-  //        .willReturn(
-  //            new ch.swisstopo.monteis.core.infrastructure.query.PagedResult<>(
-  //                java.util.List.of(dto1), 1));
-  //
-  //    // when / then
-  //    mockMvc
-  //        .perform(
-  //            get("/api/experiments")
-  //                .queryParam("startRow", "0")
-  //                .queryParam("endRow", "20")
-  //                .with(jwt())
-  //                .contentType(MediaType.APPLICATION_JSON))
-  //        .andExpect(status().isOk())
-  //        .andExpect(jsonPath("$.totalCount").value(1))
-  //        .andExpect(jsonPath("$.rows[0].id").value(dto1.id()))
-  //        .andExpect(jsonPath("$.rows[0].name").value(dto1.name()))
-  //        .andExpect(jsonPath("$.rows[0].comment").value(dto1.comment()))
-  //        .andExpect(jsonPath("$.rows[0].status").value(dto1.status().name()));
-  //
-  //    // Verify the read flow bypasses the service/mapper entirely
-  //    then(queryService).should().getExperiments(any());
-  //    then(service).shouldHaveNoInteractions();
-  //    then(mapper).shouldHaveNoInteractions();
-  //  }
+  @Test
+  void should_route_get_experiments_and_return_paged_result() throws Exception {
+    // given
+    LocalDate startDate = LocalDate.of(2024, Month.JANUARY, 1);
+    LocalDate endDate = LocalDate.of(2024, Month.DECEMBER, 31);
+
+    Experiment experiment1 =
+        new Experiment(1L, "EXP-01", new Period(startDate, endDate), "A test experiment", 2, 1);
+
+    PagedRequest parsedRequest = new PagedRequest(0, 20, List.of(), Map.of());
+    PagedResult<Experiment> domainResult = new PagedResult<>(List.of(experiment1), 1);
+
+    ExperimentResponseDto responseDto =
+        new ExperimentResponseDto(
+            1L,
+            "EXP-01",
+            "A test experiment",
+            new PeriodDto(startDate, endDate),
+            Status.HISTORIC, // Example status
+            2,
+            1);
+    PagedResult<ExperimentResponseDto> dtoResult = new PagedResult<>(List.of(responseDto), 1);
+
+    given(pagedRequestParser.parse(any())).willReturn(parsedRequest);
+    given(service.getExperiments(parsedRequest)).willReturn(domainResult);
+    given(mapper.toPagedDto(eq(domainResult), any(LocalDate.class))).willReturn(dtoResult);
+
+    // when / then
+    mockMvc
+        .perform(
+            get("/api/experiments")
+                .queryParam("startRow", "0")
+                .queryParam("endRow", "20")
+                .with(jwt()) // Ensure this matches your security test setup
+                .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalCount").value(1))
+        .andExpect(jsonPath("$.rows[0].id").value(1L))
+        .andExpect(jsonPath("$.rows[0].name").value("EXP-01"))
+        .andExpect(jsonPath("$.rows[0].comment").value("A test experiment"))
+        .andExpect(jsonPath("$.rows[0].version").value(2))
+        .andExpect(jsonPath("$.rows[0].sensorCount").value(1))
+        .andExpect(jsonPath("$.rows[0].status").value("HISTORIC"));
+
+    // Verify interaction sequence
+    then(pagedRequestParser).should().parse(any());
+    then(service).should().getExperiments(parsedRequest);
+    then(mapper).should().toPagedDto(eq(domainResult), any(LocalDate.class));
+
+    then(service).shouldHaveNoMoreInteractions();
+    then(mapper).shouldHaveNoMoreInteractions();
+  }
 
   @Test
   void should_route_create_experiment_and_verify_output() throws Exception {
