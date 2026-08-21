@@ -1,5 +1,20 @@
 <div class="metrics-panel">
-  <app-table-header [selectedSensorId]="selectedSensorId()"></app-table-header>
+  <app-table-header (searchAction)="onSearch($event)">
+    <button read-action matButton="text" (click)="onDownload()">
+      <mat-icon fontIcon="download"></mat-icon>
+      {{ 'sensor.tableHeader.download' | translate }}
+    </button>
+
+    <button write-action matButton="tonal" (click)="onCreate()">
+      <mat-icon fontIcon="add"></mat-icon>
+      {{ 'sensor.tableHeader.create' | translate }}
+    </button>
+
+    <button write-action matButton="filled" [disabled]="!selectedSensorId()" (click)="onEdit()">
+      <mat-icon fontIcon="edit"></mat-icon>
+      {{ 'sensor.tableHeader.edit' | translate }}
+    </button>
+  </app-table-header>
   @if (loadError()) {
     <p class="error-text">{{ 'sensor.error.connection' | translate }}</p>
   } @else {

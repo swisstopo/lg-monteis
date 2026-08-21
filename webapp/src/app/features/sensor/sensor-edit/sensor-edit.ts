@@ -301,13 +301,16 @@ export default class SensorEdit {
   }
 
   private buildPayload(formData: SensorFormData): WriteSensorDto {
+    // Trim whitespace and convert empty comments to undefined
+    const cleanedComment = formData.comment?.trim() || undefined;
+
     return {
       id: this.sensor()?.id ?? undefined,
       code: formData.code,
       name: formData.name,
       unit: formData.unit,
       type: { name: formData.type.name },
-      comment: formData.comment ?? undefined,
+      comment: cleanedComment,
       coordinates: {
         x: Number(formData.coordinates.x),
         y: Number(formData.coordinates.y),

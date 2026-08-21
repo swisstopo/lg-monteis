@@ -1,0 +1,18 @@
+<div class="table-header">
+  <mat-form-field class="search-field" appearance="fill" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input
+      matInput
+      type="search"
+      [placeholder]="translationPrefix + '.search' | translate"
+      (input)="onSearch($event)"
+    />
+  </mat-form-field>
+
+  <div class="header-actions">
+    <ng-content select="[read-action]"></ng-content>
+    @if (permissions.canWrite()) {
+      <ng-content select="[write-action]"></ng-content>
+    }
+  </div>
+</div>
