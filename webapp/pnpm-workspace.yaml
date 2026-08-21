@@ -16,7 +16,7 @@ allowBuilds:
   msgpackr-extract: false
 overrides:
   # GHSA-f23p-vx2j-j53r, GHSA-8j4g-w8fx-2239, GHSA-54fx-42gc-7vw4, GHSA-79qm-7rj5-m7r9 (Hono SSR/CORS/language/proxy); pulled in by @modelcontextprotocol/sdk via @angular/cli
-  hono@^4: 4.13.2
+  hono@^4: 4.13.3
   # GHSA-frvp-7c67-39w9 (@hono/node-server path traversal), GHSA-9mqv-5hh9-4cgg (@hono/node-server DoS via aborted WebSocket); pulled in by @modelcontextprotocol/sdk via @angular/cli
   '@hono/node-server@^1': 2.1.1
   # CVE-2026-14257 / GHSA-rgw5-rvv9-x895 (brace-expansion DoS); pulled in by minimatch@9 via ts-morph/@analogjs/vite-plugin-angular
