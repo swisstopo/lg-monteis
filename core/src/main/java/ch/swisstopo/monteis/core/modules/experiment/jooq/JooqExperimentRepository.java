@@ -5,10 +5,10 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
@@ -38,6 +38,8 @@ public class JooqExperimentRepository implements ExperimentRepository {
   private final ExperimentJooqMapper mapper;
   private final CurrentUserProvider currentUserProvider;
 
+  private static final String SENSOR_COUNT_FIELD_NAME = "sensorCount";
+
   public JooqExperimentRepository(
       DSLContext dsl, ExperimentJooqMapper mapper, CurrentUserProvider currentUserProvider) {
     this.mapper = mapper;
@@ -59,7 +61,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
             DSL.selectCount()
                 .from(EXPERIMENT_SENSOR)
                 .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
-                .asField("sensorCount"))
+                .asField(SENSOR_COUNT_FIELD_NAME))
         .from(EXPERIMENTS)
         .where(EXPERIMENTS.ID.eq(experimentId))
         .fetchOne(
@@ -70,7 +72,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
                     new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
                     experiment.get(EXPERIMENTS.COMMENT),
                     experiment.get(EXPERIMENTS.VERSION),
-                    experiment.get("sensorCount", Integer.class)));
+                    experiment.get(SENSOR_COUNT_FIELD_NAME, Integer.class)));
   }
 
   @Override
@@ -93,7 +95,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
                 DSL.selectCount()
                     .from(EXPERIMENT_SENSOR)
                     .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
-                    .asField("sensorCount"))
+                    .asField(SENSOR_COUNT_FIELD_NAME))
             .from(EXPERIMENTS)
             .where(criteria.condition())
             .orderBy(criteria.sortFields())
@@ -108,7 +110,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
                             experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
                         experiment.get(EXPERIMENTS.COMMENT),
                         experiment.get(EXPERIMENTS.VERSION),
-                        experiment.get("sensorCount", Integer.class)));
+                        experiment.get(SENSOR_COUNT_FIELD_NAME, Integer.class)));
 
     int totalCount =
         dsl.fetchCount(dsl.select(EXPERIMENTS.ID).from(EXPERIMENTS).where(criteria.condition()));
