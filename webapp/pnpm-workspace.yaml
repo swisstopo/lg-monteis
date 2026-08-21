@@ -24,7 +24,7 @@ overrides:
   # CVE-2026-14257 / GHSA-rgw5-rvv9-x895 (brace-expansion DoS); pulled in by minimatch@10 via eslint/typescript-eslint/glob
   brace-expansion@^5: 5.0.9
   # CVE-2026-18446 (fast-uri host confusion); pulled in by ajv via eslint/typescript-eslint
-  fast-uri@^3: 3.1.5
+  fast-uri@^3: 4.1.2
   # CVE-2026-69192 (ip-address SSRF); pulled in by @modelcontextprotocol/sdk via @angular/cli and socks
   ip-address@^10: 10.5.0
 minimumReleaseAgeExclude:
