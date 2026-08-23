@@ -69,7 +69,7 @@ jobs:
 
       - name: "[AWS]: Login to Amazon ECR"
         id: login-ecr-public
-        uses: aws-actions/amazon-ecr-login@v2.1.6
+        uses: aws-actions/amazon-ecr-login@v2.1.7
 
       - name: "[BUILD]: Checkout Code"
         uses: actions/checkout@v7
