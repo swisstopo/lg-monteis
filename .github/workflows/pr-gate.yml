@@ -475,6 +475,10 @@ jobs:
 
       - name: Run all e2e tests
         working-directory: webapp
+        env:
+          # Surfaces webServer (core/webapp) stdout+stderr in the Action log — the html
+          # reporter otherwise swallows it, hiding the real cause of webServer startup failures.
+          DEBUG: pw:webserver
         run: pnpm run e2e:headless ${{ matrix.file }}
 
   # noinspection YAMLSchemaValidation
