@@ -1,8 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.FORMULAS;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSORS;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_TYPES;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 import static org.jooq.Records.mapping;
 import static org.jooq.impl.DSL.row;
 
