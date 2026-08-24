@@ -1,11 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.jooq;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
-import ch.swisstopo.monteis.core.infrastructure.query.FilterModelItem;
-import ch.swisstopo.monteis.core.infrastructure.query.NumberFilterModel;
-import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
-import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
-import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
+import ch.swisstopo.monteis.core.infrastructure.query.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -69,6 +66,7 @@ public final class PagedRequestJooqTranslator {
     return switch (model) {
       case TextFilterModel text -> textCondition(field, text);
       case NumberFilterModel number -> numberCondition(field, number);
+      case DateFilterModel date -> dateCondition(field, date);
     };
   }
 
@@ -105,6 +103,28 @@ public final class PagedRequestJooqTranslator {
       case "notBlank" -> field.isNotNull();
       case null, default ->
           throw new InvalidPagedRequestException("Unsupported number filter type: " + model.type());
+    };
+  }
+
+  private static Condition dateCondition(Field<?> raw, DateFilterModel model) {
+    Field<LocalDate> field = raw.cast(LocalDate.class);
+
+    LocalDate fromDate = model.dateFrom() != null ? LocalDate.parse(model.dateFrom()) : null;
+
+    LocalDate toDate = model.dateTo() != null ? LocalDate.parse(model.dateTo()) : null;
+
+    return switch (model.type()) {
+      case "equals" -> field.eq(fromDate);
+      case "notEqual" -> field.ne(fromDate);
+      case "lessThan" -> field.lt(fromDate);
+      case "lessThanOrEqual" -> field.le(fromDate);
+      case "greaterThan" -> field.gt(fromDate);
+      case "greaterThanOrEqual" -> field.ge(fromDate);
+      case "inRange" -> field.between(fromDate, toDate);
+      case "blank" -> field.isNull();
+      case "notBlank" -> field.isNotNull();
+      case null, default ->
+          throw new InvalidPagedRequestException("Unsupported date filter type: " + model.type());
     };
   }
 
