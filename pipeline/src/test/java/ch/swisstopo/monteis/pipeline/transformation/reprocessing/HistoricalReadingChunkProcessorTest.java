@@ -10,6 +10,8 @@ import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
+import ch.swisstopo.monteis.pipeline.transformation.ChunkProcessingResult;
+import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
@@ -68,14 +70,15 @@ class HistoricalReadingChunkProcessorTest {
     ActiveSensorConfig config =
         new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 2));
 
-    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize))
+    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize, null))
         .willReturn(List.of());
 
     // when
-    int processedCount = chunkService.processNextChunk(config);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
 
     // then
-    assertThat(processedCount).isZero();
+    assertThat(result.processedCount()).isZero();
+    assertThat(result.cursor()).isNull();
     then(transformationOrchestrator).shouldHaveNoInteractions();
     then(sensorReadingRepository).should(never()).bulkUpdate(any());
   }
@@ -90,20 +93,23 @@ class HistoricalReadingChunkProcessorTest {
     SensorReadingRecord oldRecord =
         new SensorReadingRecord(timestamp, "deviceA", 10.0, 15.0, (short) 1, RangeCategory.correct);
 
-    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize))
+    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize, null))
         .willReturn(List.of(oldRecord));
 
     SensorReadingRecord transformedRecord =
         new SensorReadingRecord(timestamp, "deviceA", 10.0, 20.0, (short) 2, RangeCategory.correct);
 
-    given(transformationOrchestrator.transform("deviceA", 10.0, timestamp, config))
+    given(
+            transformationOrchestrator.transform(
+                "deviceA", 10.0, timestamp, config, ProcessingOrigin.REPROCESS))
         .willReturn(transformedRecord);
 
     // when
-    int processedCount = chunkService.processNextChunk(config);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
 
     // then
-    assertThat(processedCount).isEqualTo(1);
+    assertThat(result.processedCount()).isEqualTo(1);
+    assertThat(result.cursor()).isEqualTo(timestamp);
 
     then(sensorReadingRepository).should().bulkUpdate(dbRecordsCaptor.capture());
     assertThat(dbRecordsCaptor.getValue()).containsExactly(transformedRecord);
@@ -122,19 +128,23 @@ class HistoricalReadingChunkProcessorTest {
         new SensorReadingRecord(
             timestamp, "deviceB", -999.0, 5.0, (short) 1, RangeCategory.correct);
 
-    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize))
+    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize, null))
         .willReturn(List.of(poisonRecord));
 
     TransformationException ex = mock(TransformationException.class);
     given(ex.getMessage()).willReturn("Math calculation failed");
 
-    given(transformationOrchestrator.transform("deviceB", -999.0, timestamp, config)).willThrow(ex);
+    given(
+            transformationOrchestrator.transform(
+                "deviceB", -999.0, timestamp, config, ProcessingOrigin.REPROCESS))
+        .willThrow(ex);
 
     // when
-    int processedCount = chunkService.processNextChunk(config);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
 
     // then
-    assertThat(processedCount).isEqualTo(1);
+    assertThat(result.processedCount()).isEqualTo(1);
+    assertThat(result.cursor()).isEqualTo(timestamp);
 
     then(sensorReadingRepository).should().bulkUpdate(dbRecordsCaptor.capture());
 

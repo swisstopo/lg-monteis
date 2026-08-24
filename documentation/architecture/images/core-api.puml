@@ -60,6 +60,6 @@ Repos -down---> Database : " SQL\n(Metadaten & Sensorik)"
 Repos -down---> FileStorage : " S3 API\n(IFC/Uploads)"
 
 Services -left-> Umsysteme : " REST / Webhooks"
-Services -right-> SensorConfigTopic : " Publish Sensor Config\n(Key=SensorID)"
+Services -right-> SensorConfigTopic : " Publish Sensor Config\n(Key=SensorID; Update nur bei Formel-/Grenzwert-Änderung)"
 
 @enduml

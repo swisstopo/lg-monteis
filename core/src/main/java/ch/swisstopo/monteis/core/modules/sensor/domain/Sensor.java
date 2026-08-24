@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.sensor.domain;
 
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
+import java.util.Objects;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
 
@@ -165,5 +166,11 @@ public class Sensor implements Auditable {
 
   public void setVersion(Integer version) {
     this.version = version;
+  }
+
+  public boolean changeTriggersPublish(Sensor old) {
+    return old == null
+        || !Objects.equals(old.getFormula().getExpression(), this.formula.getExpression())
+        || !Objects.equals(old.getAlarmLimits(), this.alarmLimits);
   }
 }

@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.pipeline.transformation.validation;
 
 import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent;
+import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
 import java.time.Clock;
 import java.time.Instant;
 import org.springframework.context.ApplicationEventPublisher;
@@ -18,16 +19,25 @@ public class BoundsValidator {
     this.clock = clock;
   }
 
-  public BoundStatus evaluateBounds(String sensorId, Double siValue, SensorConfig config) {
+  public BoundStatus evaluateBounds(
+      String sensorId, Double siValue, SensorConfig config, ProcessingOrigin origin) {
     if (siValue > config.getUpperBound()) {
       publishBreach(
-          sensorId, siValue, config.getUpperBound(), SensorBoundBreachedEvent.BoundType.UPPER);
+          sensorId,
+          siValue,
+          config.getUpperBound(),
+          SensorBoundBreachedEvent.BoundType.UPPER,
+          origin);
       return BoundStatus.TOO_HIGH;
     }
 
     if (siValue < config.getLowerBound()) {
       publishBreach(
-          sensorId, siValue, config.getLowerBound(), SensorBoundBreachedEvent.BoundType.LOWER);
+          sensorId,
+          siValue,
+          config.getLowerBound(),
+          SensorBoundBreachedEvent.BoundType.LOWER,
+          origin);
       return BoundStatus.TOO_LOW;
     }
 
@@ -35,7 +45,17 @@ public class BoundsValidator {
   }
 
   private void publishBreach(
-      String sensorId, Double value, Double limit, SensorBoundBreachedEvent.BoundType type) {
+      String sensorId,
+      Double value,
+      Double limit,
+      SensorBoundBreachedEvent.BoundType type,
+      ProcessingOrigin origin) {
+    // Reprocessed historical readings must not re-trigger alerts that already fired (or
+    // correctly didn't) when the value was first ingested.
+    if (origin == ProcessingOrigin.REPROCESS) {
+      return;
+    }
+
     eventPublisher.publishEvent(
         new SensorBoundBreachedEvent(sensorId, value, limit, type, Instant.now(clock)));
   }

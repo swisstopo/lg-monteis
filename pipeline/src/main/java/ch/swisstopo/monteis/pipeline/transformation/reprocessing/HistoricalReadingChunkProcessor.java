@@ -2,9 +2,12 @@ package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
+import ch.swisstopo.monteis.pipeline.transformation.ChunkProcessingResult;
+import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +39,14 @@ public class HistoricalReadingChunkProcessor {
     this.chunkSize = chunkSize;
   }
 
-  public int processNextChunk(ActiveSensorConfig activeSensorConfig) {
+  public ChunkProcessingResult processNextChunk(
+      ActiveSensorConfig activeSensorConfig, OffsetDateTime cursor) {
     List<SensorReadingRecord> oldRecords =
-        sensorReadingRepository.fetchOldSensorData(activeSensorConfig.getConfig(), chunkSize);
+        sensorReadingRepository.fetchOldSensorData(
+            activeSensorConfig.getConfig(), chunkSize, cursor);
 
     if (oldRecords.isEmpty()) {
-      return 0;
+      return new ChunkProcessingResult(0, cursor);
     }
 
     List<SensorReadingRecord> updatedRecords =
@@ -53,7 +58,8 @@ public class HistoricalReadingChunkProcessor {
                         reading.getSensorId(),
                         reading.getRawValue(),
                         reading.getTimestamp(), // This is already an OffsetDateTime from DB
-                        activeSensorConfig);
+                        activeSensorConfig,
+                        ProcessingOrigin.REPROCESS);
                   } catch (TransformationException ex) {
                     log.error(
                         "POISON PILL REPROCESSING: Math failed for historical record of sensor {}."
@@ -79,6 +85,10 @@ public class HistoricalReadingChunkProcessor {
     transactionTemplate.executeWithoutResult(
         status -> sensorReadingRepository.bulkUpdate(updatedRecords));
 
-    return updatedRecords.size();
+    // oldRecords is ordered by timestamp DESC, so the last entry is the oldest in this chunk —
+    // the next fetch resumes strictly before it instead of re-scanning from the start.
+    OffsetDateTime nextCursor = oldRecords.getLast().getTimestamp();
+
+    return new ChunkProcessingResult(updatedRecords.size(), nextCursor);
   }
 }

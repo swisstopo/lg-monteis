@@ -44,7 +44,7 @@ ExtTopic --down-> MM2 : SASL_SSL / PLAIN
 MM2 --down-> RawTopic : 1:1 Mirroring (RegexRouter)
 
 ' --- MIDDLE SECTION (Maintained spacing) ---
-CoreAPI ---down---> SensorConfigTopic : "Publish Sensor Config\n(Key=SensorID)"
+CoreAPI ---down---> SensorConfigTopic : "Publish Sensor Config\n(Key=SensorID; Update nur bei Formel-/Grenzwert-Änderung)"
 
 RawTopic ---down---> Adapter : "Poll Raw Data"
 Adapter ---down---> NormTopic : "Produce Canonical JSON"

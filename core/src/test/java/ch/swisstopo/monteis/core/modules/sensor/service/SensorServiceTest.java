@@ -1,13 +1,16 @@
 package ch.swisstopo.monteis.core.modules.sensor.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -51,7 +54,40 @@ class SensorServiceTest {
 
     // then
     then(repository).should().update(inputSensor);
-    then(configPublisher).should().publish(expectedSensor);
     assertEquals(expectedSensor, actualSensor);
+  }
+
+  @Test
+  void should_publish_config_when_change_triggers_publish_returns_true() {
+    // given
+    Sensor before = mock(Sensor.class);
+    Sensor after = mock(Sensor.class);
+
+    given(repository.findById(any())).willReturn(Optional.of(before));
+    given(repository.update(after)).willReturn(after);
+    given(after.changeTriggersPublish(before)).willReturn(true);
+
+    // when
+    service.updateSensor(after);
+
+    // then
+    then(configPublisher).should().publish(after);
+  }
+
+  @Test
+  void should_not_publish_config_when_change_triggers_publish_returns_false() {
+    // given
+    Sensor before = mock(Sensor.class);
+    Sensor after = mock(Sensor.class);
+
+    given(repository.findById(any())).willReturn(Optional.of(before));
+    given(repository.update(after)).willReturn(after);
+    given(after.changeTriggersPublish(before)).willReturn(false);
+
+    // when
+    service.updateSensor(after);
+
+    // then
+    then(configPublisher).should(never()).publish(any());
   }
 }

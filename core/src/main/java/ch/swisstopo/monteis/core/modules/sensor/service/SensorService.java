@@ -25,9 +25,11 @@ public class SensorService {
 
   @AuditChanges
   public Sensor updateSensor(Sensor sensor) {
+    Sensor before = repository.findById(sensor.getId()).orElse(null);
     Sensor updated = repository.update(sensor);
-    // TODO MON-28: Only publish change when reprocessing is necessary
-    configPublisher.publish(updated);
+    if (updated.changeTriggersPublish(before)) {
+      configPublisher.publish(updated);
+    }
     return updated;
   }
 }
