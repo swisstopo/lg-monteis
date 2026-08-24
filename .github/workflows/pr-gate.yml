@@ -353,6 +353,7 @@ jobs:
         working-directory: webapp
         run: pnpm vitest --browser.headless=true
 
+  # noinspection YAMLSchemaValidation
   prepare-e2e-tests:
     name: Prepare E2E test file to run
     if: contains(github.event.pull_request.labels.*.name, 'e2e-tests')
@@ -363,12 +364,39 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Warm up actions/cache download
+        uses: actions/cache/restore@v6
+        with:
+          path: /tmp/.warmup
+          key: warmup-noop
+          lookup-only: true
+
       - parallel:
         - name: Setup Java Environment (Hits Cache)
           uses: ./.github/actions/setup-java-maven
 
         - name: Setup Node Environment (Hits Cache)
           uses: ./.github/actions/setup-node-pnpm
+
+        - name: Load Test Containers Docker Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            image: ${{ env.TEST_CONTAINER_IMAGE }}
+
+        - name: Load TimeScaleDB Docker Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            image: ${{ env.TIMESCALE_DB_IMAGE }}
+
+        - name: Load Postgres Docker Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            image: ${{ env.POSTGRES_DB_IMAGE }}
+
+        - name: Load Kafka Docker Cache
+          uses: ./.github/actions/global-docker-cache
+          with:
+            image: ${{ env.KAFKA_IMAGE }}
 
       # Warm the browser + apt-.deb caches once, before the matrix fans out.
       # run-e2e-tests legs `needs:` this job, so they start after the caches are
