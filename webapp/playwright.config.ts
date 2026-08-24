@@ -49,8 +49,10 @@ export default defineConfig({
 
   webServer: [
     {
-      command: 'SPRING_PROFILES_ACTIVE=e2e-test mvn spring-boot:test-run',
-      cwd: '../core',
+      // Installing core (and, via -am, contracts) first makes this self-sufficient.
+      command:
+        'mvn -pl core -am install -DskipTests && cd core && SPRING_PROFILES_ACTIVE=e2e-test mvn spring-boot:test-run',
+      cwd: '..',
       // Without this, Playwright has no way to detect readiness and starts running tests
       // immediately, well before Postgres/Keycloak are actually up.
       url: 'http://localhost:8080/actuator/health',
