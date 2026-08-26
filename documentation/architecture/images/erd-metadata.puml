@@ -37,12 +37,17 @@ note as AuditNote
   //nicht einzeln eingezeichnet://
   ----
   * created_at : TIMESTAMP
-  * <color:#1976D2><&link-intact></color> created_by : BIGINT
+  * <color:#1976D2><&link-intact></color> created_by : UUID
   * updated_at : TIMESTAMP
-  * <color:#1976D2><&link-intact></color> updated_by : BIGINT
+  * <color:#1976D2><&link-intact></color> updated_by : UUID
   * deleted_at : TIMESTAMP
-  * <color:#1976D2><&link-intact></color> deleted_by : BIGINT
+  * <color:#1976D2><&link-intact></color> deleted_by : UUID
   * version : INTEGER
+  ----
+  //Alle Primary Keys der Metadaten-DB sind UUIDv7//
+  //(anwendungsseitig generiert, siehe ADR "UUID v7//
+  //als einheitlicher Primärschlüsseltyp"). Ausnahme://
+  //flyway_schema_history (von Flyway verwaltet).//
 end note
 
 
@@ -50,172 +55,182 @@ end note
 ' ENTITIES: Organisation & Users
 ' ==========================================
 entity "Organisations" as org {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
   --
   * name : VARCHAR(255)
   - description : VARCHAR(4096)
-  --
-  sequence org_id
 }
 
 entity "Users" as users {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
   --
   * name : VARCHAR(255)
   * <color:#F57C00><&star></color> email : VARCHAR(255)
   - <color:#F57C00><&star></color> handy_number : VARCHAR(50)
-  --
-  sequence users_id
 }
 
 entity "Experiments" as exp {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
   --
   * name : VARCHAR(255)
   - description : VARCHAR(4096)
   * <color:#F57C00><&star></color> exp_code : VARCHAR(255)
-  --
-  sequence exp_id
 }
 
 entity "Alerts" as alerts {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
   --
   * template_email : VARCHAR(4096)
   * template_sms : VARCHAR(2048)
   * type : VARCHAR(50)
-  --
-  sequence alert_id
 }
 
 ' ==========================================
 ' EXPLICIT JOIN TABLES
 ' ==========================================
 entity "organisation_user" as j_org_user {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
   --
-  * <color:#1976D2><&link-intact></color> org_id : BIGINT
-  * <color:#1976D2><&link-intact></color> user_id : BIGINT
-  --
-  sequence org_user_id
+  * <color:#1976D2><&link-intact></color> org_id : UUID
+  * <color:#1976D2><&link-intact></color> user_id : UUID
 }
 
 entity "experiment_organisation" as j_exp_org {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
   --
-  * <color:#1976D2><&link-intact></color> exp_id : BIGINT
-  * <color:#1976D2><&link-intact></color> org_id : BIGINT
-  --
-  sequence exp_org_id
+  * <color:#1976D2><&link-intact></color> exp_id : UUID
+  * <color:#1976D2><&link-intact></color> org_id : UUID
 }
 
 entity "user_experiment" as j_user_exp {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
   --
-  * <color:#1976D2><&link-intact></color> user_id : BIGINT
-  * <color:#1976D2><&link-intact></color> exp_id : BIGINT
-  --
-  sequence user_exp_id
+  * <color:#1976D2><&link-intact></color> user_id : UUID
+  * <color:#1976D2><&link-intact></color> exp_id : UUID
 }
 
 entity "sensor_experiment" as j_sensor_exp {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
   --
-  * <color:#1976D2><&link-intact></color> sensor_id : BIGINT
-  * <color:#1976D2><&link-intact></color> exp_id : BIGINT
+  * <color:#1976D2><&link-intact></color> sensor_id : UUID
+  * <color:#1976D2><&link-intact></color> exp_id : UUID
   --
-  sequence sensor_exp_id
+  //id ist eigenständiger PK (nicht composite),//
+  //damit Sensor.main_experiment gezielt genau//
+  //eine Zeile dieser m:n-Relation referenzieren kann.//
 }
 
 entity "alert_sensor" as j_alert_sensor {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
   --
-  * <color:#1976D2><&link-intact></color> alert_id : BIGINT
-  * <color:#1976D2><&link-intact></color> sensor_id : BIGINT
-  --
-  sequence alert_sensor_id
+  * <color:#1976D2><&link-intact></color> alert_id : UUID
+  * <color:#1976D2><&link-intact></color> sensor_id : UUID
 }
 
 entity "user_alert" as j_user_alert {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
   --
-  * <color:#1976D2><&link-intact></color> user_id : BIGINT
-  * <color:#1976D2><&link-intact></color> alert_id : BIGINT
+  * <color:#1976D2><&link-intact></color> user_id : UUID
+  * <color:#1976D2><&link-intact></color> alert_id : UUID
   * method : VARCHAR(50)
-  --
-  sequence user_alert_id
 }
 
 ' ==========================================
 ' ENTITIES: Infrastructure & Spatial
 ' ==========================================
 entity "Tunnels" as tunnels {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
 }
 
 entity "Shafts" as shafts {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
 }
 
 entity "Boreholes" as boreholes {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
 }
 
-entity "Sensors" as sensors {
-  * <color:#D32F2F><&key></color> id : BIGINT
+' ==========================================
+' ENTITIES: Sensor (Shared Metadata) & Sensor_Parameter
+' ==========================================
+entity "Sensor" as sensors {
+  * <color:#D32F2F><&key></color> id : UUID
   --
-  * <color:#F57C00><&star></color> sensor_code : VARCHAR(255)
-  * unit : VARCHAR(96)
-  * formula : JSONB
-  * upper_limit : DECIMAL
-  * lower_limit : DECIMAL
-  * <color:#1976D2><&link-intact></color> sensor_type_id : BIGINT
-  * sending_frequency_sec : INTEGER
-  * sensor_model : VARCHAR(255)
-  * sensor_housing : VARCHAR(255)
-  * installed_at : DATE
+  * <color:#F57C00><&star></color> fulcrum_id : UUID
+  * <color:#F57C00><&star></color> das_sensor_alias : VARCHAR(255)
+  * das : DAS_ENUM
+  * name : VARCHAR(255)
+  * x : INTEGER
+  * y : INTEGER
+  * z : INTEGER
   * active : BOOLEAN
-  * <color:#1976D2><&link-intact></color> point_coords_id : BIGINT
-  - <color:#1976D2><&link-intact></color> borehole_id (TODO) : BIGINT
+  - comment : VARCHAR(4096)
+  * <color:#1976D2><&link-intact></color> main_experiment : UUID
+  --
+  //das_sensor_alias bildet den Sensor auf die eintreffenden//
+  //DAS-Rohmessungen ab. das identifiziert das Erfassungssystem//
+  //(z.B. SOLEXPERTS). main_experiment verweist auf genau eine//
+  //Zeile von sensor_experiment (siehe dort).//
+}
+
+entity "Sensor_Parameter" as sensor_param {
+  * <color:#D32F2F><&key></color> id : UUID
+  --
+  * <color:#1976D2><&link-intact></color> sensor_id : UUID
+  * name : VARCHAR(255)
+  * <color:#F57C00><&star></color> das_parameter_alias : VARCHAR(255)
+  * <color:#1976D2><&link-intact></color> type_id : UUID
+  * unit : UNIT_ENUM
+  * <color:#1976D2><&link-intact></color> formula_id : UUID
+  * lower_alarm_limit : DOUBLE PRECISION
+  * upper_alarm_limit : DOUBLE PRECISION
+  * active : BOOLEAN
   - comment : VARCHAR(4096)
   --
-  sequence sensor_id
+  //Ein Sensor kann mehrere Parameter (Messgrössen) mit je//
+  //eigener Formel/Grenzwerten besitzen. id wird 1:1 im//
+  //Config-Objekt an die Pipeline/TimescaleDB durchgereicht//
+  //und dient dort als FK statt einer textuellen sensor_code-//
+  //Abbildung (siehe Kapitel "Datenbankschemata").//
 }
 
-entity "Virtual_sensors" as virtual_sensors {
-  * <color:#D32F2F><&key></color> id : BIGINT
-  - TODO (nicht im MVP)
+entity "Formula" as formula {
+  * <color:#D32F2F><&key></color> id : UUID
+  --
+  * <color:#F57C00><&star></color> expression : TEXT
 }
 
 entity "Sensor_Type" as sensor_type {
-  * <color:#D32F2F><&key></color> id : BIGINT
-  * description : VARCHAR(255)
-  - comment : VARCHAR(255)
+  * <color:#D32F2F><&key></color> id : UUID
   --
-  sequence sensor_type_id
+  * <color:#F57C00><&star></color> name : VARCHAR(255)
+  - comment : VARCHAR(255)
 }
 
-entity "Point_Coordinates" as point_coords {
-  * <color:#D32F2F><&key></color> id : BIGINT
+entity "Virtual_sensors" as virtual_sensors {
+  * <color:#D32F2F><&key></color> id : UUID
+  - TODO (nicht im MVP)
 }
 
 entity "Hole_Coordinates" as hole_coords {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
 }
 
 ' ==========================================
 ' STANDALONE TABLES
 ' ==========================================
 entity "Flyway_Schemahistory" as flyway {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : INTEGER
+  --
+  //Von Flyway selbst verwaltet - keine UUIDv7 (Ausnahme, siehe ADR).//
 }
 
 entity "IFC_Uploads" as ifc {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
 }
 
 entity "Data_Uploads" as data_up {
-  * <color:#D32F2F><&key></color> id : BIGINT
+  * <color:#D32F2F><&key></color> id : UUID
 }
 
 ' ==========================================
@@ -223,8 +238,13 @@ entity "Data_Uploads" as data_up {
 ' ==========================================
 package "TimeScaleDB" <<Database>> {
     entity "Sensor_Data" as ts_data #E3F2FD {
-      * <color:#D32F2F><&key></color> id : BIGINT
-      * sensor_code : BIGINT
+      * <color:#1976D2><&link-intact></color> sensor_parameter_id : UUID
+      * timestamp : TIMESTAMPTZ
+      --
+      //Composite PK (timestamp, sensor_parameter_id) - siehe//
+      //TimeScaleDB Schema. sensor_parameter_id wird der Pipeline//
+      //via Kafka Config-Objekt mitgeteilt (kein DB-FK, separates//
+      //System) und referenziert fachlich Sensor_Parameter.id.//
     }
 }
 
@@ -241,10 +261,11 @@ boreholes "1 " -down- " m" sensors
 tunnels "1 " -right- " 1" hole_coords
 shafts "1 " -right- " 1" hole_coords
 boreholes "1 " -right- " 1" hole_coords
-sensors "1 " -right- " 1" point_coords
 
-' --- Sensoren & Typen ---
-sensor_type "1 " -down- " m" sensors
+' --- Sensor & Parameter ---
+sensors "1 " -down- " m" sensor_param
+sensor_type "1 " -right- " m" sensor_param : " type"
+formula "1 " -right- " m" sensor_param : " formula"
 sensor_type "1 " -down- " m" virtual_sensors
 
 ' --- Join Tables (Lange Linien zur Entzerrung) ---
@@ -259,6 +280,7 @@ exp "1 " --- " m" j_user_exp
 
 sensors "1 " --- " m" j_sensor_exp
 exp "1 " --- " m" j_sensor_exp
+sensors "1 " -up- " 1" j_sensor_exp : " main_experiment"
 
 alerts "1 " --- " m" j_alert_sensor
 sensors "1 " --- " m" j_alert_sensor
@@ -267,7 +289,7 @@ users "1 " --- " m" j_user_alert
 alerts "1 " --- " m" j_user_alert
 
 ' --- FDW Verbindung ---
-sensors "1 " .down. " m" ts_data : " FDW Tunnel"
+sensor_param "1 " .down. " m" ts_data : " FDW Tunnel"
 
 AuditNote -[hidden]down-> sensors
 AuditNote -[hidden]right-> sensors
