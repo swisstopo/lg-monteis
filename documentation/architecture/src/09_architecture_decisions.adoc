@@ -88,3 +88,67 @@ Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Re
 | Konsequenzen
 | Schreibrechte sind aktuell global (jeder `admin` darf überall schreiben), nicht pro Rolle/Experiment granularisiert. Sollte künftig feingranularere Schreibrechte nötig werden, müsste dies pro Controller-Methode (z. B. via `@PreAuthorize`) statt zentral im Filterchain erfolgen.
 |===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: UUID v7 als einheitlicher Primärschlüsseltyp für die Metadaten-DB
+
+| Datum
+| 26.08.2026
+
+| Status
+| entschieden
+
+| Kontext & Problem
+| Mit der Aufteilung von `sensors` in `sensors` (gemeinsame Stammdaten) und `sensor_parameters` (je Messgrösse eigene Formel/Einheit/Grenzwerte, siehe <<Sensor vs. Sensor_Parameter>>) wächst die Anzahl referenzierter Tabellen und Fremdschlüssel in der Metadaten-DB spürbar. Bisher generierte PostgreSQL fortlaufende `BIGSERIAL`-Werte pro Tabelle. Das bringt zwei Probleme: fortlaufende Integer-IDs sind über Tabellen hinweg nicht unterscheidbar (Verwechslungsgefahr beim Debugging/Tracing) und verraten Rückschlüsse auf das Datenvolumen. Zusätzlich muss `sensor_parameter.id` künftig als stabile, global eindeutige Kennung über Systemgrenzen hinweg kommuniziert werden — sie wird 1:1 im Kafka-Config-Objekt an die Pipeline durchgereicht und dort als Fremdschlüssel beim Schreiben der Messwerte in die TimeScaleDB verwendet, anstelle der bisherigen textuellen `sensor_code`-Abbildung. Pro-Tabelle-lokale Integer-Sequenzen sind für eine solche Cross-System-Referenz ungeeignet.
+
+| Entscheidung
+| Sämtliche Primärschlüssel (und die davon abgeleiteten Fremdschlüssel) der Metadaten-DB werden auf UUID Version 7 (`UUIDv7`) statt `BIGSERIAL` umgestellt. Einzige Ausnahme ist die von Flyway selbst verwaltete `flyway_schema_history`-Tabelle, die ausserhalb unserer Kontrolle liegt.
+
+| Begründung
+| **Global eindeutig über alle Tabellen hinweg:** Erleichtert Logging, Tracing und Debugging, da eine ID nie mit einer ID aus einer anderen Tabelle verwechselt werden kann.
+
+**Zeitlich sortierbar:** Im Gegensatz zu UUIDv4 kodiert UUIDv7 einen Millisekunden-Zeitstempel im höchstwertigen Teil. Dadurch bleiben B-Tree-Indizes auf dem Primärschlüssel weiterhin insertions-lokal und performant, ohne die Index-Fragmentierung, die rein zufällige UUIDv4-Werte verursachen würden.
+
+**Keine Rückschlüsse auf Geschäftsvolumen:** Fortlaufende Integer-IDs verraten z. B. wie viele Sensoren oder Experimente insgesamt existieren; für eine Anwendung mit potenziell externen Integrationen (Fulcrum) ist das unerwünscht.
+
+**Stabile, kollisionsfreie Cross-System-Referenz:** `sensor_parameter.id` muss ohne Rückfrage bei der Metadaten-DB eindeutig erzeugt und über Kafka an die Pipeline sowie fachlich in die TimeScaleDB weitergereicht werden können — eine Eigenschaft, die eine global (nicht nur pro Tabelle) eindeutige ID voraussetzt.
+
+| Konsequenzen
+| Storage-Overhead von 16 statt 8 Bytes pro ID; bei den erwarteten Tabellengrössen der Metadaten-DB (keine Zeitreihen) vernachlässigbar. Die Anwendung muss eine UUIDv7-fähige Generierungsbibliothek einbinden. Die bestehenden `BIGSERIAL`-basierten Migrationen (V1–V7) müssen im Rahmen der Sensor/Sensor_Parameter-Aufteilung entsprechend migriert werden. Fremdschlüssel-Spalten und ihre Indizes wachsen von 8 auf 16 Bytes, ohne relevante Performance-Auswirkung beim gegebenen Datenvolumen.
+|===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: Entkopplung von DAS-Ingest-Mapping (zusammengesetzter Key) und persistenter `sensor_parameter_id`-Referenz
+
+| Datum
+| 26.08.2026
+
+| Status
+| entschieden
+
+| Kontext & Problem
+| Eintreffende Rohmessungen tragen ausschliesslich Identifikatoren des jeweiligen Erfassungssystems (DAS) — z. B. einen Gerätenamen (`deviceName`) und einen Feldnamen innerhalb der Payload. Die Pipeline kennt beim Empfang einer Rohnachricht keine `sensor_parameter.id`; ein synchroner Rückruf an die Core API pro Nachricht wäre bei den angestrebten Datenraten (High-Throughput, siehe Kapitel 8, <<Skalierungsstrategien (High Throughput)>>) nicht praktikabel. Gleichzeitig sind DAS-seitige Identifikatoren volatil: Hersteller benennen Geräte um, ein Sensor kann auf ein anderes Erfassungssystem migriert werden, oder ein `das_sensor_alias`/`das_parameter_alias` wird in der Core API korrigiert. Würde die TimeScaleDB direkt mit diesen volatilen Strings referenzieren (wie bisher mit `sensor_code`), würden historische Messwerte bei einer Remapping-Änderung faktisch verwaist, da neue Werte unter einem neuen Schlüssel abgelegt würden.
+
+| Entscheidung
+| Es werden zwei getrennte Schlüssel für zwei getrennte Zwecke verwendet: Für das **Ingest-Routing** (Kafka-Key auf allen Sensordaten-Topics inkl. `internal-sensor-config`, sowie Lookup-Key im `SensorConfigCache`) dient ein deterministisch aus den DAS-Rohdaten zusammengesetzter String `<DAS>__<das_sensor_alias>__<das_parameter_alias>` (siehe Kapitel 8, <<DAS-Mapping: Inbound-Key vs. Persistenz-Referenz>>). Für die **Persistenz** in der TimeScaleDB (`sensor_reading.sensor_parameter_id`) sowie für Idempotenz-Prüfungen (`ON CONFLICT`) wird ausschliesslich die stabile, unveränderliche `sensor_parameter.id` (UUIDv7, siehe vorherige ADR) verwendet. Der DAS-Key wird der Pipeline im Config-Objekt zusätzlich zur `sensor_parameter_id` mitgegeben (nicht daraus abgeleitet), sodass beide Werte unabhängig voneinander aktualisierbar bleiben.
+
+| Begründung
+| **Kein Rückruf pro Nachricht nötig:** Der DAS-Key ist direkt aus der Rohnachricht ableitbar, ohne Kenntnis der internen `sensor_parameter.id` — das Cache-Lookup bleibt lokal und schnell.
+
+**Historische Daten bleiben stabil referenziert:** Ändert sich ein `das_sensor_alias`/`das_parameter_alias` (Remapping), aktualisiert Core nur die Zuordnung und publiziert einen neuen DAS-Key für dieselbe, unveränderte `sensor_parameter_id`. Bereits geschriebene Messwerte in der TimeScaleDB bleiben unverändert über die alte wie neue Zuordnung hinweg korrekt referenziert — es entstehen keine verwaisten Zeitreihen und kein Backfill/Merge ist nötig.
+
+**Bessere Joins/Performance:** Ein UUID-Fremdschlüssel ist kompakter und indexfreundlicher als ein zusammengesetzter, potenziell langer Text-Key, insbesondere für Joins zwischen TimeScaleDB (über den FDW-Tunnel) und der Metadaten-DB.
+
+**Reaktionsfähig auf DAS-Wechsel:** Da der DAS-Key nicht Teil der Persistenz ist, kann ein Sensor bei Bedarf komplett auf ein anderes Erfassungssystem umgezogen werden (neuer `das`-Wert, neuer `das_sensor_alias`), ohne die Historie zu fragmentieren.
+
+| Konsequenzen
+| Das Config-Objekt (`SensorParameterConfig`) transportiert zwangsläufig mehr Felder (`das`, `das_sensor_alias`, `das_parameter_alias`, `sensor_parameter_id`) statt eines einzelnen Identifiers. Der `Das`-Enum muss zentral im geteilten Modul `contracts` gepflegt werden, damit Core (Publisher) und Pipeline (Normalizer, `SensorConfigCache`) nicht auseinanderlaufen. Reprocessing-Jobs, die auf einen DAS-Key-Wechsel reagieren (z. B. rückwirkendes Neu-Labeling), müssen weiterhin über die `sensor_parameter_id` und nicht über den (potenziell mehrfach wechselnden) DAS-Key gesteuert werden.
+|===

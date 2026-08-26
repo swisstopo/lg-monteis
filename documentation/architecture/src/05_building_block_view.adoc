@@ -58,14 +58,17 @@ Das Backend fungiert als Dreh- und Angelpunkt für jegliche synchrone Kommunikat
 * *Frontend-API:* Stellt dem Angular-Client alle benötigten Endpunkte zur Verfügung.
 * *Pipeline-API:* Ein durch API-Keys gesicherter interner Endpunkt, über den die Pipeline-Worker Metadaten abrufen können.
 
+==== Contracts (Geteiltes Schema-Modul)
+Damit Core und Pipeline nicht mit divergierenden Vorstellungen desselben Konfigurations-Objekts laufen, existiert ein eigenständiges Maven-Modul `contracts`, das per OpenAPI Generator aus einer einzigen YAML-Spezifikation (siehe Kapitel 8, <<API-Schnittstellen (Contracts)>>) generiert wird. Es enthält u. a. das `SensorParameterConfig`-DTO (Kafka-Payload auf `internal-sensor-config`) sowie den `Das`-Enum, der die unterstützten Erfassungssysteme (z. B. `SOLEXPERTS`) definiert. Sowohl `core` (Publisher) als auch `pipeline` (`SensorConfigCache`, Normalizer) hängen von `contracts` ab, statt eigene, potenziell abweichende Kopien dieser Typen zu pflegen.
+
 ==== Data Pipelines & Alerting (Kafka & Worker)
 Der Ingestion-Prozess für Sensordaten ist asynchron und ereignisgesteuert aufgebaut. Die Verarbeitung innerhalb eines Pipeline-Worker-Pods folgt einem strikten Ablauf:
 
-1. **Format-Parser:** Eine neue Nachricht wird vom Kafka-Broker konsumiert und in ein Standard-Objekt (`SensorID`, `Timestamp`, `Value`) geparst. Genauere details zu dem Standardformat sind in Kapitel 8.
-2. **Metadata Handler:** Führt ein Cache-Lookup anhand der `SensorID` durch. Bei einem Cache-Miss wird das Spring Boot Backend via REST aufgerufen, um die aktuellen Metadaten zum Sensor zu laden.
+1. **Format-Parser:** Eine neue Nachricht wird vom Kafka-Broker konsumiert und in ein Standard-Objekt (`NormalizedSensorData` mit dem zusammengesetzten DAS-Key `<DAS>__<das_sensor_alias>__<das_parameter_alias>` als Sensor-Identifikator, `Timestamp`, `Value`) geparst. Genauere Details zum Standardformat und zum DAS-Key sind in Kapitel 8.
+2. **Metadata Handler:** Führt ein Cache-Lookup im `SensorConfigCache` anhand des DAS-Keys durch. Die Cache-Befüllung erfolgt nicht per Cache-Miss-REST-Call, sondern proaktiv über den `internal-sensor-config`-Kafka-Topic (Broadcast an jeden Pod bei jeder Konfigurationsänderung, siehe Kapitel 8).
 3. **SI-Unit Converter:** Rechnet den Rohwert anhand einer in den Metadaten hinterlegten Formel (*JsonLogic*) in die standardisierte SI-Einheit um.
 4. **Validator & Alerting Handler:** Prüft den umgerechneten Wert gegen definierte Upper-/Lower-Bounds. Bei einer Verletzung wird ein Event emittiert — jedoch ausschliesslich bei Live-Ingestion. Beim Reprocessing historischer Daten wird die Alert-Emission bewusst unterdrückt, um bereits bewertete Messwerte nicht erneut zu alarmieren. *(Hinweis: Architektonische Trennung des Alertings: Grenzwertverletzungen wirft der Worker, System-Alarme wie fehlende Daten werden direkt auf dem Kafka-Topic via Grafana und Amazon SNS überwacht).*
-5. **DB-Writer:** Persistiert den finalen Datensatz in die TimeScaleDB, das Format wird in Kapitel 8 definiert.
+5. **DB-Writer:** Persistiert den finalen Datensatz in die TimeScaleDB unter der stabilen `sensor_parameter_id` aus dem Cache-Eintrag (nicht dem DAS-Key), das Format wird in Kapitel 8 definiert.
 6. **Aggregator (Memory):** Der Originaldatensatz wird im Speicher gehalten. Alle *n* Minuten flusht der Worker die gesammelten Rohdaten direkt in einen AWS S3 Bucket.
 
 [plantuml, pipeline-overview, format="svg"]
