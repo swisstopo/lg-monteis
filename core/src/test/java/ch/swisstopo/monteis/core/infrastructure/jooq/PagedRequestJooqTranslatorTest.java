@@ -3,11 +3,8 @@ package ch.swisstopo.monteis.core.infrastructure.jooq;
 import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
-import ch.swisstopo.monteis.core.infrastructure.query.NumberFilterModel;
-import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
-import ch.swisstopo.monteis.core.infrastructure.query.SortDirection;
-import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
-import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
+import ch.swisstopo.monteis.core.infrastructure.query.*;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -23,10 +20,9 @@ class PagedRequestJooqTranslatorTest {
 
   private static final Field<String> nameField = DSL.field("name", String.class);
   private static final Field<Double> ageField = DSL.field("age", Double.class);
+  private static final Field<LocalDate> startField = DSL.field("start", LocalDate.class);
   private static final Map<String, Field<?>> columns =
-      Map.of(
-          "name", nameField,
-          "age", ageField);
+      Map.of("name", nameField, "age", ageField, "start", startField);
 
   @Test
   void should_useDefaultSort_when_emptyRequestWithDefaultSort() {
@@ -118,6 +114,42 @@ class PagedRequestJooqTranslatorTest {
     assertEquals(expected.toString(), criteria.condition().toString());
   }
 
+  static Stream<Arguments> dateFilterProvider() {
+    Field<LocalDate> f = startField.cast(LocalDate.class);
+
+    LocalDate d1 = LocalDate.parse("2026-01-01");
+    LocalDate d2 = LocalDate.parse("2026-12-31");
+
+    return Stream.of(
+        Arguments.of("equals", "2026-01-01", null, f.eq(d1)),
+        Arguments.of("notEqual", "2026-01-01", null, f.ne(d1)),
+        Arguments.of("lessThan", "2026-01-01", null, f.lt(d1)),
+        Arguments.of("lessThanOrEqual", "2026-01-01", null, f.le(d1)),
+        Arguments.of("greaterThan", "2026-01-01", null, f.gt(d1)),
+        Arguments.of("greaterThanOrEqual", "2026-01-01", null, f.ge(d1)),
+        Arguments.of("inRange", "2026-01-01", "2026-12-31", f.between(d1, d2)),
+        Arguments.of("blank", null, null, f.isNull()),
+        Arguments.of("notBlank", null, null, f.isNotNull()));
+  }
+
+  @ParameterizedTest(name = "date filter type ''{0}'' translates correctly")
+  @MethodSource("dateFilterProvider")
+  void should_translateCorrectly_when_dateFilterIsProvided(
+      String type, String dateFrom, String dateTo, Condition expectedCondition) {
+
+    // given
+    PagedRequest request =
+        new PagedRequest(
+            0, 10, List.of(), Map.of("start", new DateFilterModel(type, dateFrom, dateTo)));
+
+    // when
+    var criteria = PagedRequestJooqTranslator.translate(request, columns, null);
+
+    // then
+    Condition expected = DSL.noCondition().and(expectedCondition);
+    assertEquals(expected.toString(), criteria.condition().toString());
+  }
+
   @Test
   void should_throwException_when_invalidTextFilterTypeProvided() {
     // given
@@ -150,6 +182,26 @@ class PagedRequestJooqTranslatorTest {
 
     // then
     assertTrue(exception.getMessage().contains("Unsupported number filter type: invalidType"));
+  }
+
+  @Test
+  void should_throwException_when_invalidDateFilterTypeProvided() {
+    // given
+    PagedRequest request =
+        new PagedRequest(
+            0,
+            10,
+            List.of(),
+            Map.of("start", new DateFilterModel("invalidType", "2026-01-01", null)));
+
+    // when
+    InvalidPagedRequestException exception =
+        assertThrows(
+            InvalidPagedRequestException.class,
+            () -> PagedRequestJooqTranslator.translate(request, columns, null));
+
+    // then
+    assertTrue(exception.getMessage().contains("Unsupported date filter type: invalidType"));
   }
 
   @Test
