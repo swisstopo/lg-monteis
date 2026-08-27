@@ -72,6 +72,29 @@ class PagedRequestParserTest {
   }
 
   @Test
+  void should_parse_date_filter_model_with_discriminator_field() {
+    // given
+    RawPagedRequest raw =
+        new RawPagedRequest(
+            0,
+            20,
+            null,
+            "{\"createdAt\":{\"filterType\":\"date\",\"type\":\"inRange\",\"dateFrom\":\"2026-01-01\",\"dateTo\":\"2026-12-31\"}}");
+
+    // when
+    PagedRequest parsed = parser.parse(raw);
+
+    // then
+    FilterModelItem model = parsed.filterModel().get("createdAt");
+    assertInstanceOf(DateFilterModel.class, model);
+
+    DateFilterModel dateModel = (DateFilterModel) model;
+    assertEquals("inRange", dateModel.type());
+    assertEquals("2026-01-01", dateModel.dateFrom());
+    assertEquals("2026-12-31", dateModel.dateTo());
+  }
+
+  @Test
   void should_default_to_empty_when_no_sort_or_filter_given() {
     RawPagedRequest raw = new RawPagedRequest(0, 20, null, null);
 
