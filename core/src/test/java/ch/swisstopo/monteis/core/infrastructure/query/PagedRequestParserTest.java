@@ -127,7 +127,7 @@ class PagedRequestParserTest {
     // given: filterType doesn't match any registered FilterModelItem subtype
     RawPagedRequest raw =
         new RawPagedRequest(
-            0, 20, null, "{\"code\":{\"filterType\":\"date\",\"type\":\"equals\"}}");
+            0, 20, null, "{\"code\":{\"filterType\":\"boolean\",\"type\":\"equals\"}}");
 
     InvalidPagedRequestException ex =
         assertThrows(InvalidPagedRequestException.class, () -> parser.parse(raw));
