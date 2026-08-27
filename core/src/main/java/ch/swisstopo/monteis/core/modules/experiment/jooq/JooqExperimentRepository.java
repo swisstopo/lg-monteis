@@ -72,7 +72,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
             EXPERIMENTS.END,
             EXPERIMENTS.COMMENT,
             EXPERIMENTS.VERSION,
-            SENSOR_COUNT_FIELD.as("sensorCount"))
+            SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))
         .from(EXPERIMENTS)
         .where(EXPERIMENTS.ID.eq(experimentId))
         .fetchOne(
@@ -83,7 +83,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
                     new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
                     experiment.get(EXPERIMENTS.COMMENT),
                     experiment.get(EXPERIMENTS.VERSION),
-                    experiment.get(SENSOR_COUNT_FIELD.as("sensorCount"))));
+                    experiment.get(SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))));
   }
 
   @Override
@@ -103,7 +103,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
                 EXPERIMENTS.END,
                 EXPERIMENTS.COMMENT,
                 EXPERIMENTS.VERSION,
-                SENSOR_COUNT_FIELD.as("sensorCount"))
+                SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))
             .from(EXPERIMENTS)
             .where(criteria.condition())
             .orderBy(criteria.sortFields())
@@ -118,7 +118,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
                             experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
                         experiment.get(EXPERIMENTS.COMMENT),
                         experiment.get(EXPERIMENTS.VERSION),
-                        experiment.get(SENSOR_COUNT_FIELD.as("sensorCount"))));
+                        experiment.get(SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))));
 
     int totalCount =
         dsl.fetchCount(dsl.select(EXPERIMENTS.ID).from(EXPERIMENTS).where(criteria.condition()));
