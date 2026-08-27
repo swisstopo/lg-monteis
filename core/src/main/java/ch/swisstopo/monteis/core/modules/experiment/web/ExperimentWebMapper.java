@@ -13,13 +13,14 @@ import org.mapstruct.Mapping;
 public interface ExperimentWebMapper {
   // --- Inbound API DTO -> Core Rich Domain Object Mappings ---
   @Mapping(target = "owner", ignore = true)
+  @Mapping(target = "sensorCount", ignore = true)
   Experiment toDomain(WriteExperimentDto dto);
 
   // --- Outbound Domain -> API Serialization DTO Mappings ---
   @Mapping(target = "status", expression = "java(domain.getStatus(today))")
   ExperimentResponseDto toDto(Experiment domain, @Context LocalDate today);
 
-  // --- Paged Ounbound Domain -> Paged API Serialization DTO Mappings ---
+  // --- Paged Outbound Domain -> Paged API Serialization DTO Mappings ---
   PagedResult<ExperimentResponseDto> toPagedDto(
       PagedResult<Experiment> pagedResult, @Context LocalDate today);
 }
