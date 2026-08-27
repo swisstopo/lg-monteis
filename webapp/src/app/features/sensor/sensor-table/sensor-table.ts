@@ -22,7 +22,6 @@ import { createColumns } from './columns';
 export default class SensorTable {
   private readonly dialog = inject(MatDialog);
   protected sensorService = inject(SensorService);
-  protected readonly SensorEdit = SensorEdit;
   private readonly translateService = inject(TranslateService);
 
   readonly searchTerm = signal<string>('');
