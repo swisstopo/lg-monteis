@@ -5,11 +5,6 @@ import { ExperimentResponseDto } from '../../../core/generated';
 import { TableColumn } from '../../../ui/table/table.types';
 import StatusEnum = ExperimentResponseDto.StatusEnum;
 
-// Only a single filter condition per column is supported by the paged backend endpoint, so
-// combined ("AND"/"OR") filters are disabled here to keep the filter model ag-grid sends in sync
-// with what the backend can translate.
-const SINGLE_CONDITION_FILTER_PARAMS = { maxNumConditions: 1 };
-
 export function createColumns(datePipe: DatePipe): TableColumn<ExperimentResponseDto>[] {
   const i18n = inject(TranslateService);
 
@@ -19,7 +14,6 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
       headerName: i18n.translate('experiment.name.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'status',
@@ -44,7 +38,6 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
       headerName: i18n.translate('experiment.period.start.label')(),
       sortable: true,
       filter: true,
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
       valueFormatter: (params) => datePipe.transform(params.value) ?? '',
     },
     {
@@ -52,7 +45,6 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
       headerName: i18n.translate('experiment.period.end.label')(),
       sortable: true,
       filter: true,
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
       valueFormatter: (params) => datePipe.transform(params.value) ?? '',
     },
     {
@@ -60,14 +52,12 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
       headerName: i18n.translate('experiment.sensorCount.label')(),
       sortable: false,
       filter: false,
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'comment',
       headerName: i18n.translate('experiment.comment.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
       wrapText: true,
       autoHeight: true,
       flex: 0,

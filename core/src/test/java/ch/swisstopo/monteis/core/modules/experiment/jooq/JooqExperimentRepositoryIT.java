@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.query.*;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
@@ -301,19 +302,15 @@ class JooqExperimentRepositoryIT {
               LocalDate.of(2024, Month.JANUARY, 1),
               LocalDate.of(2024, Month.DECEMBER, 31));
 
-          ch.swisstopo.monteis.core.infrastructure.query.PagedRequest request =
-              new ch.swisstopo.monteis.core.infrastructure.query.PagedRequest(
+          PagedRequest request =
+              new PagedRequest(
                   0,
                   10,
                   List.of(),
-                  Map.of(
-                      "name",
-                      new ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel(
-                          "contains", "uniquetextfilter", null)));
+                  Map.of("name", new TextFilterModel("contains", "uniquetextfilter", null)));
 
           // Act
-          ch.swisstopo.monteis.core.infrastructure.query.PagedResult<Experiment> result =
-              repository.getExperiments(request);
+          PagedResult<Experiment> result = repository.getExperiments(request);
 
           // Assert
           assertEquals(1, result.totalCount());
@@ -340,18 +337,12 @@ class JooqExperimentRepositoryIT {
 
           // Scope to just our two experiments via a filter, so the sort assertion doesn't
           // depend on how many other rows happen to be seeded ahead of a fixed-size page.
-          ch.swisstopo.monteis.core.infrastructure.query.PagedRequest request =
-              new ch.swisstopo.monteis.core.infrastructure.query.PagedRequest(
+          PagedRequest request =
+              new PagedRequest(
                   0,
                   10,
-                  List.of(
-                      new ch.swisstopo.monteis.core.infrastructure.query.SortModelItem(
-                          "name",
-                          ch.swisstopo.monteis.core.infrastructure.query.SortDirection.DESC)),
-                  Map.of(
-                      "name",
-                      new ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel(
-                          "contains", "_SORT_TEST", null)));
+                  List.of(new SortModelItem("name", SortDirection.DESC)),
+                  Map.of("name", new TextFilterModel("contains", "_SORT_TEST", null)));
 
           // Act
           List<Experiment> rows = repository.getExperiments(request).rows();
