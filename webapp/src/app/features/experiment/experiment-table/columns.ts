@@ -19,7 +19,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
     {
       field: 'status',
       headerName: translateService.translate('experiment.status.label')(),
-      sortable: false,
+      sortable: true,
       filter: false,
       valueFormatter: (params) => {
         switch (params.value) {

@@ -35,6 +35,16 @@ public class JooqExperimentRepository implements ExperimentRepository {
           .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
           .asField();
 
+  private static final Field<String> STATUS_FIELD =
+      DSL.case_()
+          .when(
+              EXPERIMENTS.START.isNotNull().and(DSL.currentLocalDate().lt(EXPERIMENTS.START)),
+              DSL.inline("UPCOMING"))
+          .when(
+              EXPERIMENTS.END.isNotNull().and(DSL.currentLocalDate().gt(EXPERIMENTS.END)),
+              DSL.inline("HISTORIC"))
+          .else_(DSL.inline("ACTIVE"));
+
   private static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
       Map.of(
           "id",
@@ -48,7 +58,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
           "comment",
           EXPERIMENTS.COMMENT,
           SENSOR_COUNT_FIELD_NAME,
-          SENSOR_COUNT_FIELD);
+          SENSOR_COUNT_FIELD,
+          "status",
+          STATUS_FIELD);
 
   private final DSLContext dsl;
   private final ExperimentJooqMapper mapper;
