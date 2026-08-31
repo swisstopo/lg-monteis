@@ -8,4 +8,5 @@ public record ReadSimpleMetricDto(
     Double rawValue,
     Double normValue,
     Short version,
-    String status) {}
+    String status,
+    Long id) {}
