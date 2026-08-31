@@ -25,7 +25,7 @@ export default class ExperimentTable {
   private readonly datePipe = inject(DatePipe);
   private readonly dialog = inject(MatDialog);
   protected experimentService = inject(ExperimentService);
-  private readonly i18nService = inject(TranslateService);
+  private readonly translateService = inject(TranslateService);
 
   readonly searchTerm = signal<string>('');
 
@@ -45,7 +45,7 @@ export default class ExperimentTable {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
       const count = this.totalCount() ?? 0;
-      view.title = this.i18nService.instant('tab.experiment', { count });
+      view.title = this.translateService.instant('tab.experiment', { count });
     });
 
     // Re-fetch the currently visible pages whenever a experiment is created/updated elsewhere
