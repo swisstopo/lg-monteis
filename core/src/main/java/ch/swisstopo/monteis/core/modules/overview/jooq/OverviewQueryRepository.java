@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.overview.jooq;
 
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSORS;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
 import static org.jooq.Records.mapping;
 
@@ -33,8 +34,11 @@ public class OverviewQueryRepository implements QueryInterface {
             SENSOR_READING_SECURED.RAW_VALUE,
             SENSOR_READING_SECURED.NORM_VALUE,
             SENSOR_READING_SECURED.VERSION,
-            SENSOR_READING_SECURED.STATUS)
+            SENSOR_READING_SECURED.STATUS,
+            SENSORS.ID)
         .from(SENSOR_READING_SECURED)
+        .join(SENSORS)
+        .on(SENSOR_READING_SECURED.SENSOR_ID.eq(SENSORS.CODE))
         .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
         .limit(limit)
         .fetch(mapping(ReadSimpleMetricDto::new));

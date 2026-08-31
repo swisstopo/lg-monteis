@@ -117,6 +117,16 @@ export default class OverviewTable {
     stream: () => this.overviewService.getMetrics(50),
   });
 
+  // Does this get the correct (from a business perspective) sensor / plotting ids?
+  protected sensorIds = computed(
+    () =>
+      this.metricsResource
+        .value()
+        ?.map((e) => e.id)
+        .filter((e) => e != undefined)
+        .filter((e, i, self) => i === self.indexOf(e)) ?? [],
+  );
+
   protected wrappedCols = createColumns(this.datePipe);
 
   private readonly plottedIds = signal<string[]>([]);
@@ -164,15 +174,7 @@ export default class OverviewTable {
     const rangeEnd = combineDateAndTime(end.date, end.time);
     if (!rangeStart || !rangeEnd) return;
 
-    // TODO replace with sensor selection as soon as we get ids in DTO
-    // Fixed dev-seed sensor ids (TEMP-1, PRESS-1&2, DISP-2, FLOW-Admin) - see
-    // db/meta/seed/R__seed_dev_data.sql.
-    this.plottedIds.set([
-      '00000000-0000-7000-8000-000000000201',
-      '00000000-0000-7000-8000-000000000202',
-      '00000000-0000-7000-8000-000000000203',
-      '00000000-0000-7000-8000-000000000205',
-    ]);
+    this.plottedIds.set(this.sensorIds());
 
     this.fetchChartData(rangeStart, rangeEnd);
 
