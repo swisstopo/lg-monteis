@@ -36,11 +36,14 @@ const UNIT_KEYS: Record<Unit, { labelKey: string; symbolKey: string }> = {
 };
 
 export function getUnitMetadata(): Record<Unit, { label: Signal<string>; symbol: Signal<string> }> {
-  const i18n = inject(TranslateService);
+  const translateService = inject(TranslateService);
   return Object.fromEntries(
     Object.entries(UNIT_KEYS).map(([unit, { labelKey, symbolKey }]) => [
       unit,
-      { label: i18n.translate(labelKey), symbol: i18n.translate(symbolKey) },
+      {
+        label: translateService.translate(labelKey),
+        symbol: translateService.translate(symbolKey),
+      },
     ]),
   ) as Record<Unit, { label: Signal<string>; symbol: Signal<string> }>;
 }
