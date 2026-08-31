@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { ExperimentResponseDto } from '../../../core/generated';
+import { MultiSelectFilter } from '../../../ui/filters/multi-select-filter/multi-select-filter';
 import { CopyCellRenderer } from '../../../ui/table/copy-cell-renderer/copy-cell-renderer';
 import { TableColumn } from '../../../ui/table/table.types';
 import StatusEnum = ExperimentResponseDto.StatusEnum;
@@ -20,7 +21,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
       field: 'status',
       headerName: translateService.translate('experiment.status.label')(),
       sortable: true,
-      filter: false,
+      filter: MultiSelectFilter,
       valueFormatter: (params) => {
         switch (params.value) {
           case StatusEnum.Active:
@@ -32,6 +33,23 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
           default:
             return params.value ?? '';
         }
+      },
+      filterParams: {
+        valuesProvider: () =>
+          Promise.resolve([
+            {
+              displayName: translateService.translate('experiment.status.option.active.label')(),
+              value: 'ACTIVE',
+            },
+            {
+              displayName: translateService.translate('experiment.status.option.historic.label')(),
+              value: 'HISTORIC',
+            },
+            {
+              displayName: translateService.translate('experiment.status.option.upcoming.label')(),
+              value: 'UPCOMING',
+            },
+          ]),
       },
     },
     {

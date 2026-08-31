@@ -1,0 +1,57 @@
+<div class="filter-container">
+  @if (isLoading()) {
+    <div class="filter-state-container">
+      <mat-spinner diameter="30"></mat-spinner>
+      <span>Laden...</span>
+    </div>
+  }
+
+  @if (!isLoading() && hasError()) {
+    <div class="filter-state-container">
+      <mat-icon color="warn">error_outline</mat-icon>
+      <span>Fehler beim Laden</span>
+    </div>
+  }
+
+  @if (!isLoading() && !hasError()) {
+    @if (showFilter()) {
+      <mat-form-field class="search-field" appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Suche</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [(ngModel)]="searchText" autocomplete="off" />
+      </mat-form-field>
+    }
+
+    <mat-checkbox
+      class="mat-menu-item"
+      [checked]="isAllSelected()"
+      [indeterminate]="isIndeterminate()"
+      (change)="onAllChanged($event)"
+    >
+      (Alle selektieren)
+    </mat-checkbox>
+
+    <mat-divider></mat-divider>
+
+    <div #filterOptions class="filter-options-list">
+      @for (option of filteredOptions(); track option.value) {
+        <mat-checkbox
+          class="mat-menu-item"
+          [checked]="selectedValues().has(option.value)"
+          (change)="onValueChanged(option.value, $event)"
+        >
+          {{ option.displayName }}
+        </mat-checkbox>
+      } @empty {
+        <span class="no-results-message">Keine Resultate gefunden</span>
+      }
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="filter-actions">
+      <button mat-button (click)="onCancelClick()">Abbrechen</button>
+      <button mat-flat-button color="primary" (click)="onApplyClick()">Anwenden</button>
+    </div>
+  }
+</div>
