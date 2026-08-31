@@ -117,8 +117,8 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(playwright@1.62.1)(vite@8.1.5(@types/node@20.19.43)(esbuild@0.28.2)(sass@1.101.0))(vitest@4.1.11)
       corepack:
-        specifier: ^0.35.0
-        version: 0.35.0
+        specifier: ^0.36.0
+        version: 0.36.0
       eslint:
         specifier: ^10.9.1
         version: 10.9.1(supports-color@10.2.2)
@@ -2421,8 +2421,8 @@ packages:
     resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
 
-  corepack@0.35.0:
-    resolution: {integrity: sha512-9BuIGHDFE7Zieor1CeRsvt7X7AJFEuJ6OnbSbsVprq83ChDFoBh1wP98NeUS9FT3ZwlzFllPElXcz/OiDf0YGw==}
+  corepack@0.36.0:
+    resolution: {integrity: sha512-SiiJsBhZqdBiPHTEl6OT3sASrRrKIcYTQMsVGXx6EE/gM8WFMwYjeIX8Tt8RiU4Iv2J6LbT8KpGfCOsBpRWB/w==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
     hasBin: true
 
@@ -5913,7 +5913,7 @@ snapshots:
 
   cookie@0.7.2: {}
 
-  corepack@0.35.0: {}
+  corepack@0.36.0: {}
 
   cors@2.8.6:
     dependencies:
