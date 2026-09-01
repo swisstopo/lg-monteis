@@ -1,14 +1,24 @@
 name: Build and Package Webapp Artifact
+run-name: "Build & Package Webapp (manual): ${{ inputs.commit }}"
+
+# ⚠️ FEATURE-BRANCH VARIANT — manual builds only.
+# This copy replaces the production push/tag flow with a single manual trigger:
+# build & publish a specific already-merged webapp commit to the artifact bucket,
+# keyed by the commit SHA (the same key deploy-webapp resolves by). No git tag is
+# cut. Intended to live on a feature branch and be run via the Actions
+# "Use workflow from" selector — NOT merged to main (main keeps the push flow).
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'webapp/**'
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'CommitSHA of an (already-merged) webapp change to build & push.'
+        required: true
+        type: string
 
 permissions:
-  contents: write # required for: git push tag
+  id-token: write # required for: aws-actions/configure-aws-credentials (OIDC)
+  contents: read  # required for: actions/checkout
 
 env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION }}
@@ -16,45 +26,38 @@ env:
   NODE_VERSION: ${{ vars.NODE_VERSION }}
 
 jobs:
-  evaluate-version:
-    name: Evaluate Tag for webapp
-    runs-on: ubuntu-24.04
-    outputs:
-      is_tagged: ${{ steps.semver.outputs.is_tagged }}
-      changed: ${{ steps.semver.outputs.changed }}
-      version: ${{ steps.semver.outputs.version }}
-      version_tag: ${{ steps.semver.outputs.version_tag }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0 # Must fetch history so the bot can read the commits
-          filter: blob:none
-
-      # This is a dry run which is used later to set the github tag and have unique versioning
-      # change_path guards unnecessary execution!
-      - name: "[TAG]: Calculate Semantic Version"
-        id: semver
-        uses: paulhatch/semantic-version@v6.0.3
-        with:
-          tag_prefix: "webapp-v"
-          change_path: "webapp/"
-
-      - name: "[TAG]: Check if already tagged"
-        run: |
-          echo "is tagged: ${{ steps.semver.outputs.is_tagged }}"
-          echo "changed: ${{ steps.semver.outputs.changed }}"
-
   build-and-package:
     name: Build & Package webapp
-    needs: evaluate-version
-    if: needs.evaluate-version.outputs.is_tagged == 'false' && needs.evaluate-version.outputs.changed == 'true'
     runs-on: ubuntu-24.04
-    permissions:
-      id-token: write # required for: aws-actions/configure-aws-credentials (OIDC)
-      contents: write # required for: git push tag
     steps:
       - name: "[PREPARE]: Checkout Code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit }} # the commit to build; checkout fails clearly if it does not exist
+          fetch-depth: 0            # need tags to reuse the commit's webapp-v* version
+          filter: blob:none
+
+      - name: "[RESOLVE]: Version from commit"
+        id: ver
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse --verify "HEAD^{commit}")
+          # Reuse the webapp-v* tag on the commit so the artifact keeps its real
+          # version + key (idempotent with the push flow's object). Fall back to a
+          # manual version for an untagged commit.
+          TAG=$(git tag --points-at "$SHA" --list 'webapp-v*' | head -n1)
+          if [[ -n "$TAG" ]]; then
+            VERSION="${TAG#webapp-v}"
+          else
+            VERSION="0.0.0-manual.${SHA:0:7}"
+            TAG="manual"
+          fi
+          {
+            echo "sha=${SHA}"
+            echo "version=${VERSION}"
+            echo "version_tag=${TAG}"
+          } >> "${GITHUB_OUTPUT}"
+          echo "Building ${{ inputs.commit }} → ${SHA} (version ${VERSION})"
 
       - name: "[PREPARE]: Setup Java Environment"
         uses: ./.github/actions/setup-java-maven
@@ -77,20 +80,10 @@ jobs:
 
       - name: "[BUILD]: Create build archive"
         env:
-          VERSION: ${{ needs.evaluate-version.outputs.version }}
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           cd webapp/dist/webapp/browser
           zip -r "$GITHUB_WORKSPACE/webapp-$VERSION.zip" .
-
-      - name: "[TAG]: Push Git Tag to GitHub"
-        env:
-          TAG: ${{ needs.evaluate-version.outputs.version_tag }}
-        run: |
-          echo "[INFO]: Tagging commit with $TAG"
-
-          # Create and push the tag
-          git tag $TAG
-          git push origin $TAG
 
       - name: "[AWS]: Configure AWS Credentials"
         uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
@@ -100,19 +93,20 @@ jobs:
 
       - name: "[PUBLISH]: Upload build artifact to S3"
         env:
-          VERSION: ${{ needs.evaluate-version.outputs.version }}
-          VERSION_TAG: ${{ needs.evaluate-version.outputs.version_tag }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          VERSION_TAG: ${{ steps.ver.outputs.version_tag }}
+          BUILD_SHA: ${{ steps.ver.outputs.sha }}
         run: |
           set -euo pipefail
           aws s3 cp "webapp-${VERSION}.zip" \
-            "s3://${{ vars.ARTIFACT_BUCKET_NAME }}/webapp/${GITHUB_SHA}/webapp-${VERSION}.zip" \
+            "s3://${{ vars.ARTIFACT_BUCKET_NAME }}/webapp/${BUILD_SHA}/webapp-${VERSION}.zip" \
             --checksum-algorithm SHA256 \
-            --metadata "git-tag=${VERSION_TAG},commit-sha=${GITHUB_SHA}"
+            --metadata "git-tag=${VERSION_TAG},commit-sha=${BUILD_SHA}"
 
-      # Short-retention GitHub artifact kept for developer convenience (e.g. PR inspection).
+      # Short-retention GitHub artifact for convenience.
       - name: "[PUBLISH]: Upload build artifact to GitHub"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: webapp-${{ needs.evaluate-version.outputs.version }}
-          path: webapp-${{ needs.evaluate-version.outputs.version }}.zip
+          name: webapp-${{ steps.ver.outputs.version }}
+          path: webapp-${{ steps.ver.outputs.version }}.zip
           retention-days: 3
