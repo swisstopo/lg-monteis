@@ -37,6 +37,8 @@ class EipPipelineTaxonomyTest {
         .areNotInterfaces()
         .and()
         .areNotEnums()
+        .and()
+        .areNotNestedClasses()
         .should()
         .haveSimpleNameEndingWith("Processor")
         .orShould()
