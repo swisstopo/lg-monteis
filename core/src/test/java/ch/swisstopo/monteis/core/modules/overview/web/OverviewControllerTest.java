@@ -36,7 +36,7 @@ class OverviewControllerTest {
     OffsetDateTime timestamp = OffsetDateTime.parse("2026-07-15T10:00:05Z");
 
     ReadSimpleMetricDto expectedDto =
-        new ReadSimpleMetricDto(timestamp, "SENS-01", 25.4, 0.98, (short) 1, "ACTIVE");
+        new ReadSimpleMetricDto(timestamp, "SENS-01", 25.4, 0.98, (short) 1, "ACTIVE", 4L);
 
     List<ReadSimpleMetricDto> expectedResponse = List.of(expectedDto);
 
