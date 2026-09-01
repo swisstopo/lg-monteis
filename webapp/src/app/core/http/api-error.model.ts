@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ErrorDto } from '../../core/generated';
+import { ErrorDto } from '@core/generated';
 
 /**
  * Normalizes any error thrown by an API call into a list of {@link ErrorDto}.
