@@ -99,8 +99,8 @@ export default class OverviewTable {
   readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
   readonly dateRangeModel = signal<DateRangeModel>({
-    start: { date: null, time: atTime(0, 0) },
-    end: { date: null, time: atTime(23, 59) },
+    start: { date: new Date(), time: atTime(0, 0) },
+    end: { date: new Date(), time: atTime(23, 59) },
   });
 
   readonly rangeForm = form(
@@ -117,7 +117,8 @@ export default class OverviewTable {
     stream: () => this.overviewService.getMetrics(50),
   });
 
-  // Does this get the correct (from a business perspective) sensor / plotting ids?
+  // todo: Does this get the correct (from a business perspective) sensor / plotting ids?
+  // this would not be performant at all
   protected sensorIds = computed(
     () =>
       this.metricsResource
