@@ -14,8 +14,11 @@ function mockField(): FieldTree<unknown> {
 describe('FormErrorService', () => {
   let service: FormErrorService;
   let toastService: ToastService;
+  let translateSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    translateSpy = vi.fn((key: string) => signal(`translated:${key}`));
+
     TestBed.configureTestingModule({
       providers: [
         FormErrorService,
@@ -23,7 +26,7 @@ describe('FormErrorService', () => {
         {
           provide: TranslateService,
           useValue: {
-            translate: vi.fn((key: string) => signal(`translated:${key}`)),
+            translate: translateSpy,
           },
         },
       ],
@@ -81,6 +84,15 @@ describe('FormErrorService', () => {
 
     expect(result).toEqual([]);
     expect(toastSpy).toHaveBeenCalledWith('translated:validation.required');
+  });
+
+  it('forwards the error params to translate for unmapped errors', () => {
+    const form = {} as FieldTree<unknown>;
+    const errors: ErrorDto[] = [{ messageKey: 'validation.tooLong', params: { max: 10 } }];
+
+    service.mapApiErrorsToFormErrors(errors, form);
+
+    expect(translateSpy).toHaveBeenCalledWith('validation.tooLong', { max: 10 });
   });
 
   it('uses the fallback message key when messageKey is missing', () => {
