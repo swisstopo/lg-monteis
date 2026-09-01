@@ -38,7 +38,7 @@ export const restErrorInterceptor: HttpInterceptorFn = (req, next) => {
           if (globalErrors.length > 0) {
             globalErrors.forEach((err) =>
               toastService.error(
-                translateService.translate(err.messageKey ?? 'error.system.internal')(),
+                translateService.translate(err.messageKey ?? 'error.system.internal', err.params)(),
               ),
             );
           } else if (error.status === 0 || error.status >= 500) {

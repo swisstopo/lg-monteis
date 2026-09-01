@@ -49,7 +49,7 @@ export class FormErrorService {
         }
 
         this.toastService.error(
-          this.translateService.translate(err.messageKey ?? fallbackMessageKey)(),
+          this.translateService.translate(err.messageKey ?? fallbackMessageKey, err.params)(),
         );
         return undefined;
       })
