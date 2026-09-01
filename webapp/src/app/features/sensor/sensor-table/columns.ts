@@ -4,40 +4,32 @@ import { SensorResponseDto } from '../../../core/generated';
 import { TableColumn } from '../../../ui/table/table.types';
 import { getUnitMetadata } from '../models/sensor.model';
 
-// Only a single filter condition per column is supported by the paged backend endpoint, so
-// combined ("AND"/"OR") filters are disabled here to keep the filter model ag-grid sends in sync
-// with what the backend can translate.
-const SINGLE_CONDITION_FILTER_PARAMS = { maxNumConditions: 1 };
-
 export function createColumns(): TableColumn<SensorResponseDto>[] {
-  const i18n = inject(TranslateService);
+  const translateService = inject(TranslateService);
   const unitMetadata = getUnitMetadata();
 
   return [
     {
       field: 'code',
-      headerName: i18n.translate('sensor.code.label')(),
+      headerName: translateService.translate('sensor.code.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'name',
-      headerName: i18n.translate('sensor.name.label')(),
+      headerName: translateService.translate('sensor.name.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'type.name',
-      headerName: i18n.translate('sensor.type.label')(),
+      headerName: translateService.translate('sensor.type.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'unit',
-      headerName: i18n.translate('sensor.unit.label')(),
+      headerName: translateService.translate('sensor.unit.label')(),
       sortable: true,
       // Not text-filterable: the backend column is a DB-level enum, not a plain string.
       filter: false,
@@ -48,35 +40,31 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
     },
     {
       field: 'formula.expression',
-      headerName: i18n.translate('sensor.formula.column')(),
+      headerName: translateService.translate('sensor.formula.column')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'coordinates.x',
-      headerName: i18n.translate('sensor.coordinate.xLocal.label')(),
+      headerName: translateService.translate('sensor.coordinate.xLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'coordinates.y',
-      headerName: i18n.translate('sensor.coordinate.yLocal.label')(),
+      headerName: translateService.translate('sensor.coordinate.yLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'coordinates.z',
-      headerName: i18n.translate('sensor.coordinate.zLocal.label')(),
+      headerName: translateService.translate('sensor.coordinate.zLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
     },
     {
       field: 'alarmLimits',
-      headerName: i18n.translate('sensor.alarmLimit.column')(),
+      headerName: translateService.translate('sensor.alarmLimit.column')(),
       minWidth: 150,
       // No single natural sort/filter key: this is a composite of the lower/upper limit fields.
       sortable: false,
@@ -84,7 +72,7 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
       valueFormatter: (params) => {
         const alarmLimits = params.value;
         return alarmLimits
-          ? i18n.translate('sensor.alarmLimit.display', {
+          ? translateService.translate('sensor.alarmLimit.display', {
               lower: alarmLimits.lower,
               upper: alarmLimits.upper,
             })()
@@ -93,7 +81,7 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
     },
     {
       field: 'active',
-      headerName: i18n.translate('sensor.active.label')(),
+      headerName: translateService.translate('sensor.active.label')(),
       sortable: true,
       // Not filterable: a boolean Yes/No column would need agSetColumnFilter, a different
       // filter-model shape the backend doesn't translate yet.
@@ -103,15 +91,14 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
       cellDataType: false,
       valueFormatter: (params) =>
         params.value
-          ? i18n.translate('sensor.active.column.yes')()
-          : i18n.translate('sensor.active.column.no')(),
+          ? translateService.translate('sensor.active.column.yes')()
+          : translateService.translate('sensor.active.column.no')(),
     },
     {
       field: 'comment',
-      headerName: i18n.translate('sensor.comment.label')(),
+      headerName: translateService.translate('sensor.comment.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      filterParams: SINGLE_CONDITION_FILTER_PARAMS,
       wrapText: true,
       autoHeight: true,
       flex: 0,

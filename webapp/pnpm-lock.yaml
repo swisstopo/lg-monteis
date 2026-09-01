@@ -53,11 +53,11 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0(rxjs@7.8.2)
       '@scion/workbench':
-        specifier: 22.0.0-beta.1
-        version: 22.0.0-beta.1(0cb3266f353fcd4303415e7c9063f070)
+        specifier: 22.0.0-beta.2
+        version: 22.0.0-beta.2(26f053441853076d121f5bea19afcc7f)
       '@scion/workbench-client':
-        specifier: 1.0.0-beta.42
-        version: 1.0.0-beta.42(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
+        specifier: 1.0.0-beta.43
+        version: 1.0.0-beta.43(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
       ag-grid-angular:
         specifier: ^36.1.0
         version: 36.1.0(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))
@@ -117,8 +117,8 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(playwright@1.62.1)(vite@8.1.5(@types/node@20.19.43)(esbuild@0.28.2)(sass@1.101.0))(vitest@4.1.11)
       corepack:
-        specifier: ^0.35.0
-        version: 0.35.0
+        specifier: ^0.36.0
+        version: 0.36.0
       eslint:
         specifier: ^10.9.1
         version: 10.9.1(supports-color@10.2.2)
@@ -1923,15 +1923,15 @@ packages:
     peerDependencies:
       rxjs: ^7.8.0
 
-  '@scion/workbench-client@1.0.0-beta.42':
-    resolution: {integrity: sha512-uGfgIUjFcB3sZRePeA0UdVkvrg0EAY0UeshZPkkzUvyizt3ZEB6J6LkMrXQyeDXomKSVw7XDLFfqlgcCoDGgCA==}
+  '@scion/workbench-client@1.0.0-beta.43':
+    resolution: {integrity: sha512-GLYuVOY2YKvIDGgPgske/GerY/Sgb4lnVmoS9/pvp9+XIicE21+BFIUosFAmKMIeL9KlaGktivlZrY4/lL7ydQ==}
     peerDependencies:
-      '@scion/microfrontend-platform': ^2.0.0
+      '@scion/microfrontend-platform': ^3.0.0
       '@scion/toolkit': ^2.1.0
       rxjs: ^7.8.0
 
-  '@scion/workbench@22.0.0-beta.1':
-    resolution: {integrity: sha512-pe4PDLktSQ5JTTgkjHV2UKMbqE4Amk8r1J6KLoamlIfUkuPdEgm3+mxcqWRmwwLM0vsaOrc241jBTeXiKUBTPg==}
+  '@scion/workbench@22.0.0-beta.2':
+    resolution: {integrity: sha512-qN1V7OG5KXypSASGqxef1394nBgJmGPw+Z07KS5rGLSrv11OmVoYvHs+NwWPO7l5KMWdCNACjCBnHZiB8EiOhg==}
     peerDependencies:
       '@angular/animations': ^22.0.0
       '@angular/cdk': ^22.0.0
@@ -1940,7 +1940,7 @@ packages:
       '@angular/forms': ^22.0.0
       '@angular/router': ^22.0.0
       '@scion/components': ^22.0.0
-      '@scion/microfrontend-platform': ^2.0.0
+      '@scion/microfrontend-platform': ^3.0.0
       '@scion/toolkit': ^2.1.0
       '@scion/workbench-client': ^1.0.0-beta.42
       rxjs: ^7.8.0
@@ -2421,8 +2421,8 @@ packages:
     resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
 
-  corepack@0.35.0:
-    resolution: {integrity: sha512-9BuIGHDFE7Zieor1CeRsvt7X7AJFEuJ6OnbSbsVprq83ChDFoBh1wP98NeUS9FT3ZwlzFllPElXcz/OiDf0YGw==}
+  corepack@0.36.0:
+    resolution: {integrity: sha512-SiiJsBhZqdBiPHTEl6OT3sASrRrKIcYTQMsVGXx6EE/gM8WFMwYjeIX8Tt8RiU4Iv2J6LbT8KpGfCOsBpRWB/w==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
     hasBin: true
 
@@ -5347,14 +5347,14 @@ snapshots:
       rxjs: 7.8.2
       tslib: 2.8.1
 
-  '@scion/workbench-client@1.0.0-beta.42(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)':
+  '@scion/workbench-client@1.0.0-beta.43(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)':
     dependencies:
       '@scion/microfrontend-platform': 2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
       '@scion/toolkit': 2.1.0(rxjs@7.8.2)
       rxjs: 7.8.2
       tslib: 2.8.1
 
-  '@scion/workbench@22.0.0-beta.1(0cb3266f353fcd4303415e7c9063f070)':
+  '@scion/workbench@22.0.0-beta.2(26f053441853076d121f5bea19afcc7f)':
     dependencies:
       '@angular/animations': 22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))
       '@angular/cdk': 22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(@angular/platform-browser@22.1.4(@angular/animations@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)))(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)))(rxjs@7.8.2)
@@ -5368,7 +5368,7 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@scion/microfrontend-platform': 2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
-      '@scion/workbench-client': 1.0.0-beta.42(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
+      '@scion/workbench-client': 1.0.0-beta.43(@scion/microfrontend-platform@2.1.0(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.1.0(rxjs@7.8.2))(rxjs@7.8.2)
 
   '@standard-schema/spec@1.1.0': {}
 
@@ -5913,7 +5913,7 @@ snapshots:
 
   cookie@0.7.2: {}
 
-  corepack@0.35.0: {}
+  corepack@0.36.0: {}
 
   cors@2.8.6:
     dependencies:

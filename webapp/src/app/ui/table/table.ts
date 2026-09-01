@@ -60,6 +60,10 @@ export default class Table<T = any> {
     resizable: true,
     flex: 1,
     minWidth: 120,
+    // Only a single filter condition per column is supported by the paged backend endpoint, so
+    // combined ("AND"/"OR") filters are disabled here to keep the filter model ag-grid sends in sync
+    // with what the backend can translate.
+    filterParams: { maxNumConditions: 1 },
   };
 
   protected mergedGridOptions = computed<GridOptions<T>>(() => {
