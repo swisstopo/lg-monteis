@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,13 +26,18 @@ import org.springframework.security.oauth2.jwt.Jwt;
 /** Verifies the full JWT-to-{@code Authentication} mapping in {@link MonteisJwtAuthenticationConverter}. */
 class MonteisJwtAuthenticationConverterTest {
 
+  private static final UUID EXPERIMENT_1 = UUID.fromString("00000000-0000-0000-0000-000000000001");
+  private static final UUID EXPERIMENT_2 = UUID.fromString("00000000-0000-0000-0000-000000000002");
+  private static final UUID EXPERIMENT_5 = UUID.fromString("00000000-0000-0000-0000-000000000005");
+
   private final MonteisJwtAuthenticationConverter converter =
       new MonteisJwtAuthenticationConverter();
 
   @Test
   void should_mark_the_resulting_token_as_authenticated() {
     // given
-    Jwt jwt = givenJwt(UUID.randomUUID(), "alice", List.of("monteis-client:read"), List.of(1L));
+    Jwt jwt =
+        givenJwt(UUID.randomUUID(), "alice", List.of("monteis-client:read"), List.of(EXPERIMENT_1));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
@@ -47,7 +53,8 @@ class MonteisJwtAuthenticationConverterTest {
   void should_return_a_monteis_authentication_token_carrying_the_source_jwt_as_credentials() {
     // given: a dedicated token type, not e.g. UsernamePasswordAuthenticationToken, since this app
     // authenticates OAuth2 bearer JWTs, not a username/password exchange
-    Jwt jwt = givenJwt(UUID.randomUUID(), "alice", List.of("monteis-client:read"), List.of(1L));
+    Jwt jwt =
+        givenJwt(UUID.randomUUID(), "alice", List.of("monteis-client:read"), List.of(EXPERIMENT_1));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
@@ -61,14 +68,17 @@ class MonteisJwtAuthenticationConverterTest {
   void should_populate_own_scope_principal_from_read_role() {
     // given
     UUID subject = UUID.randomUUID();
-    Jwt jwt = givenJwt(subject, "alice", List.of("monteis-client:read"), List.of(1L, 2L));
+    Jwt jwt =
+        givenJwt(
+            subject, "alice", List.of("monteis-client:read"), List.of(EXPERIMENT_1, EXPERIMENT_2));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
 
     // then
     assertEquals(
-        new MonteisPrincipal(subject, "alice", List.of(1L, 2L)), authentication.getPrincipal());
+        new MonteisPrincipal(subject, "alice", List.of(EXPERIMENT_1, EXPERIMENT_2)),
+        authentication.getPrincipal());
     assertEquals(Set.of(new SimpleGrantedAuthority(READ_AUTHORITY)), authoritiesOf(authentication));
   }
 
@@ -81,13 +91,14 @@ class MonteisJwtAuthenticationConverterTest {
             subject,
             "bob",
             List.of("monteis-client:read-all", "monteis-client:write"),
-            List.of(5L));
+            List.of(EXPERIMENT_5));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
 
     // then
-    assertEquals(new MonteisPrincipal(subject, "bob", List.of(5L)), authentication.getPrincipal());
+    assertEquals(
+        new MonteisPrincipal(subject, "bob", List.of(EXPERIMENT_5)), authentication.getPrincipal());
     assertEquals(
         Set.of(
             new SimpleGrantedAuthority(WRITE_AUTHORITY),
@@ -105,7 +116,7 @@ class MonteisJwtAuthenticationConverterTest {
             subject,
             "alice",
             List.of("monteis-client:read", "monteis-client:read-all"),
-            List.of(1L));
+            List.of(EXPERIMENT_1));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
@@ -149,7 +160,7 @@ class MonteisJwtAuthenticationConverterTest {
             subject,
             "eve",
             List.of("monteis-client:read", "monteis-client:read-all", "monteis-client:write"),
-            List.of(5L));
+            List.of(EXPERIMENT_5));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
@@ -167,7 +178,7 @@ class MonteisJwtAuthenticationConverterTest {
     // given: experiment_ids present despite the missing role claim (and so no read authority at
     // all), to prove it's still forced empty rather than leaking through
     UUID subject = UUID.randomUUID();
-    Jwt jwt = givenJwt(subject, "carol", null, List.of(1L, 2L));
+    Jwt jwt = givenJwt(subject, "carol", null, List.of(EXPERIMENT_1, EXPERIMENT_2));
 
     // when
     AbstractAuthenticationToken authentication = converter.convert(jwt);
@@ -195,13 +206,15 @@ class MonteisJwtAuthenticationConverterTest {
   }
 
   @Test
-  void should_filter_out_non_numeric_experiment_ids() {
+  void should_filter_out_invalid_experiment_ids() {
     // given
     UUID subject = UUID.randomUUID();
     Map<String, Object> claims = new HashMap<>();
     claims.put("preferred_username", "erin");
     claims.put("monteis_access", Map.of("roles", List.of("monteis-client:read")));
-    claims.put("experiment_ids", List.of(1L, "not-a-number", 2L));
+    claims.put(
+        "experiment_ids",
+        List.of(EXPERIMENT_1.toString(), "not-a-uuid", 42, EXPERIMENT_2.toString()));
     Jwt jwt = givenJwtWithClaims(subject, claims);
 
     // when
@@ -209,7 +222,30 @@ class MonteisJwtAuthenticationConverterTest {
 
     // then
     assertEquals(
-        new MonteisPrincipal(subject, "erin", List.of(1L, 2L)), authentication.getPrincipal());
+        new MonteisPrincipal(subject, "erin", List.of(EXPERIMENT_1, EXPERIMENT_2)),
+        authentication.getPrincipal());
+  }
+
+  @Test
+  void should_filter_out_a_null_experiment_id_without_breaking_the_converter() {
+    // given: a null entry in the raw claim list (e.g. a malformed token) - tryParseUuid() is
+    // never even reached for it since the non-String filter runs first, but this pins down that
+    // the whole pipeline tolerates it end-to-end rather than throwing a NullPointerException.
+    UUID subject = UUID.randomUUID();
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("preferred_username", "frank");
+    claims.put("monteis_access", Map.of("roles", List.of("monteis-client:read")));
+    claims.put(
+        "experiment_ids", Arrays.asList(EXPERIMENT_1.toString(), null, EXPERIMENT_2.toString()));
+    Jwt jwt = givenJwtWithClaims(subject, claims);
+
+    // when
+    AbstractAuthenticationToken authentication = converter.convert(jwt);
+
+    // then
+    assertEquals(
+        new MonteisPrincipal(subject, "frank", List.of(EXPERIMENT_1, EXPERIMENT_2)),
+        authentication.getPrincipal());
   }
 
   private static Set<GrantedAuthority> authoritiesOf(AbstractAuthenticationToken authentication) {
@@ -217,14 +253,14 @@ class MonteisJwtAuthenticationConverterTest {
   }
 
   private static Jwt givenJwt(
-      UUID subject, String username, List<String> roles, List<Long> experimentIds) {
+      UUID subject, String username, List<String> roles, List<UUID> experimentIds) {
     Map<String, Object> claims = new HashMap<>();
     claims.put("preferred_username", username);
     if (roles != null) {
       claims.put("monteis_access", Map.of("roles", roles));
     }
     if (experimentIds != null) {
-      claims.put("experiment_ids", experimentIds);
+      claims.put("experiment_ids", experimentIds.stream().map(UUID::toString).toList());
     }
     return givenJwtWithClaims(subject, claims);
   }

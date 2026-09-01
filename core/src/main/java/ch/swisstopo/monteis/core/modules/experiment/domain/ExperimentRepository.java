@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.experiment.domain;
 
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
@@ -43,7 +44,7 @@ public interface ExperimentRepository {
    * @param id the ID of the experiment to retrieve
    * @return the experiment response DTO
    */
-  Experiment getById(Long id);
+  Experiment getById(UUID id);
 
   /**
    * Retrieves a page of {@link Experiment}s

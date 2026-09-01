@@ -14,10 +14,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Positive;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -46,7 +46,7 @@ public class ExperimentController {
   @Operation(summary = "Get a experiment by id", description = "Retrieves a experiment by id")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
   @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ExperimentResponseDto> getExperiment(@PathVariable @Positive Long id) {
+  public ResponseEntity<ExperimentResponseDto> getExperiment(@PathVariable UUID id) {
     LocalDate today = LocalDate.now(clock);
     return ResponseEntity.ok(mapper.toDto(service.getById(id), today));
   }
@@ -81,8 +81,7 @@ public class ExperimentController {
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExperimentResponseDto> updateExperiment(
-      @PathVariable @Positive Long id,
-      @Validated(Update.class) @RequestBody WriteExperimentDto dto) {
+      @PathVariable UUID id, @Validated(Update.class) @RequestBody WriteExperimentDto dto) {
     if (!id.equals(dto.id())) {
       throw new ObjectBusinessValidationException(
           "id.validation.mismatch", Map.of("pathId", id, "id", dto.id()));

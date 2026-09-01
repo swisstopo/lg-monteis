@@ -13,6 +13,7 @@ import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataR
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.Record3;
 import org.junit.jupiter.api.Test;
@@ -24,11 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
  * db/meta/seed} and {@code db/timescale/seed}):
  *
  * <ul>
- *   <li>TEMP-1 (id 1) — experiment 1
- *   <li>PRESS-1&amp;2 (id 2) — experiments 1 &amp; 2
- *   <li>DISP-2 (id 3) — experiment 2
- *   <li>FLOW-2 (id 4) — experiment 2
- *   <li>FLOW-Admin (id 5) — no experiment, admin-only
+ *   <li>TEMP-1 — experiment "Mont Terri Alpha"
+ *   <li>PRESS-1&amp;2 — experiments "Mont Terri Alpha" &amp; "Mont Terri Beta"
+ *   <li>DISP-2 — experiment "Mont Terri Beta"
+ *   <li>FLOW-2 — experiment "Mont Terri Beta"
+ *   <li>FLOW-Admin — no experiment, admin-only
  * </ul>
  *
  * <p>Each of these sensors has readings spaced 5 minutes apart, spanning the 365 days before the
@@ -43,11 +44,13 @@ import org.springframework.transaction.annotation.Transactional;
 @IT
 class MeasurementQueryRepositoryIT {
 
-  private static final Long TEMP_1 = 1L;
-  private static final Long DISP_2 = 3L;
-  private static final Long FLOW_ADMIN = 5L;
-  private static final Long NON_EXISTENT_ID = 999_999L;
-  private static final List<Long> EXPERIMENT_1_ONLY = List.of(1L);
+  // uuids match the seeding script
+  private static final UUID TEMP_1 = UUID.fromString("00000000-0000-7000-8000-000000000201");
+  private static final UUID DISP_2 = UUID.fromString("00000000-0000-7000-8000-000000000203");
+  private static final UUID FLOW_ADMIN = UUID.fromString("00000000-0000-7000-8000-000000000205");
+  private static final UUID NON_EXISTENT_ID = UUID.randomUUID();
+  private static final List<UUID> EXPERIMENT_1_ONLY =
+      List.of(UUID.fromString("00000000-0000-7000-8000-000000000301"));
 
   @Autowired private MeasurementQueryRepository repository;
 
@@ -290,7 +293,7 @@ class MeasurementQueryRepositoryIT {
         });
   }
 
-  private List<ChartPointDto> dataOf(Long id, OffsetDateTime from, OffsetDateTime to) {
+  private List<ChartPointDto> dataOf(UUID id, OffsetDateTime from, OffsetDateTime to) {
     return repository.findMeasurements(id, from, to).orElseThrow().data();
   }
 }

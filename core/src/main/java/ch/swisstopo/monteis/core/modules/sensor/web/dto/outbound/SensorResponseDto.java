@@ -3,9 +3,10 @@ package ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
+import java.util.UUID;
 
 public record SensorResponseDto(
-    Long id,
+    UUID id,
     String code,
     String name,
     Unit unit,

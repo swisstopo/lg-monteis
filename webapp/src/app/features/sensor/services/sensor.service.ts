@@ -9,7 +9,7 @@ import { toPagedRequestParams } from '../../../ui/table/paged-request.mapper';
 @Injectable({ providedIn: 'root' })
 export class SensorService {
   private readonly api = inject(SensorControllerService);
-  private readonly sensorRequest = signal<{ id: number | undefined }>({ id: undefined });
+  private readonly sensorRequest = signal<{ id: string | undefined }>({ id: undefined });
   readonly error = signal<ErrorDto[] | undefined>(undefined);
   // Bumped whenever a sensor is created/updated, so the sensor table can refresh its
   // ag-grid infinite row model cache - ag-grid has no way to detect that on its own.
@@ -32,7 +32,7 @@ export class SensorService {
   });
 
   // always set the sensor id to refetch the sensor
-  getSensor(id: number | undefined) {
+  getSensor(id: string | undefined) {
     if (id === undefined) {
       this.sensor.value.set(undefined);
       return;
@@ -51,7 +51,7 @@ export class SensorService {
     }
   }
 
-  async updateSensor(id: number, sensor: WriteSensorDto) {
+  async updateSensor(id: string, sensor: WriteSensorDto) {
     try {
       const result = await firstValueFrom(this.api.updateSensor(id, sensor));
       this.sensorsChanged.set(true);

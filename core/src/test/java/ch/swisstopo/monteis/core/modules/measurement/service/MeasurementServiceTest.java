@@ -14,6 +14,7 @@ import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataR
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,7 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class MeasurementServiceTest {
 
-  private static final Long SENSOR_ID = 1L;
+  private static final UUID SENSOR_ID = UUID.randomUUID();
 
   @Mock private MeasurementQuery query;
 

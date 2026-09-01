@@ -10,7 +10,7 @@ import { toErrorDtos } from '../../../core/http/api-error.model';
 import { ChartDataset, ChartPoint } from '../../../ui/chart';
 
 interface ChartRequest {
-  ids: number[];
+  ids: string[];
   rangeFrom: string;
   rangeTo: string;
 }
@@ -60,7 +60,7 @@ export class MesurementsService {
     },
   });
 
-  getChartData(ids: number[], rangeFrom: string, rangeTo: string) {
+  getChartData(ids: string[], rangeFrom: string, rangeTo: string) {
     if (!ids.length) {
       this.chartsRequest.set(undefined);
       return;

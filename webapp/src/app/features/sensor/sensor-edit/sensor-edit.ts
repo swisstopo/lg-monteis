@@ -107,7 +107,7 @@ export default class SensorEdit {
   readonly dialogRef = inject<MatDialogRef<SensorEdit>>(MatDialogRef, {
     optional: true,
   });
-  readonly sensorId = input<number | undefined>(undefined);
+  readonly sensorId = input<string | undefined>(undefined);
 
   readonly unitValues = Object.values(WriteSensorDto.UnitEnum) as Unit[];
   readonly unitMetadata = getUnitMetadata();

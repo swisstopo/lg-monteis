@@ -23,6 +23,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeRespo
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -57,7 +58,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
 
   @Override
   @Transactional(readOnly = true)
-  public SensorResponseDto getById(Long id) {
+  public SensorResponseDto getById(UUID id) {
     return dsl.select(
             SENSORS.ID,
             SENSORS.CODE,
@@ -154,17 +155,23 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
   @Override
   @Transactional(readOnly = true) // required for RLS
   public List<FormulaResponseDto> findAllFormulas() {
-    return dsl.selectFrom(FORMULAS)
+    // Explicit column list rather than selectFrom(...).fetchInto(...): fetchInto matches
+    // fields by their physical column order, which ALTER TABLE ADD COLUMN can silently change
+    // (a new/renamed column is always appended at the end), independent of declared field order.
+    return dsl.select(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
+        .from(FORMULAS)
         .orderBy(FORMULAS.EXPRESSION.asc()) // Clean alphabetical sorting for the UI
-        .fetchInto(FormulaResponseDto.class);
+        .fetch(mapping(FormulaResponseDto::new));
   }
 
   @Override
   @Transactional(readOnly = true) // required for RLS
   public List<SensorTypeResponseDto> findAllTypes() {
-    return dsl.selectFrom(SENSOR_TYPES)
+    // See findAllFormulas() above for why this avoids selectFrom(...).fetchInto(...).
+    return dsl.select(SENSOR_TYPES.ID, SENSOR_TYPES.NAME, SENSOR_TYPES.VERSION)
+        .from(SENSOR_TYPES)
         .orderBy(SENSOR_TYPES.NAME.asc()) // Clean alphabetical sorting for the UI
-        .fetchInto(SensorTypeResponseDto.class);
+        .fetch(mapping(SensorTypeResponseDto::new));
   }
 
   @Override
@@ -196,7 +203,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
 
   @Override
   @Transactional(readOnly = true)
-  public Optional<Sensor> findById(Long id) {
+  public Optional<Sensor> findById(UUID id) {
     return dsl.select(SENSORS.fields())
         .select(FORMULAS.fields())
         .select(SENSOR_TYPES.fields())
@@ -248,8 +255,14 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
         .whereNotExists(
             dsl.selectOne()
                 .from(DSL.table("jv_global_id"))
-                // JaVers stores IDs as strings, so we cast it to match SENSORS.ID
-                .where(DSL.field("local_id").cast(Long.class).eq(SENSORS.ID))
+                // JaVers stores IDs as their JSON representation, so a UUID id is stored
+                // double-quoted (e.g. "01a2..."). Compare as text instead of casting local_id to
+                // uuid, which fails on those surrounding quotes.
+                .where(
+                    DSL.field("local_id")
+                        .eq(
+                            DSL.concat(
+                                DSL.inline("\""), SENSORS.ID.cast(String.class), DSL.inline("\""))))
                 // Ensure this matches your JaVers @TypeName or class name!
                 .and(DSL.field("type_name").eq(Sensor.JAVERS_TYPE)))
         .fetchStream()

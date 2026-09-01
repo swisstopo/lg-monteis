@@ -26,6 +26,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeRespo
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.jooq.DSLContext;
@@ -293,7 +294,7 @@ class JooqSensorRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Act & Assert
-          assertTrue(repository.findById(Long.MAX_VALUE).isEmpty());
+          assertTrue(repository.findById(UUID.randomUUID()).isEmpty());
         });
   }
 
@@ -304,7 +305,7 @@ class JooqSensorRepositoryIT {
         () -> {
           // Arrange
           Sensor ghostSensor = createDummySensor("GHOST", "Ghost", "x");
-          ghostSensor.setId(Long.MAX_VALUE);
+          ghostSensor.setId(UUID.randomUUID());
 
           // Act & Assert
           ObjectBusinessValidationException exception =

@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
@@ -37,7 +38,7 @@ public interface SensorRepository {
    * @param id the sensor id
    * @return the sensor, or empty if no sensor with this id exists
    */
-  Optional<Sensor> findById(Long id);
+  Optional<Sensor> findById(UUID id);
 
   /**
    * Retrieves all unaudited sensors

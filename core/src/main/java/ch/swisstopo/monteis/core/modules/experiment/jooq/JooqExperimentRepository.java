@@ -15,6 +15,7 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -49,7 +50,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
   @Override
   @Transactional(readOnly = true)
-  public Experiment getById(Long experimentId) {
+  public Experiment getById(UUID experimentId) {
 
     return dsl.select(
             EXPERIMENTS.ID,
@@ -170,8 +171,16 @@ public class JooqExperimentRepository implements ExperimentRepository {
         .whereNotExists(
             dsl.selectOne()
                 .from(DSL.table("jv_global_id"))
-                // JaVers stores IDs as strings, so we cast it to match EXPERIMENTS.ID
-                .where(DSL.field("local_id").cast(Long.class).eq(EXPERIMENTS.ID))
+                // JaVers stores IDs as their JSON representation, so a UUID id is stored
+                // double-quoted (e.g. "01a2..."). Compare as text instead of casting local_id to
+                // uuid, which would fail on those surrounding quotes.
+                .where(
+                    DSL.field("local_id")
+                        .eq(
+                            DSL.concat(
+                                DSL.inline("\""),
+                                EXPERIMENTS.ID.cast(String.class),
+                                DSL.inline("\""))))
                 // Ensure this matches your JaVers @TypeName or class name!
                 .and(DSL.field("type_name").eq(Experiment.JAVERS_TYPE)))
         .fetchStream()

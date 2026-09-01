@@ -6,6 +6,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponse
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Query-side interface for Sensor-related read operations.
@@ -25,7 +26,7 @@ public interface SensorQuery {
    * @param id the ID of the sensor to retrieve
    * @return the sensor response DTO
    */
-  SensorResponseDto getById(Long id);
+  SensorResponseDto getById(UUID id);
 
   /**
    * Retrieves a page of sensors, projected straight into {@link SensorResponseDto}s.
