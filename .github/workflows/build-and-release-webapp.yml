@@ -25,7 +25,7 @@ jobs:
       version: ${{ steps.semver.outputs.version }}
       version_tag: ${{ steps.semver.outputs.version_tag }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Must fetch history so the bot can read the commits
           filter: blob:none
@@ -49,9 +49,12 @@ jobs:
     needs: evaluate-version
     if: needs.evaluate-version.outputs.is_tagged == 'false' && needs.evaluate-version.outputs.changed == 'true'
     runs-on: ubuntu-24.04
+    permissions:
+      id-token: write # required for: aws-actions/configure-aws-credentials (OIDC)
+      contents: write # required for: git push tag
     steps:
       - name: "[PREPARE]: Checkout Code"
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: "[PREPARE]: Setup Java Environment"
         uses: ./.github/actions/setup-java-maven
@@ -89,9 +92,26 @@ jobs:
           git tag $TAG
           git push origin $TAG
 
-      # CHANGE_ME once s3 is set up For now, just publish the build as a workflow artifact.
-      - name: "[PUBLISH]: Upload build artifact"
-        uses: actions/upload-artifact@v7
+      - name: "[AWS]: Configure AWS Credentials"
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        with:
+          role-to-assume: ${{ vars.ARTIFACT_UPLOAD_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: "[PUBLISH]: Upload build artifact to S3"
+        env:
+          VERSION: ${{ needs.evaluate-version.outputs.version }}
+          VERSION_TAG: ${{ needs.evaluate-version.outputs.version_tag }}
+        run: |
+          set -euo pipefail
+          aws s3 cp "webapp-${VERSION}.zip" \
+            "s3://${{ vars.ARTIFACT_BUCKET_NAME }}/webapp/${GITHUB_SHA}/webapp-${VERSION}.zip" \
+            --checksum-algorithm SHA256 \
+            --metadata "git-tag=${VERSION_TAG},commit-sha=${GITHUB_SHA}"
+
+      # Short-retention GitHub artifact kept for developer convenience (e.g. PR inspection).
+      - name: "[PUBLISH]: Upload build artifact to GitHub"
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: webapp-${{ needs.evaluate-version.outputs.version }}
           path: webapp-${{ needs.evaluate-version.outputs.version }}.zip
