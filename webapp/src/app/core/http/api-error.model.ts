@@ -37,6 +37,10 @@ export class AppErrorResponse {
     return this.error.status === 403;
   }
 
+  isNotFound() {
+    return this.error.status === 404;
+  }
+
   isServerError() {
     // Network failures or backend crashes that never reach our ErrorDto
     // contract (e.g. proxy/HTML error pages) still need to surface to the user.

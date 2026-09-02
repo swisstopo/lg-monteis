@@ -95,7 +95,7 @@ export default class OverviewTable {
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
   readonly dateRangeModel = signal<DateRangeModel>({
     start: { date: new Date(), time: atTime(0, 0) },
-    end: { date: new Date(), time: atTime(23, 59) },
+    end: { date: new Date(), time: atTime(new Date().getHours(), new Date().getMinutes()) },
   });
 
   readonly rangeForm = form(

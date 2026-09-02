@@ -35,6 +35,8 @@ export const restErrorInterceptor: HttpInterceptorFn = (req, next) => {
       showUnauthorizedToaster();
     } else if (error.isForbidden()) {
       showErrorForbiddenToaster();
+    } else if (error.isNotFound()) {
+      showGenericErrorToaster();
     } else {
       const globalErrors = error.dtosTargetGlobalOrUndefined();
       if (globalErrors.length > 0) {
