@@ -39,7 +39,12 @@ describe('OverviewTable', () => {
   });
 
   it('derives distinct, defined sensor ids from the metrics resource', async () => {
-    const metrics: ReadSimpleMetricDto[] = [{ id: 1 }, { id: 2 }, { id: 2 }, { id: undefined }];
+    const metrics: ReadSimpleMetricDto[] = [
+      { uuid: '1' },
+      { uuid: '2' },
+      { uuid: '2' },
+      { uuid: undefined },
+    ];
     overviewServiceMock.getMetrics.mockReturnValue(of(metrics));
 
     const component = TestBed.createComponent(OverviewTable).componentInstance as unknown as {
@@ -49,6 +54,6 @@ describe('OverviewTable', () => {
 
     await vi.waitFor(() => expect(component.metricsResource.value()).toBeDefined());
 
-    expect(component.sensorIds()).toEqual([1, 2]);
+    expect(component.sensorIds()).toEqual(['1', '2']);
   });
 });
