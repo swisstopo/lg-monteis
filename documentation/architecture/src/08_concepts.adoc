@@ -30,10 +30,11 @@ Es werden zwei Ablauf-Varianten unterschieden, abhängig davon, ob zusätzliche 
 * *Direkter Ablauf (Standardfall):* Web Request -> `Controller` -> `QueryRepository` (jOOQ) -> *`ReadDto`*.
 ** Gilt, wenn der Endpunkt eine einzelne Query 1:1 durchreicht, ohne zusätzliche Orchestrierung, Aggregation über mehrere Repositories oder fachliche Nachbearbeitung.
 ** Der Controller injiziert das `QueryRepository`-Interface direkt und ruft es auf. Ein Service, der nur `return queryRepository.find(...)` macht, ist reine Indirektion ohne Mehrwert und wird bewusst weggelassen.
-** Beispiele: `SensorController#findAllFormulas` (nutzt `SensorQuery` direkt) und `ExperimentController#getMetrics` (nutzt `ExperimentQueryInterface` direkt).
+** Beispiele: `ExperimentController#getMetrics` (nutzt `ExperimentQueryInterface` direkt).
 * *Ablauf mit Service (Ausnahmefall):* Web Request -> `Controller` -> `Service` -> `QueryRepository` (jOOQ) -> *`ReadDto`*.
 ** Nur nötig, wenn der Read-Endpunkt echte Logik erfordert, die nicht ins Repository gehört, z.B. das Kombinieren mehrerer Query-Aufrufe, fachliche Berechnungen auf den gelesenen Daten oder Orchestrierung über mehrere Module hinweg.
 ** Sobald ein solcher Service auf reine Delegation ohne jegliche Logik schrumpft, muss er entfernt und der Controller direkt auf das `QueryRepository` umgestellt werden.
+** Beispiel: `MeasurementController#getChartData` (nutzt `MeasurementService`, welcher den Datumsbereich validiert, bevor er an `MeasurementQuery` delegiert).
 * *Regeln (für beide Varianten):*
 ** Es werden *keine* Domänen-Objekte (`Entities`) verwendet.
 ** Das Repository nutzt die volle Stärke von jOOQ, um hochoptimierte SQL-Joins (z.B. über Sensoren, Experimente und Boreholes) auszuführen.

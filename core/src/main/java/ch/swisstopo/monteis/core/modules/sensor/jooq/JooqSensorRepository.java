@@ -1,8 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
-import static org.jooq.Records.mapping;
-import static org.jooq.impl.DSL.row;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
@@ -12,14 +10,10 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.FormulasRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorTypesRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorsRecord;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
-import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,7 +27,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-public class JooqSensorRepository implements SensorRepository, SensorQuery {
+public class JooqSensorRepository implements SensorRepository {
 
   private static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
       Map.of(
@@ -58,55 +52,16 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
 
   @Override
   @Transactional(readOnly = true)
-  public SensorResponseDto getById(UUID id) {
-    return dsl.select(
-            SENSORS.ID,
-            SENSORS.CODE,
-            SENSORS.NAME,
-            SENSORS.UNIT,
-            row(SENSOR_TYPES.ID, SENSOR_TYPES.NAME, SENSOR_TYPES.VERSION)
-                .mapping(SensorTypeResponseDto::new),
-            SENSORS.COMMENT,
-            row(SENSORS.X, SENSORS.Y, SENSORS.Z).mapping(CoordinatesDto::new),
-            row(SENSORS.LOWER_ALARM_LIMIT, SENSORS.UPPER_ALARM_LIMIT).mapping(AlarmLimitsDto::new),
-            SENSORS.ACTIVE,
-            row(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
-                .mapping(FormulaResponseDto::new),
-            SENSORS.VERSION)
-        .from(SENSORS)
-        .join(FORMULAS)
-        .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
-        .join(SENSOR_TYPES)
-        .on(SENSORS.TYPE_ID.eq(SENSOR_TYPES.ID))
-        .where(SENSORS.ID.eq(id))
-        .fetchOptional(mapping(SensorResponseDto::new))
-        .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public PagedResult<SensorResponseDto> getSensors(PagedRequest request) {
+  public PagedResult<Sensor> findPaged(PagedRequest request) {
     // Default to a deterministic order so offset-based paging stays stable across separate
     // requests (Postgres does not guarantee row order without an ORDER BY).
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
         PagedRequestJooqTranslator.translate(request, COLUMNS_BY_COL_ID, SENSORS.ID.asc());
 
-    List<SensorResponseDto> data =
-        dsl.select(
-                SENSORS.ID,
-                SENSORS.CODE,
-                SENSORS.NAME,
-                SENSORS.UNIT,
-                row(SENSOR_TYPES.ID, SENSOR_TYPES.NAME, SENSOR_TYPES.VERSION)
-                    .mapping(SensorTypeResponseDto::new),
-                SENSORS.COMMENT,
-                row(SENSORS.X, SENSORS.Y, SENSORS.Z).mapping(CoordinatesDto::new),
-                row(SENSORS.LOWER_ALARM_LIMIT, SENSORS.UPPER_ALARM_LIMIT)
-                    .mapping(AlarmLimitsDto::new),
-                SENSORS.ACTIVE,
-                row(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
-                    .mapping(FormulaResponseDto::new),
-                SENSORS.VERSION)
+    List<Sensor> data =
+        dsl.select(SENSORS.fields())
+            .select(FORMULAS.fields())
+            .select(SENSOR_TYPES.fields())
             .from(SENSORS)
             .join(FORMULAS)
             .on(SENSORS.FORMULA_ID.eq(FORMULAS.ID))
@@ -116,7 +71,7 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
             .orderBy(criteria.sortFields())
             .limit(request.limit())
             .offset(request.offset())
-            .fetch(mapping(SensorResponseDto::new));
+            .fetch(r -> mapper.toDomain(r.into(SENSORS), r.into(FORMULAS), r.into(SENSOR_TYPES)));
 
     int totalCount =
         dsl.fetchCount(
@@ -154,24 +109,18 @@ public class JooqSensorRepository implements SensorRepository, SensorQuery {
 
   @Override
   @Transactional(readOnly = true) // required for RLS
-  public List<FormulaResponseDto> findAllFormulas() {
-    // Explicit column list rather than selectFrom(...).fetchInto(...): fetchInto matches
-    // fields by their physical column order, which ALTER TABLE ADD COLUMN can silently change
-    // (a new/renamed column is always appended at the end), independent of declared field order.
-    return dsl.select(FORMULAS.ID, FORMULAS.EXPRESSION, FORMULAS.VERSION)
-        .from(FORMULAS)
+  public List<Formula> findAllFormulas() {
+    return dsl.selectFrom(FORMULAS)
         .orderBy(FORMULAS.EXPRESSION.asc()) // Clean alphabetical sorting for the UI
-        .fetch(mapping(FormulaResponseDto::new));
+        .fetch(mapper::toDomain);
   }
 
   @Override
   @Transactional(readOnly = true) // required for RLS
-  public List<SensorTypeResponseDto> findAllTypes() {
-    // See findAllFormulas() above for why this avoids selectFrom(...).fetchInto(...).
-    return dsl.select(SENSOR_TYPES.ID, SENSOR_TYPES.NAME, SENSOR_TYPES.VERSION)
-        .from(SENSOR_TYPES)
+  public List<SensorType> findAllTypes() {
+    return dsl.selectFrom(SENSOR_TYPES)
         .orderBy(SENSOR_TYPES.NAME.asc()) // Clean alphabetical sorting for the UI
-        .fetch(mapping(SensorTypeResponseDto::new));
+        .fetch(mapper::toDomain);
   }
 
   @Override
