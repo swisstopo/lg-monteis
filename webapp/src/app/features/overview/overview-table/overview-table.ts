@@ -24,19 +24,14 @@ import {
   MatTimepickerInput,
   MatTimepickerToggle,
 } from '@angular/material/timepicker';
+import { APP_ISO_TIMESTAMP_FORMAT } from '@core/date/date.provider';
+import { OverviewControllerService, ReadSimpleMetricDto } from '@core/generated';
+import { FormErrorService } from '@core/utils/form-error.service';
+import { MesurementsService } from '@features/overview/services/mesurements.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
-import { APP_ISO_TIMESTAMP_FORMAT } from '../../../core/date/date.provider';
-import { OverviewControllerService, ReadSimpleMetricDto } from '../../../core/generated';
-import { FormErrorService } from '../../../core/utils/form-error.service';
-import {
-  ChartComponent,
-  ChartOptions,
-  ChartRangeEvent,
-  createTimeChartOptions,
-} from '../../../ui/chart';
-import Table from '../../../ui/table/table';
-import { MesurementsService } from '../services/mesurements.service';
+import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions } from '@ui/chart';
+import Table from '@ui/table/table';
 import { createColumns } from './columns';
 
 interface DateTimeModel {

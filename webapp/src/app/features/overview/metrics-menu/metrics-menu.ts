@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { RouteButton } from '../../../ui/buttons/route-button/route-button';
+import { RouteButton } from '@ui/buttons/route-button/route-button';
 @Component({
   selector: 'app-metrics-menu',
   imports: [RouteButton, TranslatePipe],

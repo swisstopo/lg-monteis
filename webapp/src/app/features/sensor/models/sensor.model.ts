@@ -1,6 +1,6 @@
 import { inject, Signal } from '@angular/core';
+import { SensorResponseDto } from '@core/generated';
 import { TranslateService } from '@ngx-translate/core';
-import { SensorResponseDto } from '../../../core/generated';
 
 export type Unit = SensorResponseDto.UnitEnum;
 

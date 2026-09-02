@@ -1,8 +1,8 @@
 import { inject } from '@angular/core';
+import { SensorResponseDto } from '@core/generated';
+import { getUnitMetadata } from '@features/sensor/models/sensor.model';
 import { TranslateService } from '@ngx-translate/core';
-import { SensorResponseDto } from '../../../core/generated';
-import { TableColumn } from '../../../ui/table/table.types';
-import { getUnitMetadata } from '../models/sensor.model';
+import { TableColumn } from '@ui/table/table.types';
 
 export function createColumns(): TableColumn<SensorResponseDto>[] {
   const translateService = inject(TranslateService);

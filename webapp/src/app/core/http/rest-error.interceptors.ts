@@ -1,10 +1,10 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { ErrorDto } from '@core/generated';
+import { ToastService } from '@core/notifications/toast.service';
 import { TranslateService } from '@ngx-translate/core';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { catchError, throwError } from 'rxjs';
-import { ErrorDto } from '../generated';
-import { ToastService } from '../notifications/toast.service';
 import { AppErrorResponse } from './api-error.model';
 
 /**
