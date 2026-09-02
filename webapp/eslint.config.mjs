@@ -1,13 +1,12 @@
-// @ts-check
-const { defineConfig } = require('eslint/config');
-const tseslint = require('typescript-eslint');
-const angular = require('angular-eslint');
+import { defineConfig } from 'eslint/config';
+import tseslint from 'typescript-eslint';
+import angular from 'angular-eslint';
 
 const TRANSLATE_SERVICES = /^(translateService|i18nService)$/;
 const INSTANT_MESSAGE =
   'Avoid using static .instant() for translations. Use the reactive .translate()() signal or the TranslatePipe instead to ensure the UI updates automatically on language changes.';
 
-module.exports = defineConfig([
+export default defineConfig([
   {
     files: ['**/*.ts'],
     languageOptions: {
