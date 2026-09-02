@@ -1,6 +1,6 @@
+import angular from 'angular-eslint';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
-import angular from 'angular-eslint';
 
 const TRANSLATE_SERVICES = /^(translateService|i18nService)$/;
 const INSTANT_MESSAGE =
@@ -17,6 +17,12 @@ export default defineConfig([
     },
     processor: angular.processInlineTemplates,
     rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: ['../*'], // forbid relative imports except those in the same folder
+        },
+      ],
       '@typescript-eslint/no-restricted-imports': [
         'error',
         {
