@@ -118,7 +118,7 @@ export default class OverviewTable {
     () =>
       this.metricsResource
         .value()
-        ?.map((e) => e.id)
+        ?.map((e) => e.uuid)
         .filter((e) => e != undefined)
         .filter((e, i, self) => i === self.indexOf(e)) ?? [],
   );

@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.overview.web.dto;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 public record ReadSimpleMetricDto(
     OffsetDateTime timestamp,
@@ -9,4 +10,4 @@ public record ReadSimpleMetricDto(
     Double normValue,
     Short version,
     String status,
-    Long id) {}
+    UUID uuid) {}
