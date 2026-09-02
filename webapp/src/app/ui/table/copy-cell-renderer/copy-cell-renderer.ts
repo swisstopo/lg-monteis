@@ -2,10 +2,10 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
+import { ToastService } from '@core/notifications/toast.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
 import { ICellRendererParams } from 'ag-grid-community';
-import { ToastService } from '../../../core/notifications/toast.service';
 
 /**
  * Ag-grid cellRenderer showing the formatted cell value alongside a button that copies the raw
