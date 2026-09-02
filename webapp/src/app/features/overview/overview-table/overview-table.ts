@@ -112,15 +112,14 @@ export default class OverviewTable {
     stream: () => this.overviewService.getMetrics(50),
   });
 
-  // todo: Does this get the correct (from a business perspective) sensor / plotting ids?
-  // this would not be performant at all
-  protected sensorIds = computed(
-    () =>
-      this.metricsResource
-        .value()
-        ?.map((e) => e.uuid)
-        .filter((e) => e != undefined)
-        .filter((e, i, self) => i === self.indexOf(e)) ?? [],
+  protected readonly sensorIds = computed<string[]>(
+    () => {
+      const metrics = this.metricsResource.value() ?? [];
+      const sensorIds = metrics.map((metric) => metric.uuid).filter((e) => e != null);
+      return this.distinct(sensorIds);
+    },
+    // Keeps the signal identity stable when a refetch returns the same sensors.
+    { equal: this.equalByElement },
   );
 
   protected wrappedCols = createColumns(this.datePipe);
@@ -223,5 +222,15 @@ export default class OverviewTable {
     const rangeToTimestamp = this.datePipe.transform(end, APP_ISO_TIMESTAMP_FORMAT)!;
 
     this.measurementsService.getChartData(this.plottedIds(), rangeFromTimestamp, rangeToTimestamp);
+  }
+
+  /** Preserves first-occurrence order. */
+  private distinct<T>(values: readonly T[]): T[] {
+    return [...new Set(values)];
+  }
+
+  /** Reference-equality comparison of two arrays, element by element. */
+  private equalByElement<T>(a: readonly T[], b: readonly T[]): boolean {
+    return a.length === b.length && a.every((value, index) => value === b[index]);
   }
 }
