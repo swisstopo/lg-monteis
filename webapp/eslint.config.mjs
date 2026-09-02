@@ -8,6 +8,10 @@ const INSTANT_MESSAGE =
 
 export default defineConfig([
   {
+    // OpenAPI generated code is overwritten by the generator, do not lint it
+    ignores: ['src/app/core/generated/**'],
+  },
+  {
     files: ['**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
