@@ -1,8 +1,11 @@
 // @ts-check
-const eslint = require('@eslint/js');
 const { defineConfig } = require('eslint/config');
 const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
+
+const TRANSLATE_SERVICES = /^(translateService|i18nService)$/;
+const INSTANT_MESSAGE =
+  'Avoid using static .instant() for translations. Use the reactive .translate()() signal or the TranslatePipe instead to ensure the UI updates automatically on language changes.';
 
 module.exports = defineConfig([
   {
@@ -30,17 +33,14 @@ module.exports = defineConfig([
       'no-restricted-syntax': [
         'error',
         {
-          // Targets any method call named "instant"
-          selector: "CallExpression[callee.property.name='translateService.instant']",
-          message:
-            'Avoid using static .instant() for translations. Use the reactive .translate()() signal or the TranslatePipe instead to ensure the UI updates automatically on language changes.',
+          // this.translateService.instant(…) / this.#i18nService.instant(…)
+          selector: `CallExpression[callee.property.name='instant'][callee.object.property.name=${TRANSLATE_SERVICES}]`,
+          message: INSTANT_MESSAGE,
         },
-        'error',
         {
-          // Targets any method call named "instant"
-          selector: "CallExpression[callee.property.name='i18nService.instant']",
-          message:
-            'Avoid using static .instant() for translations. Use the reactive .translate()() signal or the TranslatePipe instead to ensure the UI updates automatically on language changes.',
+          // bare local: translateService.instant(…)
+          selector: `CallExpression[callee.property.name='instant'][callee.object.name=${TRANSLATE_SERVICES}]`,
+          message: INSTANT_MESSAGE,
         },
       ],
     },
