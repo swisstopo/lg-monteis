@@ -83,6 +83,9 @@ export default class Table<T = any> {
     return {
       suppressCellFocus: true,
       domLayout: 'autoHeight',
+      // Lets colDef.tooltipField/tooltipValueGetter show the native browser tooltip, e.g. to
+      // reveal a truncated cell's full text on hover.
+      enableBrowserTooltips: true,
       rowSelection,
       getRowId: (params: GetRowIdParams<T>) => this.getRowId()(params.data),
       ...this.gridOptions(),
