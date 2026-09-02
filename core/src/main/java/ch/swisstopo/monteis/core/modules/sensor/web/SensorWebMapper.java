@@ -7,6 +7,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
@@ -24,6 +25,8 @@ public interface SensorWebMapper {
   SensorResponseDto toDto(Sensor domain);
 
   FormulaResponseDto toDto(Formula domain);
+
+  SensorTypeResponseDto toDto(SensorType domain);
 
   CoordinatesDto toDto(Coordinates domain);
 

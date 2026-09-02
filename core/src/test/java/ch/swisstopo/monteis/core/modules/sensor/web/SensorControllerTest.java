@@ -14,9 +14,10 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
-import ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
@@ -54,7 +55,6 @@ class SensorControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @MockitoBean private SensorService service;
-  @MockitoBean private SensorQuery queryService;
 
   @MockitoBean private SensorWebMapper mapper;
   @MockitoBean private PagedRequestParser pagedRequestParser;
@@ -76,7 +76,10 @@ class SensorControllerTest {
             null,
             1);
 
-    given(queryService.getById(SENSOR_ID)).willReturn(expectedResponseDto);
+    Sensor mockDomain = mock(Sensor.class);
+
+    given(service.getSensor(SENSOR_ID)).willReturn(mockDomain);
+    given(mapper.toDto(mockDomain)).willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -88,10 +91,8 @@ class SensorControllerTest {
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
         .andExpect(jsonPath("$.type.name").value(expectedResponseDto.type().name()));
 
-    // Verify the read flow bypasses the service/mapper entirely
-    then(queryService).should().getById(SENSOR_ID);
-    then(service).shouldHaveNoInteractions();
-    then(mapper).shouldHaveNoInteractions();
+    then(service).should().getSensor(SENSOR_ID);
+    then(mapper).should().toDto(mockDomain);
   }
 
   @Test
@@ -111,8 +112,11 @@ class SensorControllerTest {
             null,
             1);
 
+    Sensor mockDomain = mock(Sensor.class);
+
     given(pagedRequestParser.parse(any())).willReturn(new PagedRequest(0, 20, List.of(), Map.of()));
-    given(queryService.getSensors(any())).willReturn(new PagedResult<>(List.of(dto1), 1));
+    given(service.getSensors(any())).willReturn(new PagedResult<>(List.of(mockDomain), 1));
+    given(mapper.toDto(mockDomain)).willReturn(dto1);
 
     // when / then
     mockMvc
@@ -128,10 +132,8 @@ class SensorControllerTest {
         .andExpect(jsonPath("$.rows[0].code").value(dto1.code()))
         .andExpect(jsonPath("$.rows[0].type.name").value(dto1.type().name()));
 
-    // Verify the read flow bypasses the service/mapper entirely
-    then(queryService).should().getSensors(any());
-    then(service).shouldHaveNoInteractions();
-    then(mapper).shouldHaveNoInteractions();
+    then(service).should().getSensors(any());
+    then(mapper).should().toDto(mockDomain);
   }
 
   @Test
@@ -356,10 +358,15 @@ class SensorControllerTest {
   void should_route_find_formulas_and_return_json_array() throws Exception {
     // given
 
+    Formula formula1 = Formula.builder().id(FORMULA_ID).expression("x * 2").version(1).build();
+    Formula formula2 =
+        Formula.builder().id(OTHER_FORMULA_ID).expression("x / 2").version(1).build();
     FormulaResponseDto dto1 = new FormulaResponseDto(FORMULA_ID, "x * 2", 1);
-    FormulaResponseDto dto2 = new FormulaResponseDto(OTHER_FORMULA_ID, "y / 2", 1);
+    FormulaResponseDto dto2 = new FormulaResponseDto(OTHER_FORMULA_ID, "x / 2", 1);
 
-    given(queryService.findAllFormulas()).willReturn(List.of(dto1, dto2));
+    given(service.findAllFormulas()).willReturn(List.of(formula1, formula2));
+    given(mapper.toDto(formula1)).willReturn(dto1);
+    given(mapper.toDto(formula2)).willReturn(dto2);
 
     // when / then
     mockMvc
@@ -370,16 +377,20 @@ class SensorControllerTest {
         .andExpect(jsonPath("$[1].id").value(dto2.id().toString()))
         .andExpect(jsonPath("$[1].expression").value(dto2.expression()));
 
-    then(queryService).should().findAllFormulas();
+    then(service).should().findAllFormulas();
   }
 
   @Test
   void should_route_find_types_and_return_json_array() throws Exception {
     // given
+    SensorType type1 = new SensorType(TYPE_ID, "Other", 1);
+    SensorType type2 = new SensorType(OTHER_TYPE_ID, "Temperature", 1);
     SensorTypeResponseDto dto1 = new SensorTypeResponseDto(TYPE_ID, "Other", 1);
     SensorTypeResponseDto dto2 = new SensorTypeResponseDto(OTHER_TYPE_ID, "Temperature", 1);
 
-    given(queryService.findAllTypes()).willReturn(List.of(dto1, dto2));
+    given(service.findAllTypes()).willReturn(List.of(type1, type2));
+    given(mapper.toDto(type1)).willReturn(dto1);
+    given(mapper.toDto(type2)).willReturn(dto2);
 
     // when / then
     mockMvc
@@ -390,6 +401,6 @@ class SensorControllerTest {
         .andExpect(jsonPath("$[1].id").value(dto2.id().toString()))
         .andExpect(jsonPath("$[1].name").value(dto2.name()));
 
-    then(queryService).should().findAllTypes();
+    then(service).should().findAllTypes();
   }
 }

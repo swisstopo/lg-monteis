@@ -1,19 +1,19 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
- * Command-side repository for the {@link Sensor} aggregate root.
+ * Repository for the {@link Sensor} aggregate root.
  * <p>
- * This interface is part of the strict Domain-Driven Design (DDD) write flow.
- * It is exclusively responsible for state-mutating operations (e.g., create, update)
- * and domain reconstruction. It works solely with rich domain objects to ensure
- * business invariants are protected.
- * <p>
- * Do not add UI-specific read methods here. For read-only operations that return
- * DTOs, see {@link ch.swisstopo.monteis.core.modules.sensor.query.SensorQuery}.
+ * This interface works solely with rich domain objects, for both the state-mutating
+ * (create, update) and the read-only operations - the sensor module does not project
+ * straight into UI-optimized DTOs, so the {@code web} layer is responsible for
+ * translating these domain objects into DTOs itself.
  */
 public interface SensorRepository {
   /**
@@ -39,6 +39,28 @@ public interface SensorRepository {
    * @return the sensor, or empty if no sensor with this id exists
    */
   Optional<Sensor> findById(UUID id);
+
+  /**
+   * Retrieves a page of sensors.
+   *
+   * @param request the requested page, together with an optional sort/filter model
+   * @return the requested page of sensors together with the total row count
+   */
+  PagedResult<Sensor> findPaged(PagedRequest request);
+
+  /**
+   * Retrieves all formulas that are currently used by existing sensors.
+   *
+   * @return a list of all formulas alphabetically sorted by expression
+   */
+  List<Formula> findAllFormulas();
+
+  /**
+   * Retrieves all types that are currently used by existing sensors.
+   *
+   * @return a list of all types alphabetically sorted by name
+   */
+  List<SensorType> findAllTypes();
 
   /**
    * Retrieves all unaudited sensors

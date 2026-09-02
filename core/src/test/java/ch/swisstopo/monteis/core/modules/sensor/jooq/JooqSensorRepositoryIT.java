@@ -20,9 +20,6 @@ import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -89,28 +86,6 @@ class JooqSensorRepositoryIT {
 
   @Test
   @Transactional
-  void should_get_sensor_by_id() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          Sensor savedSensor =
-              repository.create(createDummySensor("GET-001", "Get Sensor", "x * 2"));
-
-          // Act
-          SensorResponseDto found = repository.getById(savedSensor.getId());
-
-          // Assert
-          assertAll(
-              () -> assertEquals("GET-001", found.code()),
-              () -> assertNotNull(found.formula(), "Formula should be loaded"),
-              () -> assertEquals("x * 2", found.formula().expression()),
-              () -> assertNotNull(found.type(), "Type should be loaded"),
-              () -> assertEquals("Other", found.type().name()));
-        });
-  }
-
-  @Test
-  @Transactional
   void should_filter_paged_sensors_by_text_contains() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
@@ -126,11 +101,11 @@ class JooqSensorRepositoryIT {
                   Map.of("name", new TextFilterModel("contains", "uniquetextfilter", null)));
 
           // Act
-          PagedResult<SensorResponseDto> result = repository.getSensors(request);
+          PagedResult<Sensor> result = repository.findPaged(request);
 
           // Assert
           assertEquals(1, result.totalCount());
-          assertEquals("TXT-FILTER-01", result.rows().getFirst().code());
+          assertEquals("TXT-FILTER-01", result.rows().getFirst().getCode());
         });
   }
 
@@ -153,7 +128,7 @@ class JooqSensorRepositoryIT {
                   Map.of("name", new TextFilterModel("contains", "_SORT_TEST", null)));
 
           // Act
-          List<SensorResponseDto> rows = repository.getSensors(request).rows();
+          List<Sensor> rows = repository.findPaged(request).rows();
 
           // Assert: among our two sensors, the Z one must come first in descending order
           int indexOfZ = indexOfCode(rows, "SORT-Z");
@@ -183,11 +158,11 @@ class JooqSensorRepositoryIT {
                       "coordinates.x", new NumberFilterModel("inRange", 123456788.0, 123456790.0)));
 
           // Act
-          PagedResult<SensorResponseDto> result = repository.getSensors(request);
+          PagedResult<Sensor> result = repository.findPaged(request);
 
           // Assert
           assertEquals(1, result.totalCount());
-          assertEquals("NUM-FILTER-01", result.rows().getFirst().code());
+          assertEquals("NUM-FILTER-01", result.rows().getFirst().getCode());
         });
   }
 
@@ -285,6 +260,7 @@ class JooqSensorRepositoryIT {
           assertEquals("x * 2", found.get().getFormula().getExpression());
           assertEquals(0.0, found.get().getAlarmLimits().lower());
           assertEquals(100.0, found.get().getAlarmLimits().upper());
+          assertEquals("Other", found.get().getType().name());
         });
   }
 
@@ -351,12 +327,12 @@ class JooqSensorRepositoryIT {
           repository.create(createDummySensor("S-03", "C", "c * x"));
 
           // Act
-          List<FormulaResponseDto> formulas = repository.findAllFormulas();
+          List<Formula> formulas = repository.findAllFormulas();
 
           // Assert
-          assertEquals("a * x", formulas.get(0).expression());
-          assertEquals("b * x", formulas.get(1).expression());
-          assertEquals("c * x", formulas.get(2).expression());
+          assertEquals("a * x", formulas.get(0).getExpression());
+          assertEquals("b * x", formulas.get(1).getExpression());
+          assertEquals("c * x", formulas.get(2).getExpression());
         });
   }
 
@@ -372,7 +348,7 @@ class JooqSensorRepositoryIT {
           //    (4, 'Volume', 1);
 
           // Act
-          List<SensorTypeResponseDto> result = repository.findAllTypes();
+          List<SensorType> result = repository.findAllTypes();
 
           // Assert
           assertEquals("Other", result.get(0).name());
@@ -457,9 +433,9 @@ class JooqSensorRepositoryIT {
         formula);
   }
 
-  private int indexOfCode(List<SensorResponseDto> rows, String code) {
+  private int indexOfCode(List<Sensor> rows, String code) {
     for (int i = 0; i < rows.size(); i++) {
-      if (rows.get(i).code().equals(code)) {
+      if (rows.get(i).getCode().equals(code)) {
         return i;
       }
     }
