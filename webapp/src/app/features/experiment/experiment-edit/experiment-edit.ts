@@ -180,7 +180,7 @@ export default class ExperimentEdit {
       try {
         await this.saveExperiment(experiment);
 
-        this.toastService.success(this.translateService.instant('experiment.success'));
+        this.toastService.success(this.translateService.translate('experiment.success')());
 
         if (resetAfter) {
           this.resetForm();
