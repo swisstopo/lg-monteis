@@ -16,18 +16,18 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { MatSelect } from '@angular/material/select';
-import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   FormulaResponseDto,
   SensorResponseDto,
   SensorTypeResponseDto,
   WriteSensorDto,
-} from '../../../core/generated';
-import { toErrorDtos } from '../../../core/http/api-error.model';
-import { ToastService } from '../../../core/notifications/toast.service';
-import { FormErrorService } from '../../../core/utils/form-error.service';
-import { getUnitMetadata, Unit } from '../models/sensor.model';
-import { SensorService } from '../services/sensor.service';
+} from '@core/generated';
+import { toErrorDtos } from '@core/http/api-error.model';
+import { ToastService } from '@core/notifications/toast.service';
+import { FormErrorService } from '@core/utils/form-error.service';
+import { getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
+import { SensorService } from '@features/sensor/services/sensor.service';
+import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 interface SensorFormData {
   code: string;

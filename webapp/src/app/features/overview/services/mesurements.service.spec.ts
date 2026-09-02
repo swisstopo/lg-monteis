@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { ChartDataResponseDto, MeasurementControllerService } from '@core/generated';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Observable, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import { ChartDataResponseDto, MeasurementControllerService } from '../../../core/generated';
 import { MesurementsService } from './mesurements.service';
 
 const SENSOR_1 = '10000000-0000-0000-0000-000000000001';

@@ -2,11 +2,11 @@ import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { ErrorDto } from '@core/generated';
+import { ToastService } from '@core/notifications/toast.service';
 import { TranslateService } from '@ngx-translate/core';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorDto } from '../generated';
-import { ToastService } from '../notifications/toast.service';
 import { restErrorInterceptor } from './rest-error.interceptors';
 
 describe('restErrorInterceptor', () => {

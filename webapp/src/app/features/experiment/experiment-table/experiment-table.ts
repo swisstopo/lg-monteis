@@ -3,15 +3,15 @@ import { Component, effect, inject, inputBinding, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
+import { ExperimentResponseDto } from '@core/generated';
+import ExperimentEdit from '@features/experiment/experiment-edit/experiment-edit';
+import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { TableHeader } from '@ui/table-header/table-header';
+import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
+import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
-import { ExperimentResponseDto } from '../../../core/generated';
-import { TableHeader } from '../../../ui/table-header/table-header';
-import { createPagedDatasource } from '../../../ui/table/paged-datasource.factory';
-import Table from '../../../ui/table/table';
-import ExperimentEdit from '../../experiment/experiment-edit/experiment-edit';
-import { ExperimentService } from '../services/experiment.service';
 import { createColumns } from './columns';
 
 @Component({

@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, resource } from '@angular/core';
+import { CurrentUserControllerService } from '@core/generated';
 import { firstValueFrom } from 'rxjs';
-import { CurrentUserControllerService } from '../generated';
 
 /**
  * Helper for cosmetic UI decision whether to render a Button or not. (READ/WRITE)
