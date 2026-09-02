@@ -2,6 +2,12 @@
   "app": {
     "logout": "Logout"
   },
+  "common": {
+    "copy": {
+      "label": "Copy",
+      "success": "Copied to clipboard"
+    }
+  },
   "error": {
     "system": {
       "internal": "Please try again later. If the problem persists, contact support and provide the error ID: {{errorId}}.",
@@ -171,6 +177,9 @@
         "create": "Setup new Experiment",
         "edit": "Edit Experiment"
       }
+    },
+    "id": {
+      "label": "ID"
     },
     "name": {
       "label": "Experiment Name",

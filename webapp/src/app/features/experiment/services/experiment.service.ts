@@ -9,7 +9,7 @@ import { toPagedRequestParams } from '../../../ui/table/paged-request.mapper';
 @Injectable({ providedIn: 'root' })
 export class ExperimentService {
   private readonly api = inject(ExperimentControllerService);
-  private readonly experimentRequest = signal<{ id: number | undefined }>({ id: undefined });
+  private readonly experimentRequest = signal<{ id: string | undefined }>({ id: undefined });
   readonly error = signal<ErrorDto[] | undefined>(undefined);
   // Bumped whenever a sensor is created/updated, so the sensor table can refresh its
   // ag-grid infinite row model cache - ag-grid has no way to detect that on its own.
@@ -24,7 +24,7 @@ export class ExperimentService {
   });
 
   // always set the experiment id to refetch the experiment
-  getExperiment(id: number | undefined) {
+  getExperiment(id: string | undefined) {
     if (id === undefined) {
       this.experiment.value.set(undefined);
       return;
@@ -43,7 +43,7 @@ export class ExperimentService {
     }
   }
 
-  async updateExperiment(id: number, experiment: WriteExperimentDto) {
+  async updateExperiment(id: string, experiment: WriteExperimentDto) {
     try {
       const result = await firstValueFrom(this.api.updateExperiment(id, experiment));
       this.experimentsChanged.set(true);

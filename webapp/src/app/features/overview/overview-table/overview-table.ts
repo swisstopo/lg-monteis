@@ -119,7 +119,7 @@ export default class OverviewTable {
 
   protected wrappedCols = createColumns(this.datePipe);
 
-  private readonly plottedIds = signal<number[]>([]);
+  private readonly plottedIds = signal<string[]>([]);
 
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
@@ -165,7 +165,14 @@ export default class OverviewTable {
     if (!rangeStart || !rangeEnd) return;
 
     // TODO replace with sensor selection as soon as we get ids in DTO
-    this.plottedIds.set([1, 2, 3, 5]);
+    // Fixed dev-seed sensor ids (TEMP-1, PRESS-1&2, DISP-2, FLOW-Admin) - see
+    // db/meta/seed/R__seed_dev_data.sql.
+    this.plottedIds.set([
+      '00000000-0000-7000-8000-000000000201',
+      '00000000-0000-7000-8000-000000000202',
+      '00000000-0000-7000-8000-000000000203',
+      '00000000-0000-7000-8000-000000000205',
+    ]);
 
     this.fetchChartData(rangeStart, rangeEnd);
 

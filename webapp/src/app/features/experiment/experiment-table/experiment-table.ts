@@ -30,7 +30,7 @@ export default class ExperimentTable {
   readonly searchTerm = signal<string>('');
 
   protected wrappedCols = createColumns(this.datePipe);
-  protected selectedExperimentId = signal<number | undefined>(undefined);
+  protected selectedExperimentId = signal<string | undefined>(undefined);
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);

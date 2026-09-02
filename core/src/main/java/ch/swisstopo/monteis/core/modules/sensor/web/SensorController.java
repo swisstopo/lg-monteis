@@ -17,9 +17,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Positive;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -48,7 +48,7 @@ public class SensorController {
   @Operation(summary = "Get a sensor by id", description = "Retrieves a sensor by id")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
   @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<SensorResponseDto> getSensor(@PathVariable @Positive Long id) {
+  public ResponseEntity<SensorResponseDto> getSensor(@PathVariable UUID id) {
 
     return ResponseEntity.ok(sensorQuery.getById(id));
   }
@@ -81,7 +81,7 @@ public class SensorController {
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorResponseDto> updateSensor(
-      @PathVariable @Positive Long id, @Validated(Update.class) @RequestBody WriteSensorDto dto) {
+      @PathVariable UUID id, @Validated(Update.class) @RequestBody WriteSensorDto dto) {
     if (!id.equals(dto.id())) {
       throw new ObjectBusinessValidationException(
           "id.validation.mismatch", Map.of("pathId", id, "id", dto.id()));

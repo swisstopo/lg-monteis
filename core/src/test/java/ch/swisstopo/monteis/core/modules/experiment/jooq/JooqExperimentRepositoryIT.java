@@ -17,6 +17,7 @@ import java.time.Month;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.jooq.DSLContext;
@@ -47,7 +48,7 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          Long experimentId =
+          UUID experimentId =
               createExperimentWithDsl(
                   "Experiment Without Sensors",
                   "No sensors attached",
@@ -74,7 +75,7 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          Long experimentId =
+          UUID experimentId =
               createExperimentWithDsl(
                   "Experiment With Sensors",
                   "Has 2 sensors",
@@ -103,7 +104,7 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Act
-          Experiment details = repository.getById(999999L);
+          Experiment details = repository.getById(UUID.randomUUID());
 
           // Assert
           assertNull(details, "Non-existent experiment should resolve to null");
@@ -223,7 +224,7 @@ class JooqExperimentRepositoryIT {
         () -> {
           // Arrange
           Experiment ghostExperiment = buildDummyDomainExperiment("GHOST-EXP", "Ghost Owner");
-          ghostExperiment.setId(99999L); // non-existent ID
+          ghostExperiment.setId(UUID.randomUUID()); // non-existent ID
 
           // Act & Assert
           ObjectBusinessValidationException exception =
@@ -379,7 +380,7 @@ class JooqExperimentRepositoryIT {
   /**
    * Legacy helper using DSL context directly (used by read-only tests)
    */
-  private Long createExperimentWithDsl(
+  private UUID createExperimentWithDsl(
       String name, String comment, LocalDate start, LocalDate end) {
     return Objects.requireNonNull(
             dsl.insertInto(EXPERIMENTS)
@@ -393,7 +394,7 @@ class JooqExperimentRepositoryIT {
         .getId();
   }
 
-  private void linkSensorToExperiment(Long experimentId, Long sensorId) {
+  private void linkSensorToExperiment(UUID experimentId, UUID sensorId) {
     dsl.insertInto(EXPERIMENT_SENSOR)
         .set(EXPERIMENT_SENSOR.EXPERIMENT_ID, experimentId)
         .set(EXPERIMENT_SENSOR.SENSOR_ID, sensorId)

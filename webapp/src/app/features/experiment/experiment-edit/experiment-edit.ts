@@ -77,7 +77,7 @@ export default class ExperimentEdit {
   readonly dialogRef = inject<MatDialogRef<ExperimentEdit>>(MatDialogRef, {
     optional: true,
   });
-  readonly experimentId = input<number | undefined>(undefined);
+  readonly experimentId = input<string | undefined>(undefined);
 
   readonly saveError = this.experimentService.error;
   experiment = signal<ExperimentResponseDto | undefined>(undefined);

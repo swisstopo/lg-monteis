@@ -5,9 +5,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { ChartDataResponseDto, MeasurementControllerService } from '../../../core/generated';
 import { MesurementsService } from './mesurements.service';
 
+const SENSOR_1 = '10000000-0000-0000-0000-000000000001';
+const SENSOR_2 = '10000000-0000-0000-0000-000000000002';
+const SENSOR_3 = '10000000-0000-0000-0000-000000000003';
+
 function setup(
   getChartData: (
-    id: number,
+    id: string,
     rangeFrom: string,
     rangeTo: string,
   ) => Observable<ChartDataResponseDto[]>,
@@ -45,11 +49,11 @@ describe('MesurementsService', () => {
     const getChartData = vi.fn().mockReturnValue(of([]));
     const service = setup(getChartData);
 
-    service.getChartData([1, 2], '2024-01-01', '2024-01-02');
+    service.getChartData([SENSOR_1, SENSOR_2], '2024-01-01', '2024-01-02');
 
     await vi.waitFor(() => expect(getChartData).toHaveBeenCalledTimes(2));
-    expect(getChartData).toHaveBeenCalledWith(1, '2024-01-01', '2024-01-02');
-    expect(getChartData).toHaveBeenCalledWith(2, '2024-01-01', '2024-01-02');
+    expect(getChartData).toHaveBeenCalledWith(SENSOR_1, '2024-01-01', '2024-01-02');
+    expect(getChartData).toHaveBeenCalledWith(SENSOR_2, '2024-01-01', '2024-01-02');
   });
 
   it('maps sensors into datasets and groups y-axes by unit', async () => {
@@ -57,21 +61,21 @@ describe('MesurementsService', () => {
     // logic without hitting the invalid-data check below (see next test).
     const apiResponses: ChartDataResponseDto[] = [
       {
-        id: 1,
+        id: SENSOR_1,
         sensorName: 'Temperature',
         sensorCode: 'T1',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
         data: [],
       },
       {
-        id: 2,
+        id: SENSOR_2,
         sensorName: 'Distance',
         sensorCode: 'D1',
         unit: ChartDataResponseDto.UnitEnum.Meter,
         data: [],
       },
       {
-        id: 3,
+        id: SENSOR_3,
         sensorName: 'Temperature 2',
         sensorCode: 'T2',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
@@ -80,15 +84,15 @@ describe('MesurementsService', () => {
     ];
     const service = setup((id) => of(apiResponses.filter((response) => response.id === id)));
 
-    service.getChartData([1, 2, 3], '2024-01-01', '2024-01-02');
+    service.getChartData([SENSOR_1, SENSOR_2, SENSOR_3], '2024-01-01', '2024-01-02');
 
     await vi.waitFor(() => expect(service.chartData.value()).toBeDefined());
     const result = service.chartData.value()!;
 
     expect(result.datasets).toEqual([
-      { id: 1, label: 'T1 [KELVIN]', data: [], yAxisId: 'y' },
-      { id: 2, label: 'D1 [METER]', data: [], yAxisId: 'y2' },
-      { id: 3, label: 'T2 [KELVIN]', data: [], yAxisId: 'y' },
+      { id: SENSOR_1, label: 'T1 [KELVIN]', data: [], yAxisId: 'y' },
+      { id: SENSOR_2, label: 'D1 [METER]', data: [], yAxisId: 'y2' },
+      { id: SENSOR_3, label: 'T2 [KELVIN]', data: [], yAxisId: 'y' },
     ]);
     expect(result.yAxisLabels).toEqual({ y: 'KELVIN', y2: 'METER' });
     expect(service.error()).toBeUndefined();
@@ -98,7 +102,7 @@ describe('MesurementsService', () => {
     const apiResponses: ChartDataResponseDto[] = [{}];
     const service = setup(() => of(apiResponses));
 
-    service.getChartData([1], '2024-01-01', '2024-01-02');
+    service.getChartData([SENSOR_1], '2024-01-01', '2024-01-02');
 
     await vi.waitFor(() => expect(service.chartData.value()).toBeDefined());
     const result = service.chartData.value()!;
@@ -112,7 +116,7 @@ describe('MesurementsService', () => {
   it('maps data points into { x: parsed timestamp, y: value }', async () => {
     const apiResponses: ChartDataResponseDto[] = [
       {
-        id: 1,
+        id: SENSOR_1,
         sensorName: 'Temperature',
         sensorCode: 'T1',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
@@ -124,13 +128,13 @@ describe('MesurementsService', () => {
     ];
     const service = setup(() => of(apiResponses));
 
-    service.getChartData([1], '2024-01-01', '2024-01-02');
+    service.getChartData([SENSOR_1], '2024-01-01', '2024-01-02');
 
     await vi.waitFor(() => expect(service.chartData.value()).toBeDefined());
 
     expect(service.chartData.value()!.datasets).toEqual([
       {
-        id: 1,
+        id: SENSOR_1,
         label: 'T1 [KELVIN]',
         data: [
           { x: Date.parse('2024-01-01T00:00:00Z'), y: 10 },
@@ -145,7 +149,7 @@ describe('MesurementsService', () => {
   it('drops malformed data points instead of failing the whole chart', async () => {
     const apiResponses: ChartDataResponseDto[] = [
       {
-        id: 1,
+        id: SENSOR_1,
         sensorName: 'Temperature',
         sensorCode: 'T1',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
@@ -157,12 +161,12 @@ describe('MesurementsService', () => {
     ];
     const service = setup(() => of(apiResponses));
 
-    service.getChartData([1], '2024-01-01', '2024-01-02');
+    service.getChartData([SENSOR_1], '2024-01-01', '2024-01-02');
 
     await vi.waitFor(() => expect(service.chartData.value()).toBeDefined());
     expect(service.chartData.value()!.datasets).toEqual([
       {
-        id: 1,
+        id: SENSOR_1,
         label: 'T1 [KELVIN]',
         data: [{ x: Date.parse('2024-01-01T00:00:00Z'), y: 12 }],
         yAxisId: 'y',
@@ -174,7 +178,7 @@ describe('MesurementsService', () => {
   it('surfaces an error when the API call fails', async () => {
     const service = setup(() => throwError(() => new Error('network failure')));
 
-    service.getChartData([1], '2024-01-01', '2024-01-02');
+    service.getChartData([SENSOR_1], '2024-01-01', '2024-01-02');
 
     await vi.waitFor(() => expect(service.chartData.status()).toBe('error'));
     expect(service.chartData.hasValue()).toBe(false);

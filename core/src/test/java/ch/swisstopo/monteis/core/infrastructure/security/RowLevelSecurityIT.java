@@ -3,13 +3,17 @@ package ch.swisstopo.monteis.core.infrastructure.security;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.jooq.generated.routines.CanAccessExperiment;
+import ch.swisstopo.monteis.core.jooq.generated.routines.CanAccessSensor;
 import ch.swisstopo.monteis.core.modules.overview.jooq.OverviewQueryRepository;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
@@ -29,6 +33,12 @@ import org.springframework.transaction.annotation.Transactional;
 @IT
 class RowLevelSecurityIT {
 
+  // Fixed IDs from db/meta/seed/R__seed_dev_data.sql: "Mont Terri Alpha" and "Mont Terri Beta".
+  private static final UUID EXPERIMENT_ALPHA =
+      UUID.fromString("00000000-0000-7000-8000-000000000301");
+  private static final UUID EXPERIMENT_BETA =
+      UUID.fromString("00000000-0000-7000-8000-000000000302");
+
   @Autowired private DSLContext dsl;
 
   @Autowired private OverviewQueryRepository overviewQueryRepository;
@@ -37,7 +47,7 @@ class RowLevelSecurityIT {
   @Transactional
   void user_scoped_to_experiment_one_sees_only_its_sensors_and_readings() {
     SecurityContextTestSupport.runAsUser(
-        List.of(1L),
+        List.of(EXPERIMENT_ALPHA),
         () -> {
           assertEquals(12, dsl.fetchCount(SENSORS), "Experiment 1 has exactly 2 linked sensors");
           assertEquals(Set.of("TEMP-1", "PRESS-1&2"), fetchVisibleSensorCodes());
@@ -48,7 +58,7 @@ class RowLevelSecurityIT {
   @Transactional
   void user_scoped_to_experiment_two_sees_only_its_sensors_and_readings() {
     SecurityContextTestSupport.runAsUser(
-        List.of(2L),
+        List.of(EXPERIMENT_BETA),
         () -> {
           assertEquals(3, dsl.fetchCount(SENSORS), "Experiment 2 has exactly 3 linked sensors");
           assertEquals(Set.of("PRESS-1&2", "DISP-2", "FLOW-2"), fetchVisibleSensorCodes());
@@ -88,6 +98,45 @@ class RowLevelSecurityIT {
     assertEquals(0, dsl.fetchCount(SENSORS), "Unbound context must see zero sensors");
     assertEquals(0, dsl.fetchCount(EXPERIMENTS), "Unbound context must see zero experiments");
     assertEquals(Set.of(), fetchVisibleSensorCodes(), "Unbound context must see zero readings");
+  }
+
+  @Test
+  @Transactional
+  void can_access_functions_do_not_error_on_a_null_target_id() {
+    // A null sensor/experiment id can never actually reach these functions in practice (ids are
+    // NOT NULL columns), but the RLS policies call them for every row, so a null argument must
+    // resolve to "no access" rather than raise a SQL error and take the whole query down with it.
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // can_read_all() short-circuits the OR, so a null target id is irrelevant for admins.
+          assertEquals(Boolean.TRUE, callCanAccessSensor(null));
+          assertEquals(Boolean.TRUE, callCanAccessExperiment(null));
+        });
+
+    SecurityContextTestSupport.runAsUser(
+        List.of(EXPERIMENT_ALPHA),
+        () -> {
+          // Non-admin: "target_id = ANY(...)" with a null target evaluates to SQL NULL, not
+          // TRUE - never grants access, and critically never throws.
+          Boolean sensorAccess = callCanAccessSensor(null);
+          Boolean experimentAccess = callCanAccessExperiment(null);
+          assertNotEquals(Boolean.TRUE, sensorAccess);
+          assertNotEquals(Boolean.TRUE, experimentAccess);
+        });
+  }
+
+  private Boolean callCanAccessSensor(UUID targetSensorId) {
+    CanAccessSensor routine = new CanAccessSensor();
+    routine.setTargetSensorId(targetSensorId);
+    routine.execute(dsl.configuration());
+    return routine.getReturnValue();
+  }
+
+  private Boolean callCanAccessExperiment(UUID targetExperimentId) {
+    CanAccessExperiment routine = new CanAccessExperiment();
+    routine.setTargetExperimentId(targetExperimentId);
+    routine.execute(dsl.configuration());
+    return routine.getReturnValue();
   }
 
   private Set<String> fetchVisibleSensorCodes() {

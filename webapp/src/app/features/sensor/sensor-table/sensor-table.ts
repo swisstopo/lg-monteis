@@ -27,7 +27,7 @@ export default class SensorTable {
   readonly searchTerm = signal<string>('');
 
   protected wrappedCols = createColumns();
-  protected selectedSensorId = signal<number | undefined>(undefined);
+  protected selectedSensorId = signal<string | undefined>(undefined);
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);

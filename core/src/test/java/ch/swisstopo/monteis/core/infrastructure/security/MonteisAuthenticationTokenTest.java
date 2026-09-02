@@ -19,7 +19,8 @@ class MonteisAuthenticationTokenTest {
   void should_be_equal_when_jwt_principal_and_authorities_match() {
     // given
     Jwt jwt = givenJwt();
-    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(1L));
+    MonteisPrincipal principal =
+        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()));
     var authorities = List.of(new SimpleGrantedAuthority(READ_AUTHORITY));
 
     // when
@@ -38,10 +39,14 @@ class MonteisAuthenticationTokenTest {
     var authorities = List.of(new SimpleGrantedAuthority(READ_AUTHORITY));
     var first =
         new MonteisAuthenticationToken(
-            jwt, new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(1L)), authorities);
+            jwt,
+            new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID())),
+            authorities);
     var second =
         new MonteisAuthenticationToken(
-            jwt, new MonteisPrincipal(UUID.randomUUID(), "bob", List.of(1L)), authorities);
+            jwt,
+            new MonteisPrincipal(UUID.randomUUID(), "bob", List.of(UUID.randomUUID())),
+            authorities);
 
     // then
     assertNotEquals(first, second);
@@ -50,7 +55,8 @@ class MonteisAuthenticationTokenTest {
   @Test
   void should_not_be_equal_when_jwt_differs() {
     // given
-    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(1L));
+    MonteisPrincipal principal =
+        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()));
     var authorities = List.of(new SimpleGrantedAuthority(READ_AUTHORITY));
     var first = new MonteisAuthenticationToken(givenJwt(), principal, authorities);
     var second = new MonteisAuthenticationToken(givenJwt(), principal, authorities);
@@ -63,7 +69,8 @@ class MonteisAuthenticationTokenTest {
   void should_not_be_equal_when_authorities_differ() {
     // given
     Jwt jwt = givenJwt();
-    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(1L));
+    MonteisPrincipal principal =
+        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()));
     var first =
         new MonteisAuthenticationToken(
             jwt, principal, List.of(new SimpleGrantedAuthority(READ_AUTHORITY)));
@@ -79,7 +86,8 @@ class MonteisAuthenticationTokenTest {
   void should_not_be_equal_to_a_different_authentication_type_with_the_same_fields() {
     // given: without our override, AbstractAuthenticationToken#equals would treat this as equal
     Jwt jwt = givenJwt();
-    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(1L));
+    MonteisPrincipal principal =
+        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()));
     var authorities = List.of(new SimpleGrantedAuthority(READ_AUTHORITY));
     var monteisToken = new MonteisAuthenticationToken(jwt, principal, authorities);
     var otherToken = UsernamePasswordAuthenticationToken.authenticated(principal, jwt, authorities);

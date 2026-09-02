@@ -1,0 +1,11 @@
+<span class="copy-cell-renderer_value">{{ displayValue() }}</span>
+<button
+  mat-icon-button
+  type="button"
+  class="copy-cell-renderer_button"
+  [attr.aria-label]="'common.copy.label' | translate"
+  [title]="'common.copy.label' | translate"
+  (click)="copy()"
+>
+  <mat-icon fontIcon="content_copy"></mat-icon>
+</button>

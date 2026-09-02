@@ -121,7 +121,7 @@
           "config": {
             "user.attribute": "experiment_ids",
             "claim.name": "experiment_ids",
-            "jsonType.label": "long",
+            "jsonType.label": "String",
             "multivalued": "true",
             "aggregate.attrs": "true",
             "access.token.claim": "true"
