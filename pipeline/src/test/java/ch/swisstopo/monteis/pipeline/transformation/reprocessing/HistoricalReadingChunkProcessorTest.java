@@ -15,6 +15,7 @@ import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.function.Consumer;
@@ -42,16 +43,20 @@ class HistoricalReadingChunkProcessorTest {
 
   private HistoricalReadingChunkProcessor chunkService;
 
+  private SimpleMeterRegistry meterRegistry;
+
   private final int testChunkSize = 100;
 
   @BeforeEach
   void setUp() {
+    meterRegistry = new SimpleMeterRegistry();
     chunkService =
         new HistoricalReadingChunkProcessor(
             sensorReadingRepository,
             transformationOrchestrator,
             transactionTemplate,
-            testChunkSize);
+            testChunkSize,
+            meterRegistry);
 
     // Instruct the mocked TransactionTemplate to immediately execute the passed lambda!
     willAnswer(
@@ -113,6 +118,21 @@ class HistoricalReadingChunkProcessorTest {
 
     then(sensorReadingRepository).should().bulkUpdate(dbRecordsCaptor.capture());
     assertThat(dbRecordsCaptor.getValue()).containsExactly(transformedRecord);
+
+    assertThat(
+            meterRegistry
+                .get("pipeline.reprocessing.records")
+                .tag("result", "success")
+                .counter()
+                .count())
+        .isEqualTo(1.0);
+    assertThat(
+            meterRegistry
+                .get("pipeline.reprocessing.records")
+                .tag("result", "poison_pill")
+                .counter()
+                .count())
+        .isZero();
   }
 
   @Test
@@ -154,5 +174,20 @@ class HistoricalReadingChunkProcessorTest {
     assertThat(savedRecord.getVersion()).isEqualTo((short) 3);
     assertThat(savedRecord.getNormValue()).isNull();
     assertThat(savedRecord.getRawValue()).isEqualTo(-999.0);
+
+    assertThat(
+            meterRegistry
+                .get("pipeline.reprocessing.records")
+                .tag("result", "success")
+                .counter()
+                .count())
+        .isZero();
+    assertThat(
+            meterRegistry
+                .get("pipeline.reprocessing.records")
+                .tag("result", "poison_pill")
+                .counter()
+                .count())
+        .isEqualTo(1.0);
   }
 }

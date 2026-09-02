@@ -7,6 +7,8 @@ import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.slf4j.Logger;
@@ -28,15 +30,30 @@ public class HistoricalReadingChunkProcessor {
 
   private final int chunkSize;
 
+  private final Counter successCounter;
+
+  private final Counter poisonPillCounter;
+
   public HistoricalReadingChunkProcessor(
       SensorReadingRepository sensorReadingRepository,
       TransformationOrchestrator transformationOrchestrator,
       TransactionTemplate transactionTemplate,
-      @Value("${app.pipeline.reprocessing.chunk-size:1000}") int chunkSize) {
+      @Value("${app.pipeline.reprocessing.chunk-size:1000}") int chunkSize,
+      MeterRegistry meterRegistry) {
     this.sensorReadingRepository = sensorReadingRepository;
     this.transformationOrchestrator = transformationOrchestrator;
     this.transactionTemplate = transactionTemplate;
     this.chunkSize = chunkSize;
+    this.successCounter =
+        Counter.builder("pipeline.reprocessing.records")
+            .tag("result", "success")
+            .description("Historical sensor readings reprocessed, by outcome")
+            .register(meterRegistry);
+    this.poisonPillCounter =
+        Counter.builder("pipeline.reprocessing.records")
+            .tag("result", "poison_pill")
+            .description("Historical sensor readings reprocessed, by outcome")
+            .register(meterRegistry);
   }
 
   public ChunkProcessingResult processNextChunk(
@@ -54,12 +71,15 @@ public class HistoricalReadingChunkProcessor {
             .map(
                 reading -> {
                   try {
-                    return transformationOrchestrator.transform(
-                        reading.getSensorId(),
-                        reading.getRawValue(),
-                        reading.getTimestamp(), // This is already an OffsetDateTime from DB
-                        activeSensorConfig,
-                        ProcessingOrigin.REPROCESS);
+                    SensorReadingRecord transformed =
+                        transformationOrchestrator.transform(
+                            reading.getSensorId(),
+                            reading.getRawValue(),
+                            reading.getTimestamp(), // This is already an OffsetDateTime from DB
+                            activeSensorConfig,
+                            ProcessingOrigin.REPROCESS);
+                    successCounter.increment();
+                    return transformed;
                   } catch (TransformationException ex) {
                     log.error(
                         "POISON PILL REPROCESSING: Math failed for historical record of sensor {}."
@@ -77,6 +97,7 @@ public class HistoricalReadingChunkProcessor {
                     // raw value.
                     reading.setNormValue(null);
 
+                    poisonPillCounter.increment();
                     return reading;
                   }
                 })
