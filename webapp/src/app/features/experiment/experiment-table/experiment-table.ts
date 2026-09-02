@@ -45,7 +45,7 @@ export default class ExperimentTable {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
       const count = this.totalCount() ?? 0;
-      view.title = this.translateService.instant('tab.experiment', { count });
+      view.title = this.translateService.translate('tab.experiment', { count })();
     });
 
     // Re-fetch the currently visible pages whenever a experiment is created/updated elsewhere
