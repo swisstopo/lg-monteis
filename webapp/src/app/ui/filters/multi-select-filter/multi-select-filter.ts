@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, computed, ElementRef, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IFilterAngularComp } from 'ag-grid-angular';
@@ -30,7 +29,6 @@ interface MultiSelectFilterParams extends IFilterParams {
 @Component({
   selector: 'app-multi-select-filter',
   imports: [
-    CommonModule,
     FormsModule,
     MatMenuModule,
     MatButtonModule,
@@ -50,7 +48,7 @@ export class MultiSelectFilter implements IFilterAngularComp {
   private params!: MultiSelectFilterParams;
   private initialValues = new Set<string>();
 
-  readonly isLoading = signal(false);
+  readonly isLoading = signal(true);
   readonly hasError = signal(false);
   readonly showFilter = signal(false);
   searchText = signal('');
@@ -122,11 +120,10 @@ export class MultiSelectFilter implements IFilterAngularComp {
   }
 
   doesFilterPass(params: IDoesFilterPassParams): boolean {
-    const field = this.params.colDef.field;
     const selected = this.selectedValues();
 
-    if (!field || selected.size === 0) return true;
-    return selected.has(params.data[field]);
+    const value = this.params.getValue(params.node);
+    return selected.has(value);
   }
 
   getModel(): SetFilterModel | null {
@@ -150,21 +147,28 @@ export class MultiSelectFilter implements IFilterAngularComp {
     this.initialValues = new Set(newSet);
   }
 
+  private closePopup(): void {
+    this.searchText.set('');
+    this.params.api.hidePopupMenu();
+  }
+
+  private restoreToInitialState(): void {
+    this.selectedValues.set(new Set(this.initialValues));
+  }
+
   onApplyClick(): void {
     this.params.filterChangedCallback();
     this.initialValues = new Set(this.selectedValues());
-    this.searchText.set('');
-    this.params.api.hidePopupMenu();
+    this.closePopup();
   }
 
   onCancelClick(): void {
-    this.selectedValues.set(new Set(this.initialValues));
-    this.searchText.set('');
-    this.params.api.hidePopupMenu();
+    this.restoreToInitialState();
+    this.closePopup();
   }
 
   afterGuiAttached(): void {
-    this.selectedValues.set(new Set(this.initialValues));
+    this.restoreToInitialState();
     this.searchText.set('');
     this.clearAndCheckFilter();
   }
