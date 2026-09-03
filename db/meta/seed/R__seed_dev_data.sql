@@ -109,15 +109,18 @@ VALUES
     ('00000000-0000-7000-8000-000000000302', '00000000-0000-7000-8000-000000000203'),
     ('00000000-0000-7000-8000-000000000302', '00000000-0000-7000-8000-000000000204');
 
--- FLOW-Admin is intentionally linked to no experiment — only admins can see it.
+-- 7. Bulk load-testing experiments. Unlike the
+-- fixed sensors above, these IDs aren't referenced anywhere else, so they use
+-- real generated uuidv7() values.
+-- CHANGE THE NUMBER 6 BELOW TO GENERATE MORE OR FEWER EXPERIMENTS
+
 INSERT INTO experiments (
-    "id", "name", "comment",
+    "name", "comment",
     "version", "owner",
     "start",
     "end"
 )
 SELECT
-    'BULK-' || i,                                            -- id (starts at 3)
     'bulk-experiment-' || i,                               -- name
     'Auto-generated load testing experiment ' || i,   -- comment
     1,                                                -- version
@@ -139,13 +142,12 @@ SELECT
                            ELSE 90                                   -- future
                            END
                        ) * INTERVAL '1 day'
--- CHANGE THE NUMBER 10 BELOW TO GENERATE MORE OR FEWER EXPERIMENTS
 FROM generate_series(1, 6) AS i;
 
 -- FLOW-Admin (Sensor ID 5) is intentionally linked to no experiment —
 -- only admins can see it.
 
--- 7. Bulk load-testing sensors
+-- 8. Bulk load-testing sensors
 -- Generates sensors, their corresponding parameters, and links them to Experiment 1
 WITH bulk_sensors AS (
 INSERT INTO sensors (
