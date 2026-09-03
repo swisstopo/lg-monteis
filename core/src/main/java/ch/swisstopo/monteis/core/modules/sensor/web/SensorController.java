@@ -118,7 +118,6 @@ public class SensorController {
       @RequestParam(required = false) String filterModel) {
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
     PagedResult<Sensor> result = service.getSensors(pagedRequestParser.parse(raw));
-    return new PagedResult<>(
-        result.rows().stream().map(mapper::toDto).toList(), result.totalCount());
+    return mapper.toPagedDto(result);
   }
 }
