@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -96,6 +97,28 @@ class PagedRequestParserTest {
     assertEquals("inRange", dateModel.type());
     assertEquals("2026-01-01", dateModel.dateFrom());
     assertEquals("2026-12-31", dateModel.dateTo());
+  }
+
+  @Test
+  void should_parse_set_filter_model_with_discriminator_field() {
+    // given
+    RawPagedRequest raw =
+        new RawPagedRequest(
+            0,
+            20,
+            null,
+            "{\"createdAt\":{\"filterType\":\"set\",\"values\":[\"ACTIVE\",\"HISTORIC\"]}}");
+
+    // when
+    PagedRequest parsed = parser.parse(raw);
+
+    // then
+    FilterModelItem model = parsed.filterModel().get("createdAt");
+
+    assertInstanceOf(SetFilterModel.class, model);
+
+    SetFilterModel setModel = (SetFilterModel) model;
+    assertEquals(Set.of("ACTIVE", "HISTORIC"), setModel.values());
   }
 
   @Test
