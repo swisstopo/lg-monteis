@@ -31,7 +31,7 @@
     <spotless.version>3.10.1</spotless.version>
     <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
     <openapi-generator-plugin.version>7.25.0</openapi-generator-plugin.version>
-    <swagger-annotations.version>2.2.54</swagger-annotations.version>
+    <swagger-annotations.version>2.2.55</swagger-annotations.version>
     <jackson-databind-nullable.version>0.2.11</jackson-databind-nullable.version>
     <parsington.version>3.3.0</parsington.version>
     <maven-build-helper.version>3.6.1</maven-build-helper.version>
