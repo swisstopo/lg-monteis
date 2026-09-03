@@ -59,6 +59,14 @@
          .trivyignore. Drop this override once the Spring Boot BOM manages >= 4.2.16. -->
     <netty.version>4.2.16.Final</netty.version>
 
+    <!-- Override the Spring Boot BOM's managed tomcat.version to pull the patched
+         tomcat-embed-core 11.0.25. Fixes CVE-2026-65182 (security constraint bypass),
+         CVE-2026-65905 (DIGEST auth replay bypass) and CVE-2026-68525 (FORM auth
+         bypass) in tomcat-embed-core 11.0.24, caught by the Trivy scan. Spring Boot
+         4.1.1 is currently the latest release and still manages the vulnerable 11.0.24.
+         Drop this override once the Spring Boot BOM manages >= 11.0.25. -->
+    <tomcat.version>11.0.25</tomcat.version>
+
     <jooq.codegen.skip>false</jooq.codegen.skip>
   </properties>
 
