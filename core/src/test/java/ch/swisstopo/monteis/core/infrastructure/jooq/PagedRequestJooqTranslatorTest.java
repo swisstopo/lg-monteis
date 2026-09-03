@@ -7,6 +7,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -141,6 +142,32 @@ class PagedRequestJooqTranslatorTest {
     PagedRequest request =
         new PagedRequest(
             0, 10, List.of(), Map.of("start", new DateFilterModel(type, dateFrom, dateTo)));
+
+    // when
+    var criteria = PagedRequestJooqTranslator.translate(request, columns, null);
+
+    // then
+    Condition expected = DSL.noCondition().and(expectedCondition);
+    assertEquals(expected.toString(), criteria.condition().toString());
+  }
+
+  static Stream<Arguments> setFilterProvider() {
+    Field<String> f = nameField.cast(String.class);
+    return Stream.of(
+        Arguments.of("null values", null, DSL.falseCondition()),
+        Arguments.of("empty values", Set.of(), DSL.falseCondition()),
+        Arguments.of(
+            "valid values", Set.of("ACTIVE", "HISTORIC"), f.in(Set.of("ACTIVE", "HISTORIC"))));
+  }
+
+  @ParameterizedTest(name = "set filter with {0} translates correctly")
+  @MethodSource("setFilterProvider")
+  void should_translateCorrectly_when_setFilterIsProvided(
+      String description, Set<String> values, Condition expectedCondition) {
+
+    // given
+    PagedRequest request =
+        new PagedRequest(0, 10, List.of(), Map.of("name", new SetFilterModel("Set", values)));
 
     // when
     var criteria = PagedRequestJooqTranslator.translate(request, columns, null);
