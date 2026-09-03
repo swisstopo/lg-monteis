@@ -67,6 +67,7 @@ public final class PagedRequestJooqTranslator {
       case TextFilterModel text -> textCondition(field, text);
       case NumberFilterModel number -> numberCondition(field, number);
       case DateFilterModel date -> dateCondition(field, date);
+      case SetFilterModel set -> setCondition(field, set);
     };
   }
 
@@ -126,6 +127,15 @@ public final class PagedRequestJooqTranslator {
       case null, default ->
           throw new InvalidPagedRequestException("Unsupported date filter type: " + model.type());
     };
+  }
+
+  private static Condition setCondition(Field<?> raw, SetFilterModel model) {
+    if (model.values() == null || model.values().isEmpty()) {
+      return DSL.falseCondition();
+    }
+
+    Field<String> field = raw.cast(String.class);
+    return field.in(model.values());
   }
 
   private static final class AgGridFilter {
