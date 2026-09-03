@@ -115,8 +115,9 @@ class SensorControllerTest {
     Sensor mockDomain = mock(Sensor.class);
 
     given(pagedRequestParser.parse(any())).willReturn(new PagedRequest(0, 20, List.of(), Map.of()));
-    given(service.getSensors(any())).willReturn(new PagedResult<>(List.of(mockDomain), 1));
-    given(mapper.toDto(mockDomain)).willReturn(dto1);
+    PagedResult<Sensor> sensorPagedResult = new PagedResult<>(List.of(mockDomain), 1);
+    given(service.getSensors(any())).willReturn(sensorPagedResult);
+    given(mapper.toPagedDto(sensorPagedResult)).willReturn(new PagedResult<>(List.of(dto1), 1));
 
     // when / then
     mockMvc
@@ -133,7 +134,7 @@ class SensorControllerTest {
         .andExpect(jsonPath("$.rows[0].type.name").value(dto1.type().name()));
 
     then(service).should().getSensors(any());
-    then(mapper).should().toDto(mockDomain);
+    then(mapper).should().toPagedDto(sensorPagedResult);
   }
 
   @Test
