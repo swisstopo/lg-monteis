@@ -22,7 +22,7 @@ import { TableColumn } from './table.types';
   styleUrl: './table.scss',
 })
 export default class Table<T = any> {
-  rows = input<T[]>([]);
+  rows = input<T[] | undefined>(undefined);
   columns = input<TableColumn<T>[]>([]);
   // Whether to show row-selection checkboxes; independent per table instance.
   checkboxes = input<boolean>(false);
