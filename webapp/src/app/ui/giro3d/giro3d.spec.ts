@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Giro3d } from './giro3d';
 
@@ -45,6 +46,7 @@ describe('Giro3d', () => {
 
     await TestBed.configureTestingModule({
       imports: [Giro3d],
+      providers: [provideTranslateService()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Giro3d);
@@ -58,7 +60,7 @@ describe('Giro3d', () => {
   });
 
   it('renders the giro3d canvas into the view container', () => {
-    const view: HTMLDivElement = fixture.nativeElement.querySelector('div');
+    const view: HTMLDivElement = fixture.nativeElement.querySelector('.view');
     expect(view.querySelector('canvas')).toBeTruthy();
   });
 
