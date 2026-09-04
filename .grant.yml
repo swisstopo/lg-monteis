@@ -44,6 +44,7 @@ allow:
   - MIT-License
   - The-MIT-License
   - MIT-0
+  - Zlib
   - https---opensource.org-license-mit
   - CC-BY-3.0
   - CC-BY-4.0
@@ -81,6 +82,8 @@ ignore-packages: [
   "postgresql",
   "@algolia/client-query-suggestions",
   "@algolia/requester-browser-xhr",
+  "lightningcss-linux-x64-musl", # MPL-2.0 (optional musl-libc prebuilt binary installed on CI runner, no package.json to read from)
+  "@eslint-community/eslint-utils", # MIT
 
   # --- Accepted Legacy / Transitive Risks ---
   # Ignored because it uses BSD-4-Clause (Advertising Clause),
@@ -99,4 +102,3 @@ disable-file-search: false # Disable filesystem license file search
 summary: false # Show only summary information for check command
 # Show only packages without licenses (default: false)
 only-unlicensed: false # maps to grant check --unlicensed || grant list --unlicensed
-
