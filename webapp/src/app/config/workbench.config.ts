@@ -8,14 +8,14 @@ export const workbenchConfig = provideWorkbench({
   layout: (factory: WorkbenchLayoutFactory) =>
     factory
       .addPart(MAIN_AREA)
-      .navigatePart(MAIN_AREA, ['overview'])
+      .navigatePart(MAIN_AREA, ['measurements-overview'])
       .addPart(
-        'metrics-menu',
+        'measurements-menu',
         { dockTo: 'left-top' },
-        { label: '%menu.overview', icon: 'data_exploration' },
+        { label: '%menu.measurements', icon: 'data_exploration' },
       )
-      .navigatePart('metrics-menu', ['metrics-menu'])
-      .activatePart('metrics-menu')
+      .navigatePart('measurements-menu', ['measurements-menu'])
+      .activatePart('measurements-menu')
       .addPart('setup-menu', { dockTo: 'left-top' }, { label: '%menu.setup', icon: 'settings' })
       .navigatePart('setup-menu', ['setup-menu'])
       .activatePart('setup-menu'),

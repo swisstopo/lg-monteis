@@ -1,19 +1,19 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 
-import Overview from './overview';
+import MeasurementsOverview from './measurements-overview';
 
-describe('Overview', () => {
-  let component: Overview;
-  let fixture: ComponentFixture<Overview>;
+describe('MeasurementsOverview', () => {
+  let component: MeasurementsOverview;
+  let fixture: ComponentFixture<MeasurementsOverview>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Overview],
+      imports: [MeasurementsOverview],
       providers: [provideTranslateService()],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(Overview);
+    fixture = TestBed.createComponent(MeasurementsOverview);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
