@@ -298,6 +298,9 @@
       "rawValue": "Value (Raw)"
     }
   },
+  "measurements-visualization": {
+    "loading": "Loading 3D model..."
+  },
   "menu": {
     "overview": "Overview",
     "sensor": "Sensor",

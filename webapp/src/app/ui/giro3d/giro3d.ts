@@ -8,14 +8,16 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import Instance from '@giro3d/giro3d/core/Instance.js';
 import { CoordinateSystem } from '@giro3d/giro3d/core/geographic/CoordinateSystem.js';
 import Tiles3D from '@giro3d/giro3d/entities/Tiles3D.js';
+import { TranslatePipe } from '@ngx-translate/core';
 import { AmbientLight, DirectionalLight, GridHelper, MathUtils, Object3D, Vector3 } from 'three';
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
 
 @Component({
-  imports: [],
+  imports: [TranslatePipe, MatProgressSpinner],
   selector: 'app-giro3d',
   styleUrl: './giro3d.scss',
   templateUrl: './giro3d.html',
@@ -25,6 +27,7 @@ export class Giro3d implements AfterViewInit {
 
   private readonly view = viewChild.required<ElementRef<HTMLDivElement>>('view');
 
+  protected readonly loading = signal(true);
   private readonly instance = signal<Instance | null>(null);
   private readonly tileset = computed(() => new Tiles3D({ url: this.tilesetUrl().toString() }));
   private readonly controls = signal<MapControls | null>(null);
@@ -32,6 +35,7 @@ export class Giro3d implements AfterViewInit {
   constructor() {
     // Initialize/cleanup tileset whenever the tilesetUrl changes
     effect((onCleanup) => {
+      this.loading.set(true);
       const instance = this.instance();
       const controls = this.controls();
       if (!instance || !controls) return;
@@ -60,6 +64,9 @@ export class Giro3d implements AfterViewInit {
             return;
           }
           grid = this.initCamera(instance, controls, tileset);
+        })
+        .finally(() => {
+          this.loading.set(false);
         })
         .catch((error: unknown) => this.showError(error));
 
