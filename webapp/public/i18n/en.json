@@ -256,12 +256,12 @@
       "save": "Save"
     }
   },
-  "overview": {
+  "measurements-overview": {
     "totalRecords": "Total Database Records",
     "syncing": "Syncing...",
     "offline": "Offline"
   },
-  "measurements": {
+  "measurements-table": {
     "heading": "AG Grid - Database Records",
     "loading": "Streaming logs from database...",
     "error": "Failed to connect to the backend server.",
@@ -304,10 +304,10 @@
     "error": "Failed to fetch or render 3D model"
   },
   "menu": {
-    "overview": "Overview",
+    "measurements": "Measurements",
     "sensor": "Sensor",
     "setup": "Setup",
-    "measurements": "Measurements",
+    "measurements-table": "Table",
     "measurements-visualization": "3D View",
     "experiment": "Experiment"
   },
@@ -334,7 +334,7 @@
   "tab": {
     "sensor": "Setup Sensors ({{count}})",
     "experiment": "Setup Experiment ({{count}})",
-    "overview": "Measurements",
+    "measurements-table": "Measurements",
     "measurements-visualization": "Measurements 3D View"
   },
   "tableHeader": {

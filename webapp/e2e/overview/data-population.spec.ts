@@ -9,13 +9,13 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('should find calculation data in table', async ({ page }) => {
-  await page.getByRole('link', { name: 'Measurements' }).click();
+  await page.getByRole('link', { name: 'Table' }).click();
 
   await expect(page.getByRole('columnheader', { name: 'Sensor ID' })).toBeVisible();
 });
 
 test('should find sensor date in table', async ({ page }) => {
-  await page.getByRole('link', { name: 'Measurements' }).click();
+  await page.getByRole('link', { name: 'Table' }).click();
 
   await expect(page.getByRole('columnheader', { name: 'Timestamp' })).toBeVisible();
 });

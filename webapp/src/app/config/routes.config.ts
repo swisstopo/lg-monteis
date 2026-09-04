@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '../core/auth/auth.guard';
 import { EXPERIMENT_ROUTES } from '../features/experiment/experiment.routes';
-import { OVERVIEW_ROUTES } from '../features/overview/overview.routes';
+import { MEASUREMENTS_ROUTES } from '../features/measurements/measurements.routes';
 import { SENSOR_ROUTES } from '../features/sensor/sensor.routes';
 import { MENU_ROUTES } from '../ui/menus/menu.routes';
 
@@ -11,12 +11,12 @@ export const APP_ROUTES: Routes = [
     canActivateChild: [authGuard],
     children: [
       // Spread both arrays into the main application routing table
-      ...OVERVIEW_ROUTES,
+      ...MEASUREMENTS_ROUTES,
       ...SENSOR_ROUTES,
       ...EXPERIMENT_ROUTES,
       ...MENU_ROUTES,
       // Fallback route if needed
-      { path: '', redirectTo: 'overview', pathMatch: 'full' },
+      { path: '', redirectTo: 'measurements-overview', pathMatch: 'full' },
     ],
   },
 ];

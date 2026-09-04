@@ -3,7 +3,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { Observable, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { ChartDataResponseDto, MeasurementControllerService } from '../../../core/generated';
-import { MesurementsService } from './mesurements.service';
+import { MesurementsService as MeasurementsService } from './measurements.service';
 
 const SENSOR_1 = '10000000-0000-0000-0000-000000000001';
 const SENSOR_2 = '10000000-0000-0000-0000-000000000002';
@@ -18,15 +18,15 @@ function setup(
 ) {
   TestBed.configureTestingModule({
     providers: [
-      MesurementsService,
+      MeasurementsService,
       provideTranslateService(),
       { provide: MeasurementControllerService, useValue: { getChartData } },
     ],
   });
-  return TestBed.inject(MesurementsService);
+  return TestBed.inject(MeasurementsService);
 }
 
-describe('MesurementsService', () => {
+describe('MeasurementsService', () => {
   it('starts idle without fetching anything', () => {
     const getChartData = vi.fn().mockReturnValue(of([]));
     const service = setup(getChartData);

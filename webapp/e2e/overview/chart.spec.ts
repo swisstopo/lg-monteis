@@ -20,7 +20,7 @@ test.beforeEach(async ({ page }) => {
   await loginAsAdmin(page);
 
   await page.getByRole('button', { name: 'data_exploration' }).click();
-  await page.getByRole('link', { name: 'Measurements' }).click();
+  await page.getByRole('link', { name: 'Table' }).click();
 });
 
 test('should create a chart from a selected date range', async ({ page }) => {
