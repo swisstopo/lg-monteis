@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound;
 
+import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
@@ -10,6 +11,8 @@ public record SensorResponseDto(
     String code,
     String name,
     Unit unit,
+    Integer fulcrumId,
+    Experiment experiment,
     SensorTypeResponseDto type,
     String comment,
     CoordinatesDto coordinates,

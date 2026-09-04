@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.NullOrNotBlank;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
@@ -23,6 +24,8 @@ public record WriteSensorDto(
     @NotBlank @Size(min = 2, max = 50) String name,
     @NullOrNotBlank String comment,
     @NotNull Unit unit,
+    Integer fulcrumId,
+    @Valid Experiment experiment,
     @NotNull @Valid WriteSensorTypeDto type,
     @NotNull @Valid CoordinatesDto coordinates,
     @NotNull @Valid AlarmLimitsDto alarmLimits,

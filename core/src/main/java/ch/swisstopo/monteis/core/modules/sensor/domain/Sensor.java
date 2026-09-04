@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.sensor.domain;
 
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import java.util.Objects;
 import java.util.UUID;
 import org.javers.core.metamodel.annotation.Id;
@@ -14,6 +15,8 @@ public class Sensor implements Auditable {
   @Id private UUID id;
   private String code;
   private String name;
+  private Integer fulcrumId;
+  private Experiment experiment;
   private SensorType type;
   private Unit unit;
   private String comment;
@@ -167,6 +170,22 @@ public class Sensor implements Auditable {
 
   public void setVersion(Integer version) {
     this.version = version;
+  }
+
+  public Integer getFulcrumIdId() {
+    return fulcrumId;
+  }
+
+  public void setFulcrumIdId(Integer fulcrumId) {
+    this.fulcrumId = fulcrumId;
+  }
+
+  public Experiment getExperiment() {
+    return experiment;
+  }
+
+  public void setExperiment(Experiment experiment) {
+    this.experiment = experiment;
   }
 
   public boolean changeTriggersPublish(Sensor old) {
