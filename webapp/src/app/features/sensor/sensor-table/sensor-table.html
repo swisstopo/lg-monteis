@@ -16,7 +16,7 @@
     </button>
   </app-table-header>
   @if (loadError()) {
-    <p class="error-text">{{ 'sensor.error.connection' | translate }}</p>
+    <app-inline-error [message]="'sensor.error.connection' | translate"></app-inline-error>
   } @else {
     <app-table
       class="custom-grid"

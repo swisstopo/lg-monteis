@@ -27,6 +27,7 @@
     "@angular/material": "^22.1.4",
     "@angular/platform-browser": "^22.1.4",
     "@angular/router": "^22.1.4",
+    "@giro3d/giro3d": "^2.0.4",
     "@ngx-translate/core": "^18.0.0",
     "@scion/components": "^22.2.0",
     "@scion/microfrontend-platform": "^3.0.0",
@@ -42,6 +43,7 @@
     "chartjs-plugin-zoom": "^2.2.0",
     "date-fns": "^4.4.0",
     "rxjs": "~7.8.2",
+    "three": "^0.185.1",
     "tslib": "^2.8.1"
   },
   "devDependencies": {
@@ -53,6 +55,7 @@
     "@eslint/js": "^10.0.1",
     "@openapitools/openapi-generator-cli": "^2.41.0",
     "@playwright/test": "^1.62.1",
+    "@types/three": "^0.185.4",
     "@vitest/browser-playwright": "^4.1.11",
     "angular-eslint": "22.2.0",
     "corepack": "^0.36.0",

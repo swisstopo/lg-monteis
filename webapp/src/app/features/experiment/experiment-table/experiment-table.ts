@@ -7,6 +7,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { GridApi } from 'ag-grid-community';
 import { ExperimentResponseDto } from '../../../core/generated';
+import { InlineError } from '../../../ui/inline-error/inline-error';
 import { TableHeader } from '../../../ui/table-header/table-header';
 import { createPagedDatasource } from '../../../ui/table/paged-datasource.factory';
 import Table from '../../../ui/table/table';
@@ -16,7 +17,7 @@ import { createColumns } from './columns';
 
 @Component({
   selector: 'app-experiment-table',
-  imports: [TableHeader, MatButton, MatIcon, TranslatePipe, Table],
+  imports: [TableHeader, MatButton, MatIcon, TranslatePipe, Table, InlineError],
   providers: [DatePipe],
   templateUrl: './experiment-table.html',
   styleUrl: './experiment-table.scss',
