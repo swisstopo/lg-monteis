@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { ExperimentResponseDto } from '../../../core/generated';
+import { MultiSelectFilter } from '../../../ui/filters/multi-select-filter/multi-select-filter';
 import { CopyCellRenderer } from '../../../ui/table/copy-cell-renderer/copy-cell-renderer';
 import { TableColumn } from '../../../ui/table/table.types';
 import StatusEnum = ExperimentResponseDto.StatusEnum;
@@ -19,8 +20,8 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
     {
       field: 'status',
       headerName: translateService.translate('experiment.status.label')(),
-      sortable: false,
-      filter: false,
+      sortable: true,
+      filter: MultiSelectFilter,
       valueFormatter: (params) => {
         switch (params.value) {
           case StatusEnum.Active:
@@ -33,26 +34,43 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
             return params.value ?? '';
         }
       },
+      filterParams: {
+        valuesProvider: () =>
+          Promise.resolve([
+            {
+              displayName: translateService.translate('experiment.status.option.active.label')(),
+              value: 'ACTIVE',
+            },
+            {
+              displayName: translateService.translate('experiment.status.option.historic.label')(),
+              value: 'HISTORIC',
+            },
+            {
+              displayName: translateService.translate('experiment.status.option.upcoming.label')(),
+              value: 'UPCOMING',
+            },
+          ]),
+      },
     },
     {
       field: 'period.start',
       headerName: translateService.translate('experiment.period.start.label')(),
       sortable: true,
-      filter: true,
-      valueFormatter: (params) => datePipe.transform(params.value) ?? '',
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params) => datePipe.transform(params.value, 'mediumDate') ?? '',
     },
     {
       field: 'period.end',
       headerName: translateService.translate('experiment.period.end.label')(),
       sortable: true,
-      filter: true,
-      valueFormatter: (params) => datePipe.transform(params.value) ?? '',
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params) => datePipe.transform(params.value, 'mediumDate') ?? '',
     },
     {
       field: 'sensorCount',
       headerName: translateService.translate('experiment.sensorCount.label')(),
-      sortable: false,
-      filter: false,
+      sortable: true,
+      filter: 'agNumberColumnFilter',
     },
     {
       field: 'comment',

@@ -4,7 +4,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import java.util.Set;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Exercises the actual JSON parsing path against realistic ag-grid wire payloads (not just
@@ -72,6 +77,51 @@ class PagedRequestParserTest {
   }
 
   @Test
+  void should_parse_date_filter_model_with_discriminator_field() {
+    // given
+    RawPagedRequest raw =
+        new RawPagedRequest(
+            0,
+            20,
+            null,
+            "{\"createdAt\":{\"filterType\":\"date\",\"type\":\"inRange\",\"dateFrom\":\"2026-01-01\",\"dateTo\":\"2026-12-31\"}}");
+
+    // when
+    PagedRequest parsed = parser.parse(raw);
+
+    // then
+    FilterModelItem model = parsed.filterModel().get("createdAt");
+    assertInstanceOf(DateFilterModel.class, model);
+
+    DateFilterModel dateModel = (DateFilterModel) model;
+    assertEquals("inRange", dateModel.type());
+    assertEquals("2026-01-01", dateModel.dateFrom());
+    assertEquals("2026-12-31", dateModel.dateTo());
+  }
+
+  @Test
+  void should_parse_set_filter_model_with_discriminator_field() {
+    // given
+    RawPagedRequest raw =
+        new RawPagedRequest(
+            0,
+            20,
+            null,
+            "{\"createdAt\":{\"filterType\":\"set\",\"values\":[\"ACTIVE\",\"HISTORIC\"]}}");
+
+    // when
+    PagedRequest parsed = parser.parse(raw);
+
+    // then
+    FilterModelItem model = parsed.filterModel().get("createdAt");
+
+    assertInstanceOf(SetFilterModel.class, model);
+
+    SetFilterModel setModel = (SetFilterModel) model;
+    assertEquals(Set.of("ACTIVE", "HISTORIC"), setModel.values());
+  }
+
+  @Test
   void should_default_to_empty_when_no_sort_or_filter_given() {
     RawPagedRequest raw = new RawPagedRequest(0, 20, null, null);
 
@@ -92,57 +142,34 @@ class PagedRequestParserTest {
     assertTrue(parsed.filterModel().isEmpty());
   }
 
-  @Test
-  void should_wrap_malformed_sort_model_json_syntax() {
-    // given: syntactically invalid JSON (unterminated array)
-    RawPagedRequest raw = new RawPagedRequest(0, 20, "[{", null);
+  @ParameterizedTest(name = "[{index}] {0}")
+  @MethodSource("invalidJsonScenarios")
+  void should_wrap_jackson_parsing_errors_in_invalid_request_exception(
+      String testName, String sortModel, String filterModel) {
+
+    // given
+    RawPagedRequest raw = new RawPagedRequest(0, 20, sortModel, filterModel);
 
     // when / then
     InvalidPagedRequestException ex =
         assertThrows(InvalidPagedRequestException.class, () -> parser.parse(raw));
+
     assertInstanceOf(JsonProcessingException.class, ex.getCause());
   }
 
-  @Test
-  void should_wrap_malformed_filter_model_json_syntax() {
-    RawPagedRequest raw = new RawPagedRequest(0, 20, null, "{not json");
-
-    InvalidPagedRequestException ex =
-        assertThrows(InvalidPagedRequestException.class, () -> parser.parse(raw));
-    assertInstanceOf(JsonProcessingException.class, ex.getCause());
-  }
-
-  @Test
-  void should_wrap_sort_model_with_wrong_json_shape() {
-    // given: valid JSON, but an object where an array is expected
-    RawPagedRequest raw = new RawPagedRequest(0, 20, "{}", null);
-
-    InvalidPagedRequestException ex =
-        assertThrows(InvalidPagedRequestException.class, () -> parser.parse(raw));
-    assertInstanceOf(JsonProcessingException.class, ex.getCause());
-  }
-
-  @Test
-  void should_wrap_filter_model_with_unknown_discriminator() {
-    // given: filterType doesn't match any registered FilterModelItem subtype
-    RawPagedRequest raw =
-        new RawPagedRequest(
-            0, 20, null, "{\"code\":{\"filterType\":\"date\",\"type\":\"equals\"}}");
-
-    InvalidPagedRequestException ex =
-        assertThrows(InvalidPagedRequestException.class, () -> parser.parse(raw));
-    assertInstanceOf(JsonProcessingException.class, ex.getCause());
-  }
-
-  @Test
-  void should_wrap_filter_model_with_missing_discriminator() {
-    // given: no filterType at all, so Jackson can't resolve which FilterModelItem subtype to use
-    RawPagedRequest raw =
-        new RawPagedRequest(0, 20, null, "{\"code\":{\"type\":\"equals\",\"filter\":\"abc\"}}");
-
-    InvalidPagedRequestException ex =
-        assertThrows(InvalidPagedRequestException.class, () -> parser.parse(raw));
-    assertInstanceOf(JsonProcessingException.class, ex.getCause());
+  private static Stream<Arguments> invalidJsonScenarios() {
+    return Stream.of(
+        Arguments.of("Malformed sort model (unterminated array)", "[{", null),
+        Arguments.of("Malformed filter model (invalid JSON)", null, "{not json"),
+        Arguments.of("Sort model with wrong JSON shape (object instead of array)", "{}", null),
+        Arguments.of(
+            "Filter model with unknown discriminator",
+            null,
+            "{\"code\":{\"filterType\":\"boolean\",\"type\":\"equals\"}}"),
+        Arguments.of(
+            "Filter model with missing discriminator",
+            null,
+            "{\"code\":{\"type\":\"equals\",\"filter\":\"abc\"}}"));
   }
 
   @Test
