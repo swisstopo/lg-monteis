@@ -15,9 +15,10 @@ import Tiles3D from '@giro3d/giro3d/entities/Tiles3D.js';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AmbientLight, DirectionalLight, GridHelper, MathUtils, Object3D, Vector3 } from 'three';
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
+import { InlineError } from '../inline-error/inline-error';
 
 @Component({
-  imports: [TranslatePipe, MatProgressSpinner],
+  imports: [TranslatePipe, MatProgressSpinner, InlineError],
   selector: 'app-giro3d',
   styleUrl: './giro3d.scss',
   templateUrl: './giro3d.html',
@@ -28,6 +29,7 @@ export class Giro3d implements AfterViewInit {
   private readonly view = viewChild.required<ElementRef<HTMLDivElement>>('view');
 
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   private readonly instance = signal<Instance | null>(null);
   private readonly tileset = computed(() => new Tiles3D({ url: this.tilesetUrl().toString() }));
   private readonly controls = signal<MapControls | null>(null);
@@ -68,7 +70,7 @@ export class Giro3d implements AfterViewInit {
         .finally(() => {
           this.loading.set(false);
         })
-        .catch((error: unknown) => this.showError(error));
+        .catch(this.showError.bind(this));
 
       onCleanup(() => {
         cancelled = true;
@@ -168,8 +170,8 @@ export class Giro3d implements AfterViewInit {
     instance.notifyChange(instance.view.camera);
   }
 
-  private showError(event: unknown): void {
-    // TODO
-    console.error('Error: ', event);
+  private showError(error: unknown): void {
+    this.error.set(true);
+    console.error('3D View Error: ', error);
   }
 }

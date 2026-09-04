@@ -1,5 +1,8 @@
-@if (loading()) {
-  <mat-spinner [attr.aria-label]="'measurements-visualization.loading' | translate"></mat-spinner>
+@if (error()) {
+  <app-inline-error [message]="'measurements-visualization.error' | translate"></app-inline-error>
+} @else {
+  @if (loading()) {
+    <mat-spinner [attr.aria-label]="'measurements-visualization.loading' | translate"></mat-spinner>
+  }
+  <div #view class="view"></div>
 }
-
-<div #view></div>

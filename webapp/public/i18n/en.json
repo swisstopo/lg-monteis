@@ -230,7 +230,8 @@
         "title": "Error",
         "message": "An unspecified error occurred while saving the experiment."
       },
-      "noId": "No experiment id provided"
+      "noId": "No experiment id provided",
+      "connection": "Failed to connect to the backend server."
     },
     "tableHeader": {
       "download": "Download",
@@ -299,7 +300,8 @@
     }
   },
   "measurements-visualization": {
-    "loading": "Loading 3D model..."
+    "loading": "Loading 3D model...",
+    "error": "Failed to fetch or render 3D model"
   },
   "menu": {
     "overview": "Overview",
