@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('http://localhost:4200/');
   await loginAsAdmin(page);
 
-  await page.getByRole('button', { name: 'data_exploration' }).click();
+  await page.getByTitle('Measurements').click();
 });
 
 test('loads the backend-served tileset with an authenticated request', async ({ page }) => {
