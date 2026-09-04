@@ -36,7 +36,7 @@ import {
   createTimeChartOptions,
 } from '../../../ui/chart';
 import Table from '../../../ui/table/table';
-import { MesurementsService } from '../services/mesurements.service';
+import { MesurementsService } from '../services/measurements.service';
 import { createColumns } from './columns';
 
 interface DateTimeModel {
@@ -66,7 +66,7 @@ function combineDateAndTime(date: Date | null, time: Date | null): Date | null {
 }
 
 @Component({
-  selector: 'app-measurements-overview',
+  selector: 'app-measurements-table',
   imports: [
     Table,
     TranslatePipe,
@@ -86,10 +86,10 @@ function combineDateAndTime(date: Date | null, time: Date | null): Date | null {
     MatError,
   ],
   providers: [DatePipe],
-  templateUrl: './overview-table.html',
-  styleUrl: './overview-table.scss',
+  templateUrl: './measurements-table.html',
+  styleUrl: './measurements-table.scss',
 })
-export default class OverviewTable {
+export default class MeasurementsTable {
   private readonly datePipe = inject(DatePipe);
   private readonly translateService = inject(TranslateService);
   private readonly dialog = inject(MatDialog);
@@ -124,7 +124,7 @@ export default class OverviewTable {
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
-      view.title = this.translateService.translate('tab.overview')();
+      view.title = this.translateService.translate('tab.measurements-table')();
     });
 
     effect(() => {

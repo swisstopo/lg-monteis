@@ -1,6 +1,6 @@
 # Example 3D Tiles dataset (temporary)
 
-Demo data backing the "Measurements 3D View" (see `webapp/src/app/features/overview/measurements-visualization`).
+Demo data backing the "Measurements 3D View" (see `webapp/src/app/features/measurements/measurements-visualization`).
 It exists so the Giro3D view loads a model **from our own backend, through our own authentication**,
 instead of from a third-party host. It is a placeholder for the IFC models the backend will
 eventually manage itself (upload → S3 → conversion), and should be deleted once those exist.

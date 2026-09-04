@@ -19,8 +19,8 @@ test.beforeEach(async ({ page }) => {
   await page.goto('http://localhost:4200/');
   await loginAsAdmin(page);
 
-  await page.getByRole('button', { name: 'data_exploration' }).click();
-  await page.getByRole('link', { name: 'Measurements' }).click();
+  await page.getByTitle('Measurements').click();
+  await page.getByRole('link', { name: 'Table' }).click();
 });
 
 test('should create a chart from a selected date range', async ({ page }) => {

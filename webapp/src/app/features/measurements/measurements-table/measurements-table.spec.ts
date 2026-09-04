@@ -5,18 +5,18 @@ import { WorkbenchView } from '@scion/workbench';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { OverviewControllerService } from '../../../core/generated';
-import OverviewTable from './overview-table';
+import MeasurementsTable from './measurements-table';
 
 const overviewServiceMock = {
   getMetrics: vi.fn().mockReturnValue(of([])),
 };
 
-describe('OverviewTable', () => {
-  let fixture: ComponentFixture<OverviewTable>;
+describe('MeasurementsTable', () => {
+  let fixture: ComponentFixture<MeasurementsTable>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [OverviewTable],
+      imports: [MeasurementsTable],
       providers: [
         {
           provide: OverviewControllerService,
@@ -28,7 +28,7 @@ describe('OverviewTable', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(OverviewTable);
+    fixture = TestBed.createComponent(MeasurementsTable);
     fixture.detectChanges();
   });
 

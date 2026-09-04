@@ -7,14 +7,14 @@ export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetricD
   return [
     {
       field: 'sensorId',
-      headerName: translate('measurements.column.sensorId')(),
+      headerName: translate('measurements-table.column.sensorId')(),
       sortable: true,
       filter: true,
       flex: 2,
     },
     {
       field: 'timestamp',
-      headerName: translate('measurements.column.timestamp')(),
+      headerName: translate('measurements-table.column.timestamp')(),
       sortable: true,
       filter: true,
       flex: 1.5,
@@ -22,14 +22,14 @@ export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetricD
     },
     {
       field: 'normValue',
-      headerName: translate('measurements.column.normValue')(),
+      headerName: translate('measurements-table.column.normValue')(),
       sortable: true,
       filter: true,
       flex: 1,
     },
     {
       field: 'rawValue',
-      headerName: translate('measurements.column.rawValue')(),
+      headerName: translate('measurements-table.column.rawValue')(),
       sortable: true,
       filter: true,
       flex: 1,
