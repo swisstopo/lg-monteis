@@ -15,7 +15,8 @@ export default class MeasurementsVisualization {
   private readonly translate = inject(TranslateService);
   private readonly view = inject(WorkbenchView);
 
-  protected readonly tilesetUrl = `${TILESET_URL_PREFIX}/example/tileset.json`;
+  // protected readonly tilesetUrl = `${TILESET_URL_PREFIX}/example/tileset.json`;
+  protected readonly tilesetUrl = `${TILESET_URL_PREFIX}/monteis-octree-poc/tileset.json`;
 
   constructor() {
     effect(() => {

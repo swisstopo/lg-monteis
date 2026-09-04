@@ -57,6 +57,8 @@ describe('MeasurementsVisualization', () => {
   });
 
   it('loads the tileset served by the backend', () => {
-    expect(fetchedUrls()).toContain(`${window.location.origin}/api/tilesets/example/tileset.json`);
+    expect(fetchedUrls()).toContain(
+      `${window.location.origin}/api/tilesets/monteis-octree-poc/tileset.json`,
+    );
   });
 });
