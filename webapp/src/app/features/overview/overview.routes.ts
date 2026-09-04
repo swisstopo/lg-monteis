@@ -13,4 +13,8 @@ export const OVERVIEW_ROUTES: Routes = [
     path: 'measurements',
     loadComponent: () => import('./overview-table/overview-table'),
   },
+  {
+    path: 'measurements-visualization',
+    loadComponent: () => import('./measurements-visualization/measurements-visualization'),
+  },
 ];

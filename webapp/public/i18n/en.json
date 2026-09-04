@@ -303,6 +303,7 @@
     "sensor": "Sensor",
     "setup": "Setup",
     "measurements": "Measurements",
+    "measurements-visualization": "3D View",
     "experiment": "Experiment"
   },
   "chart": {
@@ -328,7 +329,8 @@
   "tab": {
     "sensor": "Setup Sensors ({{count}})",
     "experiment": "Setup Experiment ({{count}})",
-    "overview": "Measurements"
+    "overview": "Measurements",
+    "measurements-visualization": "Measurements 3D View"
   },
   "tableHeader": {
     "search": "Search"
