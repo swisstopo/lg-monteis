@@ -82,7 +82,11 @@ export class Giro3d implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.initInstance();
+    try {
+      this.initInstance();
+    } catch (error) {
+      this.showError(error);
+    }
   }
 
   ngOnDestroy(): void {
@@ -172,6 +176,7 @@ export class Giro3d implements AfterViewInit {
 
   private showError(error: unknown): void {
     this.error.set(true);
+    this.loading.set(false);
     console.error('3D View Error: ', error);
   }
 }
