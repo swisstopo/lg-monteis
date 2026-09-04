@@ -1,10 +1,10 @@
 import { Injectable, inject, resource, signal } from '@angular/core';
+import { ErrorDto, ExperimentControllerService, WriteExperimentDto } from '@core/generated';
+import { toErrorDtos } from '@core/http/api-error.model';
 import { translate } from '@ngx-translate/core';
+import { toPagedRequestParams } from '@ui/table/paged-request.mapper';
 import { IGetRowsParams } from 'ag-grid-community';
 import { firstValueFrom } from 'rxjs';
-import { ErrorDto, ExperimentControllerService, WriteExperimentDto } from '../../../core/generated';
-import { toErrorDtos } from '../../../core/http/api-error.model';
-import { toPagedRequestParams } from '../../../ui/table/paged-request.mapper';
 
 @Injectable({ providedIn: 'root' })
 export class ExperimentService {
