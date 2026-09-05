@@ -48,7 +48,7 @@
          flyway-maven-plugin (jOOQ codegen) match the migration image runner (MON-87:
          docker/migration builds FROM flyway/flyway 12.11.0-alpine). Keeps validator ==
          runner so CI actually exercises the version that migrates cloud RDS/TimescaleDB. -->
-    <flyway.version>12.11.0</flyway.version>
+    <flyway.version>13.4.0</flyway.version>
 
     <!-- Override the Spring Boot BOM's managed netty.version to pull the patched
          io.netty 4.2.16.Final. Fixes 5 HIGH DoS CVEs in netty-codec-* baked into
