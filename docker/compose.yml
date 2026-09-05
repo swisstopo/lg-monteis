@@ -142,7 +142,7 @@ services:
       start_period: 20s
 
   connect-init:
-    image: curlimages/curl:8.21.0
+    image: curlimages/curl:8.22.0
     profiles: [ pipeline ]
     container_name: local-msk-connect-init
     depends_on:
