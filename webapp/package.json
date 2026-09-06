@@ -47,8 +47,8 @@
   "devDependencies": {
     "@analogjs/vite-plugin-angular": "^2.7.1",
     "@angular-eslint/builder": "22.2.0",
-    "@angular/build": "^22.1.6",
-    "@angular/cli": "^22.1.6",
+    "@angular/build": "^22.1.7",
+    "@angular/cli": "^22.1.7",
     "@angular/compiler-cli": "^22.1.4",
     "@eslint/js": "^10.0.1",
     "@openapitools/openapi-generator-cli": "^2.41.0",
