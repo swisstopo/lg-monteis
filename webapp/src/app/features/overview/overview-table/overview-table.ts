@@ -32,6 +32,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions } from '@ui/chart';
 import Table from '@ui/table/table';
+import { subDays } from 'date-fns';
 import { createColumns } from './columns';
 
 interface DateTimeModel {
@@ -94,8 +95,8 @@ export default class OverviewTable {
   readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
   readonly dateRangeModel = signal<DateRangeModel>({
-    start: { date: new Date(), time: atTime(0, 0) },
-    end: { date: new Date(), time: atTime(23, 59) },
+    start: { date: subDays(new Date(), 10), time: atTime(0, 0) },
+    end: { date: new Date(), time: new Date() },
   });
 
   readonly rangeForm = form(
