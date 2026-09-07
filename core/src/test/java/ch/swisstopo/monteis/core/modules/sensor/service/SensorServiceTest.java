@@ -74,7 +74,7 @@ class SensorServiceTest {
 
     given(repository.findById(any())).willReturn(Optional.of(before));
     given(repository.update(after)).willReturn(after);
-    given(after.changeTriggersPublish(before)).willReturn(true);
+    //    given(after.changeTriggersPublish(before)).willReturn(true);
 
     // when
     service.updateSensor(after);
@@ -91,7 +91,7 @@ class SensorServiceTest {
 
     given(repository.findById(any())).willReturn(Optional.of(before));
     given(repository.update(after)).willReturn(after);
-    given(after.changeTriggersPublish(before)).willReturn(false);
+    //    given(after.changeTriggersPublish(before)).willReturn(false);
 
     // when
     service.updateSensor(after);

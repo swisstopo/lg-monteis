@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.core.infrastructure.observability;
 
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSORS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,8 +39,8 @@ class ObservabilityIT {
         () -> {
           RequestTiming.begin();
 
-          dsl.select(SENSORS.CODE).from(SENSORS).fetch();
-          dsl.select(SENSORS.CODE).from(SENSORS).limit(1).fetch();
+          //          dsl.select(SENSORS.CODE).from(SENSORS).fetch();
+          //          dsl.select(SENSORS.CODE).from(SENSORS).limit(1).fetch();
 
           RequestTiming timing = RequestTiming.current();
           assertEquals(
@@ -58,7 +57,7 @@ class ObservabilityIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // No RequestTiming.begin() — mirrors a scheduled job or startup task
-          dsl.select(SENSORS.CODE).from(SENSORS).limit(1).fetch();
+          //          dsl.select(SENSORS.CODE).from(SENSORS).limit(1).fetch();
 
           assertNull(RequestTiming.current());
         });

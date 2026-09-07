@@ -4,9 +4,11 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParameterDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import org.mapstruct.Mapper;
@@ -16,6 +18,9 @@ public interface SensorWebMapper {
   // --- Inbound API DTO -> Core Rich Domain Object Mappings ---
   Sensor toDomain(WriteSensorDto dto);
 
+  // New mapping for the nested parameters
+  SensorParameter toDomain(WriteSensorParameterDto dto);
+
   Formula toDomain(WriteFormulaDto dto);
 
   Coordinates toDomain(CoordinatesDto dto);
@@ -24,6 +29,9 @@ public interface SensorWebMapper {
 
   // --- Outbound Domain -> API Serialization DTO Mappings ---
   SensorResponseDto toDto(Sensor domain);
+
+  // New mapping for the nested parameters
+  SensorParameterResponseDto toDto(SensorParameter domain);
 
   FormulaResponseDto toDto(Formula domain);
 

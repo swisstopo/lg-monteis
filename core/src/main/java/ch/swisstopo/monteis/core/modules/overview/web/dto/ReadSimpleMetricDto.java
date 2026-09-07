@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public record ReadSimpleMetricDto(
     OffsetDateTime timestamp,
-    String sensorCode,
+    String sensorParameterId,
     Double rawValue,
     Double normValue,
     Short version,
