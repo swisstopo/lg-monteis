@@ -127,7 +127,7 @@ SELECT
     '00000000-0000-7000-8000-000000000301',            -- main_experiment (Alpha)
     1                                                  -- version
 FROM generate_series(1, 10) AS i
-    RETURNING id
+    RETURNING id, das_sensor_alias
 ),
 bulk_parameters AS (
 INSERT INTO sensor_parameter (
@@ -151,3 +151,31 @@ FROM bulk_sensors
 INSERT INTO experiment_sensor (experiment_id, sensor_id)
 SELECT '00000000-0000-7000-8000-000000000301', id
 FROM bulk_sensors;
+
+
+-- Add a second parameter to BULK-1
+INSERT INTO sensor_parameter (
+    sensor_id,
+    name,
+    das_parameter_alias,
+    type_id,
+    unit,
+    formula_id,
+    upper_alarm_limit,
+    lower_alarm_limit,
+    active,
+    comment
+)
+SELECT
+    id,
+    'Bulk Param 2',
+    'BULK-P2',
+    '00000000-0000-7000-8000-000000000101',
+    'METER',
+    '00000000-0000-7000-8000-000000000004',
+    200.0,
+    -100.0,
+    true,
+    'Second auto-generated parameter'
+FROM sensors
+WHERE das_sensor_alias = 'BULK-1';
