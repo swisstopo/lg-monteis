@@ -6,6 +6,7 @@ import {
   ElementRef,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
@@ -16,6 +17,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AmbientLight, DirectionalLight, GridHelper, MathUtils, Object3D, Vector3 } from 'three';
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
 import { InlineError } from '../inline-error/inline-error';
+import { AuthorizationProvider, AuthorizedFetchPlugin } from './authorized-fetch-plugin';
 
 @Component({
   imports: [TranslatePipe, MatProgressSpinner, InlineError],
@@ -26,12 +28,31 @@ import { InlineError } from '../inline-error/inline-error';
 export class Giro3d implements AfterViewInit {
   readonly tilesetUrl = input.required<string | URL>();
 
+  /**
+   * Supplies the `Authorization` header for the tile requests.
+   */
+  readonly authorization = input<AuthorizationProvider>();
+
   private readonly view = viewChild.required<ElementRef<HTMLDivElement>>('view');
 
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
   private readonly instance = signal<Instance | null>(null);
-  private readonly tileset = computed(() => new Tiles3D({ url: this.tilesetUrl().toString() }));
+  private readonly tileset = computed(() => {
+    const tileset = new Tiles3D({
+      url: this.tilesetUrl().toString(),
+      // Giro3d's own fetch plugin authorizes via HttpConfiguration, which
+      // caches the header on the renderer-wide fetch options and would
+      // therefore freeze the token, see AuthorizedFetchPlugin.
+      enableFetchPlugin: false,
+    });
+    // Read the token value for each request and avoid that a token change will
+    // rebuild the whole tileset by using `untracked`.
+    tileset.tiles.registerPlugin(
+      new AuthorizedFetchPlugin(() => untracked(() => this.authorization()?.() ?? null)),
+    );
+    return tileset;
+  });
   private readonly controls = signal<MapControls | null>(null);
 
   constructor() {

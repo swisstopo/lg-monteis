@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { provideOAuthClient } from 'angular-oauth2-oidc';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import MeasurementsVisualization from './measurements-visualization';
 
@@ -40,7 +41,7 @@ describe('MeasurementsVisualization', () => {
 
     await TestBed.configureTestingModule({
       imports: [MeasurementsVisualization],
-      providers: [WorkbenchView, provideTranslateService()],
+      providers: [WorkbenchView, provideTranslateService(), provideOAuthClient()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MeasurementsVisualization);

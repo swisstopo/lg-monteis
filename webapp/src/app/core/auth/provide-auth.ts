@@ -10,7 +10,6 @@ import { OAuthService, provideOAuthClient } from 'angular-oauth2-oidc';
 import { authConfig } from './auth.config';
 import { PermissionsService } from './permissions.service';
 import { loadRuntimeEnv } from './runtime-env';
-import { syncTilesetAuthorization } from './tileset-auth';
 
 export function provideAuth(): EnvironmentProviders {
   return makeEnvironmentProviders([
@@ -26,7 +25,6 @@ export function provideAuth(): EnvironmentProviders {
       });
       await oauthService.loadDiscoveryDocumentAndTryLogin();
       oauthService.setupAutomaticSilentRefresh();
-      syncTilesetAuthorization(oauthService);
       if (oauthService.hasValidAccessToken()) {
         runInInjectionContext(injector, () => inject(PermissionsService));
       }
