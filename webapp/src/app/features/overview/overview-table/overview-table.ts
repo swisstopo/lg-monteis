@@ -115,7 +115,7 @@ export default class OverviewTable {
   protected readonly sensorIds = computed<string[]>(
     () => {
       const metrics = this.metricsResource.value() ?? [];
-      const sensorIds = metrics.map((metric) => metric.uuid).filter((e) => e != null);
+      const sensorIds = metrics.map((metric) => metric.metadataSensorId).filter((e) => e != null);
       return this.distinct(sensorIds);
     },
     // Keeps the signal identity stable when a refetch returns the same sensors.
@@ -157,7 +157,7 @@ export default class OverviewTable {
   }
 
   protected getMetricRowId = (row: ReadSimpleMetricDto): string =>
-    `${row.sensorId}-${row.timestamp}`;
+    `${row.sensorCode}-${row.timestamp}`;
 
   protected onPlot() {
     if (this.rangeForm().invalid()) {

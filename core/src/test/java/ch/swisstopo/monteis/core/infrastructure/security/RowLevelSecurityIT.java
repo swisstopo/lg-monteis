@@ -141,6 +141,6 @@ class RowLevelSecurityIT {
 
   private Set<String> fetchVisibleSensorCodes() {
     List<ReadSimpleMetricDto> readings = overviewQueryRepository.fetchRecentMetrics(1000);
-    return readings.stream().map(ReadSimpleMetricDto::sensorId).collect(Collectors.toSet());
+    return readings.stream().map(ReadSimpleMetricDto::sensorCode).collect(Collectors.toSet());
   }
 }

@@ -40,10 +40,10 @@ describe('OverviewTable', () => {
 
   it('derives distinct, defined sensor ids from the metrics resource', async () => {
     const metrics: ReadSimpleMetricDto[] = [
-      { uuid: '1' },
-      { uuid: '2' },
-      { uuid: '2' },
-      { uuid: undefined },
+      { metadataSensorId: '1' },
+      { metadataSensorId: '2' },
+      { metadataSensorId: '2' },
+      { metadataSensorId: undefined },
     ];
     overviewServiceMock.getMetrics.mockReturnValue(of(metrics));
 
