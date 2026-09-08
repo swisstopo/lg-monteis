@@ -1,9 +1,9 @@
 import { Component, effect, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
-import { OAuthService } from 'angular-oauth2-oidc';
-import { TILESET_URL_PREFIX, tilesetAuthorization } from '../../../core/auth/tileset-auth';
 import { Giro3d } from '../../../ui/giro3d/giro3d';
+import { TilesFetch } from '../../../ui/giro3d/tiles-fetch-plugin';
+import { MeasurementsTiles, TILESET_URL_PREFIX } from '../services/measurements-tiles';
 
 @Component({
   imports: [Giro3d],
@@ -14,11 +14,11 @@ import { Giro3d } from '../../../ui/giro3d/giro3d';
 export default class MeasurementsVisualization {
   private readonly translate = inject(TranslateService);
   private readonly view = inject(WorkbenchView);
-  private readonly oauthService = inject(OAuthService);
+  private readonly tiles = inject(MeasurementsTiles);
 
   // protected readonly tilesetUrl = `${TILESET_URL_PREFIX}/example/tileset.json`;
   protected readonly tilesetUrl = `${TILESET_URL_PREFIX}/monteis-octree-poc/tileset.json`;
-  protected readonly authorization = tilesetAuthorization(this.oauthService);
+  protected readonly fetchTiles: TilesFetch = (url, options) => this.tiles.fetch(url, options);
 
   constructor() {
     effect(() => {

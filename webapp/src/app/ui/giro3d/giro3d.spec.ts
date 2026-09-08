@@ -3,6 +3,7 @@ import type Tiles3D from '@giro3d/giro3d/entities/Tiles3D.js';
 import { provideTranslateService } from '@ngx-translate/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Giro3d } from './giro3d';
+import { TilesFetch } from './tiles-fetch-plugin';
 
 const TILESET_URL = 'http://example.com/tileset';
 const OTHER_TILESET_URL = 'http://example.com/other-tileset';
@@ -29,46 +30,44 @@ type PluginDispatch = {
 
 /**
  * Requests a tile the way `TilesRendererBase` does: with a *shallow* copy of the single,
- * long-lived `fetchOptions` object it keeps per tileset. That shared object is the point of these
- * tests — whoever writes an Authorization header into it freezes the token for the whole tileset.
+ * long-lived `fetchOptions` object it keeps per tileset, plus the tile's abort signal.
  */
-const requestTileLikeTheRendererDoes = (tiles: TilesRenderer, url: string): Promise<Response> => {
-  const { signal } = new AbortController();
-  return (tiles as unknown as PluginDispatch).invokeOnePlugin((plugin) =>
+const requestTileLikeTheRendererDoes = (
+  tiles: TilesRenderer,
+  url: string,
+  signal: AbortSignal,
+): Promise<Response> =>
+  (tiles as unknown as PluginDispatch).invokeOnePlugin((plugin) =>
     plugin.fetchData?.(url, { ...tiles.fetchOptions, signal }),
   );
-};
 
 describe('Giro3d', () => {
   let component: Giro3d;
   let fixture: ComponentFixture<Giro3d>;
-  let accessToken: string;
+  let fetchTiles: ReturnType<typeof vi.fn<TilesFetch>>;
 
-  const toUrl = (input: RequestInfo | URL) =>
-    input instanceof Request ? input.url : input.toString();
-
-  const fetchedUrls = () => vi.mocked(fetch).mock.calls.map(([input]) => toUrl(input));
+  const fetchedUrls = () => fetchTiles.mock.calls.map(([url]) => url);
 
   beforeEach(async () => {
-    accessToken = 'first-token';
+    fetchTiles = vi.fn<TilesFetch>((url) => {
+      if (url === TILESET_URL || url === OTHER_TILESET_URL) {
+        return Promise.resolve(
+          new Response(JSON.stringify(TILESET), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      }
+      if (url === TILE_URL) {
+        return Promise.resolve(new Response(new ArrayBuffer(0), { status: 200 }));
+      }
+      return Promise.reject(new Error(`Not Found: ${url}`));
+    });
 
+    // Nothing may bypass the injected fetch function, so make a direct fetch fail loudly.
     vi.stubGlobal(
       'fetch',
-      vi.fn((input: RequestInfo | URL) => {
-        const url = toUrl(input);
-        if (url === TILESET_URL || url === OTHER_TILESET_URL) {
-          return Promise.resolve(
-            new Response(JSON.stringify(TILESET), {
-              status: 200,
-              headers: { 'Content-Type': 'application/json' },
-            }),
-          );
-        }
-        if (url === TILE_URL) {
-          return Promise.resolve(new Response(new ArrayBuffer(0), { status: 200 }));
-        }
-        return Promise.resolve(new Response(null, { status: 404, statusText: 'Not Found' }));
-      }),
+      vi.fn(() => Promise.reject(new Error('unexpected direct fetch'))),
     );
 
     await TestBed.configureTestingModule({
@@ -79,7 +78,7 @@ describe('Giro3d', () => {
     fixture = TestBed.createComponent(Giro3d);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('tilesetUrl', TILESET_URL);
-    fixture.componentRef.setInput('authorization', () => `Bearer ${accessToken}`);
+    fixture.componentRef.setInput('fetch', fetchTiles);
     await fixture.whenStable();
   });
 
@@ -105,29 +104,40 @@ describe('Giro3d', () => {
     expect(fetchedUrls()).toContain(OTHER_TILESET_URL);
   });
 
-  describe('authorization', () => {
-    const requestAt = (index: number) => vi.mocked(fetch).mock.calls.at(index)![0] as Request;
-
+  describe('tile requests', () => {
     const renderer = () => (component as unknown as { tileset: () => Tiles3D }).tileset().tiles;
 
-    it('sends the current token with the root tileset request', () => {
-      expect(requestAt(0).url).toBe(TILESET_URL);
-      expect(requestAt(0).headers.get('Authorization')).toBe('Bearer first-token');
+    it('routes them through the injected fetch function, never through `fetch` itself', async () => {
+      const { signal } = new AbortController();
+
+      await requestTileLikeTheRendererDoes(renderer(), TILE_URL, signal);
+
+      expect(fetchedUrls()).toContain(TILE_URL);
+      expect(fetch).not.toHaveBeenCalled();
     });
 
-    it('sends the refreshed token with tiles requested after a token refresh', async () => {
-      accessToken = 'refreshed-token';
+    it('forwards the abort signal so discarded tiles stop downloading', async () => {
+      const { signal } = new AbortController();
 
-      await requestTileLikeTheRendererDoes(renderer(), TILE_URL);
+      await requestTileLikeTheRendererDoes(renderer(), TILE_URL, signal);
 
-      expect(requestAt(-1).url).toBe(TILE_URL);
-      expect(requestAt(-1).headers.get('Authorization')).toBe('Bearer refreshed-token');
+      expect(fetchTiles).toHaveBeenLastCalledWith(TILE_URL, { signal });
     });
 
-    it('never caches the token on the renderer-wide fetch options', () => {
-      // The root load must not write anything into the object that every later tile request
-      // shallow-copies.
-      expect(renderer().fetchOptions.headers).toBeUndefined();
+    it('picks up a replaced fetch function without rebuilding the tileset', async () => {
+      const tileset = renderer();
+      const replacement = vi.fn<TilesFetch>(() =>
+        Promise.resolve(new Response(new ArrayBuffer(0), { status: 200 })),
+      );
+      fixture.componentRef.setInput('fetch', replacement);
+      await fixture.whenStable();
+
+      const { signal } = new AbortController();
+      await requestTileLikeTheRendererDoes(renderer(), TILE_URL, signal);
+
+      expect(renderer()).toBe(tileset);
+      expect(replacement).toHaveBeenCalledWith(TILE_URL, { signal });
+      expect(fetchedUrls()).not.toContain(TILE_URL);
     });
   });
 });

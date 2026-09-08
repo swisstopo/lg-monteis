@@ -17,7 +17,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AmbientLight, DirectionalLight, GridHelper, MathUtils, Object3D, Vector3 } from 'three';
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
 import { InlineError } from '../inline-error/inline-error';
-import { AuthorizationProvider, AuthorizedFetchPlugin } from './authorized-fetch-plugin';
+import { TilesFetch, TilesFetchPlugin } from './tiles-fetch-plugin';
 
 @Component({
   imports: [TranslatePipe, MatProgressSpinner, InlineError],
@@ -29,9 +29,9 @@ export class Giro3d implements AfterViewInit {
   readonly tilesetUrl = input.required<string | URL>();
 
   /**
-   * Supplies the `Authorization` header for the tile requests.
+   * Performs the tileset and tile requests, see {@link TilesFetchPlugin}.
    */
-  readonly authorization = input<AuthorizationProvider>();
+  readonly fetch = input.required<TilesFetch>();
 
   private readonly view = viewChild.required<ElementRef<HTMLDivElement>>('view');
 
@@ -41,15 +41,13 @@ export class Giro3d implements AfterViewInit {
   private readonly tileset = computed(() => {
     const tileset = new Tiles3D({
       url: this.tilesetUrl().toString(),
-      // Giro3d's own fetch plugin authorizes via HttpConfiguration, which
-      // caches the header on the renderer-wide fetch options and would
-      // therefore freeze the token, see AuthorizedFetchPlugin.
+      // Giro3d's own fetch plugin would win over ours if not disabled.
       enableFetchPlugin: false,
     });
-    // Read the token value for each request and avoid that a token change will
-    // rebuild the whole tileset by using `untracked`.
+    // Resolve the fetch function per request, and `untracked`, so that replacing it does not
+    // rebuild the whole tileset.
     tileset.tiles.registerPlugin(
-      new AuthorizedFetchPlugin(() => untracked(() => this.authorization()?.() ?? null)),
+      new TilesFetchPlugin((url, options) => untracked(() => this.fetch())(url, options)),
     );
     return tileset;
   });
