@@ -1,0 +1,16 @@
+:host {
+  display: flex;
+  width: 100%;
+  position: relative;
+}
+
+.view {
+  width: 100%;
+}
+
+mat-spinner {
+  position: absolute;
+  top: calc(50% - 100px);
+  left: calc(50% - 100px);
+  z-index: 9999;
+}

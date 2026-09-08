@@ -230,7 +230,8 @@
         "title": "Error",
         "message": "An unspecified error occurred while saving the experiment."
       },
-      "noId": "No experiment id provided"
+      "noId": "No experiment id provided",
+      "connection": "Failed to connect to the backend server."
     },
     "tableHeader": {
       "download": "Download",
@@ -298,11 +299,16 @@
       "rawValue": "Value (Raw)"
     }
   },
+  "measurements-visualization": {
+    "loading": "Loading 3D model...",
+    "error": "Failed to fetch or render 3D model"
+  },
   "menu": {
     "overview": "Overview",
     "sensor": "Sensor",
     "setup": "Setup",
     "measurements": "Measurements",
+    "measurements-visualization": "3D View",
     "experiment": "Experiment"
   },
   "chart": {
@@ -328,7 +334,8 @@
   "tab": {
     "sensor": "Setup Sensors ({{count}})",
     "experiment": "Setup Experiment ({{count}})",
-    "overview": "Measurements"
+    "overview": "Measurements",
+    "measurements-visualization": "Measurements 3D View"
   },
   "tableHeader": {
     "search": "Search"

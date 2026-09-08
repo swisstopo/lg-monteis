@@ -6,14 +6,21 @@ import { TranslateService } from '@ngx-translate/core';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { catchError, throwError } from 'rxjs';
 import { AppErrorResponse } from './api-error.model';
+import { SKIP_GLOBAL_ERROR_TOAST } from './http-context';
 
 /**
  * Shows a toast for every REST error with target `GLOBAL`, regardless of
  * which component/service triggered the request. `FORM`/`FIELD` errors are
  * left untouched so callers can still display them next to the relevant
  * form/field.
+ *
+ * Requests marked with {@link SKIP_GLOBAL_ERROR_TOAST} are passed through untouched.
  */
 export const restErrorInterceptor: HttpInterceptorFn = (req, next) => {
+  if (req.context.get(SKIP_GLOBAL_ERROR_TOAST)) {
+    return next(req);
+  }
+
   const toastService = inject(ToastService);
   const translateService = inject(TranslateService);
   const oauthService = inject(OAuthService);

@@ -7,6 +7,7 @@ import { ToastService } from '@core/notifications/toast.service';
 import { TranslateService } from '@ngx-translate/core';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { skipGlobalErrorToast } from './http-context';
 import { restErrorInterceptor } from './rest-error.interceptors';
 
 describe('restErrorInterceptor', () => {
@@ -109,6 +110,15 @@ describe('restErrorInterceptor', () => {
 
     httpClient.get('/api/whatever').subscribe({ error: () => {} });
     httpMock.expectOne('/api/whatever').flush(body, { status: 400, statusText: 'Bad Request' });
+
+    expect(toastService.error).not.toHaveBeenCalled();
+  });
+
+  it('stays silent for requests that opt out of the global toast', () => {
+    httpClient
+      .get('/api/whatever', { context: skipGlobalErrorToast() })
+      .subscribe({ error: () => {} });
+    httpMock.expectOne('/api/whatever').flush(null, { status: 500, statusText: 'Server Error' });
 
     expect(toastService.error).not.toHaveBeenCalled();
   });
