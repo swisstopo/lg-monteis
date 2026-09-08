@@ -5,20 +5,20 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
-import OverviewTable from './overview-table';
+import MeasurementsTable from './measurements-table';
 
 const overviewServiceMock = {
   getMetrics: vi.fn().mockReturnValue(of([])),
 };
 
-describe('OverviewTable', () => {
-  let fixture: ComponentFixture<OverviewTable>;
+describe('MeasurementsTable', () => {
+  let fixture: ComponentFixture<MeasurementsTable>;
 
   beforeEach(async () => {
     overviewServiceMock.getMetrics.mockReturnValue(of([]));
 
     await TestBed.configureTestingModule({
-      imports: [OverviewTable],
+      imports: [MeasurementsTable],
       providers: [
         {
           provide: OverviewControllerService,
@@ -30,7 +30,7 @@ describe('OverviewTable', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(OverviewTable);
+    fixture = TestBed.createComponent(MeasurementsTable);
     fixture.detectChanges();
   });
 
@@ -47,7 +47,7 @@ describe('OverviewTable', () => {
     ];
     overviewServiceMock.getMetrics.mockReturnValue(of(metrics));
 
-    const component = TestBed.createComponent(OverviewTable).componentInstance as unknown as {
+    const component = TestBed.createComponent(MeasurementsTable).componentInstance as unknown as {
       metricsResource: { value: () => ReadSimpleMetricDto[] | undefined };
       sensorIds: () => number[];
     };

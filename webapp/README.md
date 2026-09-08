@@ -94,11 +94,13 @@ src/
 │   └── auth/                       <-- Authentication infrastructure
 │
 ├── features/                       <-- Business features and pages
-│   └── overview/
-│       ├── overview.routes.ts
-│       ├── overview/
-│       ├── metrics-menu/
-│       └── ag-grid-record/
+│   └── measurements/
+│       ├── measurements.routes.ts
+│       ├── measurements-overview/
+│       ├── measurements-menu/
+│       ├── measurements-table/
+│       ├── measurements-visualization/
+│       └── services/
 │
 ├── ui/                             <-- Reusable UI building blocks and wrappers
 │   ├── table/                      <-- AG Grid wrapper

@@ -18,7 +18,7 @@ interface LoadedChartData {
 }
 
 @Injectable({ providedIn: 'root' })
-export class MesurementsService {
+export class MeasurementsService {
   private readonly api = inject(MeasurementControllerService);
   private readonly translateService = inject(TranslateService);
   private readonly chartsRequest = signal<ChartRequest | undefined>(undefined);

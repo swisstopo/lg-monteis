@@ -6,7 +6,7 @@ import { OverviewControllerService } from '@core/generated';
 import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
-  selector: 'app-overview',
+  selector: 'app-measurements-overview',
   imports: [
     MatCard,
     MatCardHeader,
@@ -15,10 +15,10 @@ import { TranslatePipe } from '@ngx-translate/core';
     MatProgressSpinner,
     TranslatePipe,
   ],
-  templateUrl: './overview.html',
-  styleUrl: './overview.scss',
+  templateUrl: './measurements-overview.html',
+  styleUrl: './measurements-overview.scss',
 })
-export default class Overview {
+export default class MeasurementsOverview {
   protected overviewService = inject(OverviewControllerService);
 
   protected metricsResource = rxResource({

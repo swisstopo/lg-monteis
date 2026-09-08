@@ -27,7 +27,7 @@ import {
 import { APP_ISO_TIMESTAMP_FORMAT } from '@core/date/date.provider';
 import { OverviewControllerService, ReadSimpleMetricDto } from '@core/generated';
 import { FormErrorService } from '@core/utils/form-error.service';
-import { MesurementsService } from '@features/overview/services/mesurements.service';
+import { MeasurementsService } from '@features/measurements/services/measurements.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions } from '@ui/chart';
@@ -62,7 +62,7 @@ function combineDateAndTime(date: Date | null, time: Date | null): Date | null {
 }
 
 @Component({
-  selector: 'app-measurements-overview',
+  selector: 'app-measurements-table',
   imports: [
     Table,
     TranslatePipe,
@@ -82,14 +82,14 @@ function combineDateAndTime(date: Date | null, time: Date | null): Date | null {
     MatError,
   ],
   providers: [DatePipe],
-  templateUrl: './overview-table.html',
-  styleUrl: './overview-table.scss',
+  templateUrl: './measurements-table.html',
+  styleUrl: './measurements-table.scss',
 })
-export default class OverviewTable {
+export default class MeasurementsTable {
   private readonly datePipe = inject(DatePipe);
   private readonly translateService = inject(TranslateService);
   private readonly dialog = inject(MatDialog);
-  protected readonly measurementsService = inject(MesurementsService);
+  protected readonly measurementsService = inject(MeasurementsService);
   protected readonly overviewService = inject(OverviewControllerService);
   private readonly formErrorService = inject(FormErrorService);
   readonly serviceError = this.measurementsService.error;
@@ -130,7 +130,7 @@ export default class OverviewTable {
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
-      view.title = this.translateService.translate('tab.overview')();
+      view.title = this.translateService.translate('tab.measurements-table')();
     });
 
     effect(() => {
