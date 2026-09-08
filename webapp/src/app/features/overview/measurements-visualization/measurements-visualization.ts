@@ -16,7 +16,6 @@ export default class MeasurementsVisualization {
   private readonly view = inject(WorkbenchView);
   private readonly tiles = inject(MeasurementsTiles);
 
-  // protected readonly tilesetUrl = `${TILESET_URL_PREFIX}/example/tileset.json`;
   protected readonly tilesetUrl = `${TILESET_URL_PREFIX}/monteis-octree-poc/tileset.json`;
   protected readonly fetchTiles: TilesFetch = (url, options) => this.tiles.fetch(url, options);
 
