@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatSnackBar, MatSnackBarRef } from '@angular/material/snack-bar';
+import { ToastService } from '@core/notifications/toast.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ToastService } from '../../core/notifications/toast.service';
 import { ToastComponent } from './toast.component';
 
 describe('ToastComponent', () => {

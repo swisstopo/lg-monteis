@@ -1,11 +1,11 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { ErrorDto } from '@core/generated';
+import { ToastService } from '@core/notifications/toast.service';
 import { TranslateService } from '@ngx-translate/core';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { catchError, throwError } from 'rxjs';
-import { ErrorDto } from '../generated';
-import { ToastService } from '../notifications/toast.service';
-import { toErrorDtos } from './api-error.model';
+import { AppErrorResponse } from './api-error.model';
 
 /**
  * Shows a toast for every REST error with target `GLOBAL`, regardless of
@@ -19,36 +19,54 @@ export const restErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const oauthService = inject(OAuthService);
 
   return next(req).pipe(
-    catchError((error: unknown) => {
-      if (error instanceof HttpErrorResponse) {
-        // 401/403 are raised by Spring Security's filter chain, before any controller runs, so
-        // they never carry a body matching our ErrorDto contract
-        if (error.status === 401) {
-          toastService.error(translateService.translate('error.auth.sessionExpired')(), undefined, {
-            label: translateService.translate('error.auth.logInAgain')(),
-            onClick: () => oauthService.initLoginFlow(), // re-login
-          });
-        } else if (error.status === 403) {
-          toastService.error(translateService.translate('error.auth.forbidden')());
-        } else {
-          const globalErrors = toErrorDtos(error).filter(
-            (err) => err.target === ErrorDto.TargetEnum.Global || err.target === undefined,
-          );
-
-          if (globalErrors.length > 0) {
-            globalErrors.forEach((err) =>
-              toastService.error(
-                translateService.translate(err.messageKey ?? 'error.system.internal')(),
-              ),
-            );
-          } else if (error.status === 0 || error.status >= 500) {
-            // Network failures or backend crashes that never reach our ErrorDto
-            // contract (e.g. proxy/HTML error pages) still need to surface to the user.
-            toastService.error(translateService.translate('error.system.generic')());
-          }
-        }
+    catchError((httpErrorResponse: unknown) => {
+      if (httpErrorResponse instanceof HttpErrorResponse) {
+        const appErrorResponse = new AppErrorResponse(httpErrorResponse);
+        processHttpErrorResponse(appErrorResponse);
       }
-      return throwError(() => error);
+      return throwError(() => httpErrorResponse);
     }),
   );
+
+  function processHttpErrorResponse(error: AppErrorResponse) {
+    // 401/403 are raised by Spring Security's filter chain, before any controller runs, so
+    // they never carry a body matching our ErrorDto contract
+    if (error.isUnauthorized()) {
+      showUnauthorizedToaster();
+    } else if (error.isForbidden()) {
+      showErrorForbiddenToaster();
+    } else if (error.isNotFound()) {
+      showGenericErrorToaster();
+    } else {
+      const globalErrors = error.dtosTargetGlobalOrUndefined();
+      if (globalErrors.length > 0) {
+        showGlobalErrorsToaster(globalErrors);
+      } else if (error.isServerError()) {
+        showGenericErrorToaster();
+      }
+    }
+  }
+
+  function showErrorForbiddenToaster() {
+    toastService.error(translateService.translate('error.auth.forbidden')());
+  }
+
+  function showGlobalErrorsToaster(globalErrors: ErrorDto[]) {
+    globalErrors.forEach((err) =>
+      toastService.error(
+        translateService.translate(err.messageKey ?? 'error.system.internal', err.params)(),
+      ),
+    );
+  }
+
+  function showGenericErrorToaster() {
+    toastService.error(translateService.translate('error.system.generic')());
+  }
+
+  function showUnauthorizedToaster() {
+    toastService.error(translateService.translate('error.auth.sessionExpired')(), undefined, {
+      label: translateService.translate('error.auth.logInAgain')(),
+      onClick: () => oauthService.initLoginFlow(), // re-login
+    });
+  }
 };

@@ -1,12 +1,12 @@
 import { DatePipe } from '@angular/common';
+import { ReadSimpleMetricDto } from '@core/generated';
 import { translate } from '@ngx-translate/core';
-import { ReadSimpleMetricDto } from '../../../core/generated';
-import { TableColumn } from '../../../ui/table/table.types';
+import { TableColumn } from '@ui/table/table.types';
 
 export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetricDto>[] {
   return [
     {
-      field: 'sensorId',
+      field: 'sensorCode',
       headerName: translate('measurements.column.sensorId')(),
       sortable: true,
       filter: true,

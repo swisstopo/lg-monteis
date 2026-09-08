@@ -2,15 +2,15 @@ import { Component, effect, inject, inputBinding, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
+import { SensorResponseDto } from '@core/generated';
+import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
+import { SensorService } from '@features/sensor/services/sensor.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { TableHeader } from '@ui/table-header/table-header';
+import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
+import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
-import { SensorResponseDto } from '../../../core/generated';
-import { TableHeader } from '../../../ui/table-header/table-header';
-import { createPagedDatasource } from '../../../ui/table/paged-datasource.factory';
-import Table from '../../../ui/table/table';
-import SensorEdit from '../sensor-edit/sensor-edit';
-import { SensorService } from '../services/sensor.service';
 import { createColumns } from './columns';
 
 @Component({

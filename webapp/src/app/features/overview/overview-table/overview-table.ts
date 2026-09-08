@@ -24,19 +24,15 @@ import {
   MatTimepickerInput,
   MatTimepickerToggle,
 } from '@angular/material/timepicker';
+import { APP_ISO_TIMESTAMP_FORMAT } from '@core/date/date.provider';
+import { OverviewControllerService, ReadSimpleMetricDto } from '@core/generated';
+import { FormErrorService } from '@core/utils/form-error.service';
+import { MesurementsService } from '@features/overview/services/mesurements.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
-import { APP_ISO_TIMESTAMP_FORMAT } from '../../../core/date/date.provider';
-import { OverviewControllerService, ReadSimpleMetricDto } from '../../../core/generated';
-import { FormErrorService } from '../../../core/utils/form-error.service';
-import {
-  ChartComponent,
-  ChartOptions,
-  ChartRangeEvent,
-  createTimeChartOptions,
-} from '../../../ui/chart';
-import Table from '../../../ui/table/table';
-import { MesurementsService } from '../services/mesurements.service';
+import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions } from '@ui/chart';
+import Table from '@ui/table/table';
+import { subDays } from 'date-fns';
 import { createColumns } from './columns';
 
 interface DateTimeModel {
@@ -99,8 +95,8 @@ export default class OverviewTable {
   readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
   readonly dateRangeModel = signal<DateRangeModel>({
-    start: { date: null, time: atTime(0, 0) },
-    end: { date: null, time: atTime(23, 59) },
+    start: { date: subDays(new Date(), 10), time: atTime(0, 0) },
+    end: { date: new Date(), time: new Date() },
   });
 
   readonly rangeForm = form(
@@ -116,6 +112,16 @@ export default class OverviewTable {
   protected metricsResource = rxResource({
     stream: () => this.overviewService.getMetrics(50),
   });
+
+  protected readonly sensorIds = computed<string[]>(
+    () => {
+      const metrics = this.metricsResource.value() ?? [];
+      const sensorIds = metrics.map((metric) => metric.metadataSensorId).filter((e) => e != null);
+      return this.distinct(sensorIds);
+    },
+    // Keeps the signal identity stable when a refetch returns the same sensors.
+    { equal: this.equalByElement },
+  );
 
   protected wrappedCols = createColumns(this.datePipe);
 
@@ -152,7 +158,7 @@ export default class OverviewTable {
   }
 
   protected getMetricRowId = (row: ReadSimpleMetricDto): string =>
-    `${row.sensorId}-${row.timestamp}`;
+    `${row.sensorCode}-${row.timestamp}`;
 
   protected onPlot() {
     if (this.rangeForm().invalid()) {
@@ -164,15 +170,7 @@ export default class OverviewTable {
     const rangeEnd = combineDateAndTime(end.date, end.time);
     if (!rangeStart || !rangeEnd) return;
 
-    // TODO replace with sensor selection as soon as we get ids in DTO
-    // Fixed dev-seed sensor ids (TEMP-1, PRESS-1&2, DISP-2, FLOW-Admin) - see
-    // db/meta/seed/R__seed_dev_data.sql.
-    this.plottedIds.set([
-      '00000000-0000-7000-8000-000000000201',
-      '00000000-0000-7000-8000-000000000202',
-      '00000000-0000-7000-8000-000000000203',
-      '00000000-0000-7000-8000-000000000205',
-    ]);
+    this.plottedIds.set(this.sensorIds());
 
     this.fetchChartData(rangeStart, rangeEnd);
 
@@ -225,5 +223,15 @@ export default class OverviewTable {
     const rangeToTimestamp = this.datePipe.transform(end, APP_ISO_TIMESTAMP_FORMAT)!;
 
     this.measurementsService.getChartData(this.plottedIds(), rangeFromTimestamp, rangeToTimestamp);
+  }
+
+  /** Preserves first-occurrence order. */
+  private distinct<T>(values: readonly T[]): T[] {
+    return [...new Set(values)];
+  }
+
+  /** Reference-equality comparison of two arrays, element by element. */
+  private equalByElement<T>(a: readonly T[], b: readonly T[]): boolean {
+    return a.length === b.length && a.every((value, index) => value === b[index]);
   }
 }

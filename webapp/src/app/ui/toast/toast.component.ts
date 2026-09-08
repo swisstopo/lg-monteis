@@ -19,7 +19,7 @@ import {
   MatSnackBarRef,
   MatSnackBarVerticalPosition,
 } from '@angular/material/snack-bar';
-import { ToastAction, ToastInfo, ToastService } from '../../core/notifications/toast.service';
+import { ToastAction, ToastInfo, ToastService } from '@core/notifications/toast.service';
 
 @Component({
   selector: 'app-toast',
