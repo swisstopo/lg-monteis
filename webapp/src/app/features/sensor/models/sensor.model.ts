@@ -1,5 +1,5 @@
 import { inject, Signal } from '@angular/core';
-import { SensorResponseDto, WriteSensorDto, WriteSensorParameterDto } from '@core/generated';
+import { WriteSensorDto, WriteSensorParameterDto } from '@core/generated';
 import { TranslateService } from '@ngx-translate/core';
 
 export type Unit = WriteSensorParameterDto.UnitEnum;
