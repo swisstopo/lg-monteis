@@ -19,6 +19,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,8 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.Record;
+import org.jooq.SelectOnConditionStep;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -69,45 +72,14 @@ public class JooqSensorRepository implements SensorRepository {
         PagedRequestJooqTranslator.translate(request, COLUMNS_BY_COL_ID, SENSORS.ID.asc());
 
     List<Sensor> data =
-        dsl.select(SENSORS.fields())
-            .select(EXPERIMENTS.fields())
-            .from(SENSORS)
-            .leftJoin(EXPERIMENTS)
-            .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+        sensorsWithExperiments()
             .where(criteria.condition())
             .orderBy(criteria.sortFields())
             .limit(request.limit())
             .offset(request.offset())
-            .fetch(
-                r -> {
-                  Sensor sensor = mapper.toDomain(r.into(SENSORS));
-                  ExperimentsRecord expRecord = r.into(EXPERIMENTS);
-                  if (expRecord.getId() != null) {
-                    sensor.setMainExperiment(experimentMapper.toDomain(expRecord));
-                  }
-                  return sensor;
-                });
+            .fetch(this::toSensorWithExperiment);
 
-    if (!data.isEmpty()) {
-      List<UUID> sensorIds = data.stream().map(Sensor::getId).toList();
-      Map<UUID, List<SensorParameter>> paramsMap =
-          dsl.select(SENSOR_PARAMETER.fields())
-              .select(FORMULAS.fields())
-              .select(SENSOR_TYPES.fields())
-              .from(SENSOR_PARAMETER)
-              .join(FORMULAS)
-              .on(SENSOR_PARAMETER.FORMULA_ID.eq(FORMULAS.ID))
-              .join(SENSOR_TYPES)
-              .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID))
-              .where(SENSOR_PARAMETER.SENSOR_ID.in(sensorIds))
-              .fetchGroups(
-                  SENSOR_PARAMETER.SENSOR_ID,
-                  r ->
-                      mapper.toParameterDomain(
-                          r.into(SENSOR_PARAMETER), r.into(FORMULAS), r.into(SENSOR_TYPES)));
-
-      data.forEach(s -> s.setParameters(paramsMap.getOrDefault(s.getId(), new ArrayList<>())));
-    }
+    attachParameters(data);
 
     int totalCount =
         dsl.fetchCount(
@@ -137,8 +109,7 @@ public class JooqSensorRepository implements SensorRepository {
     } catch (DuplicateKeyException _) {
       // sensors_das_das_sensor_alias_key: a sensor is identified on the DAS supplier's side by
       // (das, das_sensor_alias) together.
-      throw new FieldBusinessValidationException(
-          "dasSensorAlias", sensor.getDasSensorAlias(), "validation.unique", Map.of());
+      throw dasSensorAliasConflict(sensor);
     }
 
     Sensor savedSensor = mapper.toDomain(createdSensor);
@@ -163,8 +134,7 @@ public class JooqSensorRepository implements SensorRepository {
         } catch (DuplicateKeyException _) {
           // sensor_parameter_sensor_id_das_parameter_alias_key: two parameters of the same
           // sensor can't share a das_parameter_alias (different sensors may reuse one).
-          throw new FieldBusinessValidationException(
-              "dasParameterAlias", p.getDasParameterAlias(), "validation.unique", Map.of());
+          throw dasParameterAliasConflict(p);
         }
 
         savedParams.add(mapper.toParameterDomain(paramRecord, formulaRecord, typeRecord));
@@ -208,8 +178,7 @@ public class JooqSensorRepository implements SensorRepository {
     try {
       updatedRecord.update();
     } catch (DuplicateKeyException _) {
-      throw new FieldBusinessValidationException(
-          "dasSensorAlias", sensor.getDasSensorAlias(), "validation.unique", Map.of());
+      throw dasSensorAliasConflict(sensor);
     }
 
     Sensor savedSensor = mapper.toDomain(updatedRecord);
@@ -252,8 +221,7 @@ public class JooqSensorRepository implements SensorRepository {
         } catch (DuplicateKeyException _) {
           // two parameters of the same sensor can't share a das_parameter_alias (different sensors
           // may reuse one).
-          throw new FieldBusinessValidationException(
-              "dasParameterAlias", p.getDasParameterAlias(), "validation.unique", Map.of());
+          throw dasParameterAliasConflict(p);
         }
 
         savedParams.add(mapper.toParameterDomain(paramRecord, formulaRecord, typeRecord));
@@ -272,41 +240,15 @@ public class JooqSensorRepository implements SensorRepository {
   @Transactional(readOnly = true)
   public Optional<Sensor> findById(UUID id) {
     Optional<Sensor> sensorOpt =
-        dsl.select(SENSORS.fields())
-            .select(EXPERIMENTS.fields())
-            .from(SENSORS)
-            .leftJoin(EXPERIMENTS)
-            .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+        sensorsWithExperiments()
             .where(SENSORS.ID.eq(id))
-            .fetchOptional(
-                r -> {
-                  Sensor sensor = mapper.toDomain(r.into(SENSORS));
-                  ExperimentsRecord expRecord = r.into(EXPERIMENTS);
-                  if (expRecord.getId() != null) {
-                    sensor.setMainExperiment(experimentMapper.toDomain(expRecord));
-                  }
-                  return sensor;
-                });
+            .fetchOptional(this::toSensorWithExperiment);
 
-    // Attach parameters
     sensorOpt.ifPresent(
-        sensor -> {
-          List<SensorParameter> params =
-              dsl.select(SENSOR_PARAMETER.fields())
-                  .select(FORMULAS.fields())
-                  .select(SENSOR_TYPES.fields())
-                  .from(SENSOR_PARAMETER)
-                  .join(FORMULAS)
-                  .on(SENSOR_PARAMETER.FORMULA_ID.eq(FORMULAS.ID))
-                  .join(SENSOR_TYPES)
-                  .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID))
-                  .where(SENSOR_PARAMETER.SENSOR_ID.eq(sensor.getId()))
-                  .fetch(
-                      r ->
-                          mapper.toParameterDomain(
-                              r.into(SENSOR_PARAMETER), r.into(FORMULAS), r.into(SENSOR_TYPES)));
-          sensor.setParameters(params);
-        });
+        sensor ->
+            sensor.setParameters(
+                fetchParametersBySensorIds(List.of(sensor.getId()))
+                    .getOrDefault(sensor.getId(), new ArrayList<>())));
 
     return sensorOpt;
   }
@@ -339,11 +281,7 @@ public class JooqSensorRepository implements SensorRepository {
   @Transactional
   public Stream<Sensor> streamUnauditedSensors() {
     List<Sensor> data =
-        dsl.select(SENSORS.fields())
-            .select(EXPERIMENTS.fields())
-            .from(SENSORS)
-            .leftJoin(EXPERIMENTS)
-            .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+        sensorsWithExperiments()
             .whereNotExists(
                 dsl.selectOne()
                     .from(DSL.table("jv_global_id"))
@@ -360,37 +298,64 @@ public class JooqSensorRepository implements SensorRepository {
                                     DSL.inline("\""))))
                     // Ensure this matches your JaVers @TypeName or class name!
                     .and(DSL.field("type_name").eq(Sensor.JAVERS_TYPE)))
-            .fetch(
-                r -> {
-                  Sensor sensor = mapper.toDomain(r.into(SENSORS));
-                  ExperimentsRecord expRecord = r.into(EXPERIMENTS);
-                  if (expRecord.getId() != null) {
-                    sensor.setMainExperiment(experimentMapper.toDomain(expRecord));
-                  }
-                  return sensor;
-                });
+            .fetch(this::toSensorWithExperiment);
 
-    if (!data.isEmpty()) {
-      List<UUID> sensorIds = data.stream().map(Sensor::getId).toList();
-      Map<UUID, List<SensorParameter>> paramsMap =
-          dsl.select(SENSOR_PARAMETER.fields())
-              .select(FORMULAS.fields())
-              .select(SENSOR_TYPES.fields())
-              .from(SENSOR_PARAMETER)
-              .join(FORMULAS)
-              .on(SENSOR_PARAMETER.FORMULA_ID.eq(FORMULAS.ID))
-              .join(SENSOR_TYPES)
-              .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID))
-              .where(SENSOR_PARAMETER.SENSOR_ID.in(sensorIds))
-              .fetchGroups(
-                  SENSOR_PARAMETER.SENSOR_ID,
-                  r ->
-                      mapper.toParameterDomain(
-                          r.into(SENSOR_PARAMETER), r.into(FORMULAS), r.into(SENSOR_TYPES)));
-
-      data.forEach(s -> s.setParameters(paramsMap.getOrDefault(s.getId(), new ArrayList<>())));
-    }
+    attachParameters(data);
 
     return data.stream();
+  }
+
+  // Default to a plain left join on the experiments table; callers add their own where/order/etc.
+  private SelectOnConditionStep<Record> sensorsWithExperiments() {
+    return dsl.select(SENSORS.fields())
+        .select(EXPERIMENTS.fields())
+        .from(SENSORS)
+        .leftJoin(EXPERIMENTS)
+        .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID));
+  }
+
+  private Sensor toSensorWithExperiment(Record r) {
+    Sensor sensor = mapper.toDomain(r.into(SENSORS));
+    ExperimentsRecord expRecord = r.into(EXPERIMENTS);
+    if (expRecord.getId() != null) {
+      sensor.setMainExperiment(experimentMapper.toDomain(expRecord));
+    }
+    return sensor;
+  }
+
+  private void attachParameters(List<Sensor> sensors) {
+    if (sensors.isEmpty()) {
+      return;
+    }
+    List<UUID> sensorIds = sensors.stream().map(Sensor::getId).toList();
+    Map<UUID, List<SensorParameter>> paramsMap = fetchParametersBySensorIds(sensorIds);
+    sensors.forEach(s -> s.setParameters(paramsMap.getOrDefault(s.getId(), new ArrayList<>())));
+  }
+
+  private Map<UUID, List<SensorParameter>> fetchParametersBySensorIds(Collection<UUID> sensorIds) {
+    return dsl.select(SENSOR_PARAMETER.fields())
+        .select(FORMULAS.fields())
+        .select(SENSOR_TYPES.fields())
+        .from(SENSOR_PARAMETER)
+        .join(FORMULAS)
+        .on(SENSOR_PARAMETER.FORMULA_ID.eq(FORMULAS.ID))
+        .join(SENSOR_TYPES)
+        .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID))
+        .where(SENSOR_PARAMETER.SENSOR_ID.in(sensorIds))
+        .fetchGroups(
+            SENSOR_PARAMETER.SENSOR_ID,
+            r ->
+                mapper.toParameterDomain(
+                    r.into(SENSOR_PARAMETER), r.into(FORMULAS), r.into(SENSOR_TYPES)));
+  }
+
+  private FieldBusinessValidationException dasSensorAliasConflict(Sensor sensor) {
+    return new FieldBusinessValidationException(
+        "dasSensorAlias", sensor.getDasSensorAlias(), "validation.unique", Map.of());
+  }
+
+  private FieldBusinessValidationException dasParameterAliasConflict(SensorParameter parameter) {
+    return new FieldBusinessValidationException(
+        "dasParameterAlias", parameter.getDasParameterAlias(), "validation.unique", Map.of());
   }
 }
