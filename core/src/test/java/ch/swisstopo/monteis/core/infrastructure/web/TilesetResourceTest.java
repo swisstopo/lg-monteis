@@ -23,8 +23,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @ContextConfiguration(classes = TilesetResourceTest.NoControllers.class)
 class TilesetResourceTest {
 
-  private static final String TILESET = "/api/tilesets/example/tileset.json";
-  private static final String TILE = "/api/tilesets/example/ifc/13.b3dm";
+  private static final String TILESET = "/api/tilesets/monteis-octree-poc/tileset.json";
+  private static final String TILE = "/api/tilesets/monteis-octree-poc/tile_13.glb";
 
   @Autowired private MockMvc mockMvc;
 
