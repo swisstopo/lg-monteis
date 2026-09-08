@@ -120,6 +120,33 @@ public class JooqExperimentRepository implements ExperimentRepository {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public List<Experiment> findAll() {
+    return dsl.select(
+            EXPERIMENTS.ID,
+            EXPERIMENTS.NAME,
+            EXPERIMENTS.START,
+            EXPERIMENTS.END,
+            EXPERIMENTS.COMMENT,
+            EXPERIMENTS.VERSION,
+            DSL.selectCount()
+                .from(EXPERIMENT_SENSOR)
+                .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
+                .asField(SENSOR_COUNT_FIELD_NAME))
+        .from(EXPERIMENTS)
+        .orderBy(EXPERIMENTS.NAME.asc())
+        .fetch(
+            experiment ->
+                new Experiment(
+                    experiment.get(EXPERIMENTS.ID),
+                    experiment.get(EXPERIMENTS.NAME),
+                    new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
+                    experiment.get(EXPERIMENTS.COMMENT),
+                    experiment.get(EXPERIMENTS.VERSION),
+                    experiment.get(SENSOR_COUNT_FIELD_NAME, Integer.class)));
+  }
+
+  @Override
   @Transactional
   public Experiment create(Experiment experiment) {
     @SuppressWarnings("java:S2325")
