@@ -13,6 +13,7 @@ import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -36,7 +37,8 @@ class OverviewControllerTest {
     OffsetDateTime timestamp = OffsetDateTime.parse("2026-07-15T10:00:05Z");
 
     ReadSimpleMetricDto expectedDto =
-        new ReadSimpleMetricDto(timestamp, "SENS-01", 25.4, 0.98, (short) 1, "ACTIVE");
+        new ReadSimpleMetricDto(
+            timestamp, "SENS-01", 25.4, 0.98, (short) 1, "ACTIVE", UUID.randomUUID());
 
     List<ReadSimpleMetricDto> expectedResponse = List.of(expectedDto);
 
@@ -53,7 +55,7 @@ class OverviewControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.size()").value(expectedResponse.size()))
         .andExpect(jsonPath("$[0].timestamp").value(expectedDto.timestamp().toString()))
-        .andExpect(jsonPath("$[0].sensorId").value(expectedDto.sensorId()))
+        .andExpect(jsonPath("$[0].sensorCode").value(expectedDto.sensorCode()))
         .andExpect(jsonPath("$[0].rawValue").value(expectedDto.rawValue()))
         .andExpect(jsonPath("$[0].normValue").value(expectedDto.normValue()))
         .andExpect(jsonPath("$[0].version").value(Integer.valueOf(expectedDto.version())))

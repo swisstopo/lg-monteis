@@ -26,7 +26,7 @@ public final class SecurityContextTestSupport {
         action);
   }
 
-  public static void runAsUser(List<Long> experimentIds, Runnable action) {
+  public static void runAsUser(List<UUID> experimentIds, Runnable action) {
     runAs(
         List.of(new SimpleGrantedAuthority(MonteisJwtAuthenticationConverter.READ_AUTHORITY)),
         experimentIds,
@@ -34,7 +34,7 @@ public final class SecurityContextTestSupport {
   }
 
   public static void runAs(
-      List<GrantedAuthority> authorities, List<Long> experimentIds, Runnable action) {
+      List<GrantedAuthority> authorities, List<UUID> experimentIds, Runnable action) {
     MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "test", experimentIds);
     var authentication = new MonteisAuthenticationToken(null, principal, authorities);
 

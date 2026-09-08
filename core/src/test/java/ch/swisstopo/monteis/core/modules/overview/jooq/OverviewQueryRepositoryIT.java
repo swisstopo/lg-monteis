@@ -44,7 +44,7 @@ class OverviewQueryRepositoryIT {
               () ->
                   assertTrue(
                       Set.of("TEMP-1", "PRESS-1&2", "DISP-2", "FLOW-2", "FLOW-Admin")
-                          .contains(topRecord.sensorId()),
+                          .contains(topRecord.sensorCode()),
                       "Sensor ID must be from the seeded set"),
               () -> assertNotNull(topRecord.rawValue(), "Raw value must be calculated"),
               () -> assertNotNull(topRecord.normValue(), "Norm value must be calculated"),

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class ExperimentTest {
@@ -49,7 +50,7 @@ class ExperimentTest {
   @Test
   void should_rebuild_existing_experiment_with_all_fields() {
     // given
-    Long id = 100L;
+    UUID id = UUID.randomUUID();
     String name = "Existing Experiment";
     String description = "This is a rebuilt experiment";
     Integer version = 1;
@@ -88,7 +89,8 @@ class ExperimentTest {
         new Period(LocalDate.of(2025, Month.JANUARY, 1), LocalDate.of(2025, Month.DECEMBER, 31));
 
     // when
-    experiment.setId(99L);
+    UUID updatedId = UUID.randomUUID();
+    experiment.setId(updatedId);
     experiment.setName("Updated Name");
     experiment.setOwner("Updated Owner");
     experiment.getStatus(referenceToday);
@@ -99,7 +101,7 @@ class ExperimentTest {
 
     // then
     assertAll(
-        () -> assertEquals(99L, experiment.getId()),
+        () -> assertEquals(updatedId, experiment.getId()),
         () -> assertEquals("Updated Name", experiment.getName()),
         () -> assertEquals("Updated Owner", experiment.getOwner()),
         () -> assertEquals(Status.UPCOMING, experiment.getStatus(referenceToday)),

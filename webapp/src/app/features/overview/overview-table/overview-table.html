@@ -67,7 +67,7 @@
     <button
       matButton="filled"
       (click)="onPlot()"
-      [disabled]="mesurementsService.chartData.isLoading()"
+      [disabled]="measurementsService.chartData.isLoading()"
     >
       <mat-icon fontIcon="add_chart"></mat-icon>
       {{ 'measurements.plot' | translate }}

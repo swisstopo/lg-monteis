@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -25,8 +27,11 @@ public class SensorDataBatchListener {
       groupId = "pipeline-master-group",
       concurrency = "${app.kafka.concurrency:6}",
       containerFactory = "manualAckFactory")
-  public void consumeNormalizedSensorData(List<NormalizedSensorData> batch, Acknowledgment ack) {
+  public void consumeNormalizedSensorData(
+      List<NormalizedSensorData> batch,
+      @Header(KafkaHeaders.RECEIVED_TIMESTAMP) List<Long> receivedTimestamps,
+      Acknowledgment ack) {
     log.info("Received normalized sensor data");
-    sensorDataBatchProcessor.processAndPersist(batch, ack);
+    sensorDataBatchProcessor.processAndPersist(batch, receivedTimestamps, ack);
   }
 }

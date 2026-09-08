@@ -6,6 +6,7 @@ import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataR
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,7 +19,7 @@ public class MeasurementService {
   }
 
   public Optional<ChartDataResponseDto> findMeasurements(
-      Long id, OffsetDateTime from, OffsetDateTime to) {
+      UUID id, OffsetDateTime from, OffsetDateTime to) {
     if (from.isAfter(to)) {
       throw new ObjectBusinessValidationException(
           "measurement.dateRange.invalid", Map.of("from", from, "to", to));

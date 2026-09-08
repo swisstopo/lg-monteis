@@ -12,12 +12,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Size;
+import java.util.UUID;
 
 public record WriteSensorDto(
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
         @Null(groups = Create.class)
         @NotNull(groups = Update.class)
-        Long id,
+        UUID id,
     @NotBlank String code,
     @NotBlank @Size(min = 2, max = 50) String name,
     @NullOrNotBlank String comment,

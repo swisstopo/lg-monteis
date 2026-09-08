@@ -1,0 +1,19 @@
+:host {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.copy-cell-renderer_value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy-cell-renderer_button {
+  flex: none;
+  margin-left: auto;
+  --mdc-icon-button-state-layer-size: 32px;
+}

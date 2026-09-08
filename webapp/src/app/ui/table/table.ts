@@ -22,7 +22,7 @@ import { TableColumn } from './table.types';
   styleUrl: './table.scss',
 })
 export default class Table<T = any> {
-  rows = input<T[]>([]);
+  rows = input<T[] | undefined>(undefined);
   columns = input<TableColumn<T>[]>([]);
   // Whether to show row-selection checkboxes; independent per table instance.
   checkboxes = input<boolean>(false);
@@ -60,6 +60,10 @@ export default class Table<T = any> {
     resizable: true,
     flex: 1,
     minWidth: 120,
+    // Only a single filter condition per column is supported by the paged backend endpoint, so
+    // combined ("AND"/"OR") filters are disabled here to keep the filter model ag-grid sends in sync
+    // with what the backend can translate.
+    filterParams: { maxNumConditions: 1 },
   };
 
   protected mergedGridOptions = computed<GridOptions<T>>(() => {
@@ -79,6 +83,9 @@ export default class Table<T = any> {
     return {
       suppressCellFocus: true,
       domLayout: 'autoHeight',
+      // Lets colDef.tooltipField/tooltipValueGetter show the native browser tooltip, e.g. to
+      // reveal a truncated cell's full text on hover.
+      enableBrowserTooltips: true,
       rowSelection,
       getRowId: (params: GetRowIdParams<T>) => this.getRowId()(params.data),
       ...this.gridOptions(),

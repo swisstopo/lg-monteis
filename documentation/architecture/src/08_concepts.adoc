@@ -30,10 +30,11 @@ Es werden zwei Ablauf-Varianten unterschieden, abhängig davon, ob zusätzliche 
 * *Direkter Ablauf (Standardfall):* Web Request -> `Controller` -> `QueryRepository` (jOOQ) -> *`ReadDto`*.
 ** Gilt, wenn der Endpunkt eine einzelne Query 1:1 durchreicht, ohne zusätzliche Orchestrierung, Aggregation über mehrere Repositories oder fachliche Nachbearbeitung.
 ** Der Controller injiziert das `QueryRepository`-Interface direkt und ruft es auf. Ein Service, der nur `return queryRepository.find(...)` macht, ist reine Indirektion ohne Mehrwert und wird bewusst weggelassen.
-** Beispiele: `SensorController#findAllFormulas` (nutzt `SensorQuery` direkt) und `ExperimentController#getMetrics` (nutzt `ExperimentQueryInterface` direkt).
+** Beispiele: `ExperimentController#getMetrics` (nutzt `ExperimentQueryInterface` direkt).
 * *Ablauf mit Service (Ausnahmefall):* Web Request -> `Controller` -> `Service` -> `QueryRepository` (jOOQ) -> *`ReadDto`*.
 ** Nur nötig, wenn der Read-Endpunkt echte Logik erfordert, die nicht ins Repository gehört, z.B. das Kombinieren mehrerer Query-Aufrufe, fachliche Berechnungen auf den gelesenen Daten oder Orchestrierung über mehrere Module hinweg.
 ** Sobald ein solcher Service auf reine Delegation ohne jegliche Logik schrumpft, muss er entfernt und der Controller direkt auf das `QueryRepository` umgestellt werden.
+** Beispiel: `MeasurementController#getChartData` (nutzt `MeasurementService`, welcher den Datumsbereich validiert, bevor er an `MeasurementQuery` delegiert).
 * *Regeln (für beide Varianten):*
 ** Es werden *keine* Domänen-Objekte (`Entities`) verwendet.
 ** Das Repository nutzt die volle Stärke von jOOQ, um hochoptimierte SQL-Joins (z.B. über Sensoren, Experimente und Boreholes) auszuführen.
@@ -288,6 +289,20 @@ Da das externe Quell-Topic 6 Partitionen besitzt, ist die gesamte Pipeline auf m
 * **Kafka Connect (Ingestion):** Der MirrorSourceConnector ist mit `"tasks.max": "6"` konfiguriert. Kafka Connect baut exakt 6 parallele Threads auf, um das externe Topic ohne Bottlenecks abzusaugen.
 * **Ingress Adapter (`SolExpertsRawSensorDataNormalizationService`):** Übernimmt das Entpacken der herstellerspezifischen Payloads. Nutzt `@KafkaListener(concurrency = "6")`, um die Last optimal auf die Partitionen zu verteilen.
 * **Datenbank-Schicht (TimeScaleDB):** Um die Datenbank bei hohen Datenraten nicht zu überlasten, konsumiert der Processor (`SensorDataBatchListener`) im **Batch-Modus** (`spring.kafka.listener.type=batch`, `max-poll-records=200`). Das Schreiben erfolgt im Batch-Modus über ein hochoptimiertes jOOQ Multi-Row-Insert mit nachgelagerter ON CONFLICT (timestamp, sensor_parameter_id) DO UPDATE-Logik, um maximale Idempotenz bei minimalem Verbindungs-Overhead zu gewährleisten.
+
+==== Monitoring: Prometheus-Metriken zur Lastbeurteilung
+
+Damit sich im Betrieb (EKS) beurteilen lässt, ob die Pipeline mit der eingehenden Datenrate mithält, exponiert sie zusätzlich Betriebsmetriken für Prometheus — unabhängig vom fachlichen Alerting bei Grenzwertverletzungen (siehe Kapitel 5, <<Data Pipelines & Alerting (Kafka & Worker)>>).
+
+* **Actuator auf Default-Port:** Spring Boot Actuator stellt `/actuator/prometheus` auf dem Default-Port bereit. Der Zugriff darauf ist Netzwerk-technisch abgesichert.
+* **Kafka-Metriken (automatisch gebunden):** Dank Micrometer bindet Spring Boot Consumer-/Producer-Kennzahlen wie Consumer-Lag und Fetch-Rate ohne Zusatzcode ein. Der Lag pro Topic ist der wichtigste Indikator dafür, ob die Pipeline der Last hinterherhinkt.
+* **Verarbeitungsdauer pro Listener:** `spring.kafka.listener.observation-enabled` und `spring.kafka.template.observation-enabled` messen, wie lange ein `@KafkaListener`-Batch tatsächlich braucht — das zeigt, ob eine Verzögerung an Kafka oder an der eigenen Verarbeitung liegt.
+* **Custom-Metrik `pipeline.message.processing.duration`:** Ein im `SensorDataBatchProcessor` erfasster Timer misst je Nachricht die Zeit von deren Verfügbarkeit auf `internal-normalized` bis zum erfolgreichen Schreiben in die TimeScaleDB.
+* **Custom-Metrik `pipeline.message.total.duration`:** Derselbe `SensorDataBatchProcessor` misst zusätzlich die Zeit vom ursprünglichen Geräte-/Vendor-Zeitstempel (bereits vom `TransformationOrchestrator` geparst und auf dem `SensorReadingRecord` abgelegt) bis zum DB-Write. Die Differenz zu `pipeline.message.processing.duration` zeigt, wie viel der Latenz *vor* dem lokalen Kafka-Cluster entsteht — inkl. externem Netzwerk und MirrorMaker-2-Replikationslag —, ohne Kafka Connect selbst instrumentieren zu müssen.
+* **Reprocessing-Metriken:** Da das Reprocessing (siehe <<Datenintegrität & Zero-Data-Loss Architektur>>) denselben DB-Connection-Pool wie die Live-Ingestion belastet, misst `SensorReprocessingOrchestrator` zusätzlich die Laufdauer eines Backfill-Laufs (`pipeline.reprocessing.run.duration`, ohne den No-Op-Guard-Fall) und `HistoricalReadingChunkProcessor` zählt verarbeitete Datensätze nach Ausgang (`pipeline.reprocessing.records`, Tag `result=success|poison_pill`). So lässt sich eine Latenz-Spitze bei der Ingestion-Metrik mit einem gleichzeitig laufenden Reprocessing-Lauf korrelieren, statt zu raten.
+* **Skalierung über mehrere Pods:** Jeder Pod meldet nur seine eigenen Werte; Prometheus scraped jeden Pod einzeln, die Aggregation über alle Instanzen (z. B. Summe des Lags, Perzentile der Verarbeitungsdauer) erfolgt erst in Grafana via PromQL.
+
+Das Scraping durch Prometheus sowie die Grafana-Dashboards laufen als separate Infrastruktur in EKS und sind nicht Teil dieses Repositories.
 
 ==== Datenintegrität & Zero-Data-Loss Architektur
 

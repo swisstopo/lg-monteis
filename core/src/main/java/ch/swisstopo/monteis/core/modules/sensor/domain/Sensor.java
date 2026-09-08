@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.sensor.domain;
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import java.util.Objects;
+import java.util.UUID;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
 
@@ -10,7 +11,7 @@ import org.javers.core.metamodel.annotation.TypeName;
 public class Sensor implements Auditable {
   public static final String JAVERS_TYPE = "Sensor";
 
-  @Id private Long id;
+  @Id private UUID id;
   private String code;
   private String name;
   private SensorType type;
@@ -54,7 +55,7 @@ public class Sensor implements Auditable {
    */
   @SuppressWarnings("java:S107")
   public Sensor(
-      Long id,
+      UUID id,
       String code,
       String name,
       SensorType type,
@@ -80,11 +81,11 @@ public class Sensor implements Auditable {
 
   // --- Getters and Setters ---
 
-  public Long getId() {
+  public UUID getId() {
     return id;
   }
 
-  public void setId(Long id) {
+  public void setId(UUID id) {
     this.id = id;
   }
 

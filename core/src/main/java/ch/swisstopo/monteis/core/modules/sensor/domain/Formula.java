@@ -3,9 +3,10 @@ package ch.swisstopo.monteis.core.modules.sensor.domain;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import java.util.Map;
+import java.util.UUID;
 
 public class Formula {
-  private Long id;
+  private UUID id;
   private String expression;
   private Integer version;
   private static final String DEFAULT_EXPRESSION = "x";
@@ -23,7 +24,7 @@ public class Formula {
   /**
    * Constructor for REBUILDING an existing Formula from the database (jOOQ).
    */
-  public Formula(Long id, String expression, Integer version) {
+  public Formula(UUID id, String expression, Integer version) {
     validateExpression(expression);
     this.id = id;
     this.expression = expression;
@@ -46,11 +47,11 @@ public class Formula {
 
   // --- Getters and Setters ---
 
-  public Long getId() {
+  public UUID getId() {
     return id;
   }
 
-  public void setId(Long id) {
+  public void setId(UUID id) {
     this.id = id;
   }
 
@@ -75,11 +76,11 @@ public class Formula {
   }
 
   public static class FormulaBuilder {
-    private Long id;
+    private UUID id;
     private String expression;
     private Integer version;
 
-    public FormulaBuilder id(Long id) {
+    public FormulaBuilder id(UUID id) {
       this.id = id;
       return this;
     }

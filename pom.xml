@@ -28,10 +28,10 @@
     <springdoc.version>3.1.0</springdoc.version>
     <sonar.version>5.7.0.6970</sonar.version>
     <springdoc-plugin.version>1.5</springdoc-plugin.version>
-    <spotless.version>3.10.0</spotless.version>
+    <spotless.version>3.10.2</spotless.version>
     <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
-    <openapi-generator-plugin.version>7.24.0</openapi-generator-plugin.version>
-    <swagger-annotations.version>2.2.54</swagger-annotations.version>
+    <openapi-generator-plugin.version>7.25.0</openapi-generator-plugin.version>
+    <swagger-annotations.version>2.2.55</swagger-annotations.version>
     <jackson-databind-nullable.version>0.2.11</jackson-databind-nullable.version>
     <parsington.version>3.3.0</parsington.version>
     <maven-build-helper.version>3.6.1</maven-build-helper.version>
@@ -41,7 +41,7 @@
     <archunit-junit5.version>1.5.0</archunit-junit5.version>
     <jacoco.version>0.8.15</jacoco.version>
     <testcontainers-keycloak.version>4.3.1</testcontainers-keycloak.version>
-    <aws-msk-iam-auth.version>2.3.7</aws-msk-iam-auth.version>
+    <aws-msk-iam-auth.version>2.3.8</aws-msk-iam-auth.version>
 
     <!-- Override the Spring Boot BOM's managed flyway.version so the test-scoped
          flyway-core + flyway-database-postgresql (Testcontainers validation) and the
@@ -58,6 +58,14 @@
          are source-dependency CVEs, so they are fixed here, never waived in
          .trivyignore. Drop this override once the Spring Boot BOM manages >= 4.2.16. -->
     <netty.version>4.2.16.Final</netty.version>
+
+    <!-- Override the Spring Boot BOM's managed tomcat.version to pull the patched
+         tomcat-embed-core 11.0.25. Fixes CVE-2026-65182 (security constraint bypass),
+         CVE-2026-65905 (DIGEST auth replay bypass) and CVE-2026-68525 (FORM auth
+         bypass) in tomcat-embed-core 11.0.24, caught by the Trivy scan. Spring Boot
+         4.1.1 is currently the latest release and still manages the vulnerable 11.0.24.
+         Drop this override once the Spring Boot BOM manages >= 11.0.25. -->
+    <tomcat.version>11.0.25</tomcat.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
   </properties>

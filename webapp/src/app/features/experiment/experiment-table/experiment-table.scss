@@ -1,16 +1,25 @@
 :host {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
 
+  height: 100%;
   padding: 2rem;
   width: 100%;
   box-sizing: border-box;
 }
 .metrics-panel {
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  height: 100%;
+  // Flex children don't shrink below their content's size by default; without this the grid
+  // would grow unbounded instead of scrolling within the space actually available to it.
+  min-height: 0;
 
   .custom-grid {
+    flex: 1 1 0;
+    min-height: 0;
     width: 100%;
   }
 

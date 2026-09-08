@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { CurrentUserControllerService, CurrentUserDto } from '@core/generated';
 import { Observable, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import { CurrentUserControllerService, CurrentUserDto } from '../generated';
 import { PermissionsService } from './permissions.service';
 
 function setup(getCurrentUser: () => Observable<CurrentUserDto>) {

@@ -11,6 +11,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
@@ -21,6 +24,9 @@ import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +38,10 @@ import org.springframework.test.web.servlet.MockMvc;
 @ControllerTest(ExperimentController.class)
 class ExperimentControllerTest {
 
+  private static final UUID EXPERIMENT_ID = UUID.fromString("10000000-0000-0000-0000-000000000001");
+  private static final UUID OTHER_EXPERIMENT_ID =
+      UUID.fromString("10000000-0000-0000-0000-000000000002");
+
   @Autowired private MockMvc mockMvc;
 
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
@@ -39,6 +49,7 @@ class ExperimentControllerTest {
   @MockitoBean private ExperimentService service;
 
   @MockitoBean private ExperimentWebMapper mapper;
+  @MockitoBean private PagedRequestParser pagedRequestParser;
 
   @MockitoBean private Clock clock;
 
@@ -58,7 +69,7 @@ class ExperimentControllerTest {
     // given
     Experiment expectedExperiment =
         new Experiment(
-            1L,
+            EXPERIMENT_ID,
             "EXP-01",
             new Period(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
@@ -68,7 +79,7 @@ class ExperimentControllerTest {
 
     ExperimentResponseDto expectedResponseDto =
         new ExperimentResponseDto(
-            1L,
+            EXPERIMENT_ID,
             "EXP-01",
             "A test experiment",
             new PeriodDto(
@@ -79,21 +90,78 @@ class ExperimentControllerTest {
 
     expectedExperiment.getStatus(referenceToday);
 
-    given(service.getById(1L)).willReturn(expectedExperiment);
+    given(service.getById(EXPERIMENT_ID)).willReturn(expectedExperiment);
     given(mapper.toDto(eq(expectedExperiment), any(LocalDate.class)))
         .willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
-        .perform(get("/api/experiments/1").with(jwt()).contentType(MediaType.APPLICATION_JSON))
+        .perform(
+            get("/api/experiments/{id}", EXPERIMENT_ID)
+                .with(jwt())
+                .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.id").value(expectedResponseDto.id()))
+        .andExpect(jsonPath("$.id").value(expectedResponseDto.id().toString()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
         .andExpect(jsonPath("$.comment").value(expectedResponseDto.comment()))
         .andExpect(jsonPath("$.status").value(expectedResponseDto.status().name()));
 
-    then(service).should().getById(1L);
+    then(service).should().getById(EXPERIMENT_ID);
     then(mapper).should().toDto(eq(expectedExperiment), any(LocalDate.class));
+  }
+
+  @Test
+  void should_route_get_experiments_and_return_paged_result() throws Exception {
+    // given
+    LocalDate startDate = LocalDate.of(2024, Month.JANUARY, 1);
+    LocalDate endDate = LocalDate.of(2024, Month.DECEMBER, 31);
+
+    Experiment experiment1 =
+        new Experiment(
+            EXPERIMENT_ID, "EXP-01", new Period(startDate, endDate), "A test experiment", 2, 1);
+
+    PagedRequest parsedRequest = new PagedRequest(0, 20, List.of(), Map.of());
+    PagedResult<Experiment> domainResult = new PagedResult<>(List.of(experiment1), 1);
+
+    ExperimentResponseDto responseDto =
+        new ExperimentResponseDto(
+            EXPERIMENT_ID,
+            "EXP-01",
+            "A test experiment",
+            new PeriodDto(startDate, endDate),
+            Status.HISTORIC, // Example status
+            2,
+            1);
+    PagedResult<ExperimentResponseDto> dtoResult = new PagedResult<>(List.of(responseDto), 1);
+
+    given(pagedRequestParser.parse(any())).willReturn(parsedRequest);
+    given(service.getExperiments(parsedRequest)).willReturn(domainResult);
+    given(mapper.toPagedDto(eq(domainResult), any(LocalDate.class))).willReturn(dtoResult);
+
+    // when / then
+    mockMvc
+        .perform(
+            get("/api/experiments")
+                .queryParam("startRow", "0")
+                .queryParam("endRow", "20")
+                .with(jwt()) // Ensure this matches your security test setup
+                .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalCount").value(1))
+        .andExpect(jsonPath("$.rows[0].id").value(EXPERIMENT_ID.toString()))
+        .andExpect(jsonPath("$.rows[0].name").value("EXP-01"))
+        .andExpect(jsonPath("$.rows[0].comment").value("A test experiment"))
+        .andExpect(jsonPath("$.rows[0].version").value(2))
+        .andExpect(jsonPath("$.rows[0].sensorCount").value(1))
+        .andExpect(jsonPath("$.rows[0].status").value("HISTORIC"));
+
+    // Verify interaction sequence
+    then(pagedRequestParser).should().parse(any());
+    then(service).should().getExperiments(parsedRequest);
+    then(mapper).should().toPagedDto(eq(domainResult), any(LocalDate.class));
+
+    then(service).shouldHaveNoMoreInteractions();
+    then(mapper).shouldHaveNoMoreInteractions();
   }
 
   @Test
@@ -110,7 +178,7 @@ class ExperimentControllerTest {
 
     ExperimentResponseDto expectedResponseDto =
         new ExperimentResponseDto(
-            1L,
+            EXPERIMENT_ID,
             "EXP-01",
             "A test experiment",
             new PeriodDto(
@@ -133,7 +201,7 @@ class ExperimentControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.id").value(expectedResponseDto.id()))
+        .andExpect(jsonPath("$.id").value(expectedResponseDto.id().toString()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
         .andExpect(
             jsonPath("$.period.start").value(expectedResponseDto.period().start().toString()))
@@ -153,7 +221,7 @@ class ExperimentControllerTest {
     // given
     WriteExperimentDto requestDto =
         new WriteExperimentDto(
-            1L,
+            EXPERIMENT_ID,
             "EXP-01-UPDATED",
             "Updated comment",
             new PeriodDto(
@@ -162,7 +230,7 @@ class ExperimentControllerTest {
 
     ExperimentResponseDto expectedResponseDto =
         new ExperimentResponseDto(
-            1L,
+            EXPERIMENT_ID,
             "EXP-01-UPDATED",
             "Updated comment",
             new PeriodDto(
@@ -180,12 +248,12 @@ class ExperimentControllerTest {
     // when / then
     mockMvc
         .perform(
-            put("/api/experiments/1")
+            put("/api/experiments/{id}", EXPERIMENT_ID)
                 .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.id").value(expectedResponseDto.id()))
+        .andExpect(jsonPath("$.id").value(expectedResponseDto.id().toString()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
         .andExpect(jsonPath("$.comment").value(expectedResponseDto.comment()))
         .andExpect(jsonPath("$.version").value(expectedResponseDto.version()));
@@ -201,7 +269,7 @@ class ExperimentControllerTest {
     // given: path id (1) and body id (2) disagree
     WriteExperimentDto requestDto =
         new WriteExperimentDto(
-            2L,
+            OTHER_EXPERIMENT_ID,
             "EXP-01",
             "A test experiment",
             new PeriodDto(
@@ -211,7 +279,7 @@ class ExperimentControllerTest {
     // when / then
     mockMvc
         .perform(
-            put("/api/experiments/1")
+            put("/api/experiments/{id}", EXPERIMENT_ID)
                 .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))

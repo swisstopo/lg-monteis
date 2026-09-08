@@ -1,10 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import translationsEN from '@public/i18n/en.json';
 import { WorkbenchComponent } from '@scion/workbench';
+import { ToastComponent } from '@ui/toast/toast.component';
 import { OAuthService } from 'angular-oauth2-oidc';
-import translationsEN from '../../public/i18n/en.json';
-import { ToastComponent } from './ui/toast/toast.component';
 
 @Component({
   selector: 'app-root',

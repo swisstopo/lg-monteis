@@ -11,6 +11,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.Record4;
 import org.jooq.impl.DSL;
@@ -29,9 +30,9 @@ public class MeasurementQueryRepository implements MeasurementQuery {
 
   @Override
   public Optional<ChartDataResponseDto> findMeasurements(
-      Long id, OffsetDateTime from, OffsetDateTime to) {
+      UUID id, OffsetDateTime from, OffsetDateTime to) {
 
-    Record4<Long, String, String, Unit> sensor =
+    Record4<UUID, String, String, Unit> sensor =
         dsl.select(SENSORS.ID, SENSORS.CODE, SENSORS.NAME, SENSORS.UNIT)
             .from(SENSORS)
             .where(SENSORS.ID.eq(id))

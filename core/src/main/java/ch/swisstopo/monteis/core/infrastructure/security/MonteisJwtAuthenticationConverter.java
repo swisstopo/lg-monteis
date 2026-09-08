@@ -52,7 +52,7 @@ public class MonteisJwtAuthenticationConverter
 
     // Fail closed: a caller with neither read authority must never leak a populated
     // experiment_ids claim through as if it were a legitimately scoped user.
-    List<Long> experimentIds = canReadAny(authorities) ? extractExperimentIds(source) : List.of();
+    List<UUID> experimentIds = canReadAny(authorities) ? extractExperimentIds(source) : List.of();
 
     MonteisPrincipal principal =
         new MonteisPrincipal(
@@ -107,15 +107,24 @@ public class MonteisJwtAuthenticationConverter
     return roles;
   }
 
-  private static List<Long> extractExperimentIds(Jwt jwt) {
+  private static List<UUID> extractExperimentIds(Jwt jwt) {
     List<?> experimentIds = jwt.getClaim(EXPERIMENTS_CLAIM);
     if (experimentIds == null) {
       return List.of();
     }
     return experimentIds.stream()
-        .filter(Number.class::isInstance)
-        .map(id -> ((Number) id).longValue())
+        .filter(String.class::isInstance)
+        .map(id -> tryParseUuid((String) id))
+        .filter(Objects::nonNull)
         .distinct()
         .toList();
+  }
+
+  private static UUID tryParseUuid(String id) {
+    try {
+      return UUID.fromString(id);
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
   }
 }

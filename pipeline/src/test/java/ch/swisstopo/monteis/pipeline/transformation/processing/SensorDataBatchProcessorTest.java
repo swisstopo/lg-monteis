@@ -14,6 +14,8 @@ import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationOrchestrator;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.SensorConfigCache;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.support.Acknowledgment;
@@ -42,7 +43,9 @@ class SensorDataBatchProcessorTest {
 
   @Mock private Acknowledgment ack;
 
-  @InjectMocks private SensorDataBatchProcessor sensorDataBatchProcessor;
+  private SensorDataBatchProcessor sensorDataBatchProcessor;
+
+  private SimpleMeterRegistry meterRegistry;
 
   @Captor private ArgumentCaptor<List<SensorReadingRecord>> dbRecordsCaptor;
 
@@ -57,6 +60,15 @@ class SensorDataBatchProcessorTest {
             })
         .given(transactionTemplate)
         .executeWithoutResult(any());
+
+    meterRegistry = new SimpleMeterRegistry();
+    sensorDataBatchProcessor =
+        new SensorDataBatchProcessor(
+            sensorConfigCache,
+            orchestrator,
+            sensorReadingRepository,
+            transactionTemplate,
+            meterRegistry);
   }
 
   @Test
@@ -75,7 +87,9 @@ class SensorDataBatchProcessorTest {
     given(sensorConfigCache.getActiveConfig("deviceB")).willReturn(configB);
 
     SensorReadingRecord record1 = new SensorReadingRecord();
+    record1.setTimestamp(OffsetDateTime.now());
     SensorReadingRecord record2 = new SensorReadingRecord();
+    record2.setTimestamp(OffsetDateTime.now());
 
     given(
             orchestrator.transform(
@@ -87,13 +101,15 @@ class SensorDataBatchProcessorTest {
         .willReturn(record2);
 
     // when
-    sensorDataBatchProcessor.processAndPersist(batch, ack);
+    sensorDataBatchProcessor.processAndPersist(batch, List.of(0L, 0L), ack);
 
     // then
     then(sensorReadingRepository).should().upsertBatch(dbRecordsCaptor.capture());
     assertThat(dbRecordsCaptor.getValue()).containsExactly(record1, record2);
 
     then(ack).should().acknowledge();
+
+    assertThat(meterRegistry.get("pipeline.message.total.duration").timer().count()).isEqualTo(2);
   }
 
   @Test
@@ -114,6 +130,7 @@ class SensorDataBatchProcessorTest {
     given(sensorConfigCache.getActiveConfig("deviceB")).willReturn(configB);
 
     SensorReadingRecord validRecord = new SensorReadingRecord();
+    validRecord.setTimestamp(OffsetDateTime.now());
     given(
             orchestrator.transform(
                 "deviceA", 10.5, "2026-06-23T10:00:00Z", configA, ProcessingOrigin.INGEST))
@@ -130,7 +147,7 @@ class SensorDataBatchProcessorTest {
         .willThrow(poisonException);
 
     // when
-    sensorDataBatchProcessor.processAndPersist(batch, ack);
+    sensorDataBatchProcessor.processAndPersist(batch, List.of(0L, 0L), ack);
 
     // then
     then(sensorReadingRepository).should().upsertBatch(dbRecordsCaptor.capture());
@@ -140,6 +157,9 @@ class SensorDataBatchProcessorTest {
 
     // Assert that the batch is still acknowledged to prevent infinite retry loops
     then(ack).should().acknowledge();
+
+    // Only the surviving valid record should be timed, not the filtered-out poison pill
+    assertThat(meterRegistry.get("pipeline.message.total.duration").timer().count()).isEqualTo(1);
   }
 
   @Test
@@ -160,7 +180,7 @@ class SensorDataBatchProcessorTest {
         .willThrow(poisonException);
 
     // when
-    sensorDataBatchProcessor.processAndPersist(batch, ack);
+    sensorDataBatchProcessor.processAndPersist(batch, List.of(0L), ack);
 
     // then
     then(sensorReadingRepository).should().upsertBatch(dbRecordsCaptor.capture());

@@ -24,19 +24,15 @@ import {
   MatTimepickerInput,
   MatTimepickerToggle,
 } from '@angular/material/timepicker';
+import { APP_ISO_TIMESTAMP_FORMAT } from '@core/date/date.provider';
+import { OverviewControllerService, ReadSimpleMetricDto } from '@core/generated';
+import { FormErrorService } from '@core/utils/form-error.service';
+import { MesurementsService } from '@features/overview/services/mesurements.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
-import { APP_ISO_TIMESTAMP_FORMAT } from '../../../core/date/date.provider';
-import { OverviewControllerService, ReadSimpleMetricDto } from '../../../core/generated';
-import { FormErrorService } from '../../../core/utils/form-error.service';
-import {
-  ChartComponent,
-  ChartOptions,
-  ChartRangeEvent,
-  createTimeChartOptions,
-} from '../../../ui/chart';
-import Table from '../../../ui/table/table';
-import { MesurementsService } from '../services/mesurements.service';
+import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions } from '@ui/chart';
+import Table from '@ui/table/table';
+import { subDays } from 'date-fns';
 import { createColumns } from './columns';
 
 interface DateTimeModel {
@@ -93,14 +89,14 @@ export default class OverviewTable {
   private readonly datePipe = inject(DatePipe);
   private readonly translateService = inject(TranslateService);
   private readonly dialog = inject(MatDialog);
-  protected readonly mesurementsService = inject(MesurementsService);
+  protected readonly measurementsService = inject(MesurementsService);
   protected readonly overviewService = inject(OverviewControllerService);
   private readonly formErrorService = inject(FormErrorService);
-  readonly serviceError = this.mesurementsService.error;
+  readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
   readonly dateRangeModel = signal<DateRangeModel>({
-    start: { date: null, time: atTime(0, 0) },
-    end: { date: null, time: atTime(23, 59) },
+    start: { date: subDays(new Date(), 10), time: atTime(0, 0) },
+    end: { date: new Date(), time: new Date() },
   });
 
   readonly rangeForm = form(
@@ -117,9 +113,19 @@ export default class OverviewTable {
     stream: () => this.overviewService.getMetrics(50),
   });
 
+  protected readonly sensorIds = computed<string[]>(
+    () => {
+      const metrics = this.metricsResource.value() ?? [];
+      const sensorIds = metrics.map((metric) => metric.metadataSensorId).filter((e) => e != null);
+      return this.distinct(sensorIds);
+    },
+    // Keeps the signal identity stable when a refetch returns the same sensors.
+    { equal: this.equalByElement },
+  );
+
   protected wrappedCols = createColumns(this.datePipe);
 
-  private readonly plottedIds = signal<number[]>([]);
+  private readonly plottedIds = signal<string[]>([]);
 
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
@@ -128,7 +134,7 @@ export default class OverviewTable {
     });
 
     effect(() => {
-      const errors = this.mesurementsService.error();
+      const errors = this.measurementsService.error();
       if (errors) {
         this.formErrorService.mapApiErrorsToFormErrors(
           errors,
@@ -152,7 +158,7 @@ export default class OverviewTable {
   }
 
   protected getMetricRowId = (row: ReadSimpleMetricDto): string =>
-    `${row.sensorId}-${row.timestamp}`;
+    `${row.sensorCode}-${row.timestamp}`;
 
   protected onPlot() {
     if (this.rangeForm().invalid()) {
@@ -164,8 +170,7 @@ export default class OverviewTable {
     const rangeEnd = combineDateAndTime(end.date, end.time);
     if (!rangeStart || !rangeEnd) return;
 
-    // TODO replace with sensor selection as soon as we get ids in DTO
-    this.plottedIds.set([1, 2, 3, 5]);
+    this.plottedIds.set(this.sensorIds());
 
     this.fetchChartData(rangeStart, rangeEnd);
 
@@ -182,7 +187,7 @@ export default class OverviewTable {
     // use computed to avoid re-creating the chart options on every change
     // angular's inputBinding normally re-evaluates on every change
     const chartOptions = computed((): ChartOptions => {
-      const data = this.mesurementsService.chartData.value();
+      const data = this.measurementsService.chartData.value();
       return createTimeChartOptions({
         title: title(),
         xAxisLabel: 'Date',
@@ -201,7 +206,7 @@ export default class OverviewTable {
       autoFocus: true,
       bindings: [
         inputBinding('title', () => title()),
-        inputBinding('datasets', () => this.mesurementsService.chartData.value()?.datasets ?? []),
+        inputBinding('datasets', () => this.measurementsService.chartData.value()?.datasets ?? []),
         inputBinding('options', chartOptions),
         outputBinding('rangeSelected', (range) => this.onRangeSelected(<ChartRangeEvent>range)),
       ],
@@ -217,6 +222,16 @@ export default class OverviewTable {
     const rangeFromTimestamp = this.datePipe.transform(start, APP_ISO_TIMESTAMP_FORMAT)!;
     const rangeToTimestamp = this.datePipe.transform(end, APP_ISO_TIMESTAMP_FORMAT)!;
 
-    this.mesurementsService.getChartData(this.plottedIds(), rangeFromTimestamp, rangeToTimestamp);
+    this.measurementsService.getChartData(this.plottedIds(), rangeFromTimestamp, rangeToTimestamp);
+  }
+
+  /** Preserves first-occurrence order. */
+  private distinct<T>(values: readonly T[]): T[] {
+    return [...new Set(values)];
+  }
+
+  /** Reference-equality comparison of two arrays, element by element. */
+  private equalByElement<T>(a: readonly T[], b: readonly T[]): boolean {
+    return a.length === b.length && a.every((value, index) => value === b[index]);
   }
 }

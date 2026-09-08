@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -10,10 +11,11 @@ import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.ChunkProcessingResult;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,7 +26,16 @@ class SensorReprocessingOrchestratorTest {
 
   @Mock private HistoricalReadingChunkProcessor chunkService;
 
-  @InjectMocks private SensorReprocessingOrchestrator sensorReprocessingOrchestrator;
+  private SimpleMeterRegistry meterRegistry;
+
+  private SensorReprocessingOrchestrator sensorReprocessingOrchestrator;
+
+  @BeforeEach
+  void setUp() {
+    meterRegistry = new SimpleMeterRegistry();
+    sensorReprocessingOrchestrator =
+        new SensorReprocessingOrchestrator(sensorReadingRepository, chunkService, meterRegistry);
+  }
 
   @Test
   void should_skip_reprocessing_when_no_outdated_records_found() {
@@ -40,6 +51,8 @@ class SensorReprocessingOrchestratorTest {
     // then
     then(sensorReadingRepository).should().checkOldSensorData(config.getConfig());
     then(chunkService).shouldHaveNoInteractions();
+
+    assertThat(meterRegistry.get("pipeline.reprocessing.run.duration").timer().count()).isZero();
   }
 
   @Test
@@ -73,5 +86,8 @@ class SensorReprocessingOrchestratorTest {
     then(chunkService).should().processNextChunk(config, null);
     then(chunkService).should().processNextChunk(config, firstCursor);
     then(chunkService).should().processNextChunk(config, secondCursor);
+
+    assertThat(meterRegistry.get("pipeline.reprocessing.run.duration").timer().count())
+        .isEqualTo(1);
   }
 }

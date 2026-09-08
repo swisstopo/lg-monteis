@@ -4,8 +4,8 @@ import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
-import jakarta.validation.constraints.Positive;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,7 +34,7 @@ public class MeasurementController {
    */
   @GetMapping(value = "/charts/data", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ChartDataResponseDto> getChartData(
-      @RequestParam @NotNull @Positive Long id,
+      @RequestParam @NotNull UUID id,
       @RequestParam @NotNull @PastOrPresent OffsetDateTime from,
       @RequestParam @NotNull @PastOrPresent OffsetDateTime to) {
     return measurementService

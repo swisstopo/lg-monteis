@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.experiment.domain;
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import java.time.LocalDate;
+import java.util.UUID;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
 
@@ -10,7 +11,7 @@ import org.javers.core.metamodel.annotation.TypeName;
 public class Experiment implements Auditable {
   public static final String JAVERS_TYPE = "Experiment";
 
-  @Id private Long id;
+  @Id private UUID id;
   private String name;
   private String owner;
   private Period period;
@@ -33,7 +34,7 @@ public class Experiment implements Auditable {
    * Constructor for REBUILDING an existing Experiment from the database (jOOQ).
    */
   public Experiment(
-      Long id, String name, Period period, String comment, Integer version, Integer sensorCount) {
+      UUID id, String name, Period period, String comment, Integer version, Integer sensorCount) {
     this.id = id;
     this.name = name;
     this.period = period;
@@ -48,11 +49,11 @@ public class Experiment implements Auditable {
     return Status.ACTIVE;
   }
 
-  public Long getId() {
+  public UUID getId() {
     return id;
   }
 
-  public void setId(Long id) {
+  public void setId(UUID id) {
     this.id = id;
   }
 

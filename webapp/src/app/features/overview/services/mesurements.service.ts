@@ -1,16 +1,12 @@
 import { computed, inject, Injectable, resource, signal } from '@angular/core';
+import { ChartDataResponseDto, ErrorDto, MeasurementControllerService } from '@core/generated';
+import { toErrorDtos } from '@core/http/api-error.model';
 import { translate, TranslateService } from '@ngx-translate/core';
+import { ChartDataset, ChartPoint } from '@ui/chart';
 import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
-import {
-  ChartDataResponseDto,
-  ErrorDto,
-  MeasurementControllerService,
-} from '../../../core/generated';
-import { toErrorDtos } from '../../../core/http/api-error.model';
-import { ChartDataset, ChartPoint } from '../../../ui/chart';
 
 interface ChartRequest {
-  ids: number[];
+  ids: string[];
   rangeFrom: string;
   rangeTo: string;
 }
@@ -60,7 +56,7 @@ export class MesurementsService {
     },
   });
 
-  getChartData(ids: number[], rangeFrom: string, rangeTo: string) {
+  getChartData(ids: string[], rangeFrom: string, rangeTo: string) {
     if (!ids.length) {
       this.chartsRequest.set(undefined);
       return;

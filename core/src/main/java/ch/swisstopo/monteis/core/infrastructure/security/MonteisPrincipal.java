@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** The caller identity carried as an {@link org.springframework.security.core.Authentication} principal. */
-public record MonteisPrincipal(UUID subject, String username, List<Long> experimentIds)
+public record MonteisPrincipal(UUID subject, String username, List<UUID> experimentIds)
     implements Principal {
 
   public UUID getSubject() {
@@ -17,7 +17,7 @@ public record MonteisPrincipal(UUID subject, String username, List<Long> experim
     return username;
   }
 
-  public List<Long> getExperimentIds() {
+  public List<UUID> getExperimentIds() {
     return experimentIds;
   }
 }

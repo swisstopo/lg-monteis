@@ -1,8 +1,11 @@
 package ch.swisstopo.monteis.core.modules.experiment.service;
 
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,7 +26,11 @@ public class ExperimentService {
     return repository.update(experiment);
   }
 
-  public Experiment getById(Long experimentId) {
+  public Experiment getById(UUID experimentId) {
     return repository.getById(experimentId);
+  }
+
+  public PagedResult<Experiment> getExperiments(PagedRequest pagedRequest) {
+    return repository.getExperiments(pagedRequest);
   }
 }

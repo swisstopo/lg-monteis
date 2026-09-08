@@ -1,0 +1,166 @@
+name: Deploy Webapp
+
+# Human-dispatched deploy of a previously built and published webapp artifact.
+# Resolves a version tag or CommitSHA to the exact artifact in S3, verifies its
+# checksum, swaps the stage env.json, syncs to the frontend bucket, and invalidates
+# CloudFront. Build-once: no Angular rebuild here.
+#
+# Inputs:
+#   version - a git tag (webapp-vX.Y.Z) or a full CommitSHA
+#   stage   - target GitHub Environment (dev | staging | prod)
+#
+# Stage-specific config is resolved from the selected GitHub Environment's variables
+# (FRONTEND_BUCKET, CLOUDFRONT_DISTRIBUTION_ID, FRONTEND_DEPLOY_ROLE_ARN, AWS_REGION),
+# so each stage is isolated and can carry its own protection rules (required
+# reviewers etc.). The artifact source (ARTIFACT_BUCKET_NAME) is a single dev-account
+# store, kept as a repository-level variable.
+#
+# Only `dev` is wired today; `staging`/`prod` environments must have their variables
+# seeded (and their frontend bucket + CloudFront distribution provisioned) before use.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag (webapp-vX.Y.Z) or CommitSHA to deploy'
+        required: true
+        type: string
+      stage:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+        default: dev
+
+run-name: "Deploy webapp ${{ inputs.version }} to ${{ inputs.stage }}"
+
+jobs:
+  deploy:
+    name: Deploy webapp ${{ inputs.version }} to ${{ inputs.stage }}
+    runs-on: ubuntu-24.04
+    # Resolves stage-scoped variables (and any protection rules) from this GitHub
+    # Environment. Staging/prod can require reviewers here without workflow changes.
+    environment: ${{ inputs.stage }}
+    permissions:
+      id-token: write # required for: aws-actions/configure-aws-credentials (OIDC)
+      contents: read  # required for: actions/checkout (tag→SHA resolution)
+
+    steps:
+      - name: "[PREPARE]: Checkout repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # full history + tags required for git rev-list tag→SHA resolution
+
+      - name: "[RESOLVE]: Resolve version to CommitSHA"
+        id: resolve
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "${VERSION_INPUT}" =~ ^webapp-v ]]; then
+            SHA=$(git rev-list -n1 "${VERSION_INPUT}")
+            echo "Resolved tag ${VERSION_INPUT} → ${SHA}"
+          else
+            if ! SHA=$(git rev-parse --verify --quiet "${VERSION_INPUT}^{commit}"); then
+              echo "ERROR: '${VERSION_INPUT}' is not a valid tag or CommitSHA in this repository" >&2
+              exit 1
+            fi
+            echo "Using CommitSHA ${VERSION_INPUT} → ${SHA}"
+          fi
+          echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
+
+      - name: "[AWS]: Configure AWS Credentials"
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        with:
+          role-to-assume: ${{ vars.FRONTEND_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: "[VALIDATE]: Confirm environment variables are seeded"
+        env:
+          FRONTEND_BUCKET: ${{ vars.FRONTEND_BUCKET }}
+          DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+          ARTIFACT_BUCKET: ${{ vars.ARTIFACT_BUCKET_NAME }}
+        run: |
+          set -euo pipefail
+          # Fail fast with a clear message if the selected environment is not yet
+          # configured (e.g. staging/prod before their variables are seeded).
+          : "${FRONTEND_BUCKET:?FRONTEND_BUCKET is not set for environment '${{ inputs.stage }}'}"
+          : "${DISTRIBUTION_ID:?CLOUDFRONT_DISTRIBUTION_ID is not set for environment '${{ inputs.stage }}'}"
+          : "${ARTIFACT_BUCKET:?ARTIFACT_BUCKET_NAME repository variable is not set}"
+
+      - name: "[DOWNLOAD]: Resolve exact artifact key in S3"
+        id: key
+        env:
+          SHA: ${{ steps.resolve.outputs.sha }}
+          ARTIFACT_BUCKET: ${{ vars.ARTIFACT_BUCKET_NAME }}
+        run: |
+          set -euo pipefail
+          KEY=$(aws s3api list-objects-v2 \
+            --bucket "${ARTIFACT_BUCKET}" \
+            --prefix "webapp/${SHA}/" \
+            --query "Contents[?ends_with(Key, '.zip')].Key" \
+            --output text)
+          # AWS CLI v2 --output text renders an empty JMESPath result as the
+          # literal "None", so guard both the empty and "None" cases.
+          if [[ -z "${KEY}" || "${KEY}" == "None" ]]; then
+            echo "ERROR: no .zip artifact found under webapp/${SHA}/" >&2
+            exit 1
+          fi
+          MATCH_COUNT=$(echo "${KEY}" | wc -w)
+          if [[ "${MATCH_COUNT}" -gt 1 ]]; then
+            echo "ERROR: expected exactly one .zip under webapp/${SHA}/, found ${MATCH_COUNT}: ${KEY}" >&2
+            exit 1
+          fi
+          echo "Resolved artifact key: ${KEY}"
+          echo "artifact_key=${KEY}" >> "${GITHUB_OUTPUT}"
+
+      - name: "[DOWNLOAD]: Download artifact with checksum verification"
+        env:
+          ARTIFACT_BUCKET: ${{ vars.ARTIFACT_BUCKET_NAME }}
+          ARTIFACT_KEY: ${{ steps.key.outputs.artifact_key }}
+        run: |
+          set -euo pipefail
+          # --checksum-mode ENABLED hard-fails (non-zero) on checksum mismatch BEFORE
+          # any write to the frontend bucket.
+          aws s3 cp "s3://${ARTIFACT_BUCKET}/${ARTIFACT_KEY}" ./artifact.zip \
+            --checksum-mode ENABLED
+
+      - name: "[DEPLOY]: Unpack artifact"
+        run: |
+          set -euo pipefail
+          mkdir site
+          unzip -q ./artifact.zip -d site
+
+      - name: "[DEPLOY]: Swap stage env.json"
+        env:
+          STAGE: ${{ inputs.stage }}
+        run: |
+          set -euo pipefail
+          # The Angular build places env files at env.json and env/<stage>/env.json
+          # (no public/ prefix — public/ is source-only; production build copies it to
+          # the browser dist root). Swap the root env.json for the target stage.
+          ENV_SRC="site/env/${STAGE}/env.json"
+          if [[ ! -f "${ENV_SRC}" ]]; then
+            echo "ERROR: stage env file not found: ${ENV_SRC}" >&2
+            exit 1
+          fi
+          cp "${ENV_SRC}" site/env.json
+
+      - name: "[DEPLOY]: Sync to S3 frontend bucket"
+        env:
+          FRONTEND_BUCKET: ${{ vars.FRONTEND_BUCKET }}
+        run: |
+          set -euo pipefail
+          aws s3 sync ./site "s3://${FRONTEND_BUCKET}" --delete
+
+      - name: "[DEPLOY]: Invalidate CloudFront distribution"
+        env:
+          DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          set -euo pipefail
+          aws cloudfront create-invalidation \
+            --distribution-id "${DISTRIBUTION_ID}" \
+            --paths '/*'

@@ -30,6 +30,7 @@ test('should create experiment', async ({ page }) => {
 });
 
 test('should update experiment', async ({ page }) => {
+  await page.locator('.ag-row').first().click();
   await page.getByRole('button', { name: 'Edit Experiment' }).click();
   await expect(page.getByRole('heading', { name: 'Edit Experiment', level: 2 })).toBeVisible();
 

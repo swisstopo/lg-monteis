@@ -27,11 +27,12 @@ class SensorDataBatchListenerTest {
         List.of(
             new NormalizedSensorData("deviceA", "2026-06-23T10:00:00Z", 10.5),
             new NormalizedSensorData("deviceB", "2026-06-23T10:05:00Z", 20.0));
+    List<Long> receivedTimestamps = List.of(0L, 0L);
 
     // when
-    listener.consumeNormalizedSensorData(batch, ack);
+    listener.consumeNormalizedSensorData(batch, receivedTimestamps, ack);
 
     // then
-    then(sensorDataBatchProcessor).should().processAndPersist(batch, ack);
+    then(sensorDataBatchProcessor).should().processAndPersist(batch, receivedTimestamps, ack);
   }
 }

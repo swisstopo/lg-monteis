@@ -2,9 +2,10 @@ package ch.swisstopo.monteis.core.modules.sensor.domain;
 
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-public record SensorType(Long id, String name, Integer version) {
+public record SensorType(UUID id, String name, Integer version) {
 
   public SensorType {
     name = normalize(name);

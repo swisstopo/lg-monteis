@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class FormulaTest {
@@ -42,7 +43,7 @@ class FormulaTest {
   @Test
   void should_rebuild_formula_when_expression_is_valid() {
     // given
-    Long id = 99L;
+    UUID id = UUID.randomUUID();
     String validExpression = "x / 10";
     Integer version = 1;
 

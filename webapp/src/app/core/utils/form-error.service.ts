@@ -1,8 +1,8 @@
 import { inject, Injectable } from '@angular/core';
 import { FieldTree } from '@angular/forms/signals';
+import { ErrorDto } from '@core/generated';
+import { ToastService } from '@core/notifications/toast.service';
 import { TranslateService } from '@ngx-translate/core';
-import { ErrorDto } from '../generated';
-import { ToastService } from '../notifications/toast.service';
 
 export interface FormFieldServerError {
   kind: 'serverError';
@@ -49,7 +49,7 @@ export class FormErrorService {
         }
 
         this.toastService.error(
-          this.translateService.translate(err.messageKey ?? fallbackMessageKey)(),
+          this.translateService.translate(err.messageKey ?? fallbackMessageKey, err.params)(),
         );
         return undefined;
       })

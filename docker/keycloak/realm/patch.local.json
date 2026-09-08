@@ -17,7 +17,7 @@
           "name": "Experiment Alpha",
           "path": "/Experiments/Experiment Alpha",
           "attributes": {
-            "experiment_ids": ["1"],
+            "experiment_ids": ["00000000-0000-7000-8000-000000000301"],
             "description": ["Grants read access to experiment 1 (Alpha)."]
           },
           "clientRoles": { "monteis-spa": ["monteis-client:read"] }
@@ -26,7 +26,7 @@
           "name": "Experiment Beta",
           "path": "/Experiments/Experiment Beta",
           "attributes": {
-            "experiment_ids": ["2"],
+            "experiment_ids": ["00000000-0000-7000-8000-000000000302"],
             "description": ["Grants read access to experiment 2 (Beta)."]
           },
           "clientRoles": { "monteis-spa": ["monteis-client:read"] }
@@ -35,7 +35,7 @@
           "name": "Experiment Gamma",
           "path": "/Experiments/Experiment Gamma",
           "attributes": {
-            "experiment_ids": ["3"],
+            "experiment_ids": ["00000000-0000-7000-8000-000000000303"],
             "description": ["Grants read access to experiment 3 (Gamma)."]
           },
           "clientRoles": { "monteis-spa": ["monteis-client:read"] }
