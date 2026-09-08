@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
@@ -18,14 +19,17 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.impl.DSL;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -121,12 +125,21 @@ public class JooqSensorRepository implements SensorRepository {
   public Sensor create(Sensor sensor) {
     SensorsRecord createdSensor = mapper.toRecord(sensor);
     dsl.attach(createdSensor);
+    // Make sure the DB's DEFAULT uuidv7() always generates the sensor id
+    createdSensor.touched(SENSORS.ID, false);
 
     if (sensor.getMainExperiment() != null) {
       createdSensor.setMainExperiment(sensor.getMainExperiment().getId());
     }
 
-    createdSensor.insert();
+    try {
+      createdSensor.insert();
+    } catch (DuplicateKeyException _) {
+      // sensors_das_das_sensor_alias_key: a sensor is identified on the DAS supplier's side by
+      // (das, das_sensor_alias) together.
+      throw new FieldBusinessValidationException(
+          "dasSensorAlias", sensor.getDasSensorAlias(), "validation.unique", Map.of());
+    }
 
     Sensor savedSensor = mapper.toDomain(createdSensor);
     savedSensor.setMainExperiment(sensor.getMainExperiment());
@@ -139,10 +152,20 @@ public class JooqSensorRepository implements SensorRepository {
         SensorTypesRecord typeRecord = findOrCreateSensorTypeByName(p.getType().name());
 
         SensorParameterRecord paramRecord = mapper.toParameterRecord(p);
+        dsl.attach(paramRecord);
+        // Make sure the DB's DEFAULT uuidv7() always generates the sensor parameter id
+        paramRecord.touched(SENSOR_PARAMETER.ID, false);
         paramRecord.setSensorId(createdSensor.getId());
         paramRecord.setFormulaId(formulaRecord.getId());
         paramRecord.setTypeId(typeRecord.getId());
-        paramRecord.insert();
+        try {
+          paramRecord.insert();
+        } catch (DuplicateKeyException _) {
+          // sensor_parameter_sensor_id_das_parameter_alias_key: two parameters of the same
+          // sensor can't share a das_parameter_alias (different sensors may reuse one).
+          throw new FieldBusinessValidationException(
+              "dasParameterAlias", p.getDasParameterAlias(), "validation.unique", Map.of());
+        }
 
         savedParams.add(mapper.toParameterDomain(paramRecord, formulaRecord, typeRecord));
       }
@@ -182,13 +205,23 @@ public class JooqSensorRepository implements SensorRepository {
     updatedRecord.setMainExperiment(
         sensor.getMainExperiment() != null ? sensor.getMainExperiment().getId() : null);
 
-    updatedRecord.update();
+    try {
+      updatedRecord.update();
+    } catch (DuplicateKeyException _) {
+      throw new FieldBusinessValidationException(
+          "dasSensorAlias", sensor.getDasSensorAlias(), "validation.unique", Map.of());
+    }
 
     Sensor savedSensor = mapper.toDomain(updatedRecord);
     savedSensor.setMainExperiment(sensor.getMainExperiment());
     List<SensorParameter> savedParams = new ArrayList<>();
 
-    dsl.deleteFrom(SENSOR_PARAMETER).where(SENSOR_PARAMETER.SENSOR_ID.eq(sensor.getId())).execute();
+    Set<UUID> idsToRemove =
+        new HashSet<>(
+            dsl.select(SENSOR_PARAMETER.ID)
+                .from(SENSOR_PARAMETER)
+                .where(SENSOR_PARAMETER.SENSOR_ID.eq(sensor.getId()))
+                .fetchSet(SENSOR_PARAMETER.ID));
 
     if (sensor.getParameters() != null) {
       for (SensorParameter p : sensor.getParameters()) {
@@ -196,14 +229,39 @@ public class JooqSensorRepository implements SensorRepository {
             findOrCreateFormulaByExpression(p.getFormula().getExpression());
         SensorTypesRecord typeRecord = findOrCreateSensorTypeByName(p.getType().name());
 
-        SensorParameterRecord paramRecord = mapper.toParameterRecord(p);
-        paramRecord.setSensorId(sensor.getId());
-        paramRecord.setFormulaId(formulaRecord.getId());
-        paramRecord.setTypeId(typeRecord.getId());
-        paramRecord.insert();
+        SensorParameterRecord paramRecord;
+        try {
+          if (p.getId() != null && idsToRemove.remove(p.getId())) {
+            paramRecord =
+                dsl.selectFrom(SENSOR_PARAMETER)
+                    .where(SENSOR_PARAMETER.ID.eq(p.getId()))
+                    .fetchOne();
+            mapper.updateParameterRecordFromDomain(p, paramRecord);
+            paramRecord.setFormulaId(formulaRecord.getId());
+            paramRecord.setTypeId(typeRecord.getId());
+            paramRecord.update();
+          } else {
+            paramRecord = mapper.toParameterRecord(p);
+            dsl.attach(paramRecord);
+            paramRecord.touched(SENSOR_PARAMETER.ID, false);
+            paramRecord.setSensorId(sensor.getId());
+            paramRecord.setFormulaId(formulaRecord.getId());
+            paramRecord.setTypeId(typeRecord.getId());
+            paramRecord.insert();
+          }
+        } catch (DuplicateKeyException _) {
+          // two parameters of the same sensor can't share a das_parameter_alias (different sensors
+          // may reuse one).
+          throw new FieldBusinessValidationException(
+              "dasParameterAlias", p.getDasParameterAlias(), "validation.unique", Map.of());
+        }
 
         savedParams.add(mapper.toParameterDomain(paramRecord, formulaRecord, typeRecord));
       }
+    }
+
+    if (!idsToRemove.isEmpty()) {
+      dsl.deleteFrom(SENSOR_PARAMETER).where(SENSOR_PARAMETER.ID.in(idsToRemove)).execute();
     }
 
     savedSensor.setParameters(savedParams);

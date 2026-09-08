@@ -17,6 +17,7 @@ public class Sensor implements Auditable {
 
   private String name;
   private String dasSensorAlias;
+  private DAS das;
   private UUID fulcrumId;
   private Experiment mainExperiment;
   private Coordinates coordinates;
@@ -32,47 +33,22 @@ public class Sensor implements Auditable {
   @SuppressWarnings("java:S107")
   @Default
   public Sensor(
-      String code,
-      String name,
-      SensorType type,
-      Unit unit,
-      String comment,
-      Coordinates coordinates,
-      AlarmLimits alarmLimits,
-      Boolean active,
-      Formula formula) {
-    this.name = name;
-
-    this.comment = comment;
-    this.coordinates = coordinates;
-    this.active = active;
-  }
-
-  /**
-   * Constructor for REBUILDING an existing Sensor from the database (jOOQ).
-   */
-  @SuppressWarnings("java:S107")
-  public Sensor(
-      UUID id,
       String name,
       String dasSensorAlias,
+      DAS das,
       UUID fulcrumId,
       Experiment mainExperiment,
       Coordinates coordinates,
       Boolean active,
-      String comment,
-      Integer version,
-      List<SensorParameter> parameters) {
-    this.id = id;
+      String comment) {
     this.name = name;
     this.dasSensorAlias = dasSensorAlias;
+    this.das = das;
     this.fulcrumId = fulcrumId;
     this.mainExperiment = mainExperiment;
     this.coordinates = coordinates;
     this.active = active;
     this.comment = comment;
-    this.version = version;
-    this.parameters = parameters;
   }
 
   // --- Getters and Setters ---
@@ -99,6 +75,14 @@ public class Sensor implements Auditable {
 
   public void setDasSensorAlias(String dasSensorAlias) {
     this.dasSensorAlias = dasSensorAlias;
+  }
+
+  public DAS getDAS() {
+    return das;
+  }
+
+  public void setDAS(DAS das) {
+    this.das = das;
   }
 
   public UUID getFulcrumId() {

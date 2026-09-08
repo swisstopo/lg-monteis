@@ -1,9 +1,13 @@
 package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.FORMULAS;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_PARAMETER;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -18,6 +22,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,18 +62,21 @@ class JooqSensorRepositoryIT {
           Sensor savedSensor = repository.create(newSensor);
 
           // Assert
-          //          assertAll(
-          //              () -> assertNotNull(savedSensor.getId(), "Sensor ID should not be null
-          // after
-          // insert"),
-          //              () -> assertEquals("SENS-001", savedSensor.getCode()),
-          //              () -> assertNotNull(savedSensor.getFormula(), "Formula should be mapped
-          // back"),
-          //              () ->
-          //                  assertNotNull(savedSensor.getFormula().getId(), "Formula ID should not
-          // be
-          // null"),
-          //              () -> assertEquals("x * 2", savedSensor.getFormula().getExpression()));
+          assertAll(
+              () -> assertNotNull(savedSensor.getId(), "Sensor ID should not be null after insert"),
+              () -> assertEquals("SENS-001", savedSensor.getDasSensorAlias()),
+              () ->
+                  assertNotNull(
+                      savedSensor.getParameters().getFirst().getFormula(),
+                      "Formula should be mapped back"),
+              () ->
+                  assertNotNull(
+                      savedSensor.getParameters().getFirst().getFormula().getId(),
+                      "Formula ID should not be null"),
+              () ->
+                  assertEquals(
+                      "x * 2",
+                      savedSensor.getParameters().getFirst().getFormula().getExpression()));
 
           // Verify DB state directly: Assert the DELTA
           assertEquals(
@@ -83,8 +91,7 @@ class JooqSensorRepositoryIT {
           // Ultimate DB verification: Prove the exact record exists in the physical table
           boolean existsInDb =
               dsl.fetchExists(dsl.selectFrom(SENSORS).where(SENSORS.ID.eq(savedSensor.getId())));
-          //          assertTrue(existsInDb, "The newly created sensor must physically exist in the
-          // database");
+          assertTrue(existsInDb, "The newly created sensor must physically exist in the database");
         });
   }
 
@@ -109,7 +116,7 @@ class JooqSensorRepositoryIT {
 
           // Assert
           assertEquals(1, result.totalCount());
-          //          assertEquals("TXT-FILTER-01", result.rows().getFirst().getCode());
+          assertEquals("TXT-FILTER-01", result.rows().getFirst().getDasSensorAlias());
         });
   }
 
@@ -137,10 +144,8 @@ class JooqSensorRepositoryIT {
           // Assert: among our two sensors, the Z one must come first in descending order
           int indexOfZ = indexOfCode(rows, "SORT-Z");
           int indexOfA = indexOfCode(rows, "SORT-A");
-          //          assertTrue(
-          //              indexOfZ < indexOfA, "ZZZ_SORT_TEST should sort before AAA_SORT_TEST in
-          // DESC
-          // order");
+          assertTrue(
+              indexOfZ < indexOfA, "ZZZ_SORT_TEST should sort before AAA_SORT_TEST in DESC order");
         });
   }
 
@@ -168,7 +173,7 @@ class JooqSensorRepositoryIT {
 
           // Assert
           assertEquals(1, result.totalCount());
-          //          assertEquals("NUM-FILTER-01", result.rows().getFirst().getCode());
+          assertEquals("NUM-FILTER-01", result.rows().getFirst().getDasSensorAlias());
         });
   }
 
@@ -190,10 +195,10 @@ class JooqSensorRepositoryIT {
           Sensor saved2 = repository.create(sensor2);
 
           // Assert
-          //          assertEquals(
-          //              saved1.getFormula().getId(),
-          //              saved2.getFormula().getId(),
-          //              "Both sensors should reference the exact same formula ID");
+          assertEquals(
+              saved1.getParameters().getFirst().getFormula().getId(),
+              saved2.getParameters().getFirst().getFormula().getId(),
+              "Both sensors should reference the exact same formula ID");
 
           // Verify DB state: Sensor increased, but formula stayed exactly the same
           assertEquals(
@@ -222,8 +227,58 @@ class JooqSensorRepositoryIT {
               assertThrows(
                   FieldBusinessValidationException.class, () -> repository.create(sensor2));
 
-          assertEquals("code", exception.getField());
+          assertEquals("dasSensorAlias", exception.getField());
           assertEquals("validation.unique", exception.getMessageKey());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_throw_on_duplicate_parameter_alias_within_sensor() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange: two parameters of the SAME sensor sharing a das_parameter_alias
+          SensorParameter param1 = buildParameter("Param One", "x", 0.0, 100.0);
+          param1.setDasParameterAlias("DUPE-PARAM-ALIAS");
+          SensorParameter param2 = buildParameter("Param Two", "x * 2", 0.0, 50.0);
+          param2.setDasParameterAlias("DUPE-PARAM-ALIAS");
+
+          Sensor sensor = createDummySensor("DUPE-PARAM-SENSOR", "Sensor", "x");
+          sensor.setParameters(new ArrayList<>(List.of(param1, param2)));
+
+          // Act & Assert
+          FieldBusinessValidationException exception =
+              assertThrows(FieldBusinessValidationException.class, () -> repository.create(sensor));
+
+          assertEquals("dasParameterAlias", exception.getField());
+          assertEquals("validation.unique", exception.getMessageKey());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_allow_different_sensors_to_reuse_the_same_parameter_alias() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange: two DIFFERENT sensors, each with one parameter using the same alias -
+          // uniqueness is scoped per sensor, so this must succeed.
+          SensorParameter param1 = buildParameter("Param One", "x", 0.0, 100.0);
+          param1.setDasParameterAlias("SHARED-PARAM-ALIAS");
+          Sensor sensor1 = createDummySensor("REUSE-SENSOR-1", "Sensor 1", "x");
+          sensor1.setParameters(new ArrayList<>(List.of(param1)));
+
+          SensorParameter param2 = buildParameter("Param Two", "x * 2", 0.0, 50.0);
+          param2.setDasParameterAlias("SHARED-PARAM-ALIAS");
+          Sensor sensor2 = createDummySensor("REUSE-SENSOR-2", "Sensor 2", "x * 2");
+          sensor2.setParameters(new ArrayList<>(List.of(param2)));
+
+          // Act
+          repository.create(sensor1);
+          Sensor savedSensor2 = repository.create(sensor2);
+
+          // Assert
+          assertEquals(
+              "SHARED-PARAM-ALIAS", savedSensor2.getParameters().getFirst().getDasParameterAlias());
         });
   }
 
@@ -237,15 +292,83 @@ class JooqSensorRepositoryIT {
 
           // Mutate domain object
           savedSensor.setName("New Name");
-          //          savedSensor.getFormula().setExpression("x * 3");
+          savedSensor.getParameters().getFirst().getFormula().setExpression("x * 3");
 
           // Act
           Sensor updatedSensor = repository.update(savedSensor);
 
           // Assert
           assertEquals("New Name", updatedSensor.getName());
-          //          assertEquals("x * 3", updatedSensor.getFormula().getExpression());
+          assertEquals(
+              "x * 3", updatedSensor.getParameters().getFirst().getFormula().getExpression());
         });
+  }
+
+  @Test
+  @Transactional
+  void should_diff_upsert_parameters_preserving_ids_on_update() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange: create a sensor with two parameters
+          Sensor sensor = createDummySensor("DIFF-001", "Diff Sensor", "x");
+          sensor.setParameters(
+              new ArrayList<>(
+                  List.of(
+                      buildParameter("Param One", "x", 0.0, 100.0),
+                      buildParameter("Param Two", "x * 2", 0.0, 50.0))));
+          Sensor createdSensor = repository.create(sensor);
+          assertEquals(2, createdSensor.getParameters().size());
+
+          UUID param1Id = createdSensor.getParameters().get(0).getId();
+          UUID param2Id = createdSensor.getParameters().get(1).getId();
+          assertNotNull(param1Id);
+          assertNotNull(param2Id);
+
+          // Act: keep+edit the first parameter, drop the second, add a brand new third one
+          SensorParameter editedParam1 = createdSensor.getParameters().get(0);
+          editedParam1.setAlarmLimits(new AlarmLimits(10.0, 200.0));
+          SensorParameter newParam3 = buildParameter("Param Three", "x * 3", 0.0, 10.0);
+
+          createdSensor.setParameters(new ArrayList<>(List.of(editedParam1, newParam3)));
+          Sensor updatedSensor = repository.update(createdSensor);
+
+          // Assert
+          List<SensorParameter> updatedParams = updatedSensor.getParameters();
+          assertEquals(2, updatedParams.size());
+
+          SensorParameter resultParam1 = updatedParams.get(0);
+          assertEquals(
+              param1Id,
+              resultParam1.getId(),
+              "An existing parameter's id must stay stable across an update");
+          assertEquals(10.0, resultParam1.getAlarmLimits().lower());
+          assertEquals(200.0, resultParam1.getAlarmLimits().upper());
+
+          SensorParameter resultParam3 = updatedParams.get(1);
+          assertNotNull(resultParam3.getId(), "A newly added parameter must get a generated id");
+          assertNotEquals(param1Id, resultParam3.getId());
+
+          assertEquals(
+              0,
+              dsl.fetchCount(SENSOR_PARAMETER, SENSOR_PARAMETER.ID.eq(param2Id)),
+              "A parameter no longer present in the update must be deleted");
+        });
+  }
+
+  private SensorParameter buildParameter(
+      String name, String formulaExpression, double lower, double upper) {
+    Formula formula = new Formula();
+    formula.setExpression(formulaExpression);
+    return new SensorParameter(
+        null,
+        name,
+        null,
+        new SensorType(null, "Other", null),
+        Unit.METER,
+        formula,
+        new AlarmLimits(lower, upper),
+        true,
+        null);
   }
 
   @Test
@@ -262,11 +385,12 @@ class JooqSensorRepositoryIT {
 
           // Assert
           assertTrue(found.isPresent());
-          //          assertEquals("FIND-001", found.get().getCode());
-          //          assertEquals("x * 2", found.get().getFormula().getExpression());
-          //          assertEquals(0.0, found.get().getAlarmLimits().lower());
-          //          assertEquals(100.0, found.get().getAlarmLimits().upper());
-          //          assertEquals("Other", found.get().getType().name());
+          SensorParameter foundParameter = found.get().getParameters().getFirst();
+          assertEquals("FIND-001", found.get().getDasSensorAlias());
+          assertEquals("x * 2", foundParameter.getFormula().getExpression());
+          assertEquals(0.0, foundParameter.getAlarmLimits().lower());
+          assertEquals(100.0, foundParameter.getAlarmLimits().upper());
+          assertEquals("Other", foundParameter.getType().name());
         });
   }
 
@@ -309,7 +433,7 @@ class JooqSensorRepositoryIT {
           sensor1 = repository.create(sensor1);
           sensor2 = repository.create(sensor2);
 
-          //          sensor2.setCode(sensor1.getCode());
+          sensor2.setDasSensorAlias(sensor1.getDasSensorAlias());
 
           // Act & Assert
           Sensor finalSensor = sensor2;
@@ -317,7 +441,7 @@ class JooqSensorRepositoryIT {
               assertThrows(
                   FieldBusinessValidationException.class, () -> repository.update(finalSensor));
 
-          assertEquals("code", exception.getField());
+          assertEquals("dasSensorAlias", exception.getField());
           assertEquals("validation.unique", exception.getMessageKey());
         });
   }
@@ -378,14 +502,12 @@ class JooqSensorRepositoryIT {
 
             // Assert
             assertFalse(unauditedSensors.isEmpty(), "Stream should not be empty");
-            //
-            //            boolean containsOurSensor =
-            //                unauditedSensors.stream().anyMatch(s ->
-            // s.getCode().equals("UNAUDITED-1"));
+            boolean containsOurSensor =
+                unauditedSensors.stream()
+                    .anyMatch(s -> "UNAUDITED-1".equals(s.getDasSensorAlias()));
 
-            //            assertTrue(
-            //                containsOurSensor, "Stream should contain the newly created unaudited
-            // sensor");
+            assertTrue(
+                containsOurSensor, "Stream should contain the newly created unaudited sensor");
           }
         });
   }
@@ -405,12 +527,10 @@ class JooqSensorRepositoryIT {
             List<Sensor> unauditedSensors = stream.toList();
 
             // Assert
-            //            boolean containsOurSensor =
-            //                unauditedSensors.stream().anyMatch(s ->
-            // s.getCode().equals("AUDITED-1"));
-            //
-            //            assertFalse(containsOurSensor, "Stream should NOT contain the audited
-            // sensor");
+            boolean containsOurSensor =
+                unauditedSensors.stream().anyMatch(s -> "AUDITED-1".equals(s.getDasSensorAlias()));
+
+            assertFalse(containsOurSensor, "Stream should NOT contain the audited sensor");
           }
         });
   }
@@ -429,25 +549,28 @@ class JooqSensorRepositoryIT {
       String code, String name, String formulaExpression, Coordinates coordinates) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
-    AlarmLimits alarmLimits = new AlarmLimits(0.0, 100.0);
+    SensorParameter parameter =
+        new SensorParameter(
+            null,
+            name,
+            null,
+            new SensorType(null, "Other", null),
+            Unit.METER,
+            formula,
+            new AlarmLimits(0.0, 100.0),
+            true,
+            null);
 
-    return new Sensor(
-        code,
-        name,
-        new SensorType(null, "Other", null),
-        Unit.METER,
-        null,
-        coordinates,
-        alarmLimits,
-        true,
-        formula);
+    Sensor sensor = new Sensor(name, code, DAS.SOL_EXPERTS, null, null, coordinates, true, null);
+    sensor.setParameters(new ArrayList<>(List.of(parameter)));
+    return sensor;
   }
 
   private int indexOfCode(List<Sensor> rows, String code) {
     for (int i = 0; i < rows.size(); i++) {
-      //      if (rows.get(i).getCode().equals(code)) {
-      return i;
-      //      }
+      if (code.equals(rows.get(i).getDasSensorAlias())) {
+        return i;
+      }
     }
     throw new AssertionError("Expected to find sensor with code " + code);
   }

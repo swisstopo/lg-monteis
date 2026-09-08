@@ -7,10 +7,13 @@ import static org.mockito.BDDMockito.then;
 import ch.swisstopo.monteis.contracts.SensorConfig;
 import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
+import ch.swisstopo.monteis.core.modules.sensor.domain.DAS;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -27,24 +30,28 @@ class SensorConfigPublisherTest {
   @Captor private ArgumentCaptor<SensorConfig> configCaptor;
 
   @Test
-  void should_publish_sensor_config_keyed_by_code() {
+  void should_publish_sensor_config_keyed_by_das_parameter_alias() {
     // given
     String topic = "internal-sensor-config";
     SensorConfigPublisher publisher = new SensorConfigPublisher(kafkaTemplate, topic);
 
     Formula formula = new Formula();
     formula.setExpression("x * 2");
-    Sensor sensor =
-        new Sensor(
+    SensorParameter parameter =
+        new SensorParameter(
+            null,
+            "Temperature",
             "SENS-001",
-            "Test Sensor",
             new SensorType(null, "Other", null),
             Unit.METER,
-            null,
-            new Coordinates(0, 0, 0),
+            formula,
             new AlarmLimits(0.0, 100.0),
             true,
-            formula);
+            null);
+    Sensor sensor =
+        new Sensor(
+            "Test Sensor", null, DAS.SOL_EXPERTS, null, null, new Coordinates(0, 0, 0), true, null);
+    sensor.setParameters(List.of(parameter));
     sensor.setVersion(3);
 
     // when

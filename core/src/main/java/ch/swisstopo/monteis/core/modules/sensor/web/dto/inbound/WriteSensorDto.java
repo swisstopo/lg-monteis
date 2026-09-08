@@ -3,7 +3,7 @@ package ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.NullOrNotBlank;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
-import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.sensor.domain.DAS;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -21,9 +21,10 @@ public record WriteSensorDto(
         UUID id,
     @NotBlank @Size(min = 2, max = 50) String name,
     @NullOrNotBlank @Size(max = 255) String dasSensorAlias,
+    @NotNull DAS das,
     @NullOrNotBlank @Size(max = 4096) String comment,
     UUID fulcrumId,
-    @Valid Experiment mainExperiment,
+    UUID mainExperimentId,
     @NotNull @Valid CoordinatesDto coordinates,
     @NotNull Boolean active,
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)

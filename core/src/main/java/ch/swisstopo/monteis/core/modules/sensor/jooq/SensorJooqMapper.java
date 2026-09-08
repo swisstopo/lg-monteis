@@ -24,6 +24,7 @@ public interface SensorJooqMapper {
   @Mapping(target = "coordinates.x", source = "sensorRecord.x")
   @Mapping(target = "coordinates.y", source = "sensorRecord.y")
   @Mapping(target = "coordinates.z", source = "sensorRecord.z")
+  @Mapping(target = "DAS", source = "sensorRecord.das")
   @Mapping(target = "mainExperiment", ignore = true)
   @Mapping(target = "parameters", ignore = true)
   Sensor toDomain(SensorsRecord sensorRecord);
@@ -31,12 +32,14 @@ public interface SensorJooqMapper {
   @Mapping(target = "x", source = "coordinates.x")
   @Mapping(target = "y", source = "coordinates.y")
   @Mapping(target = "z", source = "coordinates.z")
+  @Mapping(target = "das", source = "DAS")
   @Mapping(target = "mainExperiment", ignore = true)
   SensorsRecord toRecord(Sensor domain);
 
   @Mapping(target = "x", source = "coordinates.x")
   @Mapping(target = "y", source = "coordinates.y")
   @Mapping(target = "z", source = "coordinates.z")
+  @Mapping(target = "das", source = "DAS")
   @Mapping(target = "mainExperiment", ignore = true)
   void updateRecordFromDomain(Sensor sensor, @MappingTarget SensorsRecord sensorsRecord);
 
@@ -62,6 +65,19 @@ public interface SensorJooqMapper {
   @Mapping(target = "typeId", source = "type.id")
   @Mapping(target = "sensorId", ignore = true)
   SensorParameterRecord toParameterRecord(SensorParameter domain);
+
+  // formulaId/typeId are deliberately left for the caller to set explicitly (from the
+  // found-or-created Formula/SensorType records) - the domain SensorParameter's own
+  // formula.id/type.id are never populated by the write path (the frontend only ever sends a
+  // formula expression / type name, not an id), so mapping them here would just overwrite the
+  // fetched record's real, still-correct foreign keys with null.
+  @Mapping(target = "lowerAlarmLimit", source = "alarmLimits.lower")
+  @Mapping(target = "upperAlarmLimit", source = "alarmLimits.upper")
+  @Mapping(target = "formulaId", ignore = true)
+  @Mapping(target = "typeId", ignore = true)
+  @Mapping(target = "sensorId", ignore = true)
+  void updateParameterRecordFromDomain(
+      SensorParameter domain, @MappingTarget SensorParameterRecord record);
 
   // --- Embedded Formula and Type Sub-Object Mappings ---
 
