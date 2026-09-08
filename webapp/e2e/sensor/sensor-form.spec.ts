@@ -22,7 +22,8 @@ test('should create sensor', async ({ page }) => {
   await dialog.getByLabel('DAS Sensor Alias').fill(`SN-TEMP-${uniqueId}`);
   await dialog.getByLabel('Sensor Name').fill('E2E TEST');
 
-  await dialog.getByLabel('DAS').click();
+  // 'DAS' alone substring-matches 'DAS Sensor Alias' and 'DAS Parameter Alias' too - scope exactly.
+  await dialog.getByLabel('DAS', { exact: true }).click();
   await page.getByRole('option', { name: 'SolExperts' }).click();
 
   const firstParameter = dialog.getByTestId('parameter-block-0');
@@ -41,8 +42,19 @@ test('should create sensor', async ({ page }) => {
   await firstParameter.getByLabel('Alarm Limit From').fill('10');
   await firstParameter.getByLabel('Alarm Limit To').fill('100');
 
-  await firstParameter.getByLabel("Formula Expression (Optional, defaults to 'x')").fill('x');
-  await page.getByRole('option', { name: 'x * 1000 (v1)' }).click();
+  // The CDK overlay is position: fixed and can render outside the actual viewport (WebKit gives
+  // it a zero-overlap bounding box), so no click - mouse or forced - has coordinates to land on.
+  // Typing the exact expression narrows the autocomplete to this one option and Enter selects it
+  // via the keyboard instead, which is independent of the overlay's on-screen position.
+  // getByLabel matches both the input and its results listbox here - Material's autocomplete
+  // gives them the same aria-labelledby. The combobox role is unique to the input.
+  const formulaInput = firstParameter.getByRole('combobox', {
+    name: "Formula Expression (Optional, defaults to 'x')",
+  });
+  await formulaInput.fill('x * 1000');
+  await expect(page.getByRole('option', { name: 'x * 1000 (v1)' })).toBeVisible();
+  await formulaInput.press('ArrowDown');
+  await formulaInput.press('Enter');
 
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 
@@ -50,8 +62,13 @@ test('should create sensor', async ({ page }) => {
 });
 
 test('should update sensor', async ({ page }) => {
-  // "Edit Sensor" is only enabled once a row is selected.
-  await page.locator('.ag-row').first().click();
+  // "Edit Sensor" is only enabled once a row is selected. Infinite row model: the row initially
+  // renders as an empty placeholder while its data block loads. Clicking too early hits a
+  // not-yet-loaded node, which ag-grid silently ignores for selection - wait for real content
+  // before clicking.
+  const firstRow = page.locator('.ag-row').first();
+  await expect(firstRow.locator('[col-id="dasSensorAlias"]')).not.toBeEmpty();
+  await firstRow.click();
   await page.getByRole('button', { name: 'Edit Sensor' }).click();
   await expect(page.getByRole('heading', { name: 'Edit Sensor', level: 2 })).toBeVisible();
 
@@ -68,8 +85,19 @@ test('should update sensor', async ({ page }) => {
   await firstParameter.getByLabel('Alarm Limit From').fill('20');
   await firstParameter.getByLabel('Alarm Limit To').fill('200');
 
-  await firstParameter.getByLabel("Formula Expression (Optional, defaults to 'x')").fill('x');
-  await page.getByRole('option', { name: 'x * 1000 (v1)' }).click();
+  // The CDK overlay is position: fixed and can render outside the actual viewport (WebKit gives
+  // it a zero-overlap bounding box), so no click - mouse or forced - has coordinates to land on.
+  // Typing the exact expression narrows the autocomplete to this one option and Enter selects it
+  // via the keyboard instead, which is independent of the overlay's on-screen position.
+  // getByLabel matches both the input and its results listbox here - Material's autocomplete
+  // gives them the same aria-labelledby. The combobox role is unique to the input.
+  const formulaInput = firstParameter.getByRole('combobox', {
+    name: "Formula Expression (Optional, defaults to 'x')",
+  });
+  await formulaInput.fill('x * 1000');
+  await expect(page.getByRole('option', { name: 'x * 1000 (v1)' })).toBeVisible();
+  await formulaInput.press('ArrowDown');
+  await formulaInput.press('Enter');
 
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 
@@ -90,7 +118,8 @@ test('should fail to create existing sensor', async ({ page }) => {
   await dialog.getByLabel('DAS Sensor Alias').fill(`SN-TEMP-${uniqueId}`);
   await dialog.getByLabel('Sensor Name').fill('E2E TEST');
 
-  await dialog.getByLabel('DAS').click();
+  // 'DAS' alone substring-matches 'DAS Sensor Alias' and 'DAS Parameter Alias' too - scope exactly.
+  await dialog.getByLabel('DAS', { exact: true }).click();
   await page.getByRole('option', { name: 'SolExperts' }).click();
 
   const firstParameter = dialog.getByTestId('parameter-block-0');
@@ -109,8 +138,19 @@ test('should fail to create existing sensor', async ({ page }) => {
   await firstParameter.getByLabel('Alarm Limit From').fill('10');
   await firstParameter.getByLabel('Alarm Limit To').fill('100');
 
-  await firstParameter.getByLabel("Formula Expression (Optional, defaults to 'x')").fill('x');
-  await page.getByRole('option', { name: 'x * 1000 (v1)' }).click();
+  // The CDK overlay is position: fixed and can render outside the actual viewport (WebKit gives
+  // it a zero-overlap bounding box), so no click - mouse or forced - has coordinates to land on.
+  // Typing the exact expression narrows the autocomplete to this one option and Enter selects it
+  // via the keyboard instead, which is independent of the overlay's on-screen position.
+  // getByLabel matches both the input and its results listbox here - Material's autocomplete
+  // gives them the same aria-labelledby. The combobox role is unique to the input.
+  const formulaInput = firstParameter.getByRole('combobox', {
+    name: "Formula Expression (Optional, defaults to 'x')",
+  });
+  await formulaInput.fill('x * 1000');
+  await expect(page.getByRole('option', { name: 'x * 1000 (v1)' })).toBeVisible();
+  await formulaInput.press('ArrowDown');
+  await formulaInput.press('Enter');
 
   await dialog.getByRole('button', { name: 'Save and create new', exact: true }).click();
 
