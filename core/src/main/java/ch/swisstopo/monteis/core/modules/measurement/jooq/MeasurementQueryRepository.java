@@ -2,17 +2,19 @@ package ch.swisstopo.monteis.core.modules.measurement.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSORS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_PARAMETER;
-// import static
-// ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
+import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
+import static org.jooq.Records.mapping;
 
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +33,12 @@ public class MeasurementQueryRepository implements MeasurementQuery {
       UUID id, OffsetDateTime from, OffsetDateTime to) {
 
     var parameterInfo =
-        dsl.select(SENSOR_PARAMETER.ID, SENSOR_PARAMETER.NAME, SENSOR_PARAMETER.UNIT, SENSORS.NAME)
+        dsl.select(
+                SENSOR_PARAMETER.ID,
+                SENSOR_PARAMETER.NAME,
+                SENSOR_PARAMETER.DAS_PARAMETER_ALIAS,
+                SENSOR_PARAMETER.UNIT,
+                SENSORS.NAME)
             .from(SENSOR_PARAMETER)
             .join(SENSORS)
             .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
@@ -42,29 +49,27 @@ public class MeasurementQueryRepository implements MeasurementQuery {
       return Optional.empty();
     }
 
-    List<ChartPointDto> points = List.of();
-    //                dsl.select(SENSOR_READING_SECURED.TIMESTAMP,
-    // SENSOR_READING_SECURED.NORM_VALUE)
-    //                        .from(SENSOR_READING_SECURED)
-    //                        // sensor_reading_secured should now link via the parameter ID
-    //
-    // .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(parameterInfo.get(SENSOR_PARAMETER.ID)))
-    //                        // INLINE from and to in order to bypass string conversion via fdw
-    //                        .and(SENSOR_READING_SECURED.TIMESTAMP.between(DSL.inline(from),
-    // DSL.inline(to)))
-    //                        .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc())
-    //                        .fetch(mapping(ChartPointDto::new));
+    List<ChartPointDto> points =
+        dsl.select(SENSOR_READING_SECURED.TIMESTAMP, SENSOR_READING_SECURED.NORM_VALUE)
+            .from(SENSOR_READING_SECURED)
+            // sensor_reading_secured now links via sensor_parameter.das_parameter_alias
+            .where(
+                SENSOR_READING_SECURED.SENSOR_ID.eq(
+                    parameterInfo.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS)))
+            // INLINE from and to in order to bypass string conversion via fdw
+            .and(SENSOR_READING_SECURED.TIMESTAMP.between(DSL.inline(from), DSL.inline(to)))
+            .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc())
+            .fetch(mapping(ChartPointDto::new));
 
     String combinedName =
         parameterInfo.get(SENSORS.NAME) + " - " + parameterInfo.get(SENSOR_PARAMETER.NAME);
 
-    //        return Optional.of(
-    //                new ChartDataResponseDto(
-    //                        parameterInfo.get(SENSOR_PARAMETER.ID),
-    //                        parameterInfo.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
-    //                        combinedName,
-    //                        parameterInfo.get(Unit.CANDELA),
-    //                        points));
-    return null;
+    return Optional.of(
+        new ChartDataResponseDto(
+            parameterInfo.get(SENSOR_PARAMETER.ID),
+            parameterInfo.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
+            combinedName,
+            Unit.valueOf(parameterInfo.get(SENSOR_PARAMETER.UNIT).toString()),
+            points));
   }
 }

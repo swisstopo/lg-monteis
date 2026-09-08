@@ -60,3 +60,10 @@ ALTER TABLE sensors
     DROP COLUMN lower_alarm_limit CASCADE,
     DROP COLUMN upper_alarm_limit CASCADE,
     DROP COLUMN formula_id CASCADE;
+
+CREATE VIEW sensor_reading_secured WITH (security_invoker = true) AS
+SELECT r.*
+FROM raw_sensor_reading r
+         JOIN sensor_parameter s ON s.das_parameter_alias = r.sensor_id;
+
+GRANT SELECT ON sensor_reading_secured TO core_app;

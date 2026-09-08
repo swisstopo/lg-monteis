@@ -1,7 +1,8 @@
 package ch.swisstopo.monteis.core.modules.overview.jooq;
 
-// import static
-// ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_PARAMETER;
+import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
+import static org.jooq.Records.mapping;
 
 import ch.swisstopo.monteis.core.modules.overview.query.QueryInterface;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
@@ -27,17 +28,18 @@ public class OverviewQueryRepository implements QueryInterface {
 
   @Override
   public List<ReadSimpleMetricDto> fetchRecentMetrics(int limit) {
-    //        return dsl.select(
-    //                SENSOR_READING_SECURED.TIMESTAMP,
-    //                SENSOR_READING_SECURED.SENSOR_ID,
-    //                SENSOR_READING_SECURED.RAW_VALUE,
-    //                SENSOR_READING_SECURED.NORM_VALUE,
-    //                SENSOR_READING_SECURED.VERSION,
-    //                SENSOR_READING_SECURED.STATUS)
-    //            .from(SENSOR_READING_SECURED)
-    //            .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
-    //            .limit(limit)
-    //            .fetch(mapping(ReadSimpleMetricDto::new));
-    return null;
+    return dsl.select(
+            SENSOR_READING_SECURED.TIMESTAMP,
+            SENSOR_READING_SECURED.SENSOR_ID,
+            SENSOR_READING_SECURED.RAW_VALUE,
+            SENSOR_READING_SECURED.NORM_VALUE,
+            SENSOR_READING_SECURED.VERSION,
+            SENSOR_READING_SECURED.STATUS)
+        .from(SENSOR_READING_SECURED)
+        .join(SENSOR_PARAMETER)
+        .on(SENSOR_READING_SECURED.SENSOR_ID.eq(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
+        .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
+        .limit(limit)
+        .fetch(mapping(ReadSimpleMetricDto::new));
   }
 }

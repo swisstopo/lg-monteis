@@ -158,7 +158,7 @@ export default class MeasurementsTable {
   }
 
   protected getMetricRowId = (row: ReadSimpleMetricDto): string =>
-    `${row.sensorCode}-${row.timestamp}`;
+    `${row.sensorParameterDasParameterAlias}-${row.timestamp}`;
 
   protected onPlot() {
     if (this.rangeForm().invalid()) {
