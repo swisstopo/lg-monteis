@@ -40,11 +40,34 @@
         "edit": "Edit Sensor"
       }
     },
-    "code": {
-      "label": "Sensor Code",
+    "dasSensorAlias": {
+      "label": "DAS Sensor Alias",
       "placeholder": "e.g., SN-TEMP-402",
       "validation": {
-        "required": "Sensor code is required"
+        "required": "DAS sensor alias is required"
+      }
+    },
+    "das": {
+      "label": "DAS",
+      "placeholder": "Select a DAS",
+      "option": {
+        "solExperts": {
+          "label": "SolExperts"
+        }
+      },
+      "validation": {
+        "required": "DAS is required"
+      }
+    },
+    "fulcrumId": {
+      "label": "Fulcrum ID",
+      "placeholder": "e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    },
+    "mainExperiment": {
+      "label": "Main Experiment",
+      "placeholder": "Search for an experiment...",
+      "validation": {
+        "notSelected": "Select an experiment from the suggestions"
       }
     },
     "name": {
@@ -153,6 +176,28 @@
       },
       "column": "Alarm Limits",
       "display": "[{{lower}} to {{upper}}]"
+    },
+    "parameter": {
+      "heading": "Parameter {{number}}",
+      "name": {
+        "label": "Parameter Name",
+        "placeholder": "e.g., Axial Displacement",
+        "validation": {
+          "required": "Parameter name is required"
+        }
+      },
+      "dasParameterAlias": {
+        "label": "DAS Parameter Alias",
+        "placeholder": "e.g., DISP-AX-01"
+      },
+      "active": {
+        "label": "Parameter Active"
+      },
+      "comment": {
+        "label": "Parameter Comment"
+      },
+      "addButton": "Add Parameter",
+      "removeButton": "Remove Parameter"
     },
     "button": {
       "cancel": "Cancel",
