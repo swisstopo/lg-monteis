@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.error;
 
+import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
@@ -29,6 +30,7 @@ import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
@@ -190,6 +192,54 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
     ErrorDto payload = ErrorDto.global(Map.of(ERROR_ID, errorId));
 
     return ResponseEntity.status(statusCode).headers(headers).body(payload);
+  }
+
+  @ExceptionHandler(RestClientResponseException.class)
+  @ApiResponse(
+      responseCode = "502",
+      description = "An upstream API MonTEIS depends on refused or failed the request.",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  public ResponseEntity<ErrorDto> handleUpstreamApiFailure(
+      RestClientResponseException e, HttpServletRequest request) {
+    RequestErrorContext ctx = getErrorContext(request);
+
+    log.error(
+        "Upstream API failed with {} during {} {} [ErrorID: {}]: {}",
+        e.getStatusCode(),
+        ctx.method(),
+        ctx.uri(),
+        ctx.errorId(),
+        upstreamDetail(e));
+
+    // The upstream's message can carry query internals, so it stays in the log; clients get the
+    // correlation id and the status to distinguish "they are down" from "we sent nonsense".
+    ErrorDto payload =
+        ErrorDto.global(
+            "error.upstream.failed",
+            Map.of(ERROR_ID, ctx.errorId(), "upstreamStatus", e.getStatusCode().value()));
+
+    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(payload);
+  }
+
+  /**
+   * Reads whatever the upstream said about the failure. Spring keeps the raw response body on the
+   * exception, so the upstream's own error contract is decoded here rather than in every client:
+   * Fulcrum documents {@link BadRequestResponse} for its failures. Any other body - a proxy error
+   * page, or a response from an upstream with a different contract - falls back to the raw text,
+   * as does an exception that was not produced by a client with message converters, where
+   * {@code getResponseBodyAs} refuses to convert at all.
+   */
+  private static String upstreamDetail(RestClientResponseException e) {
+    try {
+      BadRequestResponse parsed = e.getResponseBodyAs(BadRequestResponse.class);
+      if (parsed != null && parsed.getError() != null) {
+        return parsed.getError();
+      }
+    } catch (RuntimeException conversionFailure) {
+      log.debug("Upstream error body is not the documented envelope", conversionFailure);
+    }
+
+    return e.getResponseBodyAsString();
   }
 
   @ExceptionHandler(Exception.class)

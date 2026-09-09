@@ -47,6 +47,14 @@
       <artifactId>spring-context</artifactId>
       <scope>provided</scope>
     </dependency>
+
+    <!-- The generated Fulcrum @HttpExchange interface refers to ResponseEntity, the HTTP service
+         annotations and MultipartFile. -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-web</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -121,13 +129,20 @@
 
               <generatorName>spring</generatorName>
 
-              <generateApis>false</generateApis>
+              <!-- Unlike the MonTEIS execution above this one also generates the API, as a
+                   Spring @HttpExchange interface: endpoint paths, query parameter names and
+                   their documented defaults then come from the spec instead of being retyped in
+                   the client. The spec declares no tags, so every operation lands in a single
+                   DefaultApi. -->
+              <generateApis>true</generateApis>
+              <library>spring-http-interface</library>
               <generateApiTests>false</generateApiTests>
               <generateApiDocumentation>false</generateApiDocumentation>
               <generateModelTests>false</generateModelTests>
               <generateModelDocumentation>false</generateModelDocumentation>
               <generateSupportingFiles>false</generateSupportingFiles>
 
+              <apiPackage>ch.swisstopo.monteis.contracts.fulcrum.api</apiPackage>
               <modelPackage>ch.swisstopo.monteis.contracts.fulcrum</modelPackage>
               <output>${project.build.directory}/generated-sources/openapi-fulcrum</output>
 
