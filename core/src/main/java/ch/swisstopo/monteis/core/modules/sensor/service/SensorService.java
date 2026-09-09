@@ -1,6 +1,8 @@
 package ch.swisstopo.monteis.core.modules.sensor.service;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
@@ -11,6 +13,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
@@ -18,22 +21,37 @@ import org.springframework.stereotype.Service;
 public class SensorService {
   private final SensorRepository repository;
   private final SensorConfigPublisher configPublisher;
+  private final FulcrumService fulcrumService;
 
-  public SensorService(SensorRepository repository, SensorConfigPublisher configPublisher) {
+  public SensorService(
+      SensorRepository repository,
+      SensorConfigPublisher configPublisher,
+      FulcrumService fulcrumService) {
     this.repository = repository;
     this.configPublisher = configPublisher;
+    this.fulcrumService = fulcrumService;
   }
 
   @AuditChanges
   public Sensor createSensor(Sensor sensor) {
+    Optional<FulcrumSensor> sensorById = fulcrumService.getSensorById(sensor.getFulcrumId());
+    if (sensorById.isEmpty()) {
+      throw new ObjectBusinessValidationException("object.deleted", Map.of());
+    }
+
     Sensor created = repository.create(sensor);
-    configPublisher.publish(created); // TODO: MON-143 Should only publish sensorParameter
+
     return created;
   }
 
   @AuditChanges
   public Sensor updateSensor(Sensor sensor) {
     Sensor before = repository.findById(sensor.getId()).orElse(null);
+
+    Optional<FulcrumSensor> sensorById = fulcrumService.getSensorById(sensor.getFulcrumId());
+    if (sensorById.isEmpty()) {
+      throw new ObjectBusinessValidationException("object.deleted", Map.of());
+    }
     Sensor updated = repository.update(sensor);
 
     //    if (updated.changeTriggersPublish(before)) {

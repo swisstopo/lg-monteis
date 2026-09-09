@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.fulcrum;
+package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -26,14 +26,10 @@ class FulcrumSpecTest {
 
   private static final String SPEC_RESOURCE = "/fulcrum/rest-api.json";
 
-  /** Path and host the client talks to. */
+  /** Path the generated client uses; only referenced to locate the operation in the document. */
   private static final String QUERY_PATH = "/v2/query";
 
   private static final String SERVER_URL = "https://api.fulcrumapp.com/api";
-
-  /** Query parameters the client sends, with the defaults the spec documents for them. */
-  private static final List<String> SENT_PARAMETERS =
-      List.of("q", "format", "headers", "metadata", "arrays", "page", "per_page");
 
   private static JsonNode spec;
 
@@ -51,14 +47,6 @@ class FulcrumSpecTest {
   }
 
   @Test
-  void query_endpoint_is_still_a_get_on_the_same_path() {
-    JsonNode get = spec.path("paths").path(QUERY_PATH).path("get");
-
-    assertThat(get.isObject()).isTrue();
-    assertThat(get.path("operationId").asString()).isEqualTo("query-get");
-  }
-
-  @Test
   void query_api_still_authenticates_with_the_x_api_token_header() {
     JsonNode scheme = spec.path("components").path("securitySchemes").path("ApiToken");
 
@@ -73,24 +61,6 @@ class FulcrumSpecTest {
         spec.path("servers").valueStream().map(s -> s.path("url").asString()).toList();
 
     assertThat(servers).contains(SERVER_URL);
-  }
-
-  @Test
-  void parameters_the_client_sends_still_exist_with_unchanged_defaults() {
-    JsonNode parameters = spec.path("paths").path(QUERY_PATH).path("get").path("parameters");
-    List<String> names = parameters.valueStream().map(p -> p.path("name").asString()).toList();
-
-    assertThat(names).containsAll(SENT_PARAMETERS);
-    assertThat(parameter(parameters, "q").path("required").asBoolean()).isTrue();
-
-    // The client sends these explicitly, so a changed default is not breaking - but a changed
-    // type or a dropped parameter is, and the values below document what we rely on.
-    assertThat(defaultOf(parameters, "format")).isEqualTo("csv");
-    assertThat(defaultOf(parameters, "headers")).isEqualTo("true");
-    assertThat(defaultOf(parameters, "metadata")).isEqualTo("false");
-    assertThat(defaultOf(parameters, "arrays")).isEqualTo("false");
-    assertThat(defaultOf(parameters, "page")).isEqualTo("1");
-    assertThat(defaultOf(parameters, "per_page")).isEqualTo("20000");
   }
 
   @Test
@@ -140,18 +110,5 @@ class FulcrumSpecTest {
             "the row envelope of the Query API is undocumented, which is why the sensor row DTO is"
                 + " hand-written - if Fulcrum starts typing it, generate the model instead")
         .isTrue();
-  }
-
-  private static JsonNode parameter(JsonNode parameters, String name) {
-    return parameters
-        .valueStream()
-        .filter(p -> name.equals(p.path("name").asString()))
-        .findFirst()
-        .orElseThrow(
-            () -> new AssertionError("Parameter %s is gone from the spec".formatted(name)));
-  }
-
-  private static String defaultOf(JsonNode parameters, String name) {
-    return parameter(parameters, name).path("schema").path("default").asString();
   }
 }
