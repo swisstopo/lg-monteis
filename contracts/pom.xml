@@ -51,11 +51,37 @@
 
   <build>
     <plugins>
+      <!-- Fetches the third-party Fulcrum REST API spec at the SHA pinned in the parent pom.
+           Deliberately not vendored into src/main/resources: Renovate bumps the SHA but cannot
+           rewrite the 400+ KB document, so a checked-in copy would drift out of sync with the
+           pin next to it. Downloaded to target/classes instead, which both feeds the generator
+           below and ships the exact pinned contract in the jar for FulcrumSpecTest to assert
+           against. -->
+      <plugin>
+        <groupId>com.googlecode.maven-download-plugin</groupId>
+        <artifactId>download-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>fetch-fulcrum-spec</id>
+            <goals>
+              <goal>wget</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <url>${fulcrum.spec.url}</url>
+              <outputDirectory>${project.build.outputDirectory}/fulcrum</outputDirectory>
+              <outputFileName>rest-api.json</outputFileName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <plugin>
         <groupId>org.openapitools</groupId>
         <artifactId>openapi-generator-maven-plugin</artifactId>
         <executions>
           <execution>
+            <id>generate-monteis-models</id>
             <goals>
               <goal>generate</goal>
             </goals>
@@ -74,6 +100,41 @@
 
               <configOptions>
                 <useRecords>true</useRecords>
+              </configOptions>
+            </configuration>
+          </execution>
+
+          <!-- Models of the Fulcrum API. Models only, like the execution above: the spec types
+               no response body for /v2/query (its 200 is an empty EmptySuccessResponse), so the
+               query row DTOs stay hand-written and only the remaining resources - records,
+               forms, attachments, changesets - plus the BadRequestResponse error envelope come
+               from here. openApiNullable is off so the generated code needs no JsonNullable,
+               whose jackson-databind-nullable is built against Jackson 2 while the application
+               runs on Jackson 3. -->
+          <execution>
+            <id>generate-fulcrum-models</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <inputSpec>${project.build.outputDirectory}/fulcrum/rest-api.json</inputSpec>
+
+              <generatorName>spring</generatorName>
+
+              <generateApis>false</generateApis>
+              <generateApiTests>false</generateApiTests>
+              <generateApiDocumentation>false</generateApiDocumentation>
+              <generateModelTests>false</generateModelTests>
+              <generateModelDocumentation>false</generateModelDocumentation>
+              <generateSupportingFiles>false</generateSupportingFiles>
+
+              <modelPackage>ch.swisstopo.monteis.contracts.fulcrum</modelPackage>
+              <output>${project.build.directory}/generated-sources/openapi-fulcrum</output>
+
+              <configOptions>
+                <useRecords>true</useRecords>
+                <openApiNullable>false</openApiNullable>
+                <useOneOfInterfaces>false</useOneOfInterfaces>
               </configOptions>
             </configuration>
           </execution>

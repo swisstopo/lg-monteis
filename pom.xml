@@ -35,6 +35,7 @@
     <jackson-databind-nullable.version>0.2.11</jackson-databind-nullable.version>
     <parsington.version>3.3.0</parsington.version>
     <maven-build-helper.version>3.6.1</maven-build-helper.version>
+    <download-maven-plugin.version>1.10.0</download-maven-plugin.version>
     <javers.version>7.11.8</javers.version>
     <spring-boot-starter-aop.version>3.5.16</spring-boot-starter-aop.version>
     <org.mapstruct.version>1.6.3</org.mapstruct.version>
@@ -68,6 +69,16 @@
     <tomcat.version>11.0.25</tomcat.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
+
+    <!-- Fulcrum REST API contract (MON-142). The spec is published only on the v2 branch of
+         github.com/fulcrumapp/api, a repository that carries neither tags nor releases, so it is
+         pinned to a commit SHA and kept current by Renovate: the customManager in renovate.json
+         tracks that branch head via the git-refs datasource and raises a digest bump here, which
+         automerges once the regenerated models still compile and FulcrumSpecTest still passes.
+         Keep this a SHA - resolving "v2" at build time would make the build unreproducible and
+         leave Renovate nothing to bump. -->
+    <fulcrum.spec.ref>0e36397a6cc292645283587ec62d4d808f667b44</fulcrum.spec.ref>
+    <fulcrum.spec.url>https://raw.githubusercontent.com/fulcrumapp/api/${fulcrum.spec.ref}/reference/rest-api.json</fulcrum.spec.url>
   </properties>
 
   <dependencyManagement>
@@ -248,6 +259,13 @@
                 <include>**/src/main/java/**/*.java</include>
                 <include>**/src/test/java/**/*.java</include>
               </includes>
+              <!-- openapi-generator and jOOQ write their output under target/ into a
+                   .../src/main/java/... layout, which the includes above would otherwise match.
+                   Build output is never formatted, and on a built tree spotless:check would fail
+                   on files nobody can fix by hand. -->
+              <excludes>
+                <exclude>**/target/**/*.java</exclude>
+              </excludes>
               <googleJavaFormat>
                 <reflowLongStrings>true</reflowLongStrings>
                 <formatJavadoc>false</formatJavadoc>
@@ -301,6 +319,17 @@
           <groupId>org.openapitools</groupId>
           <artifactId>openapi-generator-maven-plugin</artifactId>
           <version>${openapi-generator-plugin.version}</version>
+        </plugin>
+
+        <plugin>
+          <groupId>com.googlecode.maven-download-plugin</groupId>
+          <artifactId>download-maven-plugin</artifactId>
+          <version>${download-maven-plugin.version}</version>
+          <configuration>
+            <!-- Cached per URL, and the URL carries the pinned SHA, so the spec is fetched once
+                 per bump and offline builds keep working afterwards. -->
+            <skipCache>false</skipCache>
+          </configuration>
         </plugin>
 
         <plugin>
