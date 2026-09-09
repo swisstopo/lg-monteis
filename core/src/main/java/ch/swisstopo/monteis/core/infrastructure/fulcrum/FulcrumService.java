@@ -29,7 +29,9 @@ public class FulcrumService {
   private static final String JSON_FORMAT = "json";
 
   private static final boolean WITH_HEADERS = true;
-  private static final boolean WITHOUT_COLUMN_METADATA = true;
+  // metadata=true would prepend the "fields" column listing to the response, which nothing here
+  // reads - FulcrumQueryResponse maps "rows" only.
+  private static final boolean WITHOUT_COLUMN_METADATA = false;
   private static final boolean ROWS_AS_OBJECTS = false;
   private static final int FIRST_PAGE = 1;
 
