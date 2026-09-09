@@ -27,6 +27,8 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.RequestMatcher;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.support.RestClientAdapter;
+import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 import tools.jackson.databind.json.JsonMapper;
@@ -111,15 +113,19 @@ class FulcrumServiceTest {
 
     JsonMapper objectMapper = JsonMapper.builder().build();
 
-    // Mirrors FulcrumConfig, minus the request factory it installs - MockRestServiceServer needs
-    // to keep its own. The API proxy is the real one.
+    // Mirrors what FulcrumConfig wires, except for the request factory it installs -
+    // MockRestServiceServer has to keep its own, so the proxy is built here rather than by
+    // calling the bean method. That the real wiring works is covered by CoreApplicationIT.
     RestClient.Builder builder =
         RestClient.builder()
             .baseUrl(properties.baseUrl())
             .defaultHeader(FulcrumConfig.API_TOKEN_HEADER, properties.apiToken());
     server = MockRestServiceServer.bindTo(builder).build();
 
-    DefaultApi api = new FulcrumConfig().fulcrumApi(builder.build());
+    DefaultApi api =
+        HttpServiceProxyFactory.builderFor(RestClientAdapter.create(builder.build()))
+            .build()
+            .createClient(DefaultApi.class);
     service = new FulcrumService(api, properties, objectMapper);
   }
 

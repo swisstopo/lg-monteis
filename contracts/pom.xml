@@ -11,6 +11,15 @@
 
   <artifactId>contracts</artifactId>
 
+  <properties>
+    <!-- The Fulcrum spec is committed rather than downloaded during the build: it is a
+         third-party document in a repository we do not control, and no build should fail because
+         GitHub is unreachable or rate-limiting. Being a normal resource it is also copied into
+         the jar, which is where FulcrumSpecTest reads it from. Refreshing it is the explicit,
+         network-using step in .github/scripts/sync-fulcrum-spec-to-pin.sh. -->
+    <fulcrum.spec.file>${project.basedir}/src/main/resources/fulcrum/rest-api.json</fulcrum.spec.file>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
@@ -59,31 +68,6 @@
 
   <build>
     <plugins>
-      <!-- Fetches the third-party Fulcrum REST API spec at the SHA pinned in the parent pom.
-           Deliberately not vendored into src/main/resources: Renovate bumps the SHA but cannot
-           rewrite the 400+ KB document, so a checked-in copy would drift out of sync with the
-           pin next to it. Downloaded to target/classes instead, which both feeds the generator
-           below and ships the exact pinned contract in the jar for FulcrumSpecTest to assert
-           against. -->
-      <plugin>
-        <groupId>com.googlecode.maven-download-plugin</groupId>
-        <artifactId>download-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>fetch-fulcrum-spec</id>
-            <goals>
-              <goal>wget</goal>
-            </goals>
-            <phase>generate-sources</phase>
-            <configuration>
-              <url>${fulcrum.spec.url}</url>
-              <outputDirectory>${project.build.outputDirectory}/fulcrum</outputDirectory>
-              <outputFileName>rest-api.json</outputFileName>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
       <plugin>
         <groupId>org.openapitools</groupId>
         <artifactId>openapi-generator-maven-plugin</artifactId>
@@ -125,7 +109,7 @@
               <goal>generate</goal>
             </goals>
             <configuration>
-              <inputSpec>${project.build.outputDirectory}/fulcrum/rest-api.json</inputSpec>
+              <inputSpec>${fulcrum.spec.file}</inputSpec>
 
               <generatorName>spring</generatorName>
 

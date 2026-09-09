@@ -81,6 +81,23 @@ jobs:
       - name: Download Maven Dependencies
         run: mvn dependency:go-offline
 
+  # The build reads the committed copy of the Fulcrum spec, so nothing in it notices when
+  # Renovate moves fulcrum.spec.ref onto a commit that changed the spec upstream. This job is
+  # that check, and it is what gates the automerge of those PRs: green when the bumped commit
+  # left the spec alone, red until a developer runs the refresh script when it did not.
+  verify-fulcrum-spec:
+    name: Fulcrum Spec In Sync
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      # The check reads fulcrum.spec.ref out of the pom with help:evaluate, so it needs a JDK.
+      - name: Setup Java Environment (Hits Cache)
+        uses: ./.github/actions/setup-java-maven
+
+      - name: Verify the committed spec matches the pinned commit
+        run: .github/scripts/verify-fulcrum-spec-matches-pin.sh
+
   security-scan-source-tree:
     name: Trivy Security Scan Source Tree
     needs: warmup-caches
