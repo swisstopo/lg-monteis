@@ -436,7 +436,7 @@ class JooqExperimentRepositoryIT {
   private Sensor createDummySensor(String code, String name, String formulaExpression) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
-    Coordinates coordinates = new Coordinates(2400, -12007, -1600);
+    Coordinates coordinates = new Coordinates(2400d, -12007d, -1600d);
     SensorParameter parameter =
         new SensorParameter(
             null,

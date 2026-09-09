@@ -44,6 +44,7 @@ public class SensorService {
             fulcrumSensor.yPointWithOffset(),
             fulcrumSensor.zPointWithOffset()));
     Sensor created = repository.create(sensor);
+    configPublisher.publish(created); // TODO: MON-143 Should only publish sensorParameter
 
     return created;
   }
