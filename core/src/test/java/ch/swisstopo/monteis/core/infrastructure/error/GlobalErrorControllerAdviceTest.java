@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
@@ -21,11 +22,14 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ContextConfiguration;
@@ -35,6 +39,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientResponseException;
 
 @ControllerTest
 @ContextConfiguration(
@@ -106,6 +112,38 @@ class GlobalErrorControllerAdviceTest {
         .andExpect(
             jsonPath("$.params.errorId").exists()) // Ensures the UUID is generated for tracing
         .andExpect(jsonPath("$.params.errorId").isString());
+  }
+
+  @Test
+  void should_translate_upstream_api_failure_return_502() throws Exception {
+    // given an endpoint whose upstream call failed with the documented Fulcrum error envelope
+
+    // when
+    var response = mockMvc.perform(get("/dummy/upstream-error").with(jwt()));
+
+    // then the upstream detail stays in the log, the client gets a correlation id and the status
+    response
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.target").value("GLOBAL"))
+        .andExpect(jsonPath("$.messageKey").value("error.upstream.failed"))
+        .andExpect(jsonPath("$.params.upstreamStatus").value(400))
+        .andExpect(jsonPath("$.params.errorId").isString());
+  }
+
+  @Test
+  void should_translate_upstream_api_failure_whose_body_cannot_be_converted_return_502()
+      throws Exception {
+    // given an upstream failure carrying a body that is not the documented envelope, on an
+    // exception that cannot convert its body at all
+
+    // when
+    var response = mockMvc.perform(get("/dummy/upstream-error-unconvertible").with(jwt()));
+
+    // then the handler still answers instead of failing while building the error
+    response
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.messageKey").value("error.upstream.failed"))
+        .andExpect(jsonPath("$.params.upstreamStatus").value(400));
   }
 
   @Test
@@ -270,6 +308,34 @@ class GlobalErrorControllerAdviceTest {
     @GetMapping("/dummy/unexpected-error")
     public void throwUnexpectedError() {
       throw new RuntimeException("Simulated catastrophic failure, like a DB timeout");
+    }
+
+    @GetMapping("/dummy/upstream-error")
+    public void throwUpstreamError() {
+      throw upstreamFailure(
+          "{\"error\":\"relation does not exist\",\"status\":400}",
+          new BadRequestResponse().error("relation does not exist").status(400));
+    }
+
+    @GetMapping("/dummy/upstream-error-unconvertible")
+    public void throwUnconvertibleUpstreamError() {
+      // No body conversion function, which is what getResponseBodyAs refuses to work without.
+      throw upstreamFailure("<html>gateway exploded</html>", null);
+    }
+
+    private static RestClientResponseException upstreamFailure(
+        String body, BadRequestResponse converted) {
+      RestClientResponseException e =
+          HttpClientErrorException.create(
+              HttpStatus.BAD_REQUEST,
+              "Bad Request",
+              HttpHeaders.EMPTY,
+              body.getBytes(StandardCharsets.UTF_8),
+              StandardCharsets.UTF_8);
+      if (converted != null) {
+        e.setBodyConvertFunction(type -> converted);
+      }
+      return e;
     }
 
     @GetMapping("/dummy/method-validation-error")
