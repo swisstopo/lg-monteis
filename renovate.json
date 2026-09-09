@@ -14,7 +14,28 @@
 
   "platformAutomerge": true,
 
+  "customManagers": [
+    {
+      "description": "Fulcrum OpenAPI spec: fulcrumapp/api publishes no tags or releases, so the spec is pinned to a commit of its v2 branch (see fulcrum.spec.ref in the root pom) and tracked as a git-refs digest",
+      "customType": "regex",
+      "managerFilePatterns": ["/^pom\\.xml$/"],
+      "matchStrings": ["<fulcrum\\.spec\\.ref>(?<currentDigest>[0-9a-f]{40})</fulcrum\\.spec\\.ref>"],
+      "depNameTemplate": "fulcrumapp/api",
+      "packageNameTemplate": "https://github.com/fulcrumapp/api",
+      "currentValueTemplate": "v2",
+      "datasourceTemplate": "git-refs"
+    }
+  ],
+
   "packageRules": [
+    {
+      "description": "Automerge the Fulcrum spec bump: the PR regenerates the Fulcrum models from the new commit, so a breaking upstream change fails compilation or FulcrumSpecTest and blocks the merge",
+      "matchDatasources": ["git-refs"],
+      "matchPackageNames": ["fulcrumapp/api"],
+      "matchUpdateTypes": ["digest"],
+      "groupName": "Fulcrum OpenAPI Spec",
+      "automerge": true
+    },
     {
       "description": "Ignore internal Maven monorepo modules",
       "matchPackagePrefixes": ["ch.swisstopo.monteis"],
