@@ -11,6 +11,15 @@
 
   <artifactId>contracts</artifactId>
 
+  <properties>
+    <!-- The Fulcrum spec is committed rather than downloaded during the build: it is a
+         third-party document in a repository we do not control, and no build should fail because
+         GitHub is unreachable or rate-limiting. Being a normal resource it is also copied into
+         the jar, which is where FulcrumSpecTest reads it from. Refreshing it is the explicit,
+         network-using step in .github/scripts/sync-fulcrum-spec-to-pin.sh. -->
+    <fulcrum.spec.file>${project.basedir}/src/main/resources/fulcrum/rest-api.json</fulcrum.spec.file>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
@@ -47,6 +56,14 @@
       <artifactId>spring-context</artifactId>
       <scope>provided</scope>
     </dependency>
+
+    <!-- The generated Fulcrum @HttpExchange interface refers to ResponseEntity, the HTTP service
+         annotations and MultipartFile. -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-web</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -56,6 +73,7 @@
         <artifactId>openapi-generator-maven-plugin</artifactId>
         <executions>
           <execution>
+            <id>generate-monteis-models</id>
             <goals>
               <goal>generate</goal>
             </goals>
@@ -74,6 +92,48 @@
 
               <configOptions>
                 <useRecords>true</useRecords>
+              </configOptions>
+            </configuration>
+          </execution>
+
+          <!-- Models of the Fulcrum API. Models only, like the execution above: the spec types
+               no response body for /v2/query (its 200 is an empty EmptySuccessResponse), so the
+               query row DTOs stay hand-written and only the remaining resources - records,
+               forms, attachments, changesets - plus the BadRequestResponse error envelope come
+               from here. openApiNullable is off so the generated code needs no JsonNullable,
+               whose jackson-databind-nullable is built against Jackson 2 while the application
+               runs on Jackson 3. -->
+          <execution>
+            <id>generate-fulcrum-models</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <inputSpec>${fulcrum.spec.file}</inputSpec>
+
+              <generatorName>spring</generatorName>
+
+              <!-- Unlike the MonTEIS execution above this one also generates the API, as a
+                   Spring @HttpExchange interface: endpoint paths, query parameter names and
+                   their documented defaults then come from the spec instead of being retyped in
+                   the client. The spec declares no tags, so every operation lands in a single
+                   DefaultApi. -->
+              <generateApis>true</generateApis>
+              <library>spring-http-interface</library>
+              <generateApiTests>false</generateApiTests>
+              <generateApiDocumentation>false</generateApiDocumentation>
+              <generateModelTests>false</generateModelTests>
+              <generateModelDocumentation>false</generateModelDocumentation>
+              <generateSupportingFiles>false</generateSupportingFiles>
+
+              <apiPackage>ch.swisstopo.monteis.contracts.fulcrum.api</apiPackage>
+              <modelPackage>ch.swisstopo.monteis.contracts.fulcrum</modelPackage>
+              <output>${project.build.directory}/generated-sources/openapi-fulcrum</output>
+
+              <configOptions>
+                <useRecords>true</useRecords>
+                <openApiNullable>false</openApiNullable>
+                <useOneOfInterfaces>false</useOneOfInterfaces>
               </configOptions>
             </configuration>
           </execution>

@@ -51,7 +51,14 @@ class SensorConfigPublisherTest {
             null);
     Sensor sensor =
         new Sensor(
-            "Test Sensor", null, DAS.SOL_EXPERTS, null, null, new Coordinates(0, 0, 0), true, null);
+            "Test Sensor",
+            null,
+            DAS.SOL_EXPERTS,
+            null,
+            null,
+            new Coordinates(0d, 0d, 0d),
+            true,
+            null);
     sensor.setParameters(List.of(parameter));
     sensor.setVersion(3);
 
