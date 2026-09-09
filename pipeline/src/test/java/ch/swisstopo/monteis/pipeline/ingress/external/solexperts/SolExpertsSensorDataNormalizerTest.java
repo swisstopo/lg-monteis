@@ -50,7 +50,7 @@ class SolExpertsSensorDataNormalizerTest {
   }
 
   @Test
-  void should_map_data_and_attach_kafka_key_headers_on_success() {
+  void should_map_data_and_attach_composite_das_key_as_kafka_key() {
     // given
     Map<String, Object> values =
         Map.of(
@@ -65,23 +65,28 @@ class SolExpertsSensorDataNormalizerTest {
     // then
     assertThat(result).hasSize(2);
 
-    // Verify main value (uses base deviceName as key)
+    // Verify main value (das_parameter_alias = "value", the raw field key, no special-casing -
+    // every parameter needs its own distinct alias now that a sensor can have several)
     Message<NormalizedSensorData> mainMessage =
         result.stream()
-            .filter(m -> "deviceA".equals(m.getHeaders().get(KafkaHeaders.KEY)))
+            .filter(m -> "SOL_EXPERTS__deviceA__value".equals(m.getHeaders().get(KafkaHeaders.KEY)))
             .findFirst()
             .orElseThrow();
     assertThat(mainMessage.getPayload())
-        .isEqualTo(new NormalizedSensorData("deviceA", "2026-06-23T09:00:00Z", 15.5));
+        .isEqualTo(
+            new NormalizedSensorData("SOL_EXPERTS__deviceA__value", "2026-06-23T09:00:00Z", 15.5));
 
-    // Verify battery value (appends key to deviceName as key)
+    // Verify battery value
     Message<NormalizedSensorData> batteryMessage =
         result.stream()
-            .filter(m -> "deviceA_battery".equals(m.getHeaders().get(KafkaHeaders.KEY)))
+            .filter(
+                m -> "SOL_EXPERTS__deviceA__battery".equals(m.getHeaders().get(KafkaHeaders.KEY)))
             .findFirst()
             .orElseThrow();
     assertThat(batteryMessage.getPayload())
-        .isEqualTo(new NormalizedSensorData("deviceA_battery", "2026-06-23T09:00:00Z", 99.0));
+        .isEqualTo(
+            new NormalizedSensorData(
+                "SOL_EXPERTS__deviceA__battery", "2026-06-23T09:00:00Z", 99.0));
   }
 
   @Test
@@ -97,6 +102,7 @@ class SolExpertsSensorDataNormalizerTest {
     // then
     assertThat(result).hasSize(1);
     assertThat(result.getFirst().getPayload())
-        .isEqualTo(new NormalizedSensorData("deviceA", "2026-06-23T09:00:00Z", 15.5));
+        .isEqualTo(
+            new NormalizedSensorData("SOL_EXPERTS__deviceA__value", "2026-06-23T09:00:00Z", 15.5));
   }
 }

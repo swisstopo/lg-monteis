@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.pipeline.transformation.validation;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent;
 import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
 import java.time.Clock;
@@ -20,10 +20,10 @@ public class BoundsValidator {
   }
 
   public BoundStatus evaluateBounds(
-      String sensorId, Double siValue, SensorConfig config, ProcessingOrigin origin) {
+      String dasKey, Double siValue, SensorParameterConfig config, ProcessingOrigin origin) {
     if (siValue > config.getUpperBound()) {
       publishBreach(
-          sensorId,
+          dasKey,
           siValue,
           config.getUpperBound(),
           SensorBoundBreachedEvent.BoundType.UPPER,
@@ -33,7 +33,7 @@ public class BoundsValidator {
 
     if (siValue < config.getLowerBound()) {
       publishBreach(
-          sensorId,
+          dasKey,
           siValue,
           config.getLowerBound(),
           SensorBoundBreachedEvent.BoundType.LOWER,
@@ -45,7 +45,7 @@ public class BoundsValidator {
   }
 
   private void publishBreach(
-      String sensorId,
+      String dasKey,
       Double value,
       Double limit,
       SensorBoundBreachedEvent.BoundType type,
@@ -57,6 +57,6 @@ public class BoundsValidator {
     }
 
     eventPublisher.publishEvent(
-        new SensorBoundBreachedEvent(sensorId, value, limit, type, Instant.now(clock)));
+        new SensorBoundBreachedEvent(dasKey, value, limit, type, Instant.now(clock)));
   }
 }

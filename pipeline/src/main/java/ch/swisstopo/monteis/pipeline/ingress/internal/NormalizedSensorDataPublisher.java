@@ -21,7 +21,7 @@ public class NormalizedSensorDataPublisher {
   }
 
   public CompletableFuture<SendResult<String, NormalizedSensorData>> publish(
-      String sensorId, NormalizedSensorData data) {
-    return kafkaTemplate.send(normalizedTopic, sensorId, data);
+      String dasKey, NormalizedSensorData data) {
+    return kafkaTemplate.send(normalizedTopic, dasKey, data);
   }
 }

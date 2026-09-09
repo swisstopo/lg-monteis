@@ -369,7 +369,7 @@ class JooqSensorRepositoryIT {
         new AlarmLimits(lower, upper),
         true,
         null,
-        null);
+        null); // todo: check if rather 1 instead of null
   }
 
   @Test
@@ -561,7 +561,7 @@ class JooqSensorRepositoryIT {
             new AlarmLimits(0.0, 100.0),
             true,
             null,
-            null);
+            null);// todo: check if 1 instead of null
 
     // TODO MON-143
     Sensor sensor = new Sensor(name, code, DAS.SOL_EXPERTS, null, null, coordinates, true, null);

@@ -448,7 +448,7 @@ class JooqExperimentRepositoryIT {
             new AlarmLimits(0.0, 100.0),
             true,
             null,
-            null);
+            null);// todo: check if rather have 1 instead of null
 
     Sensor sensor = new Sensor(name, code, DAS.SOL_EXPERTS, null, null, coordinates, true, null);
     sensor.setParameters(new ArrayList<>(List.of(parameter)));

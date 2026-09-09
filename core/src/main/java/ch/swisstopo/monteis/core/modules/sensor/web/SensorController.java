@@ -130,4 +130,18 @@ public class SensorController {
     LocalDate today = LocalDate.now(clock);
     return mapper.toPagedDto(result, today);
   }
+
+  @Operation(
+      summary = "Republish every sensor parameter's config",
+      description =
+          "One-time operational tool for MON-143's rollout: re-publishes every sensor parameter's"
+              + " current config to internal-sensor-config, unconditionally, so the pipeline's"
+              + " existing reprocessing flow backfills sensor_parameter_id on historical readings"
+              + " ingested before each parameter's config was ever known.")
+  @ApiResponse(responseCode = "202", description = "Republish triggered")
+  @PostMapping(path = "/republish-config")
+  public ResponseEntity<Void> republishAllActiveParameterConfigs() {
+    service.republishAllActiveParameterConfigs();
+    return ResponseEntity.accepted().build();
+  }
 }

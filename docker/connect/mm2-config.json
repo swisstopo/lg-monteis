@@ -10,7 +10,7 @@
     "source.cluster.bootstrap.servers": "pkc-7xoy1.eu-central-1.aws.confluent.cloud:9092",
     "target.cluster.bootstrap.servers": "kafka:29092",
 
-    "source.cluster.group.id": "swisstopo_0",
+    "source.cluster.group.id": "swisstopo_5",
 
     "topics": "solexperts_to_swisstopo",
 

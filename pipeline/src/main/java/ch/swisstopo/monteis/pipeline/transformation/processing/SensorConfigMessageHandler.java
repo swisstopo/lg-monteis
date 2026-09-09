@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.pipeline.transformation.processing;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,19 +16,22 @@ public class SensorConfigMessageHandler {
    * Wraps the business logic with Kafka safety checks, tombstone handling, and poison pill protection.
    */
   public void processSafely(
-      SensorConfig sensorConfig,
-      String sensorId,
+      SensorParameterConfig sensorConfig,
+      String dasKey,
       Acknowledgment ack,
-      Consumer<SensorConfig> businessLogic) {
+      Consumer<SensorParameterConfig> businessLogic) {
 
     if (sensorConfig == null) {
-      log.info("Received tombstone for {}. Stopping processing.", sensorId);
+      log.info("Received tombstone for {}. Stopping processing.", dasKey);
       ack.acknowledge();
       return;
     }
 
-    if (sensorConfig.getSensorId() == null) {
-      log.error("Received SensorConfig with null ID! Cannot process. Payload: {}", sensorConfig);
+    if (sensorConfig.getSensorParameterId() == null) {
+      log.error(
+          "Received SensorParameterConfig with null sensor_parameter_id! Cannot process. Payload:"
+              + " {}",
+          sensorConfig);
       ack.acknowledge();
       return;
     }
@@ -38,8 +41,8 @@ public class SensorConfigMessageHandler {
     } catch (IllegalArgumentException e) {
       // POISON PILL PROTECTION
       log.error(
-          "CRITICAL: Failed to process config for Sensor {}. Formula: '{}'. Reason: {}",
-          sensorConfig.getSensorId(),
+          "CRITICAL: Failed to process config for DAS key {}. Formula: '{}'. Reason: {}",
+          dasKey,
           sensorConfig.getFormula(),
           e.getMessage());
     }

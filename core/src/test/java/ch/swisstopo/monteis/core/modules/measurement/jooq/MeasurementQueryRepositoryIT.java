@@ -112,7 +112,7 @@ class MeasurementQueryRepositoryIT {
                       SENSOR_READING_SECURED.RAW_VALUE,
                       SENSOR_READING_SECURED.NORM_VALUE)
                   .from(SENSOR_READING_SECURED)
-                  .where(SENSOR_READING_SECURED.SENSOR_ID.eq("TEMP-1-P1"))
+                  .where(SENSOR_READING_SECURED.DAS_KEY.eq("TEMP-1-P1"))
                   .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc())
                   .limit(1)
                   .fetchOne();
@@ -237,9 +237,9 @@ class MeasurementQueryRepositoryIT {
         EXPERIMENT_1_ONLY,
         () -> {
           List<String> visibleParameterAliases =
-              dsl.selectDistinct(SENSOR_READING_SECURED.SENSOR_ID)
+              dsl.selectDistinct(SENSOR_READING_SECURED.DAS_KEY)
                   .from(SENSOR_READING_SECURED)
-                  .fetch(SENSOR_READING_SECURED.SENSOR_ID);
+                  .fetch(SENSOR_READING_SECURED.DAS_KEY);
 
           assertEquals(
               List.of("PRESS-1&2-P1", "TEMP-1-P1"),
