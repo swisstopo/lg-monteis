@@ -74,10 +74,10 @@ public class SensorDataBatchProcessor {
                   NormalizedSensorData sensorData = batch.get(i);
                   try {
                     ActiveSensorConfig activeConfig =
-                        sensorConfigCache.getActiveConfig(sensorData.sensorId());
+                        sensorConfigCache.getActiveConfig(sensorData.dasKey());
                     SensorReadingRecord dbRecord =
                         orchestrator.transform(
-                            sensorData.sensorId(),
+                            sensorData.dasKey(),
                             sensorData.value(),
                             sensorData.ts(),
                             activeConfig,
@@ -87,7 +87,7 @@ public class SensorDataBatchProcessor {
                     log.error(
                         "POISON PILL: Transformation failed for sensor {}. Failed Value: [{}]. Full"
                             + " Kafka Payload: {}. Reason: {}",
-                        sensorData.sensorId(),
+                        sensorData.dasKey(),
                         ex.getFailedPayload(),
                         sensorData,
                         ex.getMessage(),

@@ -1,5 +1,7 @@
 package ch.swisstopo.monteis.pipeline.ingress.external.solexperts;
 
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.DasKey;
 import ch.swisstopo.monteis.pipeline.ingress.external.VendorDataNormalizer;
 import ch.swisstopo.monteis.pipeline.internal.model.NormalizedSensorData;
 import java.util.ArrayList;
@@ -17,6 +19,8 @@ public class SolExpertsSensorDataNormalizer
     implements VendorDataNormalizer<RawSolExpertsSensorData> {
 
   private static final Logger log = LoggerFactory.getLogger(SolExpertsSensorDataNormalizer.class);
+
+  private static final Das DAS = Das.SOL_EXPERTS;
 
   @Override
   public List<Message<NormalizedSensorData>> normalizeToMessages(
@@ -37,21 +41,20 @@ public class SolExpertsSensorDataNormalizer
         continue;
       }
 
-      // Preserve original SolExperts naming logic: use base deviceName for "value", append key
-      // otherwise
-      String newDeviceName =
-          entry.getKey().equals("value")
-              ? rawPayload.deviceName()
-              : rawPayload.deviceName() + "_" + entry.getKey();
+      // Composite DAS ingest key: <DAS>__<das_sensor_alias>__<das_parameter_alias>.
+      // das_sensor_alias
+      // is the raw deviceName, das_parameter_alias is the field name within the values map - this
+      // must match exactly what SensorConfigPublisher publishes as the Kafka key on
+      // internal-sensor-config, and what SensorConfigCache is keyed by, for the same sensor
+      // parameter.
+      String dasKey = DasKey.compose(DAS, rawPayload.deviceName(), entry.getKey());
 
       NormalizedSensorData canonicalPayload =
-          new NormalizedSensorData(newDeviceName, rawPayload.ts(), numericValue.doubleValue());
+          new NormalizedSensorData(dasKey, rawPayload.ts(), numericValue.doubleValue());
 
       // Wrap in a Spring Message and attach the routing key for Kafka partitioning
       Message<NormalizedSensorData> message =
-          MessageBuilder.withPayload(canonicalPayload)
-              .setHeader(KafkaHeaders.KEY, newDeviceName)
-              .build();
+          MessageBuilder.withPayload(canonicalPayload).setHeader(KafkaHeaders.KEY, dasKey).build();
 
       outboundMessages.add(message);
     }

@@ -59,7 +59,7 @@ Das Backend fungiert als Dreh- und Angelpunkt für jegliche synchrone Kommunikat
 * *Pipeline-API:* Ein durch API-Keys gesicherter interner Endpunkt, über den die Pipeline-Worker Metadaten abrufen können.
 
 ==== Contracts (Geteiltes Schema-Modul)
-Damit Core und Pipeline nicht mit divergierenden Vorstellungen desselben Konfigurations-Objekts laufen, existiert ein eigenständiges Maven-Modul `contracts`, das per OpenAPI Generator aus einer einzigen YAML-Spezifikation (siehe Kapitel 8, <<API-Schnittstellen (Contracts)>>) generiert wird. Es enthält u. a. das `SensorParameterConfig`-DTO (Kafka-Payload auf `internal-sensor-config`) sowie den `Das`-Enum, der die unterstützten Erfassungssysteme (z. B. `SOLEXPERTS`) definiert. Sowohl `core` (Publisher) als auch `pipeline` (`SensorConfigCache`, Normalizer) hängen von `contracts` ab, statt eigene, potenziell abweichende Kopien dieser Typen zu pflegen.
+Damit Core und Pipeline nicht mit divergierenden Vorstellungen desselben Konfigurations-Objekts laufen, existiert ein eigenständiges Maven-Modul `contracts`, das per OpenAPI Generator aus einer einzigen YAML-Spezifikation (siehe Kapitel 8, <<API-Schnittstellen (Contracts)>>) generiert wird. Es enthält u. a. das `SensorParameterConfig`-DTO (Kafka-Payload auf `internal-sensor-config`) sowie den `Das`-Enum, der die unterstützten Erfassungssysteme (z. B. `SOL_EXPERTS`) definiert. Sowohl `core` (Publisher) als auch `pipeline` (`SensorConfigCache`, Normalizer) hängen von `contracts` ab, statt eigene, potenziell abweichende Kopien dieser Typen zu pflegen.
 
 ==== Data Pipelines & Alerting (Kafka & Worker)
 Der Ingestion-Prozess für Sensordaten ist asynchron und ereignisgesteuert aufgebaut. Die Verarbeitung innerhalb eines Pipeline-Worker-Pods folgt einem strikten Ablauf:

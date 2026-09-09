@@ -20,5 +20,10 @@ public record WriteSensorParameterDto(
     @NotNull @Valid WriteSensorTypeDto type,
     @NotNull @Valid AlarmLimitsDto alarmLimits,
     @NotNull Boolean active,
-    @Valid WriteFormulaDto formula,
+    @Schema(
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+            description =
+                "Omit or send null to default to the identity formula (expression \"x\").")
+        @Valid
+        WriteFormulaDto formula,
     @NullOrNotBlank @Size(max = 4096) String comment) {}

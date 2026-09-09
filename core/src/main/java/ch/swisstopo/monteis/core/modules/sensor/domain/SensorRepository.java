@@ -68,4 +68,11 @@ public interface SensorRepository {
    * @return a stream of all sensors which are not yet audited
    */
   Stream<Sensor> streamUnauditedSensors();
+
+  /**
+   * Retrieves every sensor, including its parameters.
+   *
+   * @return a stream of all sensors
+   */
+  Stream<Sensor> streamAllSensors();
 }

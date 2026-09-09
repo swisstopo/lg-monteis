@@ -5,7 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
@@ -15,6 +16,7 @@ import ch.swisstopo.monteis.pipeline.transformation.validation.BoundsValidator;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -32,7 +34,10 @@ class TransformationOrchestratorTest {
 
   @InjectMocks private TransformationOrchestrator orchestrator;
 
-  private final SensorConfig sensorConfig = new SensorConfig("deviceA", "x", 100.0, 0.0, 1);
+  private final UUID sensorParameterId = UUID.randomUUID();
+  private final SensorParameterConfig sensorConfig =
+      new SensorParameterConfig(
+          Das.SOL_EXPERTS, "deviceA", "temperature", sensorParameterId, "x", 100.0, 0.0, 1);
   private final OffsetDateTime defaultTimestamp = OffsetDateTime.now();
 
   @Test
@@ -56,7 +61,8 @@ class TransformationOrchestratorTest {
             "deviceA", rawValue, rawTimestamp, activeConfig, ProcessingOrigin.INGEST);
 
     // then
-    assertThat(result.getSensorId()).isEqualTo("deviceA");
+    assertThat(result.getDasKey()).isEqualTo("deviceA");
+    assertThat(result.getSensorParameterId()).isEqualTo(sensorParameterId);
     assertThat(result.getRawValue()).isEqualTo(15.5);
     assertThat(result.getNormValue()).isEqualTo(20.0);
     assertThat(result.getStatus()).isEqualTo(RangeCategory.correct);

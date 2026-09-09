@@ -14,6 +14,7 @@ public class SensorParameter {
   private AlarmLimits alarmLimits;
   private Boolean active;
   private String comment;
+  private Integer version;
 
   public SensorParameter(
       UUID id,
@@ -24,7 +25,8 @@ public class SensorParameter {
       Formula formula,
       AlarmLimits alarmLimits,
       Boolean active,
-      String comment) {
+      String comment,
+      Integer version) {
     this.id = id;
     this.name = name;
     this.dasParameterAlias = dasParameterAlias;
@@ -34,6 +36,7 @@ public class SensorParameter {
     this.alarmLimits = alarmLimits;
     this.active = active;
     this.comment = comment;
+    this.version = version;
   }
 
   public UUID getId() {
@@ -106,6 +109,14 @@ public class SensorParameter {
 
   public void setComment(String comment) {
     this.comment = comment;
+  }
+
+  public Integer getVersion() {
+    return version;
+  }
+
+  public void setVersion(Integer version) {
+    this.version = version;
   }
 
   public boolean changeTriggersPublish(SensorParameter old) {

@@ -368,7 +368,8 @@ class JooqSensorRepositoryIT {
         formula,
         new AlarmLimits(lower, upper),
         true,
-        null);
+        null,
+        1);
   }
 
   @Test
@@ -559,7 +560,8 @@ class JooqSensorRepositoryIT {
             formula,
             new AlarmLimits(0.0, 100.0),
             true,
-            null);
+            null,
+            1);
 
     Sensor sensor = new Sensor(name, code, DAS.SOL_EXPERTS, null, null, coordinates, true, null);
     sensor.setParameters(new ArrayList<>(List.of(parameter)));

@@ -305,6 +305,14 @@ public class JooqSensorRepository implements SensorRepository {
     return data.stream();
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public Stream<Sensor> streamAllSensors() {
+    List<Sensor> data = sensorsWithExperiments().fetch(this::toSensorWithExperiment);
+    attachParameters(data);
+    return data.stream();
+  }
+
   // Default to a plain left join on the experiments table; callers add their own where/order/etc.
   private SelectOnConditionStep<Record> sensorsWithExperiments() {
     return dsl.select(SENSORS.fields())

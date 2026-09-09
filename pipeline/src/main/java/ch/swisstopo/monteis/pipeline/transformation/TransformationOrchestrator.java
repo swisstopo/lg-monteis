@@ -24,7 +24,7 @@ public class TransformationOrchestrator {
   }
 
   public SensorReadingRecord transform(
-      String sensorId,
+      String dasKey,
       Double rawValue,
       String rawTimestamp,
       ActiveSensorConfig activeConfig,
@@ -39,11 +39,11 @@ public class TransformationOrchestrator {
           "Invalid epoch timestamp format: '" + rawTimestamp + "'", e, rawValue);
     }
 
-    return transform(sensorId, rawValue, timestamp, activeConfig, origin);
+    return transform(dasKey, rawValue, timestamp, activeConfig, origin);
   }
 
   public SensorReadingRecord transform(
-      String sensorId,
+      String dasKey,
       Double rawValue,
       OffsetDateTime timestamp,
       ActiveSensorConfig activeConfig,
@@ -53,12 +53,15 @@ public class TransformationOrchestrator {
 
     // 2. Validate the value
     BoundStatus status =
-        boundsValidator.evaluateBounds(
-            sensorId, standardizedToSI, activeConfig.getConfig(), origin);
+        boundsValidator.evaluateBounds(dasKey, standardizedToSI, activeConfig.getConfig(), origin);
 
     // 3. Map to jOOQ record
     SensorReadingRecord sensorReading = new SensorReadingRecord();
-    sensorReading.setSensorId(sensorId);
+    sensorReading.setDasKey(dasKey);
+    // Nullable: unset until the pipeline has actually resolved this DAS key to a real config (see
+    // SensorConfigCache's default placeholder) - backfilled retroactively by reprocessing once
+    // known.
+    sensorReading.setSensorParameterId(activeConfig.getConfig().getSensorParameterId());
     sensorReading.setTimestamp(timestamp);
     sensorReading.setRawValue(rawValue);
     sensorReading.setNormValue(standardizedToSI);

@@ -5,9 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.transformation.TransformationException;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -41,9 +42,9 @@ class SIStandardizerTest {
     // given
     Double rawValue = 0.0;
 
-    SensorConfig configMock = mock(SensorConfig.class);
+    SensorParameterConfig configMock = mock(SensorParameterConfig.class);
     given(activeConfig.getConfig()).willReturn(configMock);
-    given(configMock.getSensorId()).willReturn("device-001");
+    given(configMock.getSensorParameterId()).willReturn(UUID.randomUUID());
     given(configMock.getFormula()).willReturn("100 / x");
 
     // Simulate a divide-by-zero error during evaluation
@@ -67,9 +68,9 @@ class SIStandardizerTest {
     Double rawValue = -5.0;
 
     // Mock the underlying config used for logging when an error occurs
-    SensorConfig configMock = mock(SensorConfig.class);
+    SensorParameterConfig configMock = mock(SensorParameterConfig.class);
     given(activeConfig.getConfig()).willReturn(configMock);
-    given(configMock.getSensorId()).willReturn("device-002");
+    given(configMock.getSensorParameterId()).willReturn(UUID.randomUUID());
     given(configMock.getFormula()).willReturn("sqrt(x)");
 
     // Simulate an invalid argument error (e.g., square root of a negative number)

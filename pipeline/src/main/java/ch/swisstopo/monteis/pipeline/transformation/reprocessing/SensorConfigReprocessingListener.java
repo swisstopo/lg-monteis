@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.transformation.processing.SensorConfigMessageHandler;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import org.slf4j.Logger;
@@ -32,16 +32,18 @@ public class SensorConfigReprocessingListener {
       groupId = "reprocessing-group",
       containerFactory = "manualAckFactory")
   public void consumeSensorConfigUpdate(
-      @Payload(required = false) SensorConfig sensorConfig,
-      @Header(KafkaHeaders.RECEIVED_KEY) String sensorId,
+      @Payload(required = false) SensorParameterConfig sensorConfig,
+      @Header(KafkaHeaders.RECEIVED_KEY) String dasKey,
       Acknowledgment ack) {
 
     messageProcessor.processSafely(
         sensorConfig,
-        sensorId,
+        dasKey,
         ack,
         validConfig -> {
-          log.info("Triggering reprocessing flow for Sensor {}.", validConfig.getSensorId());
+          log.info(
+              "Triggering reprocessing flow for sensor parameter {}.",
+              validConfig.getSensorParameterId());
           ActiveSensorConfig activeConfig = new ActiveSensorConfig(validConfig);
           sensorReprocessingOrchestrator.checkAndReprocessHistoricalData(activeConfig);
         });

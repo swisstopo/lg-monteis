@@ -6,7 +6,9 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +22,7 @@ class SensorConfigMessageHandlerTest {
 
   @Mock private Acknowledgment ack;
 
-  @Mock private Consumer<SensorConfig> businessLogic;
+  @Mock private Consumer<SensorParameterConfig> businessLogic;
 
   @InjectMocks private SensorConfigMessageHandler processor;
 
@@ -35,9 +37,11 @@ class SensorConfigMessageHandlerTest {
   }
 
   @Test
-  void should_acknowledge_and_skip_logic_when_sensor_id_is_null() {
+  void should_acknowledge_and_skip_logic_when_sensor_parameter_id_is_null() {
     // given
-    SensorConfig configWithoutId = new SensorConfig(null, "x * 2", 10.0, -10.0, 1);
+    SensorParameterConfig configWithoutId =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceX", "temperature", null, "x * 2", 10.0, -10.0, 1);
 
     // when
     processor.processSafely(configWithoutId, "some_kafka_key", ack, businessLogic);
@@ -50,7 +54,9 @@ class SensorConfigMessageHandlerTest {
   @Test
   void should_execute_business_logic_and_acknowledge_on_success() {
     // given
-    SensorConfig validConfig = new SensorConfig("sensorA", "x * 2", 10.0, -10.0, 1);
+    SensorParameterConfig validConfig =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "sensorA", "temperature", UUID.randomUUID(), "x * 2", 10.0, -10.0, 1);
 
     // when
     processor.processSafely(validConfig, "sensorA", ack, businessLogic);
@@ -63,7 +69,16 @@ class SensorConfigMessageHandlerTest {
   @Test
   void should_catch_illegal_argument_exception_and_still_acknowledge_poison_pill() {
     // given
-    SensorConfig poisonConfig = new SensorConfig("sensorB", "invalid syntax", 10.0, -10.0, 1);
+    SensorParameterConfig poisonConfig =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS,
+            "sensorB",
+            "temperature",
+            UUID.randomUUID(),
+            "invalid syntax",
+            10.0,
+            -10.0,
+            1);
 
     // Simulate Parsington/Cache throwing an IllegalArgumentException for bad syntax
     willThrow(new IllegalArgumentException("Invalid math syntax"))
@@ -82,7 +97,9 @@ class SensorConfigMessageHandlerTest {
   @Test
   void should_not_acknowledge_and_bubble_up_transient_exceptions() {
     // given
-    SensorConfig validConfig = new SensorConfig("sensorC", "x * 2", 10.0, -10.0, 1);
+    SensorParameterConfig validConfig =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "sensorC", "temperature", UUID.randomUUID(), "x * 2", 10.0, -10.0, 1);
 
     // Simulate a transient error like a database connection failure
     willThrow(new RuntimeException("Database timeout")).given(businessLogic).accept(validConfig);
