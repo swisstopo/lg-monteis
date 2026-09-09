@@ -34,6 +34,7 @@ import { Das, getDasMetadata, getUnitMetadata, Unit } from '@features/sensor/mod
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 
+// TODO: MON-145 refactor sensor parameter into own component
 interface SensorParameterFormData {
   // Component-local synthetic key, never sent to the backend. Needed as a stable @for track
   // identity because a parameter's real id is undefined until first saved, and array index is

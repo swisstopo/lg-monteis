@@ -4,6 +4,7 @@ import { getDasMetadata } from '@features/sensor/models/sensor.model';
 import { TranslateService } from '@ngx-translate/core';
 import { TableColumn } from '@ui/table/table.types';
 
+// TODO: MON-145 refactor table to include parameters per sensor
 export function createColumns(): TableColumn<SensorResponseDto>[] {
   const translateService = inject(TranslateService);
   const dasMetadata = getDasMetadata();

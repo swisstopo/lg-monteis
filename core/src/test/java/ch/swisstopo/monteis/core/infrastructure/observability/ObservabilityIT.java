@@ -37,7 +37,7 @@ class ObservabilityIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           RequestTiming.begin();
-
+          // TODO MON-143 fetch sensor parameters
           dsl.select(SENSORS.DAS_SENSOR_ALIAS).from(SENSORS).fetch();
           dsl.select(SENSORS.DAS_SENSOR_ALIAS).from(SENSORS).limit(1).fetch();
 
@@ -56,6 +56,7 @@ class ObservabilityIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // No RequestTiming.begin() — mirrors a scheduled job or startup task
+          // TODO MON-143 fetch sensor parameters
           dsl.select(SENSORS.DAS_SENSOR_ALIAS).from(SENSORS).limit(1).fetch();
 
           assertNull(RequestTiming.current());

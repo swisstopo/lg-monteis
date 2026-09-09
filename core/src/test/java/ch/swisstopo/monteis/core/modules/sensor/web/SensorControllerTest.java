@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.sensor.web;
 
 import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
@@ -31,9 +32,14 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameter
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -62,15 +68,25 @@ class SensorControllerTest {
 
   @MockitoBean private SensorWebMapper mapper;
   @MockitoBean private PagedRequestParser pagedRequestParser;
+  @MockitoBean private Clock clock;
+
+  @BeforeEach
+  void setUpClock() {
+    // Set up LocalDate.now(clock) to be the exact date
+    Clock fixedClock = Clock.fixed(Instant.parse("2024-01-01T12:00:00Z"), ZoneId.of("UTC"));
+
+    given(clock.instant()).willReturn(fixedClock.instant());
+    given(clock.getZone()).willReturn(fixedClock.getZone());
+  }
 
   @Test
   void should_route_get_sensor_and_verify_output() throws Exception {
     // given
-    SensorResponseDto expectedResponseDto = defaultResponseDto(SENSOR_ID, "Test", 1);
+    SensorResponseDto expectedResponseDto = defaultResponseDto(SENSOR_ID, "Test", 1, 1);
     Sensor mockDomain = mock(Sensor.class);
 
     given(service.getSensor(SENSOR_ID)).willReturn(mockDomain);
-    given(mapper.toDto(mockDomain)).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -86,20 +102,21 @@ class SensorControllerTest {
                 .value(expectedResponseDto.parameters().getFirst().type().name()));
 
     then(service).should().getSensor(SENSOR_ID);
-    then(mapper).should().toDto(mockDomain);
+    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
   }
 
   @Test
   void should_route_get_sensors_and_return_paged_result() throws Exception {
     // given
-    SensorResponseDto dto1 = defaultResponseDto(SENSOR_ID, "Test 1", 1);
+    SensorResponseDto dto1 = defaultResponseDto(SENSOR_ID, "Test 1", 1, 1);
 
     Sensor mockDomain = mock(Sensor.class);
 
     given(pagedRequestParser.parse(any())).willReturn(new PagedRequest(0, 20, List.of(), Map.of()));
     PagedResult<Sensor> sensorPagedResult = new PagedResult<>(List.of(mockDomain), 1);
     given(service.getSensors(any())).willReturn(sensorPagedResult);
-    given(mapper.toPagedDto(sensorPagedResult)).willReturn(new PagedResult<>(List.of(dto1), 1));
+    given(mapper.toPagedDto(eq(sensorPagedResult), any(LocalDate.class)))
+        .willReturn(new PagedResult<>(List.of(dto1), 1));
 
     // when / then
     mockMvc
@@ -118,21 +135,21 @@ class SensorControllerTest {
                 .value(dto1.parameters().getFirst().type().name()));
 
     then(service).should().getSensors(any());
-    then(mapper).should().toPagedDto(sensorPagedResult);
+    then(mapper).should().toPagedDto(eq(sensorPagedResult), any(LocalDate.class));
   }
 
   @Test
   void should_route_create_sensor_and_verify_output() throws Exception {
     // given: Instantiate DTOs for input and expected output
-    WriteSensorDto requestDto = defaultWriteDto(null, null);
-    SensorResponseDto expectedResponseDto = defaultResponseDto(SENSOR_ID, "Test", 1);
+    WriteSensorDto requestDto = defaultWriteDto(null, null, null, null);
+    SensorResponseDto expectedResponseDto = defaultResponseDto(SENSOR_ID, "Test", 1, 1);
 
     // Strictly mock the domain object
     Sensor mockDomain = mock(Sensor.class);
 
     given(mapper.toDomain(any(WriteSensorDto.class))).willReturn(mockDomain);
     given(service.createSensor(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(mockDomain)).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
 
     // when / then: Perform request and assert the actual JSON fields match our expected output
     // DTO
@@ -168,7 +185,7 @@ class SensorControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().createSensor(mockDomain);
-    then(mapper).should().toDto(mockDomain);
+    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
   }
 
   @Test
@@ -184,6 +201,7 @@ class SensorControllerTest {
             new AlarmLimitsDto(0.0, 100.0),
             true,
             new WriteFormulaDto("x * 2"),
+            null,
             null);
     WriteSensorDto requestDto =
         new WriteSensorDto(
@@ -209,6 +227,7 @@ class SensorControllerTest {
             new FormulaResponseDto(FORMULA_ID, "x * 2", 1),
             new AlarmLimitsDto(0.0, 100.0),
             true,
+            null,
             null);
     SensorResponseDto expectedResponseDto =
         new SensorResponseDto(
@@ -228,7 +247,7 @@ class SensorControllerTest {
 
     given(mapper.toDomain(any(WriteSensorDto.class))).willReturn(mockDomain);
     given(service.createSensor(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(mockDomain)).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -251,20 +270,20 @@ class SensorControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().createSensor(mockDomain);
-    then(mapper).should().toDto(mockDomain);
+    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
   }
 
   @Test
   void should_route_update_sensor_and_verify_output() throws Exception {
     // given
-    WriteSensorDto requestDto = defaultWriteDto(SENSOR_ID, 1);
-    SensorResponseDto expectedResponseDto = defaultResponseDto(SENSOR_ID, "Updated", 2);
+    WriteSensorDto requestDto = defaultWriteDto(SENSOR_ID, 1, PARAMETER_ID, 1);
+    SensorResponseDto expectedResponseDto = defaultResponseDto(SENSOR_ID, "Updated", 2, 1);
 
     Sensor mockDomain = mock(Sensor.class);
 
     given(mapper.toDomain(any(WriteSensorDto.class))).willReturn(mockDomain);
     given(service.updateSensor(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(mockDomain)).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -298,13 +317,13 @@ class SensorControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().updateSensor(mockDomain);
-    then(mapper).should().toDto(mockDomain);
+    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
   }
 
   @Test
   void should_reject_update_when_path_id_does_not_match_body_id() throws Exception {
     // given: path id (SENSOR_ID) and body id (OTHER_SENSOR_ID) disagree
-    WriteSensorDto requestDto = defaultWriteDto(OTHER_SENSOR_ID, 1);
+    WriteSensorDto requestDto = defaultWriteDto(OTHER_SENSOR_ID, 1, PARAMETER_ID, 1);
 
     // when / then
     mockMvc
@@ -371,9 +390,9 @@ class SensorControllerTest {
     then(service).should().findAllTypes();
   }
 
-  private WriteSensorParameterDto defaultWriteParameterDto() {
+  private WriteSensorParameterDto defaultWriteParameterDto(UUID id, Integer version) {
     return new WriteSensorParameterDto(
-        null,
+        id,
         "Temperature",
         "TEMP-1",
         Unit.METER,
@@ -381,10 +400,12 @@ class SensorControllerTest {
         new AlarmLimitsDto(0.0, 100.0),
         true,
         null,
-        null);
+        null,
+        version);
   }
 
-  private WriteSensorDto defaultWriteDto(UUID id, Integer version) {
+  private WriteSensorDto defaultWriteDto(
+      UUID id, Integer version, UUID paramId, Integer paramVersion) {
     return new WriteSensorDto(
         id,
         "Test",
@@ -396,10 +417,10 @@ class SensorControllerTest {
         new CoordinatesDto(0, 0, 0),
         true,
         version,
-        List.of(defaultWriteParameterDto()));
+        List.of(defaultWriteParameterDto(paramId, paramVersion)));
   }
 
-  private SensorParameterResponseDto defaultResponseParameterDto() {
+  private SensorParameterResponseDto defaultResponseParameterDto(Integer version) {
     return new SensorParameterResponseDto(
         PARAMETER_ID,
         "Temperature",
@@ -409,10 +430,12 @@ class SensorControllerTest {
         null,
         new AlarmLimitsDto(0.0, 100.0),
         true,
-        null);
+        null,
+        version);
   }
 
-  private SensorResponseDto defaultResponseDto(UUID id, String name, Integer version) {
+  private SensorResponseDto defaultResponseDto(
+      UUID id, String name, Integer sensorVersion, Integer paramVersion) {
     return new SensorResponseDto(
         id,
         name,
@@ -423,7 +446,7 @@ class SensorControllerTest {
         new CoordinatesDto(0, 0, 0),
         true,
         null,
-        version,
-        List.of(defaultResponseParameterDto()));
+        sensorVersion,
+        List.of(defaultResponseParameterDto(paramVersion)));
   }
 }

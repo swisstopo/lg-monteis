@@ -15,6 +15,7 @@ CREATE TABLE sensor_parameter
     upper_alarm_limit DOUBLE PRECISION NOT NULL,
     active BOOLEAN NOT NULL DEFAULT true,
     comment TEXT,
+    version     INTEGER          NOT NULL DEFAULT 1,
     CONSTRAINT sensor_parameter_sensor_id_das_parameter_alias_key
         UNIQUE (sensor_id, das_parameter_alias)
 );
@@ -27,13 +28,7 @@ ALTER TABLE sensors DROP CONSTRAINT IF EXISTS sensors_type_id_fkey;
 ALTER TABLE sensors DROP CONSTRAINT IF EXISTS sensors_formula_id_fkey;
 DROP INDEX IF EXISTS idx_sensors_formula_id;
 
--- 4. Add the `das` (data-acquisition-system) enum, completing the Sensor.das : DAS_ENUM field
--- documented in documentation/architecture/images/erd-metadata.puml. Only SOL_EXPERTS is
--- integrated today, so the enum has a single value; extend it with
--- `ALTER TYPE das ADD VALUE '...'` in a future migration as further DAS integrations are onboarded.
-CREATE TYPE das AS ENUM ('SOL_EXPERTS');
-
--- 5. Modify the sensors table: add new columns, drop extracted columns, and restore the
+-- 4. Modify the sensors table: add new columns, drop extracted columns, and restore the
 -- uniqueness the old `code` column had (V2's `code TEXT UNIQUE NOT NULL`) on its replacement -
 -- a sensor is identified on the external DAS supplier's side by the combination of which DAS
 -- system it comes from and its alias on that system (das_sensor_alias) - e.g. two different
@@ -52,7 +47,7 @@ ALTER TABLE sensors
     ADD COLUMN fulcrum_id UUID,
     ADD COLUMN das_sensor_alias TEXT,
     ADD COLUMN main_experiment UUID,
-    ADD COLUMN das das NOT NULL DEFAULT 'SOL_EXPERTS',
+    ADD COLUMN das TEXT NOT NULL DEFAULT 'SOL_EXPERTS',
     ADD CONSTRAINT sensors_das_das_sensor_alias_key UNIQUE (das, das_sensor_alias),
     DROP COLUMN code CASCADE,
     DROP COLUMN type_id CASCADE,

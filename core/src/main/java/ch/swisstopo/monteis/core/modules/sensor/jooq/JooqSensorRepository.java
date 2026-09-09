@@ -7,25 +7,11 @@ import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidati
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
-import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
-import ch.swisstopo.monteis.core.jooq.generated.tables.records.FormulasRecord;
-import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorParameterRecord;
-import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorTypesRecord;
-import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorsRecord;
+import ch.swisstopo.monteis.core.jooq.generated.tables.records.*;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.jooq.ExperimentJooqMapper;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import ch.swisstopo.monteis.core.modules.sensor.domain.*;
+import java.util.*;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -113,7 +99,7 @@ public class JooqSensorRepository implements SensorRepository {
     }
 
     Sensor savedSensor = mapper.toDomain(createdSensor);
-    savedSensor.setMainExperiment(sensor.getMainExperiment());
+    savedSensor.setMainExperiment(hydrateMainExperiment(sensor.getMainExperiment()));
     List<SensorParameter> savedParams = new ArrayList<>();
 
     if (sensor.getParameters() != null) {
@@ -182,7 +168,7 @@ public class JooqSensorRepository implements SensorRepository {
     }
 
     Sensor savedSensor = mapper.toDomain(updatedRecord);
-    savedSensor.setMainExperiment(sensor.getMainExperiment());
+    savedSensor.setMainExperiment(hydrateMainExperiment(sensor.getMainExperiment()));
     List<SensorParameter> savedParams = new ArrayList<>();
 
     Set<UUID> idsToRemove =
@@ -323,6 +309,18 @@ public class JooqSensorRepository implements SensorRepository {
     return sensor;
   }
 
+  // Re-fetch the fully-hydrated Experiment (with its period)
+  private Experiment hydrateMainExperiment(Experiment mainExperimentShell) {
+    if (mainExperimentShell == null) {
+      return null;
+    }
+    ExperimentsRecord expRecord =
+        dsl.selectFrom(EXPERIMENTS)
+            .where(EXPERIMENTS.ID.eq(mainExperimentShell.getId()))
+            .fetchOne();
+    return expRecord != null ? experimentMapper.toDomain(expRecord) : null;
+  }
+
   private void attachParameters(List<Sensor> sensors) {
     if (sensors.isEmpty()) {
       return;
@@ -350,12 +348,14 @@ public class JooqSensorRepository implements SensorRepository {
   }
 
   private FieldBusinessValidationException dasSensorAliasConflict(Sensor sensor) {
-    return new FieldBusinessValidationException(
-        "dasSensorAlias", sensor.getDasSensorAlias(), "validation.unique", Map.of());
+    return dasAliasConflict("dasSensorAlias", sensor.getDasSensorAlias());
   }
 
   private FieldBusinessValidationException dasParameterAliasConflict(SensorParameter parameter) {
-    return new FieldBusinessValidationException(
-        "dasParameterAlias", parameter.getDasParameterAlias(), "validation.unique", Map.of());
+    return dasAliasConflict("dasParameterAlias", parameter.getDasParameterAlias());
+  }
+
+  private FieldBusinessValidationException dasAliasConflict(String aliasKey, String alias) {
+    return new FieldBusinessValidationException(aliasKey, alias, "validation.unique", Map.of());
   }
 }

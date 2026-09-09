@@ -72,6 +72,7 @@ export class MeasurementsService {
       // use flatMap to safely filter out bad points without crashing the whole chart
       const data: ChartPoint[] = (sensor.points ?? []).flatMap((item) => {
         if (item.timestamp === undefined || item.value === undefined) {
+          // TODO MON-143
           console.warn(`[Telemetry] Dropped malformed point for sensor ${sensor.code}`);
           return [];
         }
@@ -80,6 +81,7 @@ export class MeasurementsService {
 
       return {
         id: sensor.id ?? `sensor-${index}`,
+        // TODO MON-143
         label: `${sensor.code ?? 'unknown'} [${sensor.unit ?? ''}]`,
         data: data,
         yAxisId: axisIdsByUnit.get(sensor.unit ?? ''),

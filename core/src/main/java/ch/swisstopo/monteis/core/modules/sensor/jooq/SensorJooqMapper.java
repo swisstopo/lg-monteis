@@ -43,8 +43,6 @@ public interface SensorJooqMapper {
   @Mapping(target = "mainExperiment", ignore = true)
   void updateRecordFromDomain(Sensor sensor, @MappingTarget SensorsRecord sensorsRecord);
 
-  // --- Embedded Sensor Parameter Mappings ---
-
   @Mapping(target = "id", source = "paramRecord.id")
   @Mapping(target = "name", source = "paramRecord.name")
   @Mapping(target = "unit", source = "paramRecord.unit")
@@ -52,12 +50,15 @@ public interface SensorJooqMapper {
   @Mapping(target = "comment", source = "paramRecord.comment")
   @Mapping(target = "alarmLimits.lower", source = "paramRecord.lowerAlarmLimit")
   @Mapping(target = "alarmLimits.upper", source = "paramRecord.upperAlarmLimit")
+  @Mapping(target = "version", source = "paramRecord.version")
   @Mapping(target = "formula", source = "formulaRecord")
   @Mapping(target = "type", source = "typeRecord")
   SensorParameter toParameterDomain(
       SensorParameterRecord paramRecord,
       FormulasRecord formulaRecord,
       SensorTypesRecord typeRecord);
+
+  // --- Embedded Sensor Parameter Mappings ---
 
   @Mapping(target = "lowerAlarmLimit", source = "alarmLimits.lower")
   @Mapping(target = "upperAlarmLimit", source = "alarmLimits.upper")

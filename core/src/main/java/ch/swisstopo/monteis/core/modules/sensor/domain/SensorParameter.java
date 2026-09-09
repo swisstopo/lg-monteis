@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
+import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import java.util.Objects;
 import java.util.UUID;
 import org.javers.core.metamodel.annotation.Id;
@@ -14,7 +15,34 @@ public class SensorParameter {
   private AlarmLimits alarmLimits;
   private Boolean active;
   private String comment;
+  private Integer version;
 
+  /**
+   * Constructor for creating a NEW SensorParameter from a web request.
+   * ID and Version are omitted as they are handled by the infrastructure layer.
+   */
+  @SuppressWarnings("java:S107")
+  @Default
+  public SensorParameter(
+      String name,
+      String dasParameterAlias,
+      SensorType type,
+      Unit unit,
+      Formula formula,
+      AlarmLimits alarmLimits,
+      Boolean active,
+      String comment) {
+    this.name = name;
+    this.dasParameterAlias = dasParameterAlias;
+    this.type = type;
+    this.unit = unit;
+    this.formula = formula;
+    this.alarmLimits = alarmLimits;
+    this.active = active;
+    this.comment = comment;
+  }
+
+  @SuppressWarnings("java:S107")
   public SensorParameter(
       UUID id,
       String name,
@@ -24,7 +52,8 @@ public class SensorParameter {
       Formula formula,
       AlarmLimits alarmLimits,
       Boolean active,
-      String comment) {
+      String comment,
+      Integer version) {
     this.id = id;
     this.name = name;
     this.dasParameterAlias = dasParameterAlias;
@@ -34,6 +63,7 @@ public class SensorParameter {
     this.alarmLimits = alarmLimits;
     this.active = active;
     this.comment = comment;
+    this.version = version;
   }
 
   public UUID getId() {
@@ -106,6 +136,14 @@ public class SensorParameter {
 
   public void setComment(String comment) {
     this.comment = comment;
+  }
+
+  public Integer getVersion() {
+    return version;
+  }
+
+  public void setVersion(Integer version) {
+    this.version = version;
   }
 
   public boolean changeTriggersPublish(SensorParameter old) {

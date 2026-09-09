@@ -368,6 +368,7 @@ class JooqSensorRepositoryIT {
         formula,
         new AlarmLimits(lower, upper),
         true,
+        null,
         null);
   }
 
@@ -559,8 +560,10 @@ class JooqSensorRepositoryIT {
             formula,
             new AlarmLimits(0.0, 100.0),
             true,
+            null,
             null);
 
+    // TODO MON-143
     Sensor sensor = new Sensor(name, code, DAS.SOL_EXPERTS, null, null, coordinates, true, null);
     sensor.setParameters(new ArrayList<>(List.of(parameter)));
     return sensor;

@@ -51,6 +51,32 @@ public class Sensor implements Auditable {
     this.comment = comment;
   }
 
+  @SuppressWarnings("java:S107")
+  public Sensor(
+      UUID id,
+      String name,
+      String dasSensorAlias,
+      DAS das,
+      UUID fulcrumId,
+      Experiment mainExperiment,
+      Coordinates coordinates,
+      Boolean active,
+      String comment,
+      Integer version,
+      List<SensorParameter> parameters) {
+    this.id = id;
+    this.name = name;
+    this.dasSensorAlias = dasSensorAlias;
+    this.das = das;
+    this.fulcrumId = fulcrumId;
+    this.mainExperiment = mainExperiment;
+    this.coordinates = coordinates;
+    this.active = active;
+    this.comment = comment;
+    this.version = version;
+    this.parameters = parameters;
+  }
+
   // --- Getters and Setters ---
 
   public UUID getId() {

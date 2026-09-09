@@ -59,6 +59,7 @@ class MeasurementControllerTest {
                 .param("to", validTo.toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(SENSOR_ID.toString()))
+        // TODO: MON-143
         .andExpect(jsonPath("$.code").value("TEMP-1"))
         .andExpect(jsonPath("$.name").value("monteis-001"))
         .andExpect(jsonPath("$.unit").value("KELVIN"))

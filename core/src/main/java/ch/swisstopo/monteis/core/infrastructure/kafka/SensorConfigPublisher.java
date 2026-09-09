@@ -23,6 +23,8 @@ public class SensorConfigPublisher {
   public void publish(Sensor sensor) {
     for (SensorParameter parameter : sensor.getParameters()) {
 
+      // TODO: MON-143 also send config of inactive sensors,
+      //  since the active flag is used for filtering rather than deciding which values we parse
       if (Boolean.FALSE.equals(parameter.getActive())) {
         continue;
       }

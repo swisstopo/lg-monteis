@@ -447,6 +447,7 @@ class JooqExperimentRepositoryIT {
             formula,
             new AlarmLimits(0.0, 100.0),
             true,
+            null,
             null);
 
     Sensor sensor = new Sensor(name, code, DAS.SOL_EXPERTS, null, null, coordinates, true, null);

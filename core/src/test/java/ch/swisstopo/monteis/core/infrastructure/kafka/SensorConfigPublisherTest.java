@@ -47,6 +47,7 @@ class SensorConfigPublisherTest {
             formula,
             new AlarmLimits(0.0, 100.0),
             true,
+            null,
             null);
     Sensor sensor =
         new Sensor(

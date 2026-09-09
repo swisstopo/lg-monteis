@@ -13,4 +13,5 @@ public record SensorParameterResponseDto(
     FormulaResponseDto formula,
     AlarmLimitsDto alarmLimits,
     Boolean active,
-    String comment) {}
+    String comment,
+    Integer version) {}
