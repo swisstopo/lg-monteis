@@ -5,6 +5,9 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
@@ -12,7 +15,6 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -34,11 +36,15 @@ public class SensorService {
 
   @AuditChanges
   public Sensor createSensor(Sensor sensor) {
-    Optional<FulcrumSensor> sensorById = fulcrumService.getSensorById(sensor.getFulcrumId());
-    if (sensorById.isEmpty()) {
-      throw new ObjectBusinessValidationException("object.deleted", Map.of());
-    }
-
+    FulcrumSensor fulcrumSensor =
+        fulcrumService
+            .getSensorById(sensor.getFulcrumId())
+            .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
+    sensor.setCoordinates(
+        new Coordinates(
+            fulcrumSensor.xPointWithOffset(),
+            fulcrumSensor.yPointWithOffset(),
+            fulcrumSensor.zPointWithOffset()));
     Sensor created = repository.create(sensor);
     for (SensorParameter parameter : created.getParameters()) {
       configPublisher.publish(created, parameter);
@@ -50,10 +56,15 @@ public class SensorService {
   public Sensor updateSensor(Sensor sensor) {
     Sensor before = repository.findById(sensor.getId()).orElse(null);
 
-    Optional<FulcrumSensor> sensorById = fulcrumService.getSensorById(sensor.getFulcrumId());
-    if (sensorById.isEmpty()) {
-      throw new ObjectBusinessValidationException("object.deleted", Map.of());
-    }
+    FulcrumSensor fulcrumSensor =
+        fulcrumService
+            .getSensorById(sensor.getFulcrumId())
+            .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
+    sensor.setCoordinates(
+        new Coordinates(
+            fulcrumSensor.xPointWithOffset(),
+            fulcrumSensor.yPointWithOffset(),
+            fulcrumSensor.zPointWithOffset()));
     Sensor updated = repository.update(sensor);
 
     Map<UUID, SensorParameter> parametersBefore =
