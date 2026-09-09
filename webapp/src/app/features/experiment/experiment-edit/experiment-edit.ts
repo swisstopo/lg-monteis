@@ -131,6 +131,9 @@ export default class ExperimentEdit {
     required(schema.name, { message: translate('experiment.name.validation.required')() });
     minLength(schema.name, 2, { message: translate('experiment.name.validation.minLength')() });
     maxLength(schema.name, 50, { message: translate('experiment.name.validation.maxLength')() });
+    maxLength(schema.comment, 4096, {
+      message: translate('experiment.comment.validation.maxLength')(),
+    });
     required(schema.period.start, {
       message: translate('experiment.period.start.validation.required')(),
     });

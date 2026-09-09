@@ -44,6 +44,10 @@ interface SensorParameterFormData {
   // parameters added client-side via "+ Add Parameter". Carried through unchanged into the
   // submitted payload so updateSensor can tell which array items are existing vs new.
   id: string | undefined;
+  // Backend optimistic-locking version, mirroring id: populated for existing parameters, left
+  // undefined for new ones. Required by WriteSensorParameterDto on update - omitting it fails
+  // bean validation (@NotNull(groups = Update.class)) for every parameter in the request.
+  version: number | undefined;
   name: string;
   dasParameterAlias: string;
   unit: Unit;
@@ -83,6 +87,7 @@ function blankParameter(): SensorParameterFormData {
   return {
     clientKey: crypto.randomUUID(),
     id: undefined,
+    version: undefined,
     name: '',
     dasParameterAlias: '',
     unit: WriteSensorParameterDto.UnitEnum.Ampere,
@@ -100,6 +105,7 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
       ? domainModel.parameters.map((parameter) => ({
           clientKey: crypto.randomUUID(),
           id: parameter.id,
+          version: parameter.version,
           name: parameter.name ?? '',
           dasParameterAlias: parameter.dasParameterAlias ?? '',
           unit: parameter.unit ?? WriteSensorParameterDto.UnitEnum.Ampere,
@@ -236,10 +242,16 @@ export default class SensorEdit {
     required(schema.dasSensorAlias, {
       message: translate('sensor.dasSensorAlias.validation.required')(),
     });
+    maxLength(schema.dasSensorAlias, 255, {
+      message: translate('sensor.dasSensorAlias.validation.maxLength')(),
+    });
     required(schema.name, { message: translate('sensor.name.validation.required')() });
     minLength(schema.name, 2, { message: translate('sensor.name.validation.minLength')() });
     maxLength(schema.name, 50, { message: translate('sensor.name.validation.maxLength')() });
     required(schema.das, { message: translate('sensor.das.validation.required')() });
+    maxLength(schema.comment, 4096, {
+      message: translate('sensor.comment.validation.maxLength')(),
+    });
     required(schema.coordinates.x, {
       message: translate('sensor.coordinate.xLocal.validation.required')(),
     });
@@ -267,9 +279,30 @@ export default class SensorEdit {
       required(parameter.name, {
         message: translate('sensor.parameter.name.validation.required')(),
       });
+      minLength(parameter.name, 2, {
+        message: translate('sensor.parameter.name.validation.minLength')(),
+      });
+      maxLength(parameter.name, 255, {
+        message: translate('sensor.parameter.name.validation.maxLength')(),
+      });
+      maxLength(parameter.dasParameterAlias, 255, {
+        message: translate('sensor.parameter.dasParameterAlias.validation.maxLength')(),
+      });
+      maxLength(parameter.comment, 4096, {
+        message: translate('sensor.parameter.comment.validation.maxLength')(),
+      });
       required(parameter.unit);
       required(parameter.type.name, {
         message: translate('sensor.type.validation.required')(),
+      });
+      minLength(parameter.type.name, 2, {
+        message: translate('sensor.type.validation.minLength')(),
+      });
+      maxLength(parameter.type.name, 100, {
+        message: translate('sensor.type.validation.maxLength')(),
+      });
+      maxLength(parameter.formula.expression, 1024, {
+        message: translate('sensor.formula.validation.maxLength')(),
       });
       required(parameter.alarmLimits.lower, {
         message: translate('sensor.alarmLimit.from.validation.required')(),
@@ -438,6 +471,7 @@ export default class SensorEdit {
       version: this.sensor()?.version ?? undefined,
       parameters: formData.parameters.map((parameter) => ({
         id: parameter.id,
+        version: parameter.version,
         name: parameter.name,
         dasParameterAlias: parameter.dasParameterAlias?.trim() || undefined,
         unit: parameter.unit,

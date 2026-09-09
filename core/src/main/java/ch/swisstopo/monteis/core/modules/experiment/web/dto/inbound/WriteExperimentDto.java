@@ -18,7 +18,7 @@ public record WriteExperimentDto(
         @NotNull(groups = Update.class)
         UUID id,
     @NotBlank @Size(min = 2, max = 50) String name,
-    @NullOrNotBlank String comment,
+    @NullOrNotBlank @Size(max = 4096) String comment,
     @NotNull @Valid PeriodDto period,
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
         @Null(groups = Create.class)
