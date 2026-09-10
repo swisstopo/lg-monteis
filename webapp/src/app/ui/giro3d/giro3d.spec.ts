@@ -78,6 +78,7 @@ describe('Giro3d', () => {
     fixture = TestBed.createComponent(Giro3d);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('tilesetUrl', TILESET_URL);
+    fixture.componentRef.setInput('sensors', []);
     fixture.componentRef.setInput('fetch', fetchTiles);
     await fixture.whenStable();
   });
