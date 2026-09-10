@@ -25,7 +25,7 @@
     <testcontainers.postgres.version>1.21.4</testcontainers.postgres.version>
     <testcontainers.kafka.version>1.21.4</testcontainers.kafka.version>
     <postgresql.version>42.7.13</postgresql.version>
-    <springdoc.version>3.1.0</springdoc.version>
+    <springdoc.version>3.1.1</springdoc.version>
     <sonar.version>5.7.0.6970</sonar.version>
     <springdoc-plugin.version>1.5</springdoc-plugin.version>
     <spotless.version>3.10.2</spotless.version>
