@@ -1,1 +1,5 @@
-<app-giro3d [tilesetUrl]="tilesetUrl" [fetch]="fetchTiles"></app-giro3d>
+@if (error()) {
+  <app-inline-error [message]="'measurements-visualization.error' | translate"></app-inline-error>
+} @else {
+  <app-giro3d [tilesetUrl]="tilesetUrl" [sensors]="sensors()" [fetch]="fetchTiles"></app-giro3d>
+}
