@@ -36,7 +36,7 @@ jobs:
       # Scoped to schema dirs + Dockerfile; seed dirs excluded (not baked).
       - name: "[TAG]: Calculate Semantic Version"
         id: semver
-        uses: paulhatch/semantic-version@v6.0.3
+        uses: paulhatch/semantic-version@v6.0.4
         with:
           tag_prefix: "${{ env.SERVICE }}-v"
           change_path: "db/meta/schema db/timescale/schema docker/migration/Dockerfile"
