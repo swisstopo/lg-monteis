@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import Instance from '@giro3d/giro3d/core/Instance.js';
 import { CoordinateSystem } from '@giro3d/giro3d/core/geographic/CoordinateSystem.js';
 import Tiles3D from '@giro3d/giro3d/entities/Tiles3D.js';
@@ -32,10 +33,10 @@ import { SensorResponseDto } from '../../core/generated';
 import { InlineError } from '../inline-error/inline-error';
 import { TilesFetch, TilesFetchPlugin } from './tiles-fetch-plugin';
 
-const HIGHLIGHT_COLOR = new Color(0xa5f9a0);
+const BLACK = new Color('#000');
 
 @Component({
-  imports: [TranslatePipe, MatProgressSpinner, InlineError],
+  imports: [TranslatePipe, MatProgressSpinner, MatTooltipModule, InlineError],
   selector: 'app-giro3d',
   styleUrl: './giro3d.scss',
   templateUrl: './giro3d.html',
@@ -198,14 +199,19 @@ export class Giro3d implements AfterViewInit {
   }
 
   private setupPicking(instance: Instance, sensorGroup: Group) {
-    let highlightedElem: Mesh<SphereGeometry, MeshLambertMaterial> | null = null;
+    let highlightedElem: Mesh | null = null;
 
-    function highlightElem(elem: Mesh<SphereGeometry, MeshLambertMaterial>) {
+    function highlightElem(elem: Mesh) {
       highlightedElem = elem;
-      elem.userData['originalColor'] = elem.material.color;
-      elem.material.color = HIGHLIGHT_COLOR;
-      elem.material.needsUpdate = true;
-      instance.notifyChange(elem);
+      if ('color' in elem.material) {
+        const originalColor = elem.material.color as Color;
+        elem.userData['originalColor'] = originalColor.clone();
+        // originalColor.offsetHSL(0, 0, 0.2);
+        originalColor.lerp(BLACK, 0.5);
+        // there is no cases where the material has a color but no needsUpdate
+        (elem.material as MeshLambertMaterial).needsUpdate = true;
+        instance.notifyChange(elem);
+      }
     }
 
     function resetHighlightedObject() {
@@ -214,9 +220,11 @@ export class Giro3d implements AfterViewInit {
         highlightedElem.material != null &&
         !Array.isArray(highlightedElem.material)
       ) {
-        highlightedElem.material.color = highlightedElem.userData['originalColor'];
-        highlightedElem.material.needsUpdate = true;
-        instance.notifyChange(highlightedElem);
+        if ('color' in highlightedElem.material) {
+          highlightedElem.material.color = highlightedElem.userData['originalColor'];
+          highlightedElem.material.needsUpdate = true;
+          instance.notifyChange(highlightedElem);
+        }
         highlightedElem = null;
       }
     }
@@ -232,7 +240,7 @@ export class Giro3d implements AfterViewInit {
           // nothing to do
           return;
         }
-        if (object.parent === sensorGroup && object instanceof Mesh) {
+        if (object instanceof Mesh) {
           // highlight object
           highlightElem(object);
         }
