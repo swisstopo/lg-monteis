@@ -119,6 +119,7 @@ export class Giro3d implements AfterViewInit {
 
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
+  protected readonly popupContent = signal<string | null>(null);
 
   private readonly instance = signal<Instance | null>(null);
   private readonly tileset = computed(() => {
@@ -263,7 +264,16 @@ export class Giro3d implements AfterViewInit {
     this.controls.set(controls);
   }
 
-  private setupPicking(instance: Instance, sensorGroup: Group) {
+  private getMeshInfo(obj: Mesh) {
+    const data = obj.userData;
+    if (data['type'] === 'sensor') {
+      return `sensor ${data['name']}, ${data['comment']}`;
+    } else {
+      return `${data['class']}: ${data['name']}`;
+    }
+  }
+
+  private setupPicking(instance: Instance) {
     let highlightedElem: Mesh | null = null;
 
     function highlightElem(elem: Mesh) {
@@ -271,7 +281,6 @@ export class Giro3d implements AfterViewInit {
       if ('color' in elem.material) {
         const originalColor = elem.material.color as Color;
         elem.userData['originalColor'] = originalColor.clone();
-        // originalColor.offsetHSL(0, 0, 0.2);
         originalColor.lerp(BLACK, 0.5);
         // there is no cases where the material has a color but no needsUpdate
         (elem.material as MeshLambertMaterial).needsUpdate = true;
@@ -308,7 +317,10 @@ export class Giro3d implements AfterViewInit {
         if (object instanceof Mesh) {
           // highlight object
           highlightElem(object);
+          this.popupContent.set(this.getMeshInfo(object));
         }
+      } else {
+        this.popupContent.set(null);
       }
     };
     instance.domElement.addEventListener('mousemove', this._mouseMoveEventListener);
@@ -333,7 +345,7 @@ export class Giro3d implements AfterViewInit {
     this.sensorGroup = sensorGroup;
 
     // set up listeners/picking/hovering etc.
-    this.setupPicking(instance, sensorGroup);
+    this.setupPicking(instance);
   }
 
   private removeEventListeners(instance: Instance) {
@@ -362,6 +374,7 @@ export class Giro3d implements AfterViewInit {
       id: sensor.sensorId,
       name: sensor.name,
       comment: sensor.comment,
+      type: 'sensor',
     };
     return sensor3D;
   }
