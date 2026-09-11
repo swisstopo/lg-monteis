@@ -1,11 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.jooq;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
-import ch.swisstopo.monteis.core.infrastructure.query.FilterModelItem;
-import ch.swisstopo.monteis.core.infrastructure.query.NumberFilterModel;
-import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
-import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
-import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
+import ch.swisstopo.monteis.core.infrastructure.query.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -69,20 +66,22 @@ public final class PagedRequestJooqTranslator {
     return switch (model) {
       case TextFilterModel text -> textCondition(field, text);
       case NumberFilterModel number -> numberCondition(field, number);
+      case DateFilterModel date -> dateCondition(field, date);
+      case SetFilterModel set -> setCondition(field, set);
     };
   }
 
   private static Condition textCondition(Field<?> raw, TextFilterModel model) {
     Field<String> field = raw.cast(String.class);
     return switch (model.type()) {
-      case "contains" -> field.containsIgnoreCase(model.filter());
-      case "notContains" -> field.notContainsIgnoreCase(model.filter());
-      case "equals" -> field.equalIgnoreCase(model.filter());
-      case "notEqual" -> field.notEqualIgnoreCase(model.filter());
-      case "startsWith" -> field.startsWithIgnoreCase(model.filter());
-      case "endsWith" -> field.endsWithIgnoreCase(model.filter());
-      case "blank" -> field.isNull().or(field.eq(""));
-      case "notBlank" -> field.isNotNull().and(field.ne(""));
+      case AgGridFilter.CONTAINS -> field.containsIgnoreCase(model.filter());
+      case AgGridFilter.NOT_CONTAINS -> field.notContainsIgnoreCase(model.filter());
+      case AgGridFilter.EQUALS -> field.equalIgnoreCase(model.filter());
+      case AgGridFilter.NOT_EQUAL -> field.notEqualIgnoreCase(model.filter());
+      case AgGridFilter.STARTS_WITH -> field.startsWithIgnoreCase(model.filter());
+      case AgGridFilter.ENDS_WITH -> field.endsWithIgnoreCase(model.filter());
+      case AgGridFilter.BLANK -> field.isNull().or(field.eq(""));
+      case AgGridFilter.NOT_BLANK -> field.isNotNull().and(field.ne(""));
       case null, default ->
           throw new InvalidPagedRequestException("Unsupported text filter type: " + model.type());
     };
@@ -94,18 +93,66 @@ public final class PagedRequestJooqTranslator {
     // Double at the SQL level regardless, instead of failing at bind time on a type mismatch.
     Field<Double> field = raw.cast(Double.class);
     return switch (model.type()) {
-      case "equals" -> field.eq(model.filter());
-      case "notEqual" -> field.ne(model.filter());
-      case "lessThan" -> field.lt(model.filter());
-      case "lessThanOrEqual" -> field.le(model.filter());
-      case "greaterThan" -> field.gt(model.filter());
-      case "greaterThanOrEqual" -> field.ge(model.filter());
-      case "inRange" -> field.between(model.filter(), model.filterTo());
-      case "blank" -> field.isNull();
-      case "notBlank" -> field.isNotNull();
+      case AgGridFilter.EQUALS -> field.eq(model.filter());
+      case AgGridFilter.NOT_EQUAL -> field.ne(model.filter());
+      case AgGridFilter.LESS_THAN -> field.lt(model.filter());
+      case AgGridFilter.LESS_THAN_OR_EQUAL -> field.le(model.filter());
+      case AgGridFilter.GREATER_THAN -> field.gt(model.filter());
+      case AgGridFilter.GREATER_THAN_OR_EQUAL -> field.ge(model.filter());
+      case AgGridFilter.IN_RANGE -> field.between(model.filter(), model.filterTo());
+      case AgGridFilter.BLANK -> field.isNull();
+      case AgGridFilter.NOT_BLANK -> field.isNotNull();
       case null, default ->
           throw new InvalidPagedRequestException("Unsupported number filter type: " + model.type());
     };
+  }
+
+  private static Condition dateCondition(Field<?> raw, DateFilterModel model) {
+    Field<LocalDate> field = raw.cast(LocalDate.class);
+
+    LocalDate fromDate = model.dateFrom() != null ? LocalDate.parse(model.dateFrom()) : null;
+
+    LocalDate toDate = model.dateTo() != null ? LocalDate.parse(model.dateTo()) : null;
+
+    return switch (model.type()) {
+      case AgGridFilter.EQUALS -> field.eq(fromDate);
+      case AgGridFilter.NOT_EQUAL -> field.ne(fromDate);
+      case AgGridFilter.LESS_THAN -> field.lt(fromDate);
+      case AgGridFilter.LESS_THAN_OR_EQUAL -> field.le(fromDate);
+      case AgGridFilter.GREATER_THAN -> field.gt(fromDate);
+      case AgGridFilter.GREATER_THAN_OR_EQUAL -> field.ge(fromDate);
+      case AgGridFilter.IN_RANGE -> field.between(fromDate, toDate);
+      case AgGridFilter.BLANK -> field.isNull();
+      case AgGridFilter.NOT_BLANK -> field.isNotNull();
+      case null, default ->
+          throw new InvalidPagedRequestException("Unsupported date filter type: " + model.type());
+    };
+  }
+
+  private static Condition setCondition(Field<?> raw, SetFilterModel model) {
+    if (model.values() == null || model.values().isEmpty()) {
+      return DSL.falseCondition();
+    }
+
+    Field<String> field = raw.cast(String.class);
+    return field.in(model.values());
+  }
+
+  private static final class AgGridFilter {
+    static final String EQUALS = "equals";
+    static final String NOT_EQUAL = "notEqual";
+    static final String LESS_THAN = "lessThan";
+    static final String LESS_THAN_OR_EQUAL = "lessThanOrEqual";
+    static final String GREATER_THAN = "greaterThan";
+    static final String GREATER_THAN_OR_EQUAL = "greaterThanOrEqual";
+    static final String IN_RANGE = "inRange";
+    static final String BLANK = "blank";
+    static final String NOT_BLANK = "notBlank";
+    // text specific
+    static final String CONTAINS = "contains";
+    static final String NOT_CONTAINS = "notContains";
+    static final String STARTS_WITH = "startsWith";
+    static final String ENDS_WITH = "endsWith";
   }
 
   private static Field<?> requireField(String colId, Map<String, Field<?>> columnsByColId) {

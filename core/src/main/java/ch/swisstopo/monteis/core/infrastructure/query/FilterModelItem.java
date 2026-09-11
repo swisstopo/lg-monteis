@@ -15,6 +15,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     property = "filterType")
 @JsonSubTypes({
   @JsonSubTypes.Type(value = TextFilterModel.class, name = "text"),
-  @JsonSubTypes.Type(value = NumberFilterModel.class, name = "number")
+  @JsonSubTypes.Type(value = NumberFilterModel.class, name = "number"),
+  @JsonSubTypes.Type(value = DateFilterModel.class, name = "date"),
+  @JsonSubTypes.Type(value = SetFilterModel.class, name = "set")
 })
-public sealed interface FilterModelItem permits TextFilterModel, NumberFilterModel {}
+public sealed interface FilterModelItem
+    permits DateFilterModel, NumberFilterModel, SetFilterModel, TextFilterModel {}
