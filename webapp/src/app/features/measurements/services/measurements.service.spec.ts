@@ -62,24 +62,24 @@ describe('MeasurementsService', () => {
     const apiResponses: ChartDataResponseDto[] = [
       {
         id: SENSOR_1,
-        sensorName: 'Temperature',
-        sensorCode: 'T1',
+        name: 'Temperature',
+        code: 'T1',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
-        data: [],
+        points: [],
       },
       {
         id: SENSOR_2,
-        sensorName: 'Distance',
-        sensorCode: 'D1',
+        name: 'Distance',
+        code: 'D1',
         unit: ChartDataResponseDto.UnitEnum.Meter,
-        data: [],
+        points: [],
       },
       {
         id: SENSOR_3,
-        sensorName: 'Temperature 2',
-        sensorCode: 'T2',
+        name: 'Temperature 2',
+        code: 'T2',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
-        data: [],
+        points: [],
       },
     ];
     const service = setup((id) => of(apiResponses.filter((response) => response.id === id)));
@@ -117,10 +117,10 @@ describe('MeasurementsService', () => {
     const apiResponses: ChartDataResponseDto[] = [
       {
         id: SENSOR_1,
-        sensorName: 'Temperature',
-        sensorCode: 'T1',
+        name: 'Temperature',
+        code: 'T1',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
-        data: [
+        points: [
           { timestamp: '2024-01-01T00:00:00Z', value: 10 },
           { timestamp: '2024-01-01T01:00:00Z', value: 12 },
         ],
@@ -150,10 +150,10 @@ describe('MeasurementsService', () => {
     const apiResponses: ChartDataResponseDto[] = [
       {
         id: SENSOR_1,
-        sensorName: 'Temperature',
-        sensorCode: 'T1',
+        name: 'Temperature',
+        code: 'T1',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
-        data: [
+        points: [
           { timestamp: undefined, value: 10 },
           { timestamp: '2024-01-01T00:00:00Z', value: 12 },
         ],

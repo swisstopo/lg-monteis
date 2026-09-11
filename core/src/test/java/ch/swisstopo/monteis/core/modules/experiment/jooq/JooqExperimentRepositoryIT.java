@@ -14,6 +14,7 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -108,6 +109,34 @@ class JooqExperimentRepositoryIT {
 
           // Assert
           assertNull(details, "Non-existent experiment should resolve to null");
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_find_all_experiments_sorted_by_name() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          createExperimentWithDsl(
+              "Zebra Experiment",
+              "Comment Z",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
+          createExperimentWithDsl(
+              "Alpha Experiment",
+              "Comment A",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
+
+          // Act
+          List<Experiment> result = repository.findAll();
+
+          // Assert
+          List<String> namesInOrder = result.stream().map(Experiment::getName).toList();
+          assertTrue(
+              namesInOrder.indexOf("Alpha Experiment") < namesInOrder.indexOf("Zebra Experiment"),
+              "Experiments should be sorted alphabetically by name");
         });
   }
 
@@ -407,19 +436,22 @@ class JooqExperimentRepositoryIT {
   private Sensor createDummySensor(String code, String name, String formulaExpression) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
-    AlarmLimits alarmLimits = new AlarmLimits(0.0, 100.0);
     Coordinates coordinates = new Coordinates(2400, -12007, -1600);
-
-    return sensorRepository.create(
-        new Sensor(
-            code,
+    SensorParameter parameter =
+        new SensorParameter(
+            null,
             name,
+            null,
             new SensorType(null, "Other", null),
             Unit.METER,
-            null,
-            coordinates,
-            alarmLimits,
+            formula,
+            new AlarmLimits(0.0, 100.0),
             true,
-            formula));
+            null,
+            null);
+
+    Sensor sensor = new Sensor(name, code, DAS.SOL_EXPERTS, null, null, coordinates, true, null);
+    sensor.setParameters(new ArrayList<>(List.of(parameter)));
+    return sensorRepository.create(sensor);
   }
 }

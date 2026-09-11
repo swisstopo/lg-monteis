@@ -2,7 +2,9 @@ package ch.swisstopo.monteis.core.modules.sensor.domain;
 
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
-import java.util.Objects;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
@@ -12,16 +14,17 @@ public class Sensor implements Auditable {
   public static final String JAVERS_TYPE = "Sensor";
 
   @Id private UUID id;
-  private String code;
+
   private String name;
-  private SensorType type;
-  private Unit unit;
-  private String comment;
+  private String dasSensorAlias;
+  private DAS das;
+  private UUID fulcrumId;
+  private Experiment mainExperiment;
   private Coordinates coordinates;
-  private AlarmLimits alarmLimits;
   private Boolean active;
-  private Formula formula;
+  private String comment;
   private Integer version;
+  private List<SensorParameter> parameters = new ArrayList<>();
 
   /**
    * Constructor for creating a NEW Sensor from a web request.
@@ -30,53 +33,48 @@ public class Sensor implements Auditable {
   @SuppressWarnings("java:S107")
   @Default
   public Sensor(
-      String code,
       String name,
-      SensorType type,
-      Unit unit,
-      String comment,
+      String dasSensorAlias,
+      DAS das,
+      UUID fulcrumId,
+      Experiment mainExperiment,
       Coordinates coordinates,
-      AlarmLimits alarmLimits,
       Boolean active,
-      Formula formula) {
-    this.code = code;
+      String comment) {
     this.name = name;
-    this.type = type;
-    this.unit = unit;
-    this.comment = comment;
+    this.dasSensorAlias = dasSensorAlias;
+    this.das = das;
+    this.fulcrumId = fulcrumId;
+    this.mainExperiment = mainExperiment;
     this.coordinates = coordinates;
-    this.alarmLimits = alarmLimits;
     this.active = active;
-    this.formula = formula != null ? formula : new Formula();
+    this.comment = comment;
   }
 
-  /**
-   * Constructor for REBUILDING an existing Sensor from the database (jOOQ).
-   */
   @SuppressWarnings("java:S107")
   public Sensor(
       UUID id,
-      String code,
       String name,
-      SensorType type,
-      Unit unit,
-      String comment,
+      String dasSensorAlias,
+      DAS das,
+      UUID fulcrumId,
+      Experiment mainExperiment,
       Coordinates coordinates,
-      AlarmLimits alarmLimits,
       Boolean active,
-      Formula formula,
-      Integer version) {
+      String comment,
+      Integer version,
+      List<SensorParameter> parameters) {
     this.id = id;
-    this.code = code;
     this.name = name;
-    this.unit = unit;
-    this.type = type;
-    this.comment = comment;
+    this.dasSensorAlias = dasSensorAlias;
+    this.das = das;
+    this.fulcrumId = fulcrumId;
+    this.mainExperiment = mainExperiment;
     this.coordinates = coordinates;
-    this.alarmLimits = alarmLimits;
     this.active = active;
-    this.formula = formula;
+    this.comment = comment;
     this.version = version;
+    this.parameters = parameters;
   }
 
   // --- Getters and Setters ---
@@ -89,14 +87,6 @@ public class Sensor implements Auditable {
     this.id = id;
   }
 
-  public String getCode() {
-    return code;
-  }
-
-  public void setCode(String code) {
-    this.code = code;
-  }
-
   public String getName() {
     return name;
   }
@@ -105,28 +95,36 @@ public class Sensor implements Auditable {
     this.name = name;
   }
 
-  public SensorType getType() {
-    return type;
+  public String getDasSensorAlias() {
+    return dasSensorAlias;
   }
 
-  public void setType(SensorType type) {
-    this.type = type;
+  public void setDasSensorAlias(String dasSensorAlias) {
+    this.dasSensorAlias = dasSensorAlias;
   }
 
-  public Unit getUnit() {
-    return unit;
+  public DAS getDAS() {
+    return das;
   }
 
-  public void setUnit(Unit unit) {
-    this.unit = unit;
+  public void setDAS(DAS das) {
+    this.das = das;
   }
 
-  public String getComment() {
-    return comment;
+  public UUID getFulcrumId() {
+    return fulcrumId;
   }
 
-  public void setComment(String comment) {
-    this.comment = comment;
+  public void setFulcrumId(UUID fulcrumId) {
+    this.fulcrumId = fulcrumId;
+  }
+
+  public Experiment getMainExperiment() {
+    return mainExperiment;
+  }
+
+  public void setMainExperiment(Experiment mainExperiment) {
+    this.mainExperiment = mainExperiment;
   }
 
   public Coordinates getCoordinates() {
@@ -137,14 +135,6 @@ public class Sensor implements Auditable {
     this.coordinates = coordinates;
   }
 
-  public AlarmLimits getAlarmLimits() {
-    return alarmLimits;
-  }
-
-  public void setAlarmLimits(AlarmLimits alarmLimits) {
-    this.alarmLimits = alarmLimits;
-  }
-
   public Boolean getActive() {
     return active;
   }
@@ -153,12 +143,12 @@ public class Sensor implements Auditable {
     this.active = active;
   }
 
-  public Formula getFormula() {
-    return formula;
+  public String getComment() {
+    return comment;
   }
 
-  public void setFormula(Formula formula) {
-    this.formula = formula;
+  public void setComment(String comment) {
+    this.comment = comment;
   }
 
   public Integer getVersion() {
@@ -169,9 +159,11 @@ public class Sensor implements Auditable {
     this.version = version;
   }
 
-  public boolean changeTriggersPublish(Sensor old) {
-    return old == null
-        || !Objects.equals(old.getFormula().getExpression(), this.formula.getExpression())
-        || !Objects.equals(old.getAlarmLimits(), this.alarmLimits);
+  public List<SensorParameter> getParameters() {
+    return parameters;
+  }
+
+  public void setParameters(List<SensorParameter> parameters) {
+    this.parameters = parameters;
   }
 }

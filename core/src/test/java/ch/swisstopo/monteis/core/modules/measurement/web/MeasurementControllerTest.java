@@ -59,10 +59,11 @@ class MeasurementControllerTest {
                 .param("to", validTo.toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(SENSOR_ID.toString()))
-        .andExpect(jsonPath("$.sensorCode").value("TEMP-1"))
-        .andExpect(jsonPath("$.sensorName").value("monteis-001"))
+        // TODO: MON-143
+        .andExpect(jsonPath("$.code").value("TEMP-1"))
+        .andExpect(jsonPath("$.name").value("monteis-001"))
         .andExpect(jsonPath("$.unit").value("KELVIN"))
-        .andExpect(jsonPath("$.data[0].value").value(12.5));
+        .andExpect(jsonPath("$.points[0].value").value(12.5));
 
     then(measurementService).should().findMeasurements(SENSOR_ID, validFrom, validTo);
   }
@@ -176,7 +177,7 @@ class MeasurementControllerTest {
                 .param("from", validFrom.toString())
                 .param("to", validFrom.toString()))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data").isArray());
+        .andExpect(jsonPath("$.points").isArray());
   }
 
   @Test

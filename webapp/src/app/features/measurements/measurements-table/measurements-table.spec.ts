@@ -38,22 +38,19 @@ describe('MeasurementsTable', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('derives distinct, defined sensor ids from the metrics resource', async () => {
-    const metrics: ReadSimpleMetricDto[] = [
+  it('derives distinct, defined sensor ids from the selected rows only', () => {
+    const component = TestBed.createComponent(MeasurementsTable).componentInstance as unknown as {
+      selectedRows: { set: (rows: ReadSimpleMetricDto[]) => void };
+      selectedSensorIds: () => string[];
+    };
+
+    component.selectedRows.set([
       { metadataSensorId: '1' },
       { metadataSensorId: '2' },
       { metadataSensorId: '2' },
       { metadataSensorId: undefined },
-    ];
-    overviewServiceMock.getMetrics.mockReturnValue(of(metrics));
+    ]);
 
-    const component = TestBed.createComponent(MeasurementsTable).componentInstance as unknown as {
-      metricsResource: { value: () => ReadSimpleMetricDto[] | undefined };
-      sensorIds: () => number[];
-    };
-
-    await vi.waitFor(() => expect(component.metricsResource.value()).toBeDefined());
-
-    expect(component.sensorIds()).toEqual(['1', '2']);
+    expect(component.selectedSensorIds()).toEqual(['1', '2']);
   });
 });

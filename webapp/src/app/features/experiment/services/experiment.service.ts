@@ -11,7 +11,7 @@ export class ExperimentService {
   private readonly api = inject(ExperimentControllerService);
   private readonly experimentRequest = signal<{ id: string | undefined }>({ id: undefined });
   readonly error = signal<ErrorDto[] | undefined>(undefined);
-  // Bumped whenever a sensor is created/updated, so the sensor table can refresh its
+  // Bumped whenever an experiment is created/updated, so the experiment table can refresh its
   // ag-grid infinite row model cache - ag-grid has no way to detect that on its own.
   readonly experimentsChanged = signal(false);
 
@@ -21,6 +21,10 @@ export class ExperimentService {
       if (!params.id) return Promise.reject(new Error(translate('experiment.error.noId')()));
       return firstValueFrom(this.api.getExperiment(params.id));
     },
+  });
+
+  readonly allExperiments = resource({
+    loader: () => firstValueFrom(this.api.getAllExperiments()),
   });
 
   // always set the experiment id to refetch the experiment
@@ -36,6 +40,7 @@ export class ExperimentService {
     try {
       const result = await firstValueFrom(this.api.createExperiment(experiment));
       this.experimentsChanged.set(true);
+      this.allExperiments.reload();
       return result;
     } catch (err) {
       this.error.set(toErrorDtos(err));
@@ -47,6 +52,7 @@ export class ExperimentService {
     try {
       const result = await firstValueFrom(this.api.updateExperiment(id, experiment));
       this.experimentsChanged.set(true);
+      this.allExperiments.reload();
       return result;
     } catch (err) {
       this.error.set(toErrorDtos(err));

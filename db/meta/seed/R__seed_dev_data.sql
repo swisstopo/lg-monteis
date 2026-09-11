@@ -1,15 +1,9 @@
 -- Local/dev only seed data — NOT run in production
 -- Repeatable migration: re-applies whenever this file's checksum changes.
--- Delete-then-insert so the script is the single source of truth —
--- edits and removals here are reflected on the next run, not just additions.
---
--- IDs are fixed literal UUIDs (not generated via uuidv7()) so the seed stays
--- reproducible across runs and so docker/keycloak/realm/patch.local.json's
--- test-user group attributes (experiment_ids) can reference the same fixed
--- experiment IDs. Bulk-generated sensors below are the exception: nothing
--- else references their IDs, so they get real uuidv7() values.
+-- Delete-then-insert so the script is the single source of truth.
 
-TRUNCATE TABLE experiment_sensor, experiments, sensors, sensor_types, formulas CASCADE;
+-- 0. Truncate tables (added sensor_parameter to the list)
+TRUNCATE TABLE experiment_sensor, experiments, sensor_parameter, sensors, sensor_types, formulas CASCADE;
 
 -- 1. Insert formulas (Parsington-compatible expressions using 'x')
 INSERT INTO formulas (id, expression, version)
@@ -23,6 +17,7 @@ VALUES
     -- FLOW-2 / FLOW-Admin: 1:1 passthrough (no modification to the raw value)
     ('00000000-0000-7000-8000-000000000004', 'x', 1);
 
+
 -- 2. Insert sensor types
 INSERT INTO sensor_types (id, name, version)
 VALUES
@@ -31,34 +26,9 @@ VALUES
     ('00000000-0000-7000-8000-000000000103', 'Other', 1),
     ('00000000-0000-7000-8000-000000000104', 'Volume', 1);
 
--- 3. Insert corresponding sample sensors
--- Naming convention: <TYPE>-<experiment membership>, so RLS visibility is obvious from the code
--- alone — e.g. PRESS-1&2 is visible to users in experiment 1 OR 2, FLOW-Admin belongs to no
--- experiment and is only ever visible to admins.
-INSERT INTO sensors (
-    id, code, name, type_id, unit, comment,
-    x, y, z,
-    upper_alarm_limit, lower_alarm_limit, active, formula_id, version
-)
-VALUES
-    ('00000000-0000-7000-8000-000000000201', 'TEMP-1', 'monteis-001',
-     '00000000-0000-7000-8000-000000000101', 'KELVIN', 'Air temperature sensor near ventilation intake',
-     100, 200, 300, 100.0, -50.0, true, '00000000-0000-7000-8000-000000000001', 1),
-    ('00000000-0000-7000-8000-000000000202', 'PRESS-1&2', 'monteis-002',
-     '00000000-0000-7000-8000-000000000102', 'KILOGRAM', 'Radial stress/pressure sensor',
-     110, 210, 310, 5000.0, 0.0, true, '00000000-0000-7000-8000-000000000002', 1),
-    ('00000000-0000-7000-8000-000000000203', 'DISP-2', 'monteis-003',
-     '00000000-0000-7000-8000-000000000103', 'METER', 'Displacement monitoring sensor',
-     120, 220, 320, 50.0, -50.0, true, '00000000-0000-7000-8000-000000000003', 1),
-    ('00000000-0000-7000-8000-000000000204', 'FLOW-2', 'monteis-004',
-     '00000000-0000-7000-8000-000000000104', 'SECONDS', 'Flow/volume monitoring sensor',
-     130, 230, 330, 1500.0, 0.0, true, '00000000-0000-7000-8000-000000000004', 1),
-    ('00000000-0000-7000-8000-000000000205', 'FLOW-Admin', 'ADMIN',
-     '00000000-0000-7000-8000-000000000103', 'METER', 'Admin-only flow sensor',
-     140, 240, 340, 1500.0, 0.0, true, '00000000-0000-7000-8000-000000000004', 1);
 
--- 4. Insert Experiments
--- Fixed IDs matching docker/keycloak/realm/patch.local.json's "Experiment Alpha"/"Beta" groups.
+-- 3. Insert Experiments
+-- MOVED UP: Must be inserted before sensors because sensors now have a main_experiment column
 INSERT INTO experiments (
     "id", "name", "comment",
     "version", "owner",
@@ -71,12 +41,63 @@ VALUES
     ('00000000-0000-7000-8000-000000000302', 'Mont Terri Beta', 'Deep borehole displacement and pressure monitoring', 1, 'User2',
      DATE '2024-07-01', DATE '2025-03-31');
 
--- Note: patch.local.json's "Experiment Gamma" group grants
--- experiment_ids = ['00000000-0000-7000-8000-000000000303'], which intentionally
--- matches no seeded experiment here (mirrors the previous integer-id seed, which
--- likewise never inserted an experiment with id 3).
 
--- 5. Link Sensors to Experiments (Many-to-Many)
+-- 4. Insert corresponding sample sensors
+-- Note: 'code' mapped to 'das_sensor_alias'. Measurement specs are removed from this insert.
+INSERT INTO sensors (
+    id, das_sensor_alias, name, comment,
+    x, y, z,
+    active, main_experiment, version
+)
+VALUES
+    ('00000000-0000-7000-8000-000000000201', 'TEMP-1', 'monteis-001', 'Air temperature sensor near ventilation intake',
+     100, 200, 300, true, '00000000-0000-7000-8000-000000000301', 1),
+
+    ('00000000-0000-7000-8000-000000000202', 'PRESS-1&2', 'monteis-002', 'Radial stress/pressure sensor',
+     110, 210, 310, true, '00000000-0000-7000-8000-000000000301', 1),
+
+    ('00000000-0000-7000-8000-000000000203', 'DISP-2', 'monteis-003', 'Displacement monitoring sensor',
+     120, 220, 320, true, '00000000-0000-7000-8000-000000000302', 1),
+
+    ('00000000-0000-7000-8000-000000000204', 'FLOW-2', 'monteis-004', 'Flow/volume monitoring sensor',
+     130, 230, 330, true, '00000000-0000-7000-8000-000000000302', 1),
+
+    ('00000000-0000-7000-8000-000000000205', 'FLOW-Admin', 'ADMIN', 'Admin-only flow sensor',
+     140, 240, 340, true, NULL, 1);
+
+
+-- 5. Insert Sensor Parameters
+-- This maps the old measurement limits and formulas to the new child table.
+-- Explicit ids (following the same 0400-series convention as formulas/types/sensors/experiments
+-- below) rather than the DEFAULT uuidv7() - MeasurementQueryRepositoryIT looks these up by fixed
+-- id, the same way every other seeded entity in this file is referenced.
+INSERT INTO sensor_parameter (
+    id, sensor_id, name, das_parameter_alias, type_id, unit, formula_id,
+    upper_alarm_limit, lower_alarm_limit, active, comment, version
+)
+VALUES
+    -- Param for TEMP-1
+    ('00000000-0000-7000-8000-000000000401', '00000000-0000-7000-8000-000000000201', 'Temperature Param', 'TEMP-1-P1', '00000000-0000-7000-8000-000000000101', 'KELVIN',
+     '00000000-0000-7000-8000-000000000001', 100.0, -50.0, true, 'Primary temperature reading', 1),
+
+    -- Param for PRESS-1&2
+    ('00000000-0000-7000-8000-000000000402', '00000000-0000-7000-8000-000000000202', 'Pressure Param', 'PRESS-1&2-P1', '00000000-0000-7000-8000-000000000102', 'KILOGRAM',
+     '00000000-0000-7000-8000-000000000002', 5000.0, 0.0, true, 'Primary pressure reading', 1),
+
+    -- Param for DISP-2
+    ('00000000-0000-7000-8000-000000000403', '00000000-0000-7000-8000-000000000203', 'Displacement Param', 'DISP-2-P1', '00000000-0000-7000-8000-000000000103', 'METER',
+     '00000000-0000-7000-8000-000000000003', 50.0, -50.0, true, 'Primary displacement reading', 1),
+
+    -- Param for FLOW-2
+    ('00000000-0000-7000-8000-000000000404', '00000000-0000-7000-8000-000000000204', 'Flow Param', 'FLOW-2-P1', '00000000-0000-7000-8000-000000000104', 'SECONDS',
+     '00000000-0000-7000-8000-000000000004', 1500.0, 0.0, true, 'Primary flow reading', 1),
+
+    -- Param for ADMIN
+    ('00000000-0000-7000-8000-000000000405', '00000000-0000-7000-8000-000000000205', 'Admin Flow Param', 'FLOW-Admin-P1', '00000000-0000-7000-8000-000000000103', 'METER',
+     '00000000-0000-7000-8000-000000000004', 1500.0, 0.0, true, 'Admin flow parameter', 1);
+
+
+-- 6. Link Sensors to secondary Experiments (Many-to-Many)
 INSERT INTO experiment_sensor (experiment_id, sensor_id)
 VALUES
     -- Experiment 1 (Alpha) contains: TEMP-1 and PRESS-1&2
@@ -84,40 +105,79 @@ VALUES
     ('00000000-0000-7000-8000-000000000301', '00000000-0000-7000-8000-000000000202'),
 
     -- Experiment 2 (Beta) contains: PRESS-1&2, DISP-2, and FLOW-2
-    -- (Notice PRESS-1&2 is shared between both experiments)
     ('00000000-0000-7000-8000-000000000302', '00000000-0000-7000-8000-000000000202'),
     ('00000000-0000-7000-8000-000000000302', '00000000-0000-7000-8000-000000000203'),
     ('00000000-0000-7000-8000-000000000302', '00000000-0000-7000-8000-000000000204');
 
--- FLOW-Admin is intentionally linked to no experiment — only admins can see it.
 
--- 6. Bulk load-testing sensors, all linked to Experiment 1 (Alpha). Unlike the
--- fixed sensors above, these IDs aren't referenced anywhere else, so they use
--- real generated uuidv7() values.
--- CHANGE THE NUMBER 10 BELOW TO GENERATE MORE OR FEWER SENSORS
+-- 7. Bulk load-testing sensors
+-- Generates sensors, their corresponding parameters, and links them to Experiment 1
 WITH bulk_sensors AS (
-    INSERT INTO sensors (
-        code, name, type_id, unit, comment,
-        x, y, z,
-        upper_alarm_limit, lower_alarm_limit, active, formula_id, version
-    )
-    SELECT
-        'BULK-' || i,                                     -- code (e.g. BULK-1)
-        'bulk-sensor-' || i,                               -- name
-        '00000000-0000-7000-8000-000000000101',            -- type
-        'METER',                                           -- unit
-        'Auto-generated load testing sensor ' || i,        -- comment
-        random() * 100,                                    -- random x_local
-        random() * 100,                                    -- random y_local
-        random() * 100,                                    -- random z_local
-        100.0,                                              -- upper_alarm_bound
-        -50.0,                                              -- lower_alarm_bound
-        true,                                               -- active
-        '00000000-0000-7000-8000-000000000004',             -- formula_id (passthrough)
-        1                                                   -- version
-    FROM generate_series(1, 10) AS i
-    RETURNING id
+INSERT INTO sensors (
+    das_sensor_alias, name, comment,
+    x, y, z,
+    active, main_experiment, version
 )
+SELECT
+    'BULK-' || i,                                      -- das_sensor_alias
+    'bulk-sensor-' || i,                               -- name
+    'Auto-generated load testing sensor ' || i,        -- comment
+    random() * 100,                                    -- random x_local
+    random() * 100,                                    -- random y_local
+    random() * 100,                                    -- random z_local
+    true,                                              -- active
+    '00000000-0000-7000-8000-000000000301',            -- main_experiment (Alpha)
+    1                                                  -- version
+FROM generate_series(1, 10) AS i
+    RETURNING id, das_sensor_alias
+),
+bulk_parameters AS (
+INSERT INTO sensor_parameter (
+    sensor_id, name, das_parameter_alias, type_id, unit, formula_id,
+    upper_alarm_limit, lower_alarm_limit, active, comment
+)
+SELECT
+    id,
+    'Bulk Param',
+    'BULK-P1',
+    '00000000-0000-7000-8000-000000000101',           -- type
+    'METER',                                          -- unit
+    '00000000-0000-7000-8000-000000000004',           -- formula_id (passthrough)
+    100.0,                                            -- upper_alarm_bound
+    -50.0,                                            -- lower_alarm_bound
+    true,
+    'Auto-generated parameter'
+FROM bulk_sensors
+    RETURNING id
+    )
 INSERT INTO experiment_sensor (experiment_id, sensor_id)
 SELECT '00000000-0000-7000-8000-000000000301', id
 FROM bulk_sensors;
+
+
+-- Add a second parameter to BULK-1
+INSERT INTO sensor_parameter (
+    sensor_id,
+    name,
+    das_parameter_alias,
+    type_id,
+    unit,
+    formula_id,
+    upper_alarm_limit,
+    lower_alarm_limit,
+    active,
+    comment
+)
+SELECT
+    id,
+    'Bulk Param 2',
+    'BULK-P2',
+    '00000000-0000-7000-8000-000000000101',
+    'METER',
+    '00000000-0000-7000-8000-000000000004',
+    200.0,
+    -100.0,
+    true,
+    'Second auto-generated parameter'
+FROM sensors
+WHERE das_sensor_alias = 'BULK-1';
