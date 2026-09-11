@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.query.*;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -175,6 +176,40 @@ class PagedRequestJooqTranslatorTest {
     // then
     Condition expected = DSL.noCondition().and(expectedCondition);
     assertEquals(expected.toString(), criteria.condition().toString());
+  }
+
+  @Test
+  void should_translateCorrectly_when_Multiple_filters_are_provided() {
+    // given
+    Field<String> name = nameField.cast(String.class);
+    Field<String> start = startField.cast(String.class);
+
+    Map<String, FilterModelItem> filters = new LinkedHashMap<>();
+    filters.put("name", new SetFilterModel("Set", Set.of("ACTIVE", "HISTORIC")));
+    filters.put("start", new TextFilterModel("contains", "smith", null));
+
+    List<SortModelItem> sortList = List.of(new SortModelItem("name", SortDirection.ASC));
+
+    PagedRequest request = new PagedRequest(0, 10, sortList, filters);
+
+    // when
+    var criteria = PagedRequestJooqTranslator.translate(request, columns, null);
+
+    // then
+
+    // Assert Filters
+    Condition expected =
+        DSL.noCondition()
+            .and(name.in(Set.of("ACTIVE", "HISTORIC")))
+            .and(start.containsIgnoreCase("smith"));
+
+    assertEquals(expected.toString(), criteria.condition().toString());
+
+    // Assert Sort
+    var sortFields = new java.util.ArrayList<>(criteria.sortFields());
+
+    assertEquals(1, sortFields.size());
+    assertEquals(nameField.asc().toString(), sortFields.get(0).toString());
   }
 
   @Test
