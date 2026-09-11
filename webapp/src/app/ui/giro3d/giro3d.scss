@@ -8,6 +8,16 @@
   width: 100%;
 }
 
+.popup {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 1;
+  background: white;
+  padding: 0.25rem;
+  border-radius: var(--sci-workbench-tab-border-radius);
+}
+
 mat-spinner {
   position: absolute;
   top: calc(50% - 100px);
