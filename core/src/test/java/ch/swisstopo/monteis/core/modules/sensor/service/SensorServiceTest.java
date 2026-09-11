@@ -12,10 +12,13 @@ import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidati
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,20 +36,38 @@ class SensorServiceTest {
 
   @InjectMocks private SensorService service;
 
+  private static SensorParameter parameter(UUID id, String formulaExpression) {
+    Formula formula = new Formula();
+    formula.setExpression(formulaExpression);
+    return new SensorParameter(
+        id,
+        "Temperature",
+        "SENS-001",
+        new SensorType(null, "Other", null),
+        Unit.METER,
+        formula,
+        new AlarmLimits(0.0, 100.0),
+        true,
+        null,
+        1);
+  }
+
   @Test
   void should_delegate_create_sensor_to_repository() {
     // given
     Sensor inputSensor = mock(Sensor.class);
     Sensor expectedSensor = mock(Sensor.class);
+    SensorParameter createdParameter = parameter(UUID.randomUUID(), "x * 2");
 
     given(repository.create(inputSensor)).willReturn(expectedSensor);
+    given(expectedSensor.getParameters()).willReturn(List.of(createdParameter));
 
     // when
     Sensor actualSensor = service.createSensor(inputSensor);
 
     // then
     then(repository).should().create(inputSensor);
-    then(configPublisher).should().publish(expectedSensor);
+    then(configPublisher).should().publish(expectedSensor, createdParameter);
     assertEquals(expectedSensor, actualSensor);
   }
 
@@ -69,35 +90,45 @@ class SensorServiceTest {
   @Test
   void should_publish_config_when_change_triggers_publish_returns_true() {
     // given
+    UUID parameterId = UUID.randomUUID();
+    SensorParameter parameterBefore = parameter(parameterId, "x");
+    SensorParameter parameterAfter = parameter(parameterId, "x * 2");
+
     Sensor before = mock(Sensor.class);
     Sensor after = mock(Sensor.class);
+    given(before.getParameters()).willReturn(List.of(parameterBefore));
+    given(after.getParameters()).willReturn(List.of(parameterAfter));
 
     given(repository.findById(any())).willReturn(Optional.of(before));
     given(repository.update(after)).willReturn(after);
-    given(after.changeTriggersPublish(before)).willReturn(true);
 
     // when
     service.updateSensor(after);
 
     // then
-    then(configPublisher).should().publish(after);
+    then(configPublisher).should().publish(after, parameterAfter);
   }
 
   @Test
   void should_not_publish_config_when_change_triggers_publish_returns_false() {
     // given
+    UUID parameterId = UUID.randomUUID();
+    SensorParameter parameterBefore = parameter(parameterId, "x");
+    SensorParameter parameterAfter = parameter(parameterId, "x");
+
     Sensor before = mock(Sensor.class);
     Sensor after = mock(Sensor.class);
+    given(before.getParameters()).willReturn(List.of(parameterBefore));
+    given(after.getParameters()).willReturn(List.of(parameterAfter));
 
     given(repository.findById(any())).willReturn(Optional.of(before));
     given(repository.update(after)).willReturn(after);
-    given(after.changeTriggersPublish(before)).willReturn(false);
 
     // when
     service.updateSensor(after);
 
     // then
-    then(configPublisher).should(never()).publish(any());
+    then(configPublisher).should(never()).publish(any(), any());
   }
 
   @Test

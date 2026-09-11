@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.ChunkProcessingResult;
@@ -56,12 +57,36 @@ public class HistoricalReadingChunkProcessor {
             .register(meterRegistry);
   }
 
-  public ChunkProcessingResult processNextChunk(
+  /**
+   * Rows already tagged with the config's sensor_parameter_id - survives DAS-key remaps, see
+   * {@code SensorReadingRepository.fetchOldSensorDataById}.
+   */
+  public ChunkProcessingResult processNextChunkById(
       ActiveSensorConfig activeSensorConfig, OffsetDateTime cursor) {
+    SensorParameterConfig config = activeSensorConfig.getConfig();
     List<SensorReadingRecord> oldRecords =
-        sensorReadingRepository.fetchOldSensorData(
-            activeSensorConfig.getConfig(), chunkSize, cursor);
+        sensorReadingRepository.fetchOldSensorDataById(
+            config.getSensorParameterId(), config.getVersion().shortValue(), chunkSize, cursor);
+    return processChunk(activeSensorConfig, oldRecords, cursor);
+  }
 
+  /**
+   * Rows ingested under this DAS key before sensor_parameter_id was ever known (still NULL) - the
+   * one-time backfill path, see {@code SensorReadingRepository.fetchOldSensorDataByDasKeyUnbackfilled}.
+   */
+  public ChunkProcessingResult processNextChunkByDasKeyUnbackfilled(
+      ActiveSensorConfig activeSensorConfig, String dasKey, OffsetDateTime cursor) {
+    SensorParameterConfig config = activeSensorConfig.getConfig();
+    List<SensorReadingRecord> oldRecords =
+        sensorReadingRepository.fetchOldSensorDataByDasKeyUnbackfilled(
+            dasKey, config.getVersion().shortValue(), chunkSize, cursor);
+    return processChunk(activeSensorConfig, oldRecords, cursor);
+  }
+
+  private ChunkProcessingResult processChunk(
+      ActiveSensorConfig activeSensorConfig,
+      List<SensorReadingRecord> oldRecords,
+      OffsetDateTime cursor) {
     if (oldRecords.isEmpty()) {
       return new ChunkProcessingResult(0, cursor);
     }
@@ -73,7 +98,7 @@ public class HistoricalReadingChunkProcessor {
                   try {
                     SensorReadingRecord transformed =
                         transformationOrchestrator.transform(
-                            reading.getSensorId(),
+                            reading.getDasKey(),
                             reading.getRawValue(),
                             reading.getTimestamp(), // This is already an OffsetDateTime from DB
                             activeSensorConfig,
@@ -85,7 +110,7 @@ public class HistoricalReadingChunkProcessor {
                         "POISON PILL REPROCESSING: Math failed for historical record of sensor {}."
                             + " Raw Value: [{}]. Bumping version to bypass infinite loop. Reason:"
                             + " {}",
-                        reading.getSensorId(),
+                        reading.getDasKey(),
                         reading.getRawValue(),
                         ex.getMessage(),
                         ex);
@@ -96,6 +121,12 @@ public class HistoricalReadingChunkProcessor {
                     // Set norm_value to null because the new formula cannot process this specific
                     // raw value.
                     reading.setNormValue(null);
+
+                    // Still backfill the id even on a poison pill: this row otherwise stays stuck
+                    // in the unbackfilled-by-DAS-key backlog forever, since its version now equals
+                    // the config's and it will never be picked up by that scan again.
+                    reading.setSensorParameterId(
+                        activeSensorConfig.getConfig().getSensorParameterId());
 
                     poisonPillCounter.increment();
                     return reading;

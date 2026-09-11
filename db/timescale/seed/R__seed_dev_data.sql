@@ -5,10 +5,15 @@
 -- TRUNCATE works fine on hypertables
 TRUNCATE TABLE sensor_reading;
 
-INSERT INTO sensor_reading (timestamp, sensor_id, raw_value, norm_value, version, status)
+-- sensor_parameter_id values below are the fixed ids assigned to the matching sensor_parameter
+-- rows in db/meta/seed/R__seed_dev_data.sql (same das_parameter_alias) - TimescaleDB and the meta
+-- DB are separate physical databases (that's the whole point of the FDW split), so this can't be
+-- a join; the ids just have to be kept in sync by hand between the two seed scripts.
+INSERT INTO sensor_reading (timestamp, das_key, sensor_parameter_id, raw_value, norm_value, version, status)
 SELECT
     data.ts,
-    data.sensor_id,
+    data.das_key,
+    data.sensor_parameter_id,
     data.raw_value,
     data.norm_value,
     0,
@@ -20,7 +25,8 @@ SELECT
 FROM (
          SELECT
              gs.ts,
-             s.sensor_id,
+             s.das_key,
+             s.sensor_parameter_id,
              round(((50 + 30 * sin(extract(epoch FROM gs.ts) / 3600.0 + s.phase_shift)))::numeric, 2) AS raw_value,
              round(((50 + 30 * sin(extract(epoch FROM gs.ts) / 3600.0 + s.phase_shift)) * 0.98)::numeric, 2) AS norm_value
          FROM generate_series(
@@ -29,12 +35,12 @@ FROM (
                       interval '5 minutes'
               ) AS gs(ts)
                   CROSS JOIN (VALUES
-                                  ('TEMP-1', 0.0),
-                                  ('PRESS-1&2', 2.1),
-                                  ('FLOW-2', 4.2),
-                                  ('DISP-2', 3.7),
-                                  ('FLOW-Admin', 5.8)
-         ) AS s(sensor_id, phase_shift)
+                                  ('TEMP-1-P1', 0.0, '00000000-0000-7000-8000-000000000401'::uuid),
+                                  ('PRESS-1&2-P1', 2.1, '00000000-0000-7000-8000-000000000402'::uuid),
+                                  ('FLOW-2-P1', 4.2, '00000000-0000-7000-8000-000000000404'::uuid),
+                                  ('DISP-2-P1', 3.7, '00000000-0000-7000-8000-000000000403'::uuid),
+                                  ('FLOW-Admin-P1', 5.8, '00000000-0000-7000-8000-000000000405'::uuid)
+         ) AS s(das_key, phase_shift, sensor_parameter_id)
      ) AS data;
 
 -- Bulk INSERT leaves the hypertable with no statistics, and autovacuum may not

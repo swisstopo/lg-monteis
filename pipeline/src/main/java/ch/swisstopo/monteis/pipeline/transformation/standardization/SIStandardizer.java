@@ -26,8 +26,8 @@ public class SIStandardizer {
     } catch (IllegalArgumentException | ArithmeticException e) {
 
       log.error(
-          "Math calculation failed for sensor {}. Formula: '{}', Raw Value: {}",
-          activeConfig.getConfig().getSensorId(),
+          "Math calculation failed for sensor parameter {}. Formula: '{}', Raw Value: {}",
+          activeConfig.getConfig().getSensorParameterId(),
           activeConfig.getConfig().getFormula(),
           rawValue,
           e);

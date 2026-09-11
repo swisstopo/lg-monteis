@@ -3,7 +3,10 @@
 CREATE TYPE range_category AS ENUM ('too_low', 'correct', 'too_high');
 
 -- 2. Base Table erstellen (Raw Data)
--- Hinweis: sensor_id ist sensor_code in der Metadaten DB
+-- Hinweis: sensor_id ist der zusammengesetzte DAS-Key (<DAS>__<das_sensor_alias>__<das_parameter_alias>),
+-- nicht der (inzwischen entfernte) sensor_code. Die stabile, DAS-unabhaengige Referenz auf
+-- sensor_parameter.id in der Metadaten-DB liegt in der separaten, nullable sensor_parameter_id-Spalte
+-- (siehe V2__add_sensor_parameter_id.sql).
 CREATE TABLE IF NOT EXISTS sensor_reading (
                                               timestamp   TIMESTAMPTZ NOT NULL,
                                               sensor_id   TEXT NOT NULL,

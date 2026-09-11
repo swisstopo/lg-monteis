@@ -5,8 +5,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.DasKey;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.transformation.processing.SensorConfigMessageHandler;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,14 +32,16 @@ class SensorConfigCacheHydrationListenerTest {
   @Test
   void should_delegate_to_processor_and_update_cache() {
     // given
-    String sensorId = "deviceA";
-    SensorConfig config = new SensorConfig(sensorId, "x + 1", 100.0, 0.0, 1);
+    String dasKey = DasKey.compose(Das.SOL_EXPERTS, "deviceA", "temperature");
+    SensorParameterConfig config =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x + 1", 100.0, 0.0, 1);
 
     // Simulate the messageProcessor successfully executing the lambda function passed to it
     willAnswer(
             invocation -> {
-              SensorConfig passedConfig = invocation.getArgument(0);
-              Consumer<SensorConfig> businessLogicLambda = invocation.getArgument(3);
+              SensorParameterConfig passedConfig = invocation.getArgument(0);
+              Consumer<SensorParameterConfig> businessLogicLambda = invocation.getArgument(3);
 
               businessLogicLambda.accept(passedConfig); // Execute the lambda
               return null;
@@ -45,10 +50,10 @@ class SensorConfigCacheHydrationListenerTest {
         .processSafely(any(), any(), any(), any());
 
     // when
-    hydrator.consumeSensorConfigUpdate(config, sensorId, ack);
+    hydrator.consumeSensorConfigUpdate(config, dasKey, ack);
 
     // then
-    then(messageProcessor).should().processSafely(eq(config), eq(sensorId), eq(ack), any());
+    then(messageProcessor).should().processSafely(eq(config), eq(dasKey), eq(ack), any());
 
     then(cacheService).should().updateSensorConfig(config);
   }

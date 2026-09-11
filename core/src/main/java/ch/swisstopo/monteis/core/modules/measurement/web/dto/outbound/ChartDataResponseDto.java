@@ -6,4 +6,4 @@ import java.util.List;
 import java.util.UUID;
 
 public record ChartDataResponseDto(
-    UUID id, String sensorCode, String sensorName, Unit unit, List<ChartPointDto> data) {}
+    UUID id, String code, String name, Unit unit, List<ChartPointDto> points) {}

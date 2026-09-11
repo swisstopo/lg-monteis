@@ -1,7 +1,11 @@
 package ch.swisstopo.monteis.core.infrastructure.kafka;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.DasKey;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
+import ch.swisstopo.monteis.core.modules.sensor.domain.DAS;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -9,24 +13,51 @@ import org.springframework.stereotype.Component;
 @Component
 public class SensorConfigPublisher {
 
-  private final KafkaTemplate<String, SensorConfig> kafkaTemplate;
+  private final KafkaTemplate<String, SensorParameterConfig> kafkaTemplate;
   private final String sensorConfigTopic;
 
   public SensorConfigPublisher(
-      KafkaTemplate<String, SensorConfig> kafkaTemplate,
+      KafkaTemplate<String, SensorParameterConfig> kafkaTemplate,
       @Value("${app.kafka.topics.sensor-config}") String sensorConfigTopic) {
     this.kafkaTemplate = kafkaTemplate;
     this.sensorConfigTopic = sensorConfigTopic;
   }
 
-  public void publish(Sensor sensor) {
-    SensorConfig config =
-        new SensorConfig()
-            .sensorId(sensor.getCode())
-            .formula(sensor.getFormula().getExpression())
-            .upperBound(sensor.getAlarmLimits().upper())
-            .lowerBound(sensor.getAlarmLimits().lower())
-            .version(sensor.getVersion());
-    kafkaTemplate.send(sensorConfigTopic, sensor.getCode(), config);
+  /**
+   * Publishes the config for a single sensor parameter, keyed by the composite DAS ingest key
+   * ({@code <DAS>__<das_sensor_alias>__<das_parameter_alias>}). Skips inactive parameters and ones with a
+   * blank {@code dasParameterAlias}, since neither can be resolved to a valid Kafka key.
+   */
+  public void publish(Sensor sensor, SensorParameter parameter) {
+    if (Boolean.FALSE.equals(parameter.getActive())) {
+      return;
+    }
+
+    String dasParameterAlias = parameter.getDasParameterAlias();
+    if (dasParameterAlias == null || dasParameterAlias.isBlank()) {
+      return;
+    }
+
+    Das das = toContractsDas(sensor.getDAS());
+    String dasKey = DasKey.compose(das, sensor.getDasSensorAlias(), dasParameterAlias);
+
+    SensorParameterConfig config =
+        new SensorParameterConfig()
+            .das(das)
+            .dasSensorAlias(sensor.getDasSensorAlias())
+            .dasParameterAlias(dasParameterAlias)
+            .sensorParameterId(parameter.getId())
+            .formula(parameter.getFormula().getExpression())
+            .upperBound(parameter.getAlarmLimits().upper())
+            .lowerBound(parameter.getAlarmLimits().lower())
+            .version(parameter.getVersion());
+
+    kafkaTemplate.send(sensorConfigTopic, dasKey, config);
+  }
+
+  private static Das toContractsDas(DAS das) {
+    return switch (das) {
+      case SOL_EXPERTS -> Das.SOL_EXPERTS;
+    };
   }
 }

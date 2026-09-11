@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.experiment.domain;
 
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -53,4 +54,13 @@ public interface ExperimentRepository {
    * @return the requested page of experiments together with the total row count
    */
   PagedResult<Experiment> getExperiments(PagedRequest request);
+
+  /**
+   * Retrieves all {@link Experiment}s (unpaged), sorted alphabetically by name.
+   * Intended for lightweight lookup/autocomplete UIs (e.g. picking a sensor's main
+   * experiment). Subject to the same row-level security as {@link #getExperiments}.
+   *
+   * @return all experiments visible to the current user
+   */
+  List<Experiment> findAll();
 }

@@ -1,17 +1,17 @@
 import { inject } from '@angular/core';
 import { SensorResponseDto } from '@core/generated';
-import { getUnitMetadata } from '@features/sensor/models/sensor.model';
+import { getDasMetadata } from '@features/sensor/models/sensor.model';
 import { TranslateService } from '@ngx-translate/core';
 import { TableColumn } from '@ui/table/table.types';
 
 export function createColumns(): TableColumn<SensorResponseDto>[] {
   const translateService = inject(TranslateService);
-  const unitMetadata = getUnitMetadata();
+  const dasMetadata = getDasMetadata();
 
   return [
     {
-      field: 'code',
-      headerName: translateService.translate('sensor.code.label')(),
+      field: 'dasSensorAlias',
+      headerName: translateService.translate('sensor.dasSensorAlias.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
     },
@@ -22,27 +22,25 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
       filter: 'agTextColumnFilter',
     },
     {
-      field: 'type.name',
-      headerName: translateService.translate('sensor.type.label')(),
-      sortable: true,
-      filter: 'agTextColumnFilter',
-    },
-    {
-      field: 'unit',
-      headerName: translateService.translate('sensor.unit.label')(),
+      field: 'das',
+      headerName: translateService.translate('sensor.das.label')(),
       sortable: true,
       // Not text-filterable: the backend column is a DB-level enum, not a plain string.
       filter: false,
-      // Show the unit's translated shorthand symbol (e.g. "m", "kg") instead of the raw enum
-      // value (e.g. "METER").
       valueFormatter: (params) =>
-        unitMetadata[params.value as SensorResponseDto.UnitEnum]?.symbol() ?? '',
+        dasMetadata[params.value as SensorResponseDto.DasEnum]?.label() ?? '',
     },
     {
-      field: 'formula.expression',
-      headerName: translateService.translate('sensor.formula.column')(),
+      field: 'fulcrumId',
+      headerName: translateService.translate('sensor.fulcrumId.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
+    },
+    {
+      field: 'mainExperiment.name',
+      headerName: translateService.translate('sensor.mainExperiment.label')(),
+      sortable: true,
+      filter: false,
     },
     {
       field: 'coordinates.x',
@@ -61,23 +59,6 @@ export function createColumns(): TableColumn<SensorResponseDto>[] {
       headerName: translateService.translate('sensor.coordinate.zLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-    },
-    {
-      field: 'alarmLimits',
-      headerName: translateService.translate('sensor.alarmLimit.column')(),
-      minWidth: 150,
-      // No single natural sort/filter key: this is a composite of the lower/upper limit fields.
-      sortable: false,
-      filter: false,
-      valueFormatter: (params) => {
-        const alarmLimits = params.value;
-        return alarmLimits
-          ? translateService.translate('sensor.alarmLimit.display', {
-              lower: alarmLimits.lower,
-              upper: alarmLimits.upper,
-            })()
-          : '';
-      },
     },
     {
       field: 'active',

@@ -6,9 +6,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.transformation.processing.SensorConfigMessageHandler;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,14 +37,16 @@ class SensorConfigReprocessingListenerTest {
   @Test
   void should_delegate_to_processor_and_trigger_reprocessing() {
     // given
-    String sensorId = "deviceA";
-    SensorConfig config = new SensorConfig(sensorId, "x * 2.5", 100.0, 0.0, 2);
+    String dasKey = "SOL_EXPERTS__deviceA__temperature";
+    SensorParameterConfig config =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x * 2.5", 100.0, 0.0, 2);
 
     // Simulate the messageProcessor instantly executing the lambda function passed to it
     willAnswer(
             invocation -> {
-              SensorConfig passedConfig = invocation.getArgument(0);
-              Consumer<SensorConfig> businessLogicLambda = invocation.getArgument(3);
+              SensorParameterConfig passedConfig = invocation.getArgument(0);
+              Consumer<SensorParameterConfig> businessLogicLambda = invocation.getArgument(3);
 
               businessLogicLambda.accept(passedConfig); // Execute the lambda
               return null;
@@ -51,10 +55,10 @@ class SensorConfigReprocessingListenerTest {
         .processSafely(any(), any(), any(), any());
 
     // when
-    listener.consumeSensorConfigUpdate(config, sensorId, ack);
+    listener.consumeSensorConfigUpdate(config, dasKey, ack);
 
     // then
-    then(messageProcessor).should().processSafely(eq(config), eq(sensorId), eq(ack), any());
+    then(messageProcessor).should().processSafely(eq(config), eq(dasKey), eq(ack), any());
 
     then(sensorReprocessingOrchestrator)
         .should()

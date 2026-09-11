@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Min;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -90,6 +91,20 @@ public class ExperimentController {
 
     Experiment updated = service.updateExperiment(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated, today));
+  }
+
+  @Operation(
+      summary = "Get all experiments",
+      description =
+          "Retrieves an unpaged list of all experiments visible to the current user, sorted"
+              + " alphabetically by name. Intended for lightweight lookups (e.g. an autocomplete"
+              + " when picking a sensor's main experiment).")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved experiments")
+  @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<ExperimentResponseDto>> getAllExperiments() {
+    LocalDate today = LocalDate.now(clock);
+    return ResponseEntity.ok(
+        service.findAllExperiments().stream().map(e -> mapper.toDto(e, today)).toList());
   }
 
   @Operation(

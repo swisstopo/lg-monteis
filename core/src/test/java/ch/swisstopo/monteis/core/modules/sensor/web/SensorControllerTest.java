@@ -14,6 +14,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.modules.sensor.domain.DAS;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
@@ -21,10 +22,12 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParameterDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,6 +47,7 @@ class SensorControllerTest {
   private static final UUID SENSOR_ID = UUID.fromString("20000000-0000-0000-0000-000000000001");
   private static final UUID OTHER_SENSOR_ID =
       UUID.fromString("20000000-0000-0000-0000-000000000002");
+  private static final UUID PARAMETER_ID = UUID.fromString("20000000-0000-0000-0000-000000000301");
   private static final UUID TYPE_ID = UUID.fromString("20000000-0000-0000-0000-000000000101");
   private static final UUID OTHER_TYPE_ID = UUID.fromString("20000000-0000-0000-0000-000000000102");
   private static final UUID FORMULA_ID = UUID.fromString("20000000-0000-0000-0000-000000000201");
@@ -62,20 +66,7 @@ class SensorControllerTest {
   @Test
   void should_route_get_sensor_and_verify_output() throws Exception {
     // given
-    SensorResponseDto expectedResponseDto =
-        new SensorResponseDto(
-            SENSOR_ID,
-            "SENS-01",
-            "Test",
-            Unit.METER,
-            new SensorTypeResponseDto(TYPE_ID, "Other", 1),
-            null,
-            new CoordinatesDto(0, 0, 0),
-            new AlarmLimitsDto(0.0, 100.0),
-            true,
-            null,
-            1);
-
+    SensorResponseDto expectedResponseDto = defaultResponseDto(SENSOR_ID, "Test", 1);
     Sensor mockDomain = mock(Sensor.class);
 
     given(service.getSensor(SENSOR_ID)).willReturn(mockDomain);
@@ -87,9 +78,12 @@ class SensorControllerTest {
             get("/api/sensors/{id}", SENSOR_ID).with(jwt()).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(expectedResponseDto.id().toString()))
-        .andExpect(jsonPath("$.code").value(expectedResponseDto.code()))
+        .andExpect(jsonPath("$.dasSensorAlias").value(expectedResponseDto.dasSensorAlias()))
+        .andExpect(jsonPath("$.das").value(expectedResponseDto.das().name()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
-        .andExpect(jsonPath("$.type.name").value(expectedResponseDto.type().name()));
+        .andExpect(
+            jsonPath("$.parameters[0].type.name")
+                .value(expectedResponseDto.parameters().getFirst().type().name()));
 
     then(service).should().getSensor(SENSOR_ID);
     then(mapper).should().toDto(mockDomain);
@@ -98,19 +92,7 @@ class SensorControllerTest {
   @Test
   void should_route_get_sensors_and_return_paged_result() throws Exception {
     // given
-    SensorResponseDto dto1 =
-        new SensorResponseDto(
-            SENSOR_ID,
-            "SENS-01",
-            "Test 1",
-            Unit.METER,
-            new SensorTypeResponseDto(TYPE_ID, "Other", 1),
-            null,
-            new CoordinatesDto(0, 0, 0),
-            new AlarmLimitsDto(0.0, 100.0),
-            true,
-            null,
-            1);
+    SensorResponseDto dto1 = defaultResponseDto(SENSOR_ID, "Test 1", 1);
 
     Sensor mockDomain = mock(Sensor.class);
 
@@ -130,8 +112,10 @@ class SensorControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalCount").value(1))
         .andExpect(jsonPath("$.rows[0].id").value(dto1.id().toString()))
-        .andExpect(jsonPath("$.rows[0].code").value(dto1.code()))
-        .andExpect(jsonPath("$.rows[0].type.name").value(dto1.type().name()));
+        .andExpect(jsonPath("$.rows[0].dasSensorAlias").value(dto1.dasSensorAlias()))
+        .andExpect(
+            jsonPath("$.rows[0].parameters[0].type.name")
+                .value(dto1.parameters().getFirst().type().name()));
 
     then(service).should().getSensors(any());
     then(mapper).should().toPagedDto(sensorPagedResult);
@@ -140,33 +124,8 @@ class SensorControllerTest {
   @Test
   void should_route_create_sensor_and_verify_output() throws Exception {
     // given: Instantiate DTOs for input and expected output
-    WriteSensorDto requestDto =
-        new WriteSensorDto(
-            null,
-            "SENS-01",
-            "Test",
-            null,
-            Unit.METER,
-            new WriteSensorTypeDto("Other"),
-            new CoordinatesDto(0, 0, 0),
-            new AlarmLimitsDto(0.0, 100.0),
-            true,
-            null,
-            null);
-
-    SensorResponseDto expectedResponseDto =
-        new SensorResponseDto(
-            SENSOR_ID,
-            "SENS-01",
-            "Test",
-            Unit.METER,
-            new SensorTypeResponseDto(TYPE_ID, "Other", 1),
-            null,
-            new CoordinatesDto(0, 0, 0),
-            new AlarmLimitsDto(0.0, 100.0),
-            true,
-            null,
-            1);
+    WriteSensorDto requestDto = defaultWriteDto(null, null);
+    SensorResponseDto expectedResponseDto = defaultResponseDto(SENSOR_ID, "Test", 1);
 
     // Strictly mock the domain object
     Sensor mockDomain = mock(Sensor.class);
@@ -175,7 +134,8 @@ class SensorControllerTest {
     given(service.createSensor(mockDomain)).willReturn(mockDomain);
     given(mapper.toDto(mockDomain)).willReturn(expectedResponseDto);
 
-    // when / then: Perform request and assert the actual JSON fields match our expected output DTO
+    // when / then: Perform request and assert the actual JSON fields match our expected output
+    // DTO
     mockMvc
         .perform(
             post("/api/sensors")
@@ -184,15 +144,24 @@ class SensorControllerTest {
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(expectedResponseDto.id().toString()))
-        .andExpect(jsonPath("$.code").value(expectedResponseDto.code()))
+        .andExpect(jsonPath("$.dasSensorAlias").value(expectedResponseDto.dasSensorAlias()))
+        .andExpect(jsonPath("$.das").value(expectedResponseDto.das().name()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
-        .andExpect(jsonPath("$.unit").value(expectedResponseDto.unit().name()))
-        .andExpect(jsonPath("$.type.name").value(expectedResponseDto.type().name()))
+        .andExpect(
+            jsonPath("$.parameters[0].unit")
+                .value(expectedResponseDto.parameters().getFirst().unit().name()))
+        .andExpect(
+            jsonPath("$.parameters[0].type.name")
+                .value(expectedResponseDto.parameters().getFirst().type().name()))
         .andExpect(jsonPath("$.coordinates.x").value(expectedResponseDto.coordinates().x()))
         .andExpect(jsonPath("$.coordinates.y").value(expectedResponseDto.coordinates().y()))
         .andExpect(jsonPath("$.coordinates.z").value(expectedResponseDto.coordinates().z()))
-        .andExpect(jsonPath("$.alarmLimits.lower").value(expectedResponseDto.alarmLimits().lower()))
-        .andExpect(jsonPath("$.alarmLimits.upper").value(expectedResponseDto.alarmLimits().upper()))
+        .andExpect(
+            jsonPath("$.parameters[0].alarmLimits.lower")
+                .value(expectedResponseDto.parameters().getFirst().alarmLimits().lower()))
+        .andExpect(
+            jsonPath("$.parameters[0].alarmLimits.upper")
+                .value(expectedResponseDto.parameters().getFirst().alarmLimits().upper()))
         .andExpect(jsonPath("$.active").value(expectedResponseDto.active()))
         .andExpect(jsonPath("$.version").value(expectedResponseDto.version()));
 
@@ -205,33 +174,55 @@ class SensorControllerTest {
   @Test
   void should_route_create_sensor_with_formula_and_verify_output() throws Exception {
     // given: request carries a WriteFormulaDto to exercise the nested formula mapping
+    WriteSensorParameterDto parameterDto =
+        new WriteSensorParameterDto(
+            null,
+            "Temperature",
+            "TEMP-1",
+            Unit.METER,
+            new WriteSensorTypeDto("Other"),
+            new AlarmLimitsDto(0.0, 100.0),
+            true,
+            new WriteFormulaDto("x * 2"),
+            null);
     WriteSensorDto requestDto =
         new WriteSensorDto(
             null,
             "SENS-02",
             "Formula",
+            DAS.SOL_EXPERTS,
             null,
-            Unit.METER,
-            new WriteSensorTypeDto("Other"),
+            null,
+            null,
             new CoordinatesDto(0, 0, 0),
+            true,
+            null,
+            List.of(parameterDto));
+
+    SensorParameterResponseDto expectedParameterDto =
+        new SensorParameterResponseDto(
+            PARAMETER_ID,
+            "Temperature",
+            "TEMP-1",
+            new SensorTypeResponseDto(TYPE_ID, "Other", 1),
+            Unit.METER,
+            new FormulaResponseDto(FORMULA_ID, "x * 2", 1),
             new AlarmLimitsDto(0.0, 100.0),
             true,
-            new WriteFormulaDto("x * 2"),
             null);
-
     SensorResponseDto expectedResponseDto =
         new SensorResponseDto(
             SENSOR_ID,
             "SENS-02",
             "Formula",
-            Unit.METER,
-            new SensorTypeResponseDto(TYPE_ID, "Other", 1),
+            DAS.SOL_EXPERTS,
+            null,
             null,
             new CoordinatesDto(0, 0, 0),
-            new AlarmLimitsDto(0.0, 100.0),
             true,
-            new FormulaResponseDto(FORMULA_ID, "x * 2", 1),
-            1);
+            null,
+            1,
+            List.of(expectedParameterDto));
 
     Sensor mockDomain = mock(Sensor.class);
 
@@ -247,10 +238,15 @@ class SensorControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.formula.id").value(expectedResponseDto.formula().id().toString()))
         .andExpect(
-            jsonPath("$.formula.expression").value(expectedResponseDto.formula().expression()))
-        .andExpect(jsonPath("$.formula.version").value(expectedResponseDto.formula().version()));
+            jsonPath("$.parameters[0].formula.id")
+                .value(expectedParameterDto.formula().id().toString()))
+        .andExpect(
+            jsonPath("$.parameters[0].formula.expression")
+                .value(expectedParameterDto.formula().expression()))
+        .andExpect(
+            jsonPath("$.parameters[0].formula.version")
+                .value(expectedParameterDto.formula().version()));
 
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
@@ -261,33 +257,8 @@ class SensorControllerTest {
   @Test
   void should_route_update_sensor_and_verify_output() throws Exception {
     // given
-    WriteSensorDto requestDto =
-        new WriteSensorDto(
-            SENSOR_ID,
-            "SENS-01",
-            "Updated",
-            null,
-            Unit.METER,
-            new WriteSensorTypeDto("Other"),
-            new CoordinatesDto(0, 0, 0),
-            new AlarmLimitsDto(-10.0, 50.0),
-            true,
-            null,
-            1);
-
-    SensorResponseDto expectedResponseDto =
-        new SensorResponseDto(
-            SENSOR_ID,
-            "SENS-01",
-            "Updated",
-            Unit.METER,
-            new SensorTypeResponseDto(TYPE_ID, "Other", 1),
-            null,
-            new CoordinatesDto(0, 0, 0),
-            new AlarmLimitsDto(-10.0, 50.0),
-            true,
-            null,
-            2);
+    WriteSensorDto requestDto = defaultWriteDto(SENSOR_ID, 1);
+    SensorResponseDto expectedResponseDto = defaultResponseDto(SENSOR_ID, "Updated", 2);
 
     Sensor mockDomain = mock(Sensor.class);
 
@@ -305,14 +276,22 @@ class SensorControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(expectedResponseDto.id().toString()))
         .andExpect(jsonPath("$.name").value(expectedResponseDto.name()))
-        .andExpect(jsonPath("$.code").value(expectedResponseDto.code()))
-        .andExpect(jsonPath("$.unit").value(expectedResponseDto.unit().name()))
-        .andExpect(jsonPath("$.type.name").value(expectedResponseDto.type().name()))
+        .andExpect(jsonPath("$.dasSensorAlias").value(expectedResponseDto.dasSensorAlias()))
+        .andExpect(
+            jsonPath("$.parameters[0].unit")
+                .value(expectedResponseDto.parameters().getFirst().unit().name()))
+        .andExpect(
+            jsonPath("$.parameters[0].type.name")
+                .value(expectedResponseDto.parameters().getFirst().type().name()))
         .andExpect(jsonPath("$.coordinates.x").value(expectedResponseDto.coordinates().x()))
         .andExpect(jsonPath("$.coordinates.y").value(expectedResponseDto.coordinates().y()))
         .andExpect(jsonPath("$.coordinates.z").value(expectedResponseDto.coordinates().z()))
-        .andExpect(jsonPath("$.alarmLimits.lower").value(expectedResponseDto.alarmLimits().lower()))
-        .andExpect(jsonPath("$.alarmLimits.upper").value(expectedResponseDto.alarmLimits().upper()))
+        .andExpect(
+            jsonPath("$.parameters[0].alarmLimits.lower")
+                .value(expectedResponseDto.parameters().getFirst().alarmLimits().lower()))
+        .andExpect(
+            jsonPath("$.parameters[0].alarmLimits.upper")
+                .value(expectedResponseDto.parameters().getFirst().alarmLimits().upper()))
         .andExpect(jsonPath("$.active").value(expectedResponseDto.active()))
         .andExpect(jsonPath("$.version").value(expectedResponseDto.version()));
 
@@ -324,20 +303,8 @@ class SensorControllerTest {
 
   @Test
   void should_reject_update_when_path_id_does_not_match_body_id() throws Exception {
-    // given: path id (1) and body id (2) disagree
-    WriteSensorDto requestDto =
-        new WriteSensorDto(
-            OTHER_SENSOR_ID,
-            "SENS-01",
-            "Updated",
-            null,
-            Unit.METER,
-            new WriteSensorTypeDto("Other"),
-            new CoordinatesDto(0, 0, 0),
-            new AlarmLimitsDto(-10.0, 50.0),
-            true,
-            null,
-            1);
+    // given: path id (SENSOR_ID) and body id (OTHER_SENSOR_ID) disagree
+    WriteSensorDto requestDto = defaultWriteDto(OTHER_SENSOR_ID, 1);
 
     // when / then
     mockMvc
@@ -358,7 +325,6 @@ class SensorControllerTest {
   @Test
   void should_route_find_formulas_and_return_json_array() throws Exception {
     // given
-
     Formula formula1 = Formula.builder().id(FORMULA_ID).expression("x * 2").version(1).build();
     Formula formula2 =
         Formula.builder().id(OTHER_FORMULA_ID).expression("x / 2").version(1).build();
@@ -403,5 +369,61 @@ class SensorControllerTest {
         .andExpect(jsonPath("$[1].name").value(dto2.name()));
 
     then(service).should().findAllTypes();
+  }
+
+  private WriteSensorParameterDto defaultWriteParameterDto() {
+    return new WriteSensorParameterDto(
+        null,
+        "Temperature",
+        "TEMP-1",
+        Unit.METER,
+        new WriteSensorTypeDto("Other"),
+        new AlarmLimitsDto(0.0, 100.0),
+        true,
+        null,
+        null);
+  }
+
+  private WriteSensorDto defaultWriteDto(UUID id, Integer version) {
+    return new WriteSensorDto(
+        id,
+        "Test",
+        "SENS-01",
+        DAS.SOL_EXPERTS,
+        null,
+        null,
+        null,
+        new CoordinatesDto(0, 0, 0),
+        true,
+        version,
+        List.of(defaultWriteParameterDto()));
+  }
+
+  private SensorParameterResponseDto defaultResponseParameterDto() {
+    return new SensorParameterResponseDto(
+        PARAMETER_ID,
+        "Temperature",
+        "TEMP-1",
+        new SensorTypeResponseDto(TYPE_ID, "Other", 1),
+        Unit.METER,
+        null,
+        new AlarmLimitsDto(0.0, 100.0),
+        true,
+        null);
+  }
+
+  private SensorResponseDto defaultResponseDto(UUID id, String name, Integer version) {
+    return new SensorResponseDto(
+        id,
+        name,
+        "SENS-01",
+        DAS.SOL_EXPERTS,
+        null,
+        null,
+        new CoordinatesDto(0, 0, 0),
+        true,
+        null,
+        version,
+        List.of(defaultResponseParameterDto()));
   }
 }

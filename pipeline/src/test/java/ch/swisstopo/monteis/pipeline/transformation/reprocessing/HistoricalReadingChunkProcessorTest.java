@@ -6,7 +6,8 @@ import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
@@ -18,6 +19,7 @@ import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSenso
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,17 +71,24 @@ class HistoricalReadingChunkProcessorTest {
         .executeWithoutResult(any());
   }
 
-  @Test
-  void should_return_zero_when_no_old_records_found() {
-    // given
-    ActiveSensorConfig config =
-        new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 2));
+  private static SensorParameterConfig config(UUID sensorParameterId, int version) {
+    return new SensorParameterConfig(
+        Das.SOL_EXPERTS, "deviceA", "temperature", sensorParameterId, "x + 1", 100.0, 0.0, version);
+  }
 
-    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize, null))
+  @Test
+  void should_return_zero_when_no_old_records_found_by_id() {
+    // given
+    UUID sensorParameterId = UUID.randomUUID();
+    ActiveSensorConfig config = new ActiveSensorConfig(config(sensorParameterId, (short) 2));
+
+    given(
+            sensorReadingRepository.fetchOldSensorDataById(
+                sensorParameterId, (short) 2, testChunkSize, null))
         .willReturn(List.of());
 
     // when
-    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
+    ChunkProcessingResult result = chunkService.processNextChunkById(config, null);
 
     // then
     assertThat(result.processedCount()).isZero();
@@ -89,20 +98,24 @@ class HistoricalReadingChunkProcessorTest {
   }
 
   @Test
-  void should_process_and_bulk_update_valid_records() throws TransformationException {
+  void should_process_and_bulk_update_valid_records_matched_by_id() throws TransformationException {
     // given
-    ActiveSensorConfig config =
-        new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 2));
+    UUID sensorParameterId = UUID.randomUUID();
+    ActiveSensorConfig config = new ActiveSensorConfig(config(sensorParameterId, (short) 2));
     OffsetDateTime timestamp = OffsetDateTime.now();
 
     SensorReadingRecord oldRecord =
-        new SensorReadingRecord(timestamp, "deviceA", 10.0, 15.0, (short) 1, RangeCategory.correct);
+        new SensorReadingRecord(
+            timestamp, "deviceA", 10.0, 15.0, (short) 1, RangeCategory.correct, sensorParameterId);
 
-    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize, null))
+    given(
+            sensorReadingRepository.fetchOldSensorDataById(
+                sensorParameterId, (short) 2, testChunkSize, null))
         .willReturn(List.of(oldRecord));
 
     SensorReadingRecord transformedRecord =
-        new SensorReadingRecord(timestamp, "deviceA", 10.0, 20.0, (short) 2, RangeCategory.correct);
+        new SensorReadingRecord(
+            timestamp, "deviceA", 10.0, 20.0, (short) 2, RangeCategory.correct, sensorParameterId);
 
     given(
             transformationOrchestrator.transform(
@@ -110,7 +123,7 @@ class HistoricalReadingChunkProcessorTest {
         .willReturn(transformedRecord);
 
     // when
-    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
+    ChunkProcessingResult result = chunkService.processNextChunkById(config, null);
 
     // then
     assertThat(result.processedCount()).isEqualTo(1);
@@ -136,19 +149,60 @@ class HistoricalReadingChunkProcessorTest {
   }
 
   @Test
+  void should_process_unbackfilled_records_matched_by_das_key() throws TransformationException {
+    // given
+    UUID sensorParameterId = UUID.randomUUID();
+    ActiveSensorConfig config = new ActiveSensorConfig(config(sensorParameterId, (short) 1));
+    OffsetDateTime timestamp = OffsetDateTime.now();
+    String dasKey = "SOL_EXPERTS__deviceA__temperature";
+
+    // sensor_parameter_id still null on the fetched row - that's why it matched this backlog
+    SensorReadingRecord oldRecord =
+        new SensorReadingRecord(
+            timestamp, dasKey, 10.0, 15.0, (short) 0, RangeCategory.correct, null);
+
+    given(
+            sensorReadingRepository.fetchOldSensorDataByDasKeyUnbackfilled(
+                dasKey, (short) 1, testChunkSize, null))
+        .willReturn(List.of(oldRecord));
+
+    SensorReadingRecord transformedRecord =
+        new SensorReadingRecord(
+            timestamp, dasKey, 10.0, 20.0, (short) 1, RangeCategory.correct, sensorParameterId);
+
+    given(
+            transformationOrchestrator.transform(
+                dasKey, 10.0, timestamp, config, ProcessingOrigin.REPROCESS))
+        .willReturn(transformedRecord);
+
+    // when
+    ChunkProcessingResult result =
+        chunkService.processNextChunkByDasKeyUnbackfilled(config, dasKey, null);
+
+    // then
+    assertThat(result.processedCount()).isEqualTo(1);
+    then(sensorReadingRepository).should().bulkUpdate(dbRecordsCaptor.capture());
+    assertThat(dbRecordsCaptor.getValue()).containsExactly(transformedRecord);
+    assertThat(dbRecordsCaptor.getValue().getFirst().getSensorParameterId())
+        .isEqualTo(sensorParameterId);
+  }
+
+  @Test
   void should_handle_poison_pills_by_bumping_version_and_setting_null_norm_value()
       throws TransformationException {
     // given
-    ActiveSensorConfig config =
-        new ActiveSensorConfig(new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 3));
+    UUID sensorParameterId = UUID.randomUUID();
+    ActiveSensorConfig config = new ActiveSensorConfig(config(sensorParameterId, (short) 3));
     OffsetDateTime timestamp = OffsetDateTime.now();
 
     // The old record has version 1 and a raw value that will cause math to fail
     SensorReadingRecord poisonRecord =
         new SensorReadingRecord(
-            timestamp, "deviceB", -999.0, 5.0, (short) 1, RangeCategory.correct);
+            timestamp, "deviceB", -999.0, 5.0, (short) 1, RangeCategory.correct, sensorParameterId);
 
-    given(sensorReadingRepository.fetchOldSensorData(config.getConfig(), testChunkSize, null))
+    given(
+            sensorReadingRepository.fetchOldSensorDataById(
+                sensorParameterId, (short) 3, testChunkSize, null))
         .willReturn(List.of(poisonRecord));
 
     TransformationException ex = mock(TransformationException.class);
@@ -160,7 +214,7 @@ class HistoricalReadingChunkProcessorTest {
         .willThrow(ex);
 
     // when
-    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
+    ChunkProcessingResult result = chunkService.processNextChunkById(config, null);
 
     // then
     assertThat(result.processedCount()).isEqualTo(1);
@@ -174,6 +228,8 @@ class HistoricalReadingChunkProcessorTest {
     assertThat(savedRecord.getVersion()).isEqualTo((short) 3);
     assertThat(savedRecord.getNormValue()).isNull();
     assertThat(savedRecord.getRawValue()).isEqualTo(-999.0);
+    // The id must still be backfilled even on a poison pill, or this row would be stuck forever
+    assertThat(savedRecord.getSensorParameterId()).isEqualTo(sensorParameterId);
 
     assertThat(
             meterRegistry

@@ -4,15 +4,15 @@
   <form id="sensorCreateForm" class="form-layout" (submit)="onSubmit($event)" novalidate>
     <div class="form-row">
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.code.label' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.dasSensorAlias.label' | translate }}</mat-label>
         <input
           matInput
-          [formField]="sensorForm.code"
-          [placeholder]="'sensor.code.placeholder' | translate"
+          [formField]="sensorForm.dasSensorAlias"
+          [placeholder]="'sensor.dasSensorAlias.placeholder' | translate"
         />
-        @if (sensorForm.code().touched() && sensorForm.code().invalid()) {
+        @if (sensorForm.dasSensorAlias().touched() && sensorForm.dasSensorAlias().invalid()) {
           <mat-error>
-            @for (error of sensorForm.code().errors(); track error) {
+            @for (error of sensorForm.dasSensorAlias().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>
@@ -43,38 +43,18 @@
         </mat-select>
       </mat-form-field>
     </div>
+
     <div class="form-row">
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.unit.label' | translate }}</mat-label>
-        <mat-select [formField]="sensorForm.unit">
-          <mat-option value="">{{ 'sensor.unit.placeholder' | translate }}</mat-option>
-          @for (unit of unitValues; track unit) {
-            <mat-option [value]="unit"
-              >{{ unitMetadata[unit].label() }} ({{ unitMetadata[unit].symbol() }})
-            </mat-option>
+        <mat-label>{{ 'sensor.das.label' | translate }}</mat-label>
+        <mat-select [formField]="sensorForm.das">
+          @for (das of dasValues; track das) {
+            <mat-option [value]="das">{{ dasMetadata[das].label() }}</mat-option>
           }
         </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.type.label' | translate }}</mat-label>
-        <input
-          type="text"
-          [placeholder]="'sensor.type.placeholder' | translate"
-          matInput
-          [formField]="sensorForm.type.name"
-          [matAutocomplete]="autoType"
-        />
-        <mat-autocomplete #autoType="matAutocomplete">
-          @for (type of filteredTypes(); track type.id) {
-            <mat-option [value]="type.name" (onSelectionChange)="selectType(type)">{{
-              type.name
-            }}</mat-option>
-          }
-        </mat-autocomplete>
-        @if (sensorForm.type.name().touched() && sensorForm.type.name().invalid()) {
+        @if (sensorForm.das().touched() && sensorForm.das().invalid()) {
           <mat-error>
-            @for (error of sensorForm.type.name().errors(); track error) {
+            @for (error of sensorForm.das().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>
@@ -82,26 +62,38 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.formula.label' | translate }}</mat-label>
+        <mat-label>{{ 'sensor.fulcrumId.label' | translate }}</mat-label>
+        <input
+          matInput
+          [formField]="sensorForm.fulcrumId"
+          [placeholder]="'sensor.fulcrumId.placeholder' | translate"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.mainExperiment.label' | translate }}</mat-label>
         <input
           type="text"
-          [placeholder]="'sensor.formula.placeholder' | translate"
           matInput
-          [formField]="sensorForm.formula.expression"
-          [matAutocomplete]="autoFormula"
+          [placeholder]="'sensor.mainExperiment.placeholder' | translate"
+          [formField]="sensorForm.mainExperiment.name"
+          [matAutocomplete]="autoExperiment"
         />
-        <mat-autocomplete #autoFormula="matAutocomplete">
-          @for (formula of filteredFormulas(); track formula.id) {
-            <mat-option [value]="formula.expression" (onSelectionChange)="selectFormula(formula)">
-              {{ formula.expression }} <span class="version-badge">(v{{ formula.version }})</span>
+        <mat-autocomplete #autoExperiment="matAutocomplete">
+          @for (experiment of filteredExperiments(); track experiment.id) {
+            <mat-option
+              [value]="experiment.name"
+              (onSelectionChange)="selectExperiment(experiment)"
+            >
+              {{ experiment.name }}
             </mat-option>
           }
         </mat-autocomplete>
         @if (
-          sensorForm.formula.expression().touched() && sensorForm.formula.expression().invalid()
+          sensorForm.mainExperiment.name().touched() && sensorForm.mainExperiment.name().invalid()
         ) {
           <mat-error>
-            @for (error of sensorForm.formula.expression().errors(); track error) {
+            @for (error of sensorForm.mainExperiment.name().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>
@@ -152,31 +144,170 @@
       </mat-form-field>
     </div>
 
-    <div class="form-row">
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.alarmLimit.from.label' | translate }}</mat-label>
-        <input matInput type="number" [formField]="sensorForm.alarmLimits.lower" />
-        @if (sensorForm.alarmLimits.lower().touched() && sensorForm.alarmLimits.lower().invalid()) {
-          <mat-error>
-            @for (error of sensorForm.alarmLimits.lower().errors(); track error) {
-              {{ error.message }}
-            }
-          </mat-error>
-        }
-      </mat-form-field>
+    @for (parameter of sensorForm.parameters; track parameterKeys()[i]; let i = $index) {
+      <fieldset class="parameter-block" [attr.data-testid]="'parameter-block-' + i">
+        <legend>{{ 'sensor.parameter.heading' | translate: { number: i + 1 } }}</legend>
 
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.alarmLimit.to.label' | translate }}</mat-label>
-        <input matInput type="number" [formField]="sensorForm.alarmLimits.upper" />
-        @if (sensorForm.alarmLimits.upper().touched() && sensorForm.alarmLimits.upper().invalid()) {
-          <mat-error>
-            @for (error of sensorForm.alarmLimits.upper().errors(); track error) {
-              {{ error.message }}
+        <button
+          matIconButton
+          type="button"
+          [disabled]="!canRemoveParameter()"
+          [attr.aria-label]="'sensor.parameter.removeButton' | translate"
+          (click)="removeParameter(i)"
+        >
+          <mat-icon fontIcon="delete"></mat-icon>
+        </button>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.parameter.name.label' | translate }}</mat-label>
+            <input
+              matInput
+              [formField]="parameter.name"
+              [placeholder]="'sensor.parameter.name.placeholder' | translate"
+            />
+            @if (parameter.name().touched() && parameter.name().invalid()) {
+              <mat-error>
+                @for (error of parameter.name().errors(); track error) {
+                  {{ error.message }}
+                }
+              </mat-error>
             }
-          </mat-error>
-        }
-      </mat-form-field>
-    </div>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.parameter.dasParameterAlias.label' | translate }}</mat-label>
+            <input
+              matInput
+              [formField]="parameter.dasParameterAlias"
+              [placeholder]="'sensor.parameter.dasParameterAlias.placeholder' | translate"
+            />
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.unit.label' | translate }}</mat-label>
+            <mat-select [formField]="parameter.unit">
+              <mat-option value="">{{ 'sensor.unit.placeholder' | translate }}</mat-option>
+              @for (unit of unitValues; track unit) {
+                <mat-option [value]="unit"
+                  >{{ unitMetadata[unit].label() }} ({{ unitMetadata[unit].symbol() }})
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.type.label' | translate }}</mat-label>
+            <input
+              type="text"
+              [placeholder]="'sensor.type.placeholder' | translate"
+              matInput
+              [formField]="parameter.type.name"
+              [matAutocomplete]="autoType"
+            />
+            <mat-autocomplete #autoType="matAutocomplete">
+              @for (type of filteredTypesFor(parameter); track type.id) {
+                <mat-option [value]="type.name" (onSelectionChange)="selectType(parameter, type)">{{
+                  type.name
+                }}</mat-option>
+              }
+            </mat-autocomplete>
+            @if (parameter.type.name().touched() && parameter.type.name().invalid()) {
+              <mat-error>
+                @for (error of parameter.type.name().errors(); track error) {
+                  {{ error.message }}
+                }
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.formula.label' | translate }}</mat-label>
+            <input
+              type="text"
+              [placeholder]="'sensor.formula.placeholder' | translate"
+              matInput
+              [formField]="parameter.formula.expression"
+              [matAutocomplete]="autoFormula"
+            />
+            <mat-autocomplete #autoFormula="matAutocomplete">
+              @for (formula of filteredFormulasFor(parameter); track formula.id) {
+                <mat-option
+                  [value]="formula.expression"
+                  (onSelectionChange)="selectFormula(parameter, formula)"
+                >
+                  {{ formula.expression }}
+                  <span class="version-badge">(v{{ formula.version }})</span>
+                </mat-option>
+              }
+            </mat-autocomplete>
+            @if (
+              parameter.formula.expression().touched() && parameter.formula.expression().invalid()
+            ) {
+              <mat-error>
+                @for (error of parameter.formula.expression().errors(); track error) {
+                  {{ error.message }}
+                }
+              </mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.alarmLimit.from.label' | translate }}</mat-label>
+            <input matInput type="number" [formField]="parameter.alarmLimits.lower" />
+            @if (
+              parameter.alarmLimits.lower().touched() && parameter.alarmLimits.lower().invalid()
+            ) {
+              <mat-error>
+                @for (error of parameter.alarmLimits.lower().errors(); track error) {
+                  {{ error.message }}
+                }
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.alarmLimit.to.label' | translate }}</mat-label>
+            <input matInput type="number" [formField]="parameter.alarmLimits.upper" />
+            @if (
+              parameter.alarmLimits.upper().touched() && parameter.alarmLimits.upper().invalid()
+            ) {
+              <mat-error>
+                @for (error of parameter.alarmLimits.upper().errors(); track error) {
+                  {{ error.message }}
+                }
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.parameter.active.label' | translate }}</mat-label>
+            <mat-select [formField]="parameter.active">
+              <mat-option [value]="true">{{
+                'sensor.active.option.active' | translate
+              }}</mat-option>
+              <mat-option [value]="false">{{
+                'sensor.active.option.inactive' | translate
+              }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <mat-form-field class="full-width" appearance="outline">
+          <mat-label>{{ 'sensor.parameter.comment.label' | translate }}</mat-label>
+          <textarea matInput [formField]="parameter.comment" rows="2"></textarea>
+        </mat-form-field>
+      </fieldset>
+    }
+
+    <button matButton type="button" (click)="addParameter()">
+      <mat-icon fontIcon="add"></mat-icon>
+      {{ 'sensor.parameter.addButton' | translate }}
+    </button>
   </form>
 
   <mat-dialog-actions align="end">

@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.pipeline.transformation.processing.cache;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.transformation.processing.SensorConfigMessageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,17 +34,17 @@ public class SensorConfigCacheHydrationListener {
       properties = {"auto.offset.reset=earliest"},
       containerFactory = "manualAckFactory")
   public void consumeSensorConfigUpdate(
-      @Payload(required = false) SensorConfig sensorConfig,
-      @Header(KafkaHeaders.RECEIVED_KEY) String sensorId,
+      @Payload(required = false) SensorParameterConfig sensorConfig,
+      @Header(KafkaHeaders.RECEIVED_KEY) String dasKey,
       Acknowledgment ack) {
 
     messageProcessor.processSafely(
         sensorConfig,
-        sensorId,
+        dasKey,
         ack,
         validConfig -> {
           cacheService.updateSensorConfig(validConfig);
-          log.info("Pod cache updated for sensor {}", validConfig.getSensorId());
+          log.info("Pod cache updated for sensor parameter {}", validConfig.getSensorParameterId());
         });
   }
 }
