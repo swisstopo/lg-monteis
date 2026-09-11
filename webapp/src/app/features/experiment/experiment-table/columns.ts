@@ -2,9 +2,9 @@ import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
 import { ExperimentResponseDto } from '@core/generated';
 import { TranslateService } from '@ngx-translate/core';
+import { MultiSelectFilter } from '@ui/filters/multi-select-filter/multi-select-filter';
 import { CopyCellRenderer } from '@ui/table/copy-cell-renderer/copy-cell-renderer';
 import { TableColumn } from '@ui/table/table.types';
-import { MultiSelectFilter } from '@ui/filters/multi-select-filter/multi-select-filter';
 import StatusEnum = ExperimentResponseDto.StatusEnum;
 
 export function createColumns(datePipe: DatePipe): TableColumn<ExperimentResponseDto>[] {
