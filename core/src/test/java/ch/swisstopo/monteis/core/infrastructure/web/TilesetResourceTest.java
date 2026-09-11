@@ -24,7 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class TilesetResourceTest {
 
   private static final String TILESET = "/api/tilesets/monteis-octree-poc/tileset.json";
-  private static final String TILE = "/api/tilesets/monteis-octree-poc/tile_13.glb";
+  private static final String TILE = "/api/tilesets/monteis-octree-poc/geometry/1.b3dm";
 
   @Autowired private MockMvc mockMvc;
 

@@ -10,23 +10,40 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import Instance from '@giro3d/giro3d/core/Instance.js';
 import { CoordinateSystem } from '@giro3d/giro3d/core/geographic/CoordinateSystem.js';
 import Tiles3D from '@giro3d/giro3d/entities/Tiles3D.js';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AmbientLight, DirectionalLight, GridHelper, MathUtils, Object3D, Vector3 } from 'three';
+import {
+  AmbientLight,
+  Color,
+  DirectionalLight,
+  GridHelper,
+  Group,
+  MathUtils,
+  Mesh,
+  MeshLambertMaterial,
+  Object3D,
+  SphereGeometry,
+  Vector3,
+} from 'three';
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
+import { SensorResponseDto } from '../../core/generated';
 import { InlineError } from '../inline-error/inline-error';
 import { TilesFetch, TilesFetchPlugin } from './tiles-fetch-plugin';
 
+const BLACK = new Color('#000');
+
 @Component({
-  imports: [TranslatePipe, MatProgressSpinner, InlineError],
+  imports: [TranslatePipe, MatProgressSpinner, MatTooltipModule, InlineError],
   selector: 'app-giro3d',
   styleUrl: './giro3d.scss',
   templateUrl: './giro3d.html',
 })
 export class Giro3d implements AfterViewInit {
   readonly tilesetUrl = input.required<string | URL>();
+  readonly sensors = input.required<SensorResponseDto[]>();
 
   /**
    * Performs the tileset and tile requests, see {@link TilesFetchPlugin}.
@@ -37,6 +54,8 @@ export class Giro3d implements AfterViewInit {
 
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
+  protected readonly popupContent = signal<string | null>(null);
+
   private readonly instance = signal<Instance | null>(null);
   private readonly tileset = computed(() => {
     const tileset = new Tiles3D({
@@ -53,15 +72,20 @@ export class Giro3d implements AfterViewInit {
   });
   private readonly controls = signal<MapControls | null>(null);
 
+  private sensorGroup: Group | null = null;
+  private readonly sensorsObj = computed(() => this.sensors().map(this.createSensorObject3D));
+
+  private _mouseMoveEventListener: ((evt: MouseEvent) => void) | null = null;
+
   constructor() {
-    // Initialize/cleanup tileset whenever the tilesetUrl changes
     effect((onCleanup) => {
-      this.loading.set(true);
+      // Initialize/cleanup data whenever they change tilesetUrl changes
+      const tileset = this.tileset();
       const instance = this.instance();
       const controls = this.controls();
+      this.loading.set(true);
       if (!instance || !controls) return;
 
-      const tileset = this.tileset();
       let cancelled = false;
       let grid: GridHelper | undefined;
 
@@ -98,6 +122,24 @@ export class Giro3d implements AfterViewInit {
         instance.remove(tileset);
       });
     });
+
+    effect((onCleanup) => {
+      // initialize / cleanup sensors whenever the list changes
+      const instance = this.instance();
+      const sensorsObj = this.sensorsObj();
+      if (!instance || !this.sensorGroup || !sensorsObj) return;
+
+      // cleanup sensors, because the list could have completely changed
+      // this.cleanupSensors();
+      for (let sensorObj of sensorsObj) {
+        if (sensorObj) {
+          this.sensorGroup.add(sensorObj);
+        }
+      }
+      instance.notifyChange(this.sensorGroup);
+
+      onCleanup(() => this.cleanupSensors);
+    });
   }
 
   ngAfterViewInit(): void {
@@ -109,18 +151,30 @@ export class Giro3d implements AfterViewInit {
   }
 
   ngOnDestroy(): void {
-    this.controls()?.dispose();
-    this.instance()?.dispose();
+    const instance = this.instance();
+    if (instance) {
+      instance.dispose();
+      this.removeEventListeners(instance);
+    }
+    const controls = this.controls();
+    if (controls) controls.dispose();
   }
 
-  private initInstance() {
-    const instance = new Instance({
-      target: this.view().nativeElement,
-      crs: CoordinateSystem.epsg3857,
-      backgroundColor: 0xcccccc,
-    });
+  private cleanupSensors() {
+    const instance = this.instance();
+    if (instance && this.sensorGroup) {
+      this.sensorGroup.traverse((o: Object3D) => {
+        o.removeFromParent();
+        if (o instanceof Mesh) {
+          o.geometry.dispose();
+          o.material.dispose();
+        }
+      });
+      instance.notifyChange(this.sensorGroup);
+    }
+  }
 
-    // Add a sunlight
+  private setupLights(instance: Instance) {
     const sun = new DirectionalLight('#ffffff', 1.4);
     sun.position.set(1, 0, 1).normalize();
     sun.updateMatrixWorld(true);
@@ -135,15 +189,123 @@ export class Giro3d implements AfterViewInit {
     // Add ambient light
     const ambientLight = new AmbientLight(0xffffff, 1);
     instance.scene.add(ambientLight);
-    instance.view.minNearPlane = 0.5;
+  }
 
+  private setupControls(instance: Instance) {
     const controls = new MapControls(instance.view.camera, instance.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
     instance.view.setControls(controls);
+    this.controls.set(controls);
+  }
+
+  private getMeshInfo(obj: Mesh) {
+    const data = obj.userData;
+    if (data['type'] === 'sensor') {
+      return `sensor ${data['name']}, ${data['comment']}`;
+    } else {
+      return `${data['class']}: ${data['name']}`;
+    }
+  }
+
+  private setupPicking(instance: Instance) {
+    let highlightedElem: Mesh | null = null;
+
+    function highlightElem(elem: Mesh) {
+      highlightedElem = elem;
+      if ('color' in elem.material) {
+        const originalColor = elem.material.color as Color;
+        elem.userData['originalColor'] = originalColor.clone();
+        originalColor.lerp(BLACK, 0.5);
+        // there is no cases where the material has a color but no needsUpdate
+        (elem.material as MeshLambertMaterial).needsUpdate = true;
+        instance.notifyChange(elem);
+      }
+    }
+
+    function resetHighlightedObject() {
+      if (
+        highlightedElem &&
+        highlightedElem.material != null &&
+        !Array.isArray(highlightedElem.material)
+      ) {
+        if ('color' in highlightedElem.material) {
+          highlightedElem.material.color = highlightedElem.userData['originalColor'];
+          highlightedElem.material.needsUpdate = true;
+          instance.notifyChange(highlightedElem);
+        }
+        highlightedElem = null;
+      }
+    }
+
+    this._mouseMoveEventListener = (event) => {
+      const picked = instance.pickObjectsAt(event, { sortByDistance: true });
+      resetHighlightedObject();
+      if (picked.length > 0) {
+        // let's consider the first one in the picking order
+        // we *don't* iterate, as we don't want to highlight a sensor that would be behind another object
+        const object = picked[0].object;
+        if (object === highlightedElem) {
+          // nothing to do
+          return;
+        }
+        if (object instanceof Mesh) {
+          // highlight object
+          highlightElem(object);
+          this.popupContent.set(this.getMeshInfo(object));
+        }
+      } else {
+        this.popupContent.set(null);
+      }
+    };
+    instance.domElement.addEventListener('mousemove', this._mouseMoveEventListener);
+  }
+
+  private initInstance() {
+    const instance = new Instance({
+      target: this.view().nativeElement,
+      crs: CoordinateSystem.epsg3857,
+      backgroundColor: 0xcccccc,
+    });
+
+    this.setupLights(instance);
+    this.setupControls(instance);
 
     this.instance.set(instance);
-    this.controls.set(controls);
+
+    // set up group for sensors
+    const sensorGroup = new Group();
+    sensorGroup.name = 'sensorGroup';
+    instance.add(sensorGroup);
+    this.sensorGroup = sensorGroup;
+
+    // set up listeners/picking/hovering etc.
+    this.setupPicking(instance);
+  }
+
+  private removeEventListeners(instance: Instance) {
+    if (this._mouseMoveEventListener != null) {
+      instance.domElement.removeEventListener('mousemove', this._mouseMoveEventListener);
+    }
+  }
+
+  private createSensorObject3D(sensor: SensorResponseDto): Object3D | void {
+    // create the geom
+    let geom = new SphereGeometry(0.3, 32, 16);
+    let sensor3D = new Mesh(geom, new MeshLambertMaterial({ color: 0x02cb02 }));
+    if (sensor.coordinates == null) {
+      return;
+    }
+    sensor3D.position.copy(sensor.coordinates);
+    sensor3D.updateMatrixWorld();
+
+    // set metadata
+    sensor3D.userData = {
+      name: sensor.name,
+      comment: sensor.comment,
+      type: 'sensor',
+    };
+    return sensor3D;
   }
 
   private initCamera(
