@@ -23,6 +23,7 @@
     }
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
+  "object.deleted": "The record no longer exists. It may have been deleted in the meantime.",
   "validation": {
     "required": "There is a validation error with this field.",
     "mustBeNull": "",
