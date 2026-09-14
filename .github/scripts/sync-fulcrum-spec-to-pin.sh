@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Brings the committed Fulcrum OpenAPI spec up to the commit pinned in the root pom (MON-142).
+# Brings the committed Fulcrum OpenAPI spec up to the commit pinned in the contracts pom
+# (MON-142).
 #
 # Run this when the "Fulcrum Spec In Sync" check fails on a Renovate PR:
 #
@@ -7,8 +8,8 @@
 #   .github/scripts/sync-fulcrum-spec-to-pin.sh
 #   git commit -am 'chore(deps): refresh Fulcrum OpenAPI spec' && git push
 #
-# It only replaces the committed spec with the document at fulcrum.spec.ref. The pom is left
-# alone - Renovate owns the pin, and no hash is stored anywhere that would need updating too.
+# It only replaces the committed spec with the document at fulcrum.spec.ref. The contracts pom is
+# left alone - Renovate owns the pin, and no hash is stored anywhere that would need updating too.
 set -euo pipefail
 
 # shellcheck source=.github/scripts/fulcrum-spec-common.sh

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Verifies that the committed Fulcrum spec is the document at the commit pinned in the root pom
-# (MON-142). Run by the "Fulcrum Spec In Sync" job in pr-gate.
+# Verifies that the committed Fulcrum spec is the document at the commit pinned in the contracts
+# pom (MON-142). Run by the "Fulcrum Spec In Sync" job in pr-gate.
 #
 # Nothing about the upstream document is recorded in the repository except fulcrum.spec.ref, so
 # there is no stored hash that could fall out of step: the spec at that commit is fetched and

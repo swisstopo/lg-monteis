@@ -16,9 +16,9 @@
 
   "customManagers": [
     {
-      "description": "Fulcrum OpenAPI spec: fulcrumapp/api publishes no tags or releases, so the spec is pinned to a commit of its v2 branch (see fulcrum.spec.ref in the root pom) and tracked as a git-refs digest",
+      "description": "Fulcrum OpenAPI spec: fulcrumapp/api publishes no tags or releases, so the spec is pinned to a commit of its v2 branch (see fulcrum.spec.ref in contracts/pom.xml, next to the committed spec) and tracked as a git-refs digest",
       "customType": "regex",
-      "managerFilePatterns": ["/^pom\\.xml$/"],
+      "managerFilePatterns": ["/^contracts\\/pom\\.xml$/"],
       "matchStrings": ["<fulcrum\\.spec\\.ref>(?<currentDigest>[0-9a-f]{40})</fulcrum\\.spec\\.ref>"],
       "depNameTemplate": "fulcrumapp/api",
       "packageNameTemplate": "https://github.com/fulcrumapp/api",
