@@ -1,9 +1,10 @@
 package ch.swisstopo.monteis.core.modules.measurement.query;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,5 +18,5 @@ public interface MeasurementQuery {
    */
   Optional<ChartDataResponseDto> findChartData(UUID id, OffsetDateTime from, OffsetDateTime to);
 
-  List<MeasurementResponseDto> findMeasurements();
+  PagedResult<MeasurementResponseDto> findPaged(PagedRequest request);
 }
