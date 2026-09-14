@@ -2,9 +2,11 @@ package ch.swisstopo.monteis.core.modules.measurement.web;
 
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -38,8 +40,14 @@ public class MeasurementController {
       @RequestParam @NotNull @PastOrPresent OffsetDateTime from,
       @RequestParam @NotNull @PastOrPresent OffsetDateTime to) {
     return measurementService
-        .findMeasurements(id, from, to)
+        .findChartData(id, from, to)
         .map(ResponseEntity::ok)
         .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<MeasurementResponseDto>> getMeasurements() {
+    List<MeasurementResponseDto> measurements = measurementService.findMeasurements();
+    return ResponseEntity.ok(measurements);
   }
 }

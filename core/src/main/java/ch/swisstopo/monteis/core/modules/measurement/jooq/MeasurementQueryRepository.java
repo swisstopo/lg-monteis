@@ -1,13 +1,13 @@
 package ch.swisstopo.monteis.core.modules.measurement.jooq;
 
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSORS;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_PARAMETER;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
 import static org.jooq.Records.mapping;
 
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -29,7 +29,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
   }
 
   @Override
-  public Optional<ChartDataResponseDto> findMeasurements(
+  public Optional<ChartDataResponseDto> findChartData(
       UUID id, OffsetDateTime from, OffsetDateTime to) {
 
     var parameterInfo =
@@ -80,5 +80,48 @@ public class MeasurementQueryRepository implements MeasurementQuery {
             combinedName,
             Unit.valueOf(parameterInfo.get(SENSOR_PARAMETER.UNIT).toString()),
             points));
+  }
+
+  public List<MeasurementResponseDto> findMeasurements() {
+
+    var latestReadings =
+        dsl.select(
+                SENSOR_READING_SECURED.SENSOR_ID,
+                SENSOR_READING_SECURED.TIMESTAMP,
+                SENSOR_READING_SECURED.NORM_VALUE)
+            .distinctOn(SENSOR_READING_SECURED.SENSOR_ID)
+            .from(SENSOR_READING_SECURED)
+            .orderBy(SENSOR_READING_SECURED.SENSOR_ID, SENSOR_READING_SECURED.TIMESTAMP.desc())
+            .asTable("latest_readings");
+
+    return dsl.select(
+            SENSORS.ID,
+            SENSORS.DAS_SENSOR_ALIAS,
+            EXPERIMENTS.NAME,
+            SENSORS.NAME,
+            latestReadings.field(SENSOR_READING_SECURED.TIMESTAMP),
+            latestReadings.field(SENSOR_READING_SECURED.NORM_VALUE),
+            SENSOR_PARAMETER.UNIT,
+            SENSOR_TYPES.NAME,
+            SENSORS.X,
+            SENSORS.Y,
+            SENSORS.Z,
+            SENSOR_PARAMETER.LOWER_ALARM_LIMIT,
+            SENSOR_PARAMETER.UPPER_ALARM_LIMIT,
+            SENSORS.ACTIVE,
+            SENSORS.COMMENT)
+        .from(SENSORS)
+        .join(SENSOR_PARAMETER)
+        .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
+        .leftJoin(EXPERIMENTS)
+        .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+        .leftJoin(SENSOR_TYPES)
+        .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID))
+        .leftJoin(latestReadings)
+        .on(
+            latestReadings
+                .field(SENSOR_READING_SECURED.SENSOR_ID)
+                .eq(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
+        .fetchInto(MeasurementResponseDto.class);
   }
 }

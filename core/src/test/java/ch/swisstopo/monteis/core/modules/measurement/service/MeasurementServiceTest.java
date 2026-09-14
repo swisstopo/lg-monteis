@@ -37,13 +37,13 @@ class MeasurementServiceTest {
     OffsetDateTime to = OffsetDateTime.parse("2024-01-02T00:00:00Z");
     Optional<ChartDataResponseDto> expected = Optional.of(mock(ChartDataResponseDto.class));
 
-    given(query.findMeasurements(SENSOR_ID, from, to)).willReturn(expected);
+    given(query.findChartData(SENSOR_ID, from, to)).willReturn(expected);
 
     // when
-    Optional<ChartDataResponseDto> actual = service.findMeasurements(SENSOR_ID, from, to);
+    Optional<ChartDataResponseDto> actual = service.findChartData(SENSOR_ID, from, to);
 
     // then
-    then(query).should().findMeasurements(SENSOR_ID, from, to);
+    then(query).should().findChartData(SENSOR_ID, from, to);
     assertEquals(expected, actual);
   }
 
@@ -53,10 +53,10 @@ class MeasurementServiceTest {
     OffsetDateTime from = OffsetDateTime.parse("2024-01-01T00:00:00Z");
     OffsetDateTime to = OffsetDateTime.parse("2024-01-02T00:00:00Z");
 
-    given(query.findMeasurements(SENSOR_ID, from, to)).willReturn(Optional.empty());
+    given(query.findChartData(SENSOR_ID, from, to)).willReturn(Optional.empty());
 
     // when / then
-    assertEquals(Optional.empty(), service.findMeasurements(SENSOR_ID, from, to));
+    assertEquals(Optional.empty(), service.findChartData(SENSOR_ID, from, to));
   }
 
   @Test
@@ -65,13 +65,13 @@ class MeasurementServiceTest {
     OffsetDateTime from = OffsetDateTime.parse("2024-01-01T00:00:00Z");
     OffsetDateTime to = from;
 
-    given(query.findMeasurements(SENSOR_ID, from, to)).willReturn(Optional.empty());
+    given(query.findChartData(SENSOR_ID, from, to)).willReturn(Optional.empty());
 
     // when
-    Optional<ChartDataResponseDto> actual = service.findMeasurements(SENSOR_ID, from, to);
+    Optional<ChartDataResponseDto> actual = service.findChartData(SENSOR_ID, from, to);
 
     // then
-    then(query).should().findMeasurements(SENSOR_ID, from, to);
+    then(query).should().findChartData(SENSOR_ID, from, to);
     assertEquals(Optional.empty(), actual);
   }
 
@@ -81,13 +81,13 @@ class MeasurementServiceTest {
     OffsetDateTime from = OffsetDateTime.of(2024, 1, 1, 10, 0, 0, 0, ZoneOffset.ofHours(2));
     OffsetDateTime to = OffsetDateTime.of(2024, 1, 1, 8, 0, 0, 0, ZoneOffset.UTC);
 
-    given(query.findMeasurements(SENSOR_ID, from, to)).willReturn(Optional.empty());
+    given(query.findChartData(SENSOR_ID, from, to)).willReturn(Optional.empty());
 
     // when
-    Optional<ChartDataResponseDto> actual = service.findMeasurements(SENSOR_ID, from, to);
+    Optional<ChartDataResponseDto> actual = service.findChartData(SENSOR_ID, from, to);
 
     // then
-    then(query).should().findMeasurements(SENSOR_ID, from, to);
+    then(query).should().findChartData(SENSOR_ID, from, to);
     assertEquals(Optional.empty(), actual);
   }
 
@@ -101,7 +101,7 @@ class MeasurementServiceTest {
     ObjectBusinessValidationException exception =
         assertThrows(
             ObjectBusinessValidationException.class,
-            () -> service.findMeasurements(SENSOR_ID, from, to));
+            () -> service.findChartData(SENSOR_ID, from, to));
 
     // then
     assertAll(
@@ -119,8 +119,7 @@ class MeasurementServiceTest {
 
     // when / then
     assertThrows(
-        ObjectBusinessValidationException.class,
-        () -> service.findMeasurements(SENSOR_ID, from, to));
+        ObjectBusinessValidationException.class, () -> service.findChartData(SENSOR_ID, from, to));
     verifyNoInteractions(query);
   }
 }
