@@ -36,15 +36,18 @@ public class SensorService {
 
   @AuditChanges
   public Sensor createSensor(Sensor sensor) {
-    FulcrumSensor fulcrumSensor =
-        fulcrumService
-            .getSensorById(sensor.getFulcrumId())
-            .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
-    sensor.setCoordinates(
-        new Coordinates(
-            fulcrumSensor.xPointWithOffset(),
-            fulcrumSensor.yPointWithOffset(),
-            fulcrumSensor.zPointWithOffset()));
+    if (sensor.getFulcrumId() != null) {
+      FulcrumSensor fulcrumSensor =
+          fulcrumService
+              .getSensorById(sensor.getFulcrumId())
+              .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
+      sensor.setCoordinates(
+          new Coordinates(
+              fulcrumSensor.xPointWithOffset(),
+              fulcrumSensor.yPointWithOffset(),
+              fulcrumSensor.zPointWithOffset()));
+    }
+
     Sensor created = repository.create(sensor);
     for (SensorParameter parameter : created.getParameters()) {
       configPublisher.publish(created, parameter);
@@ -56,15 +59,17 @@ public class SensorService {
   public Sensor updateSensor(Sensor sensor) {
     Sensor before = repository.findById(sensor.getId()).orElse(null);
 
-    FulcrumSensor fulcrumSensor =
-        fulcrumService
-            .getSensorById(sensor.getFulcrumId())
-            .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
-    sensor.setCoordinates(
-        new Coordinates(
-            fulcrumSensor.xPointWithOffset(),
-            fulcrumSensor.yPointWithOffset(),
-            fulcrumSensor.zPointWithOffset()));
+    if (sensor.getFulcrumId() != null) {
+      FulcrumSensor fulcrumSensor =
+          fulcrumService
+              .getSensorById(sensor.getFulcrumId())
+              .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
+      sensor.setCoordinates(
+          new Coordinates(
+              fulcrumSensor.xPointWithOffset(),
+              fulcrumSensor.yPointWithOffset(),
+              fulcrumSensor.zPointWithOffset()));
+    }
     Sensor updated = repository.update(sensor);
 
     Map<UUID, SensorParameter> parametersBefore =
