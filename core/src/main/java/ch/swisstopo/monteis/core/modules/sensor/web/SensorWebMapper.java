@@ -50,6 +50,17 @@ public interface SensorWebMapper {
   // New mapping for the nested parameters
   SensorParameter toDomain(WriteSensorParameterDto dto);
 
+  @AfterMapping
+  default void defaultFormula(
+      WriteSensorParameterDto dto, @MappingTarget SensorParameter parameter) {
+    if (dto.formula() == null) {
+      // The formula is optional on the write DTO and the form labels it "defaults to 'x'": the
+      // webapp sends no formula at all when the field is left empty. Without this, the parameter
+      // reaches JooqSensorRepository with a null formula and the insert dereferences it.
+      parameter.setFormula(new Formula());
+    }
+  }
+
   // id/version aren't provided by the write DTO: JooqSensorRepository resolves/creates the
   // SensorType by name (findOrCreateSensorTypeByName), so they're intentionally not mapped here.
   @Mapping(target = "id", ignore = true)
