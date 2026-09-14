@@ -6,15 +6,15 @@ import { TableColumn } from '@ui/table/table.types';
 export function createColumns(datePipe: DatePipe): TableColumn<MeasurementResponseDto>[] {
   return [
     {
-      field: 'dasSensorAlias',
-      headerName: translate('measurements-table.column.sensorId')(),
+      field: 'experimentName',
+      headerName: translate('measurements-table.column.experimentName')(),
       sortable: true,
       filter: true,
       flex: 1.5,
     },
     {
-      field: 'experimentName',
-      headerName: translate('measurements-table.column.experimentName')(),
+      field: 'dasSensorAlias',
+      headerName: translate('measurements-table.column.sensorId')(),
       sortable: true,
       filter: true,
       flex: 1.5,
@@ -25,6 +25,13 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       sortable: true,
       filter: true,
       flex: 1.5,
+    },
+    {
+      field: 'sensorType',
+      headerName: translate('measurements-table.column.sensorType')(),
+      sortable: true,
+      filter: true,
+      flex: 1,
     },
     {
       field: 'newestMeasurement',
@@ -51,26 +58,6 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       flex: 1,
     },
     {
-      field: 'sensorType',
-      headerName: translate('measurements-table.column.sensorType')(),
-      sortable: true,
-      filter: true,
-      flex: 1,
-    },
-    {
-      field: 'x',
-      headerName: translate('measurements-table.column.xyz')(),
-      sortable: false,
-      filter: false,
-      flex: 1.5,
-      valueGetter: (params) => {
-        const x = params.data?.x ?? '-';
-        const y = params.data?.y ?? '-';
-        const z = params.data?.z ?? '-';
-        return `${x} / ${y} / ${z}`;
-      },
-    },
-    {
       field: 'alarmLimitFrom',
       headerName: translate('measurements-table.column.alarmLimits')(),
       sortable: false,
@@ -89,6 +76,19 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       filter: true,
       flex: 0.5,
       valueFormatter: (params) => (params.value ? 'Active' : 'Inactive'),
+    },
+    {
+      field: 'x',
+      headerName: translate('measurements-table.column.xyz')(),
+      sortable: false,
+      filter: false,
+      flex: 1.5,
+      valueGetter: (params) => {
+        const x = params.data?.x ?? '-';
+        const y = params.data?.y ?? '-';
+        const z = params.data?.z ?? '-';
+        return `${x} / ${y} / ${z}`;
+      },
     },
     {
       field: 'comment',
