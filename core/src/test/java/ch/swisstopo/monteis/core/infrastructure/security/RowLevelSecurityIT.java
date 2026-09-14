@@ -83,7 +83,7 @@ class RowLevelSecurityIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           assertEquals(15, dsl.fetchCount(SENSORS), "Admin should see all seeded sensors");
-          assertEquals(2, dsl.fetchCount(EXPERIMENTS), "Admin should see all seeded experiments");
+          assertEquals(8, dsl.fetchCount(EXPERIMENTS), "Admin should see all seeded experiments");
           assertEquals(
               Set.of("TEMP-1-P1", "PRESS-1&2-P1", "DISP-2-P1", "FLOW-2-P1", "FLOW-Admin-P1"),
               fetchVisibleSensorCodes(),

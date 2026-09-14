@@ -63,7 +63,7 @@ export default class Table<T = any> {
     // Only a single filter condition per column is supported by the paged backend endpoint, so
     // combined ("AND"/"OR") filters are disabled here to keep the filter model ag-grid sends in sync
     // with what the backend can translate.
-    filterParams: { maxNumConditions: 1 },
+    filterParams: { maxNumConditions: 1, buttons: ['clear'] },
   };
 
   protected mergedGridOptions = computed<GridOptions<T>>(() => {

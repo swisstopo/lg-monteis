@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.query;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
@@ -11,4 +12,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record NumberFilterModel(String type, Double filter, Double filterTo)
-    implements FilterModelItem {}
+    implements FilterModelItem {
+
+  public NumberFilterModel {
+    if ("inRange".equals(type) && filterTo == null) {
+      throw new InvalidPagedRequestException("filterTo cannot be null when type is 'inRange'");
+    }
+  }
+}

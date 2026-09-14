@@ -27,19 +27,44 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class JooqExperimentRepository implements ExperimentRepository {
 
+  private static final String SENSOR_COUNT_FIELD_NAME = "sensorCount";
+
+  private static final Field<Integer> SENSOR_COUNT_FIELD =
+      DSL.selectCount()
+          .from(EXPERIMENT_SENSOR)
+          .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
+          .asField();
+
+  private static final Field<String> STATUS_FIELD =
+      DSL.case_()
+          .when(
+              EXPERIMENTS.START.isNotNull().and(DSL.currentLocalDate().lt(EXPERIMENTS.START)),
+              DSL.inline("UPCOMING"))
+          .when(
+              EXPERIMENTS.END.isNotNull().and(DSL.currentLocalDate().gt(EXPERIMENTS.END)),
+              DSL.inline("HISTORIC"))
+          .else_(DSL.inline("ACTIVE"));
+
   private static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
       Map.of(
-          "id", EXPERIMENTS.ID,
-          "name", EXPERIMENTS.NAME,
-          "period.start", EXPERIMENTS.START,
-          "period.end", EXPERIMENTS.END,
-          "comment", EXPERIMENTS.COMMENT);
+          "id",
+          EXPERIMENTS.ID,
+          "name",
+          EXPERIMENTS.NAME,
+          "period.start",
+          EXPERIMENTS.START,
+          "period.end",
+          EXPERIMENTS.END,
+          "comment",
+          EXPERIMENTS.COMMENT,
+          SENSOR_COUNT_FIELD_NAME,
+          SENSOR_COUNT_FIELD,
+          "status",
+          STATUS_FIELD);
 
   private final DSLContext dsl;
   private final ExperimentJooqMapper mapper;
   private final CurrentUserProvider currentUserProvider;
-
-  private static final String SENSOR_COUNT_FIELD_NAME = "sensorCount";
 
   public JooqExperimentRepository(
       DSLContext dsl, ExperimentJooqMapper mapper, CurrentUserProvider currentUserProvider) {
@@ -59,10 +84,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
             EXPERIMENTS.END,
             EXPERIMENTS.COMMENT,
             EXPERIMENTS.VERSION,
-            DSL.selectCount()
-                .from(EXPERIMENT_SENSOR)
-                .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
-                .asField(SENSOR_COUNT_FIELD_NAME))
+            SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))
         .from(EXPERIMENTS)
         .where(EXPERIMENTS.ID.eq(experimentId))
         .fetchOne(
@@ -73,7 +95,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
                     new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
                     experiment.get(EXPERIMENTS.COMMENT),
                     experiment.get(EXPERIMENTS.VERSION),
-                    experiment.get(SENSOR_COUNT_FIELD_NAME, Integer.class)));
+                    experiment.get(SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))));
   }
 
   @Override
@@ -93,10 +115,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
                 EXPERIMENTS.END,
                 EXPERIMENTS.COMMENT,
                 EXPERIMENTS.VERSION,
-                DSL.selectCount()
-                    .from(EXPERIMENT_SENSOR)
-                    .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
-                    .asField(SENSOR_COUNT_FIELD_NAME))
+                SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))
             .from(EXPERIMENTS)
             .where(criteria.condition())
             .orderBy(criteria.sortFields())
@@ -111,7 +130,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
                             experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
                         experiment.get(EXPERIMENTS.COMMENT),
                         experiment.get(EXPERIMENTS.VERSION),
-                        experiment.get(SENSOR_COUNT_FIELD_NAME, Integer.class)));
+                        experiment.get(SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))));
 
     int totalCount =
         dsl.fetchCount(dsl.select(EXPERIMENTS.ID).from(EXPERIMENTS).where(criteria.condition()));

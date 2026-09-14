@@ -1,0 +1,61 @@
+.filter-container {
+  width: 280px;
+  box-sizing: border-box;
+}
+
+// This centers the content vertically and horizontally and gives the
+// container a fixed minimum height to prevent layout shifts.
+.filter-state-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 150px;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  color: rgb(0 0 0 / 60%); // Standard secondary text color
+}
+
+/*
+ * Style each checkbox as a menu item.
+ * This overrides default padding to make the checkbox fill the space.
+ */
+.mat-menu-item {
+  padding: 0 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/*
+ * Ensure the inner layout of the mat-checkbox spans the full width.
+ */
+.mat-menu-item .mat-checkbox-layout {
+  width: 100%;
+}
+
+.filter-options-list {
+  max-height: 300px; /* Adjust as needed */
+  overflow-y: auto;
+}
+
+/*
+ * Styles for the action button container at the bottom.
+ * Uses flexbox to right-align the "Apply" button.
+ */
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px;
+}
+
+.search-field {
+  padding: 8px 16px 4px;
+}
+
+.no-results-message {
+  display: block;
+  padding: 12px 16px;
+  font-style: italic;
+  color: rgb(0 0 0 / 60%);
+}
