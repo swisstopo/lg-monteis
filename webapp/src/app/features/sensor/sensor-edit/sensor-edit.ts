@@ -34,6 +34,11 @@ import { Das, getDasMetadata, getUnitMetadata, Unit } from '@features/sensor/mod
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 
+// Canonical 8-4-4-4-12 form, the only shape java.util.UUID round-trips. Deliberately not
+// version-restricted: the backend accepts any UUID here, and Fulcrum owns the ids we store.
+const UUID_PATTERN =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
 // TODO: MON-145 refactor sensor parameter into own component
 interface SensorParameterFormData {
   // Component-local synthetic key, never sent to the backend. Needed as a stable @for track
@@ -249,6 +254,14 @@ export default class SensorEdit {
     minLength(schema.name, 2, { message: translate('sensor.name.validation.minLength')() });
     maxLength(schema.name, 50, { message: translate('sensor.name.validation.maxLength')() });
     required(schema.das, { message: translate('sensor.das.validation.required')() });
+    validate(schema.fulcrumId, ({ value }) => {
+      const fulcrumId = value().trim();
+      if (!fulcrumId || UUID_PATTERN.test(fulcrumId)) return undefined;
+      return {
+        kind: 'invalidUuid',
+        message: this.translateService.translate('sensor.fulcrumId.validation.invalid')(),
+      };
+    });
     maxLength(schema.comment, 4096, {
       message: translate('sensor.comment.validation.maxLength')(),
     });
