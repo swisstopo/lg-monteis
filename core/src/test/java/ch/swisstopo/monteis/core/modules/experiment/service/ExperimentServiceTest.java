@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -82,5 +83,20 @@ class ExperimentServiceTest {
     // then
     then(repository).should().getById(experimentId);
     assertNull(actualExperiment, "Should safely return null if the repository returns null");
+  }
+
+  @Test
+  void should_delegate_find_all_experiments_to_repository() {
+    // given
+    List<Experiment> expectedExperiments = List.of(mock(Experiment.class), mock(Experiment.class));
+
+    given(repository.findAll()).willReturn(expectedExperiments);
+
+    // when
+    List<Experiment> actualExperiments = service.findAllExperiments();
+
+    // then
+    then(repository).should().findAll();
+    assertEquals(expectedExperiments, actualExperiments);
   }
 }

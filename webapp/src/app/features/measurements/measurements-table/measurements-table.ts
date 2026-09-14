@@ -113,15 +113,14 @@ export default class MeasurementsTable {
     stream: () => this.overviewService.getMetrics(50),
   });
 
-  protected readonly sensorIds = computed<string[]>(
-    () => {
-      const metrics = this.metricsResource.value() ?? [];
-      const sensorIds = metrics.map((metric) => metric.metadataSensorId).filter((e) => e != null);
-      return this.distinct(sensorIds);
-    },
-    // Keeps the signal identity stable when a refetch returns the same sensors.
-    { equal: this.equalByElement },
-  );
+  protected readonly selectedRows = signal<ReadSimpleMetricDto[]>([]);
+
+  protected readonly selectedSensorIds = computed<string[]>(() => {
+    const ids = this.selectedRows()
+      .map((metric) => metric.metadataSensorId)
+      .filter((e) => e != null);
+    return this.distinct(ids);
+  });
 
   protected wrappedCols = createColumns(this.datePipe);
 
@@ -157,20 +156,26 @@ export default class MeasurementsTable {
     console.log(row);
   }
 
+  onSelectionChanged(rows: ReadSimpleMetricDto[]): void {
+    this.selectedRows.set(rows);
+  }
+
   protected getMetricRowId = (row: ReadSimpleMetricDto): string =>
-    `${row.sensorCode}-${row.timestamp}`;
+    `${row.sensorParameterDasParameterAlias}-${row.timestamp}`;
 
   protected onPlot() {
     if (this.rangeForm().invalid()) {
       this.rangeForm().markAsTouched();
       return;
     }
+    if (this.selectedSensorIds().length === 0) return;
+
     const { start, end } = this.dateRangeModel();
     const rangeStart = combineDateAndTime(start.date, start.time);
     const rangeEnd = combineDateAndTime(end.date, end.time);
     if (!rangeStart || !rangeEnd) return;
 
-    this.plottedIds.set(this.sensorIds());
+    this.plottedIds.set(this.selectedSensorIds());
 
     this.fetchChartData(rangeStart, rangeEnd);
 
@@ -228,10 +233,5 @@ export default class MeasurementsTable {
   /** Preserves first-occurrence order. */
   private distinct<T>(values: readonly T[]): T[] {
     return [...new Set(values)];
-  }
-
-  /** Reference-equality comparison of two arrays, element by element. */
-  private equalByElement<T>(a: readonly T[], b: readonly T[]): boolean {
-    return a.length === b.length && a.every((value, index) => value === b[index]);
   }
 }

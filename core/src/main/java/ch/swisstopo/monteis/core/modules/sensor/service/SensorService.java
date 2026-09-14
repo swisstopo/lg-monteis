@@ -27,7 +27,7 @@ public class SensorService {
   @AuditChanges
   public Sensor createSensor(Sensor sensor) {
     Sensor created = repository.create(sensor);
-    configPublisher.publish(created); // a brand-new sensor always needs its config announced
+    configPublisher.publish(created); // TODO: MON-143 Should only publish sensorParameter
     return created;
   }
 
@@ -35,9 +35,10 @@ public class SensorService {
   public Sensor updateSensor(Sensor sensor) {
     Sensor before = repository.findById(sensor.getId()).orElse(null);
     Sensor updated = repository.update(sensor);
-    if (updated.changeTriggersPublish(before)) {
-      configPublisher.publish(updated);
-    }
+
+    //    if (updated.changeTriggersPublish(before)) {
+    //      configPublisher.publish(updated); // TODO: MON-143 Should only publish sensorParameter
+    //    }
     return updated;
   }
 

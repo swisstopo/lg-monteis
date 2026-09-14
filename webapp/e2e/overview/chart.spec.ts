@@ -16,6 +16,11 @@ async function fillRange(page: Page): Promise<void> {
   await endTime(page).fill('18:30');
 }
 
+// Plot only charts the selected rows, so at least one row must be checked before clicking it.
+async function selectFirstRow(page: Page): Promise<void> {
+  await page.locator('.ag-row').first().getByRole('checkbox').check();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('http://localhost:4200/');
   await loginAsAdmin(page);
@@ -26,6 +31,7 @@ test.beforeEach(async ({ page }) => {
 
 test('should create a chart from a selected date range', async ({ page }) => {
   await fillRange(page);
+  await selectFirstRow(page);
 
   await page.getByRole('button', { name: 'Plot' }).click();
 
@@ -48,7 +54,7 @@ test('should require a date range before plotting', async ({ page }) => {
 test('should default the time fields to a full 24h day in HH:mm format', async ({ page }) => {
   await expect(startTime(page)).toHaveValue('00:00');
 
-  await expect(endTime(page)).toHaveValue(format(new Date(), 'hh:mm'));
+  await expect(endTime(page)).toHaveValue(format(new Date(), 'HH:mm'));
 });
 
 test('should keep typed times in 24h format instead of converting them to AM/PM', async ({
@@ -81,6 +87,7 @@ test('should offer 24h formatted options in the timepicker dropdown', async ({ p
 
 test('should render the chart toolbar with zoom controls', async ({ page }) => {
   await fillRange(page);
+  await selectFirstRow(page);
 
   await page.getByRole('button', { name: 'Plot' }).click();
 

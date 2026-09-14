@@ -40,11 +40,35 @@
         "edit": "Edit Sensor"
       }
     },
-    "code": {
-      "label": "Sensor Code",
+    "dasSensorAlias": {
+      "label": "DAS Sensor Alias",
       "placeholder": "e.g., SN-TEMP-402",
       "validation": {
-        "required": "Sensor code is required"
+        "required": "DAS sensor alias is required",
+        "maxLength": "DAS sensor alias must be at most 255 characters long"
+      }
+    },
+    "das": {
+      "label": "DAS",
+      "placeholder": "Select a DAS",
+      "option": {
+        "solExperts": {
+          "label": "SolExperts"
+        }
+      },
+      "validation": {
+        "required": "DAS is required"
+      }
+    },
+    "fulcrumId": {
+      "label": "Fulcrum ID",
+      "placeholder": "e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    },
+    "mainExperiment": {
+      "label": "Main Experiment",
+      "placeholder": "Search for an experiment...",
+      "validation": {
+        "notSelected": "Select an experiment from the suggestions"
       }
     },
     "name": {
@@ -53,7 +77,7 @@
       "validation": {
         "required": "Sensor name is required",
         "minLength": "Name must be at least 2 characters long",
-        "maxLength": "Name must be at most 10 characters long"
+        "maxLength": "Name must be at most 50 characters long"
       }
     },
     "active": {
@@ -105,16 +129,24 @@
       "label": "Sensor Type",
       "placeholder": "Add a new type or select an existing one...",
       "validation": {
-        "required": "Sensor type is required"
+        "required": "Sensor type is required",
+        "minLength": "Sensor type must be at least 2 characters long",
+        "maxLength": "Sensor type must be at most 100 characters long"
       }
     },
     "formula": {
       "label": "Formula Expression (Optional, defaults to 'x')",
       "placeholder": "Type a new formula or select an existing one...",
-      "column": "Formula"
+      "column": "Formula",
+      "validation": {
+        "maxLength": "Formula expression must be at most 1024 characters long"
+      }
     },
     "comment": {
-      "label": "Comment"
+      "label": "Comment",
+      "validation": {
+        "maxLength": "Comment must be at most 4096 characters long"
+      }
     },
     "coordinate": {
       "xLocal": {
@@ -153,6 +185,36 @@
       },
       "column": "Alarm Limits",
       "display": "[{{lower}} to {{upper}}]"
+    },
+    "parameter": {
+      "heading": "Parameter {{number}}",
+      "name": {
+        "label": "Parameter Name",
+        "placeholder": "e.g., Axial Displacement",
+        "validation": {
+          "required": "Parameter name is required",
+          "minLength": "Parameter name must be at least 2 characters long",
+          "maxLength": "Parameter name must be at most 255 characters long"
+        }
+      },
+      "dasParameterAlias": {
+        "label": "DAS Parameter Alias",
+        "placeholder": "e.g., DISP-AX-01",
+        "validation": {
+          "maxLength": "DAS parameter alias must be at most 255 characters long"
+        }
+      },
+      "active": {
+        "label": "Parameter Active"
+      },
+      "comment": {
+        "label": "Parameter Comment",
+        "validation": {
+          "maxLength": "Parameter comment must be at most 4096 characters long"
+        }
+      },
+      "addButton": "Add Parameter",
+      "removeButton": "Remove Parameter"
     },
     "button": {
       "cancel": "Cancel",
@@ -205,7 +267,10 @@
       }
     },
     "comment": {
-      "label": "Comment"
+      "label": "Comment",
+      "validation": {
+        "maxLength": "Comment must be at most 4096 characters long"
+      }
     },
     "period": {
       "start": {
@@ -318,7 +383,7 @@
       "unspecified": "Failed to load the requested data."
     },
     "title": "{{name}} | {{rangeFrom}} to {{rangeTo}}",
-    "subtitle": "Plot of {{count}} mesurements",
+    "subtitle": "Plot of {{count}} measurements",
     "button": {
       "cancel": "Close",
       "resetZoom": "Reset Zoom"

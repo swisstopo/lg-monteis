@@ -5,6 +5,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
@@ -32,5 +33,9 @@ public class ExperimentService {
 
   public PagedResult<Experiment> getExperiments(PagedRequest pagedRequest) {
     return repository.getExperiments(pagedRequest);
+  }
+
+  public List<Experiment> findAllExperiments() {
+    return repository.findAll();
   }
 }

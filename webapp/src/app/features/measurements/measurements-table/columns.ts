@@ -6,7 +6,7 @@ import { TableColumn } from '@ui/table/table.types';
 export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetricDto>[] {
   return [
     {
-      field: 'sensorCode',
+      field: 'sensorParameterDasParameterAlias',
       headerName: translate('measurements-table.column.sensorId')(),
       sortable: true,
       filter: true,

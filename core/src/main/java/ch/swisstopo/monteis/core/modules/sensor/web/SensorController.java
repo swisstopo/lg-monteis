@@ -16,6 +16,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Min;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,12 +32,17 @@ import org.springframework.web.bind.annotation.*;
 public class SensorController {
   private final SensorService service;
   private final SensorWebMapper mapper;
+  private final Clock clock;
   private final PagedRequestParser pagedRequestParser;
 
   public SensorController(
-      SensorService service, SensorWebMapper mapper, PagedRequestParser pagedRequestParser) {
+      SensorService service,
+      SensorWebMapper mapper,
+      Clock clock,
+      PagedRequestParser pagedRequestParser) {
     this.service = service;
     this.mapper = mapper;
+    this.clock = clock;
     this.pagedRequestParser = pagedRequestParser;
   }
 
@@ -43,8 +50,8 @@ public class SensorController {
   @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
   @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorResponseDto> getSensor(@PathVariable UUID id) {
-
-    return ResponseEntity.ok(mapper.toDto(service.getSensor(id)));
+    LocalDate today = LocalDate.now(clock);
+    return ResponseEntity.ok(mapper.toDto(service.getSensor(id), today));
   }
 
   @Operation(
@@ -60,7 +67,8 @@ public class SensorController {
       @Validated(Create.class) @RequestBody WriteSensorDto dto) {
 
     Sensor createdSensor = service.createSensor(mapper.toDomain(dto));
-    return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDto(createdSensor));
+    LocalDate today = LocalDate.now(clock);
+    return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDto(createdSensor, today));
   }
 
   @Operation(
@@ -82,7 +90,8 @@ public class SensorController {
     }
 
     Sensor updated = service.updateSensor(mapper.toDomain(dto));
-    return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated));
+    LocalDate today = LocalDate.now(clock);
+    return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated, today));
   }
 
   @Operation(
@@ -118,6 +127,7 @@ public class SensorController {
       @RequestParam(required = false) String filterModel) {
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
     PagedResult<Sensor> result = service.getSensors(pagedRequestParser.parse(raw));
-    return mapper.toPagedDto(result);
+    LocalDate today = LocalDate.now(clock);
+    return mapper.toPagedDto(result, today);
   }
 }

@@ -165,6 +165,41 @@ class ExperimentControllerTest {
   }
 
   @Test
+  void should_route_get_all_experiments_and_return_json_array() throws Exception {
+    // given
+    LocalDate startDate = LocalDate.of(2024, Month.JANUARY, 1);
+    LocalDate endDate = LocalDate.of(2024, Month.DECEMBER, 31);
+
+    Experiment experiment1 =
+        new Experiment(
+            EXPERIMENT_ID, "EXP-01", new Period(startDate, endDate), "A test experiment", 2, 1);
+
+    ExperimentResponseDto responseDto =
+        new ExperimentResponseDto(
+            EXPERIMENT_ID,
+            "EXP-01",
+            "A test experiment",
+            new PeriodDto(startDate, endDate),
+            Status.HISTORIC,
+            2,
+            1);
+
+    given(service.findAllExperiments()).willReturn(List.of(experiment1));
+    given(mapper.toDto(eq(experiment1), any(LocalDate.class))).willReturn(responseDto);
+
+    // when / then
+    mockMvc
+        .perform(get("/api/experiments/all").with(jwt()).contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(EXPERIMENT_ID.toString()))
+        .andExpect(jsonPath("$[0].name").value("EXP-01"))
+        .andExpect(jsonPath("$[0].comment").value("A test experiment"));
+
+    then(service).should().findAllExperiments();
+    then(mapper).should().toDto(eq(experiment1), any(LocalDate.class));
+  }
+
+  @Test
   void should_route_create_experiment_and_verify_output() throws Exception {
     // given
     WriteExperimentDto requestDto =

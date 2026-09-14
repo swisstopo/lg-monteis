@@ -75,7 +75,7 @@
     <button
       matButton="filled"
       (click)="onPlot()"
-      [disabled]="measurementsService.chartData.isLoading()"
+      [disabled]="measurementsService.chartData.isLoading() || selectedRows().length === 0"
     >
       <mat-icon fontIcon="add_chart"></mat-icon>
       {{ 'measurements-table.plot' | translate }}
@@ -83,10 +83,12 @@
     <app-table
       class="custom-grid"
       [multiple]="true"
+      [checkboxes]="true"
       [rows]="metricsResource.value() ?? []"
       [columns]="wrappedCols"
       [getRowId]="getMetricRowId"
       (rowClicked)="onWrappedRow($event)"
+      (selectionChanged)="onSelectionChanged($event)"
     >
     </app-table>
   }

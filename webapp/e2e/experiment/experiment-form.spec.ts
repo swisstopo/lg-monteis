@@ -30,7 +30,12 @@ test('should create experiment', async ({ page }) => {
 });
 
 test('should update experiment', async ({ page }) => {
-  await page.locator('.ag-row').first().click();
+  const firstRow = page.locator('.ag-row').first();
+  // Infinite row model: the row initially renders as an empty placeholder while its data block
+  // loads. Clicking too early hits a not-yet-loaded node, which ag-grid silently ignores for
+  // selection - wait for real content before clicking.
+  await expect(firstRow.locator('[col-id="name"]')).not.toBeEmpty();
+  await firstRow.click();
   await page.getByRole('button', { name: 'Edit Experiment' }).click();
   await expect(page.getByRole('heading', { name: 'Edit Experiment', level: 2 })).toBeVisible();
 

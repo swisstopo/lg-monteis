@@ -1,5 +1,7 @@
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import {
+  applyEach,
+  FieldTree,
   form,
   FormField,
   maxLength,
@@ -9,7 +11,7 @@ import {
   validate,
 } from '@angular/forms/signals';
 import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
-import { MatButton } from '@angular/material/button';
+import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatOption } from '@angular/material/core';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -17,63 +19,123 @@ import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { MatSelect } from '@angular/material/select';
 import {
+  ExperimentResponseDto,
   FormulaResponseDto,
   SensorResponseDto,
   SensorTypeResponseDto,
   WriteSensorDto,
+  WriteSensorParameterDto,
 } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
-import { getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
+import { ExperimentService } from '@features/experiment/services/experiment.service';
+import { Das, getDasMetadata, getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 
-interface SensorFormData {
-  code: string;
+// TODO: MON-145 refactor sensor parameter into own component
+interface SensorParameterFormData {
+  // Component-local synthetic key, never sent to the backend. Needed as a stable @for track
+  // identity because a parameter's real id is undefined until first saved, and array index is
+  // unsafe to track by once removal-from-the-middle is possible.
+  clientKey: string;
+  // Backend id: populated from the loaded sensor for existing parameters, left undefined for
+  // parameters added client-side via "+ Add Parameter". Carried through unchanged into the
+  // submitted payload so updateSensor can tell which array items are existing vs new.
+  id: string | undefined;
+  // Backend optimistic-locking version, mirroring id: populated for existing parameters, left
+  // undefined for new ones. Required by WriteSensorParameterDto on update - omitting it fails
+  // bean validation (@NotNull(groups = Update.class)) for every parameter in the request.
+  version: number | undefined;
   name: string;
+  dasParameterAlias: string;
   unit: Unit;
   type: {
     name: string;
   };
-  comment: string;
-  coordinates: {
-    x: number;
-    y: number;
-    z: number;
+  formula: {
+    expression: string;
   };
   alarmLimits: {
     lower: number;
     upper: number;
   };
   active: boolean;
-  formula: {
-    expression: string;
+  comment: string;
+}
+
+interface SensorFormData {
+  name: string;
+  dasSensorAlias: string;
+  das: Das;
+  fulcrumId: string;
+  comment: string;
+  active: boolean;
+  coordinates: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  mainExperiment: {
+    name: string;
+  };
+  parameters: SensorParameterFormData[];
+}
+
+function blankParameter(): SensorParameterFormData {
+  return {
+    clientKey: crypto.randomUUID(),
+    id: undefined,
+    version: undefined,
+    name: '',
+    dasParameterAlias: '',
+    unit: WriteSensorParameterDto.UnitEnum.Ampere,
+    type: { name: '' },
+    formula: { expression: '' },
+    alarmLimits: { lower: 0, upper: 100 },
+    active: true,
+    comment: '',
   };
 }
 
 function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData {
+  const parameters: SensorParameterFormData[] =
+    domainModel.parameters && domainModel.parameters.length > 0
+      ? domainModel.parameters.map((parameter) => ({
+          clientKey: crypto.randomUUID(),
+          id: parameter.id,
+          version: parameter.version,
+          name: parameter.name ?? '',
+          dasParameterAlias: parameter.dasParameterAlias ?? '',
+          unit: parameter.unit ?? WriteSensorParameterDto.UnitEnum.Ampere,
+          type: { name: parameter.type?.name ?? '' },
+          formula: { expression: parameter.formula?.expression ?? '' },
+          alarmLimits: {
+            lower: parameter.alarmLimits?.lower ?? 0,
+            upper: parameter.alarmLimits?.upper ?? 100,
+          },
+          active: parameter.active ?? true,
+          comment: parameter.comment ?? '',
+        }))
+      : [blankParameter()];
+
   return {
     active: domainModel.active ?? true,
-    code: domainModel.code ?? '',
+    dasSensorAlias: domainModel.dasSensorAlias ?? '',
     name: domainModel.name ?? '',
     comment: domainModel.comment ?? '',
-    formula: {
-      expression: domainModel.formula?.expression ?? '',
-    },
-    alarmLimits: {
-      lower: domainModel.alarmLimits?.lower ?? 0,
-      upper: domainModel.alarmLimits?.upper ?? 100,
-    },
-    type: {
-      name: domainModel.type?.name ?? '',
-    },
-    unit: domainModel.unit ?? WriteSensorDto.UnitEnum.Ampere,
+    das: domainModel.das ?? WriteSensorDto.DasEnum.SolExperts,
+    fulcrumId: domainModel.fulcrumId ?? '',
     coordinates: {
       x: domainModel.coordinates?.x ?? 0,
       y: domainModel.coordinates?.y ?? 0,
       z: domainModel.coordinates?.z ?? 0,
     },
+    mainExperiment: {
+      name: domainModel.mainExperiment?.name ?? '',
+    },
+    parameters,
   };
 }
 
@@ -87,6 +149,7 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
     MatLabel,
     MatInput,
     MatButton,
+    MatIconButton,
     MatSelect,
     MatOption,
     FormField,
@@ -101,6 +164,7 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
 })
 export default class SensorEdit {
   private readonly sensorService = inject(SensorService);
+  private readonly experimentService = inject(ExperimentService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
   private readonly formErrorService = inject(FormErrorService);
@@ -109,12 +173,14 @@ export default class SensorEdit {
   });
   readonly sensorId = input<string | undefined>(undefined);
 
-  readonly unitValues = Object.values(WriteSensorDto.UnitEnum) as Unit[];
+  readonly unitValues = Object.values(WriteSensorParameterDto.UnitEnum) as Unit[];
   readonly unitMetadata = getUnitMetadata();
+  readonly dasValues = Object.values(WriteSensorDto.DasEnum) as Das[];
+  readonly dasMetadata = getDasMetadata();
   readonly allFormulas = this.sensorService.allFormulas;
   readonly allTypes = this.sensorService.allTypes;
-  selectedFormula = signal<FormulaResponseDto | null>(null);
-  selectedType = signal<SensorTypeResponseDto | null>(null);
+  readonly allExperiments = this.experimentService.allExperiments;
+  selectedExperiment = signal<ExperimentResponseDto | null>(null);
 
   readonly saveError = this.sensorService.error;
   sensor = signal<SensorResponseDto | undefined>(undefined);
@@ -133,6 +199,7 @@ export default class SensorEdit {
       this.sensor.set(this.sensorService.sensor.value());
       if (this.sensor() !== undefined) {
         this.domainModel.set(this.sensor()!);
+        this.selectedExperiment.set(this.sensor()?.mainExperiment ?? null);
         this.sensorForm().markAsTouched();
       }
     } catch {
@@ -155,37 +222,35 @@ export default class SensorEdit {
 
   private initSensorModel(): SensorFormData {
     return {
-      code: '',
+      dasSensorAlias: '',
       name: '',
-      unit: WriteSensorDto.UnitEnum.Ampere,
-      type: {
-        name: '',
-      },
+      das: WriteSensorDto.DasEnum.SolExperts,
+      fulcrumId: '',
       comment: '',
+      active: true,
       coordinates: {
         x: 0,
         y: 0,
         z: 0,
       },
-      alarmLimits: {
-        lower: 0,
-        upper: 100,
-      },
-      active: true,
-      formula: {
-        expression: '',
-      },
+      mainExperiment: { name: '' },
+      parameters: [blankParameter()],
     };
   }
 
   readonly sensorForm = form(this.formModel, (schema) => {
-    required(schema.code, { message: translate('sensor.code.validation.required')() });
+    required(schema.dasSensorAlias, {
+      message: translate('sensor.dasSensorAlias.validation.required')(),
+    });
+    maxLength(schema.dasSensorAlias, 255, {
+      message: translate('sensor.dasSensorAlias.validation.maxLength')(),
+    });
     required(schema.name, { message: translate('sensor.name.validation.required')() });
     minLength(schema.name, 2, { message: translate('sensor.name.validation.minLength')() });
     maxLength(schema.name, 50, { message: translate('sensor.name.validation.maxLength')() });
-    required(schema.unit);
-    required(schema.type.name, {
-      message: translate('sensor.type.validation.required')(),
+    required(schema.das, { message: translate('sensor.das.validation.required')() });
+    maxLength(schema.comment, 4096, {
+      message: translate('sensor.comment.validation.maxLength')(),
     });
     required(schema.coordinates.x, {
       message: translate('sensor.coordinate.xLocal.validation.required')(),
@@ -196,66 +261,145 @@ export default class SensorEdit {
     required(schema.coordinates.z, {
       message: translate('sensor.coordinate.zLocal.validation.required')(),
     });
-    required(schema.alarmLimits.lower, {
-      message: translate('sensor.alarmLimit.from.validation.required')(),
-    });
-    required(schema.alarmLimits.upper, {
-      message: translate('sensor.alarmLimit.to.validation.required')(),
-    });
-    validate(schema.alarmLimits.lower, ({ value, valueOf }) => {
-      const lower = value();
-      const upper = valueOf(schema.alarmLimits.upper);
-      if (lower > upper) {
+    validate(schema.mainExperiment.name, ({ value }) => {
+      const name = value();
+      if (!name) return undefined;
+      if (this.selectedExperiment()?.name !== name) {
         return {
-          kind: 'bounds',
-          message: this.translateService.translate('sensor.alarmLimit.from.validation.bounds')(),
+          kind: 'notSelected',
+          message: this.translateService.translate(
+            'sensor.mainExperiment.validation.notSelected',
+          )(),
         };
       }
       return undefined;
     });
-    validate(schema.alarmLimits.upper, ({ value, valueOf }) => {
-      const upper = value();
-      const lower = valueOf(schema.alarmLimits.lower);
-      if (upper < lower) {
-        return {
-          kind: 'bounds',
-          message: this.translateService.translate('sensor.alarmLimit.to.validation.bounds')(),
-        };
-      }
-      return undefined;
+
+    applyEach(schema.parameters, (parameter) => {
+      required(parameter.name, {
+        message: translate('sensor.parameter.name.validation.required')(),
+      });
+      minLength(parameter.name, 2, {
+        message: translate('sensor.parameter.name.validation.minLength')(),
+      });
+      maxLength(parameter.name, 255, {
+        message: translate('sensor.parameter.name.validation.maxLength')(),
+      });
+      maxLength(parameter.dasParameterAlias, 255, {
+        message: translate('sensor.parameter.dasParameterAlias.validation.maxLength')(),
+      });
+      maxLength(parameter.comment, 4096, {
+        message: translate('sensor.parameter.comment.validation.maxLength')(),
+      });
+      required(parameter.unit);
+      required(parameter.type.name, {
+        message: translate('sensor.type.validation.required')(),
+      });
+      minLength(parameter.type.name, 2, {
+        message: translate('sensor.type.validation.minLength')(),
+      });
+      maxLength(parameter.type.name, 100, {
+        message: translate('sensor.type.validation.maxLength')(),
+      });
+      maxLength(parameter.formula.expression, 1024, {
+        message: translate('sensor.formula.validation.maxLength')(),
+      });
+      required(parameter.alarmLimits.lower, {
+        message: translate('sensor.alarmLimit.from.validation.required')(),
+      });
+      required(parameter.alarmLimits.upper, {
+        message: translate('sensor.alarmLimit.to.validation.required')(),
+      });
+      validate(parameter.alarmLimits.lower, ({ value, valueOf }) => {
+        const lower = value();
+        const upper = valueOf(parameter.alarmLimits.upper);
+        if (lower > upper) {
+          return {
+            kind: 'bounds',
+            message: this.translateService.translate('sensor.alarmLimit.from.validation.bounds')(),
+          };
+        }
+        return undefined;
+      });
+      validate(parameter.alarmLimits.upper, ({ value, valueOf }) => {
+        const upper = value();
+        const lower = valueOf(parameter.alarmLimits.lower);
+        if (upper < lower) {
+          return {
+            kind: 'bounds',
+            message: this.translateService.translate('sensor.alarmLimit.to.validation.bounds')(),
+          };
+        }
+        return undefined;
+      });
     });
   });
 
-  readonly filteredFormulas = computed(() => {
-    const search = this.sensorForm.formula().value();
-    const list = this.allFormulas.value() ?? [];
-
+  filteredTypesFor(parameter: FieldTree<SensorParameterFormData>): SensorTypeResponseDto[] {
+    const search = parameter.type.name().value();
+    const list = this.allTypes.value() ?? [];
     if (!search) return list;
-
-    return list.filter((formula) =>
-      (formula.expression ?? '').toLowerCase().includes(search.expression.toLowerCase()),
-    );
-  });
-
-  selectFormula(formula: FormulaResponseDto): void {
-    this.sensorForm.formula.expression().value.set(formula.expression ?? '');
-    this.selectedFormula.set(formula);
+    return list.filter((type) => (type.name ?? '').toLowerCase().includes(search.toLowerCase()));
   }
 
-  readonly filteredTypes = computed(() => {
-    const search = this.sensorForm.type().value();
-    const list = this.allTypes.value() ?? [];
+  selectType(parameter: FieldTree<SensorParameterFormData>, type: SensorTypeResponseDto): void {
+    parameter.type.name().value.set(type.name ?? '');
+  }
 
+  filteredFormulasFor(parameter: FieldTree<SensorParameterFormData>): FormulaResponseDto[] {
+    const search = parameter.formula.expression().value();
+    const list = this.allFormulas.value() ?? [];
     if (!search) return list;
+    return list.filter((formula) =>
+      (formula.expression ?? '').toLowerCase().includes(search.toLowerCase()),
+    );
+  }
 
-    return list.filter((type) =>
-      (type.name ?? '').toLowerCase().includes(search.name.toLowerCase()),
+  selectFormula(parameter: FieldTree<SensorParameterFormData>, formula: FormulaResponseDto): void {
+    parameter.formula.expression().value.set(formula.expression ?? '');
+  }
+
+  readonly filteredExperiments = computed(() => {
+    const search = this.sensorForm.mainExperiment.name().value();
+    const list = this.allExperiments.value() ?? [];
+    if (!search) return list;
+    return list.filter((experiment) =>
+      (experiment.name ?? '').toLowerCase().includes(search.toLowerCase()),
     );
   });
 
-  selectType(type: SensorTypeResponseDto): void {
-    this.sensorForm.type.name().value.set(type.name ?? '');
-    this.selectedType.set(type);
+  selectExperiment(experiment: ExperimentResponseDto): void {
+    this.sensorForm.mainExperiment.name().value.set(experiment.name ?? '');
+    this.selectedExperiment.set(experiment);
+  }
+
+  addParameter(): void {
+    this.formModel.update((data) => ({
+      ...data,
+      parameters: [...data.parameters, blankParameter()],
+    }));
+  }
+
+  removeParameter(index: number): void {
+    this.formModel.update((data) => ({
+      ...data,
+      parameters: data.parameters.filter((_, i) => i !== index),
+    }));
+  }
+
+  canRemoveParameter(): boolean {
+    return this.formModel().parameters.length > 1;
+  }
+
+  // The @for template tracks parameter rows by this plain (non-FieldTree) key array rather
+  // than reading the clientKey through the form field itself. Angular's @for re-evaluates the
+  // track expression against the *live* FieldTree reference of a just-removed row while
+  // reconciling the DOM, and a FieldTree for a row no longer present in the array throws
+  // (NG01904 "Orphan field") instead of returning a stable value - reading the key from the
+  // plain underlying model sidesteps that entirely while still keying by identity (not index),
+  // so a row's DOM/focus/touched state still tracks the same logical parameter across reorders.
+  parameterKeys(): string[] {
+    return this.formModel().parameters.map((parameter) => parameter.clientKey);
   }
 
   async onSubmit(event: SubmitEvent) {
@@ -296,6 +440,7 @@ export default class SensorEdit {
 
   private resetForm(): void {
     this.domainModel.set({});
+    this.selectedExperiment.set(null);
     this.sensorService.getSensor(undefined);
     this.sensorForm().reset();
   }
@@ -303,28 +448,44 @@ export default class SensorEdit {
   private buildPayload(formData: SensorFormData): WriteSensorDto {
     // Trim whitespace and convert empty comments to undefined
     const cleanedComment = formData.comment?.trim() || undefined;
+    const cleanedFulcrumId = formData.fulcrumId?.trim() || undefined;
+
+    const selected = this.selectedExperiment();
+    const mainExperimentId =
+      selected && selected.name === formData.mainExperiment.name ? selected.id : undefined;
 
     return {
       id: this.sensor()?.id ?? undefined,
-      code: formData.code,
       name: formData.name,
-      unit: formData.unit,
-      type: { name: formData.type.name },
+      dasSensorAlias: formData.dasSensorAlias,
+      das: formData.das,
+      fulcrumId: cleanedFulcrumId,
+      mainExperimentId,
       comment: cleanedComment,
       coordinates: {
         x: Number(formData.coordinates.x),
         y: Number(formData.coordinates.y),
         z: Number(formData.coordinates.z),
       },
-      alarmLimits: {
-        lower: Number(formData.alarmLimits.lower),
-        upper: Number(formData.alarmLimits.upper),
-      },
       active: Boolean(formData.active),
-      formula: formData.formula.expression
-        ? { expression: formData.formula.expression }
-        : undefined,
       version: this.sensor()?.version ?? undefined,
+      parameters: formData.parameters.map((parameter) => ({
+        id: parameter.id,
+        version: parameter.version,
+        name: parameter.name,
+        dasParameterAlias: parameter.dasParameterAlias?.trim() || undefined,
+        unit: parameter.unit,
+        type: { name: parameter.type.name },
+        alarmLimits: {
+          lower: Number(parameter.alarmLimits.lower),
+          upper: Number(parameter.alarmLimits.upper),
+        },
+        active: Boolean(parameter.active),
+        formula: parameter.formula.expression
+          ? { expression: parameter.formula.expression }
+          : undefined,
+        comment: parameter.comment?.trim() || undefined,
+      })),
     };
   }
 
