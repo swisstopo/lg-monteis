@@ -1,21 +1,31 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.infrastructure.query.RawExportRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.Min;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
@@ -34,16 +44,19 @@ public class SensorController {
   private final SensorWebMapper mapper;
   private final Clock clock;
   private final PagedRequestParser pagedRequestParser;
+  private final SensorCsvExportQueryRepository csvExportQueryRepository;
 
   public SensorController(
       SensorService service,
       SensorWebMapper mapper,
       Clock clock,
-      PagedRequestParser pagedRequestParser) {
+      PagedRequestParser pagedRequestParser,
+      SensorCsvExportQueryRepository csvExportQueryRepository) {
     this.service = service;
     this.mapper = mapper;
     this.clock = clock;
     this.pagedRequestParser = pagedRequestParser;
+    this.csvExportQueryRepository = csvExportQueryRepository;
   }
 
   @Operation(summary = "Get a sensor by id", description = "Retrieves a sensor by id")
@@ -144,5 +157,34 @@ public class SensorController {
   public ResponseEntity<Void> republishAllActiveParameterConfigs() {
     service.republishAllActiveParameterConfigs();
     return ResponseEntity.accepted().build();
+  }
+
+  @Operation(
+      summary = "Download sensors as CSV",
+      description =
+          "Streams all sensors matching the optional sorting/filtering as a CSV file, capped at a"
+              + " server-configured maximum row count.")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Successfully streamed sensors as CSV",
+      content = @Content(mediaType = "text/csv"))
+  @GetMapping(value = "/csv", produces = "text/csv")
+  public void getSensorsCsv(
+      @RequestParam(required = false) String sortModel,
+      @RequestParam(required = false) String filterModel,
+      HttpServletResponse response)
+      throws IOException {
+    PagedRequest exportRequest =
+        pagedRequestParser.parseForExport(new RawExportRequest(sortModel, filterModel));
+
+    response.setContentType("text/csv");
+    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    response.setHeader("Content-Disposition", "attachment; filename=\"sensors.csv\"");
+
+    Writer writer =
+        new BufferedWriter(
+            new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
+    csvExportQueryRepository.streamCsv(exportRequest, writer);
+    writer.flush();
   }
 }

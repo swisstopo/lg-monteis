@@ -5,12 +5,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willAnswer;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
@@ -18,11 +23,13 @@ import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
+import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.Writer;
 import java.time.*;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +59,8 @@ class ExperimentControllerTest {
   @MockitoBean private PagedRequestParser pagedRequestParser;
 
   @MockitoBean private Clock clock;
+
+  @MockitoBean private ExperimentCsvExportQueryRepository csvExportQueryRepository;
 
   @BeforeEach
   void setUpClock() {
@@ -162,6 +171,51 @@ class ExperimentControllerTest {
 
     then(service).shouldHaveNoMoreInteractions();
     then(mapper).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
+  void should_route_get_experiments_csv_and_stream_csv_content() throws Exception {
+    // given
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    willAnswer(
+            invocation -> {
+              Writer writer = invocation.getArgument(1);
+              writer.write("name,status\r\nEXP-01,ACTIVE\r\n");
+              return null;
+            })
+        .given(csvExportQueryRepository)
+        .streamCsv(eq(exportRequest), any());
+
+    // when / then
+    mockMvc
+        .perform(get("/api/experiments/csv").with(jwt()))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType("text/csv;charset=UTF-8"))
+        .andExpect(
+            header().string("Content-Disposition", "attachment; filename=\"experiments.csv\""))
+        .andExpect(content().string("name,status\r\nEXP-01,ACTIVE\r\n"));
+
+    then(pagedRequestParser).should().parseForExport(any());
+    then(csvExportQueryRepository).should().streamCsv(eq(exportRequest), any());
+  }
+
+  @Test
+  void should_return_bad_request_when_csv_export_query_rejects_the_filter() throws Exception {
+    // given: the repository throws before writing any bytes (an unknown filter column) - this
+    // must still surface as a normal 400 via GlobalErrorControllerAdvice, not a broken/partial
+    // 200 response
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    willThrow(new InvalidPagedRequestException("Unknown sortable/filterable column: bogus"))
+        .given(csvExportQueryRepository)
+        .streamCsv(eq(exportRequest), any());
+
+    // when / then
+    mockMvc
+        .perform(get("/api/experiments/csv").with(jwt()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
   }
 
   @Test

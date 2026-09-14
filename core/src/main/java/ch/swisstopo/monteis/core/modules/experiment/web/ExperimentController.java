@@ -1,19 +1,29 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.infrastructure.query.RawExportRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.Min;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
@@ -32,16 +42,19 @@ public class ExperimentController {
   private final ExperimentWebMapper mapper;
   private final Clock clock;
   private final PagedRequestParser pagedRequestParser;
+  private final ExperimentCsvExportQueryRepository csvExportQueryRepository;
 
   public ExperimentController(
       ExperimentService service,
       ExperimentWebMapper mapper,
       Clock clock,
-      PagedRequestParser pagedRequestParser) {
+      PagedRequestParser pagedRequestParser,
+      ExperimentCsvExportQueryRepository csvExportQueryRepository) {
     this.service = service;
     this.mapper = mapper;
     this.clock = clock;
     this.pagedRequestParser = pagedRequestParser;
+    this.csvExportQueryRepository = csvExportQueryRepository;
   }
 
   @Operation(summary = "Get a experiment by id", description = "Retrieves a experiment by id")
@@ -122,5 +135,40 @@ public class ExperimentController {
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
     PagedResult<Experiment> domainResult = service.getExperiments(pagedRequestParser.parse(raw));
     return mapper.toPagedDto(domainResult, today);
+  }
+
+  @Operation(
+      summary = "Download experiments as CSV",
+      description =
+          "Streams all experiments matching the optional sorting/filtering as a CSV file, capped"
+              + " at a server-configured maximum row count.")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Successfully streamed experiments as CSV",
+      content = @Content(mediaType = "text/csv"))
+  @GetMapping(value = "/csv", produces = "text/csv")
+  public void getExperimentsCsv(
+      @RequestParam(required = false) String sortModel,
+      @RequestParam(required = false) String filterModel,
+      HttpServletResponse response)
+      throws IOException {
+    PagedRequest exportRequest =
+        pagedRequestParser.parseForExport(new RawExportRequest(sortModel, filterModel));
+
+    response.setContentType("text/csv");
+    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    response.setHeader("Content-Disposition", "attachment; filename=\"experiments.csv\"");
+
+    // Deliberately not try-with-resources: closing the writer commits the response (defaulting to
+    // 200) even if nothing was ever written to it, which would happen during the unwinding of a
+    // translate()-time InvalidPagedRequestException - before the response is committed, we want
+    // that exception to still reach GlobalErrorControllerAdvice as a normal 400. Only flush (not
+    // close) on the success path; the container closes the underlying stream once this request
+    // finishes.
+    Writer writer =
+        new BufferedWriter(
+            new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
+    csvExportQueryRepository.streamCsv(exportRequest, writer);
+    writer.flush();
   }
 }
