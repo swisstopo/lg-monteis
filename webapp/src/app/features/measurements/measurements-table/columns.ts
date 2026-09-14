@@ -87,7 +87,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       headerName: translate('measurements-table.column.active')(),
       sortable: true,
       filter: true,
-      flex: 1,
+      flex: 0.5,
       valueFormatter: (params) => (params.value ? 'Active' : 'Inactive'),
     },
     {
