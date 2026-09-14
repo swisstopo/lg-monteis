@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import {
   applyEach,
+  disabled,
   FieldTree,
   form,
   FormField,
@@ -264,6 +265,9 @@ export default class SensorEdit {
     });
     maxLength(schema.comment, 4096, {
       message: translate('sensor.comment.validation.maxLength')(),
+    });
+    disabled(schema.coordinates, {
+      when: ({ valueOf }) => valueOf(schema.fulcrumId).trim().length > 0,
     });
     required(schema.coordinates.x, {
       message: translate('sensor.coordinate.xLocal.validation.required')(),
