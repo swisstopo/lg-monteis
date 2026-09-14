@@ -12,6 +12,22 @@
   <artifactId>contracts</artifactId>
 
   <properties>
+    <download-maven-plugin.version>1.10.0</download-maven-plugin.version>
+
+    <!-- Fulcrum REST API contract (MON-142). The spec is published only on the v2 branch of
+         github.com/fulcrumapp/api, a repository that carries neither tags nor releases, so it is
+         pinned to a commit SHA and kept current by Renovate: the customManager in renovate.json
+         tracks that branch head via the git-refs datasource and raises a digest bump here. This
+         value is the only thing recorded about the upstream document: the "Fulcrum Spec In Sync"
+         check in pr-gate fetches the spec at this commit and compares it against the copy
+         committed in this module, so no separate hash has to be kept in step with it. Most
+         commits on that branch leave the spec untouched, so the check stays green and the PR
+         automerges; a commit that does change it turns the check red until a developer runs
+         .github/scripts/sync-fulcrum-spec-to-pin.sh on the branch and pushes the result.
+         Keep this a SHA - resolving "v2" at build time would make the build unreproducible and
+         leave Renovate nothing to bump. -->
+    <fulcrum.spec.ref>0e36397a6cc292645283587ec62d4d808f667b44</fulcrum.spec.ref>
+
     <!-- The Fulcrum spec is committed rather than downloaded during the build: it is a
          third-party document in a repository we do not control, and no build should fail because
          GitHub is unreachable or rate-limiting. Being a normal resource it is also copied into
@@ -67,6 +83,25 @@
   </dependencies>
 
   <build>
+    <pluginManagement>
+      <plugins>
+        <!-- Fetching the document at ${fulcrum.spec.ref} belongs to the module that owns both the
+             pin and the committed copy. Managed rather than bound to a phase: every build reads
+             the committed file, and the fetch happens only in
+             .github/scripts/sync-fulcrum-spec-to-pin.sh. -->
+        <plugin>
+          <groupId>com.googlecode.maven-download-plugin</groupId>
+          <artifactId>download-maven-plugin</artifactId>
+          <version>${download-maven-plugin.version}</version>
+          <configuration>
+            <!-- Cached per URL, and the URL carries the pinned SHA, so the spec is fetched once
+                 per bump and offline builds keep working afterwards. -->
+            <skipCache>false</skipCache>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
     <plugins>
       <plugin>
         <groupId>org.openapitools</groupId>
