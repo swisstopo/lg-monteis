@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.query.NumberFilterModel;
@@ -369,7 +370,7 @@ class JooqSensorRepositoryIT {
         new AlarmLimits(lower, upper),
         true,
         null,
-        null); // todo: check if rather 1 instead of null
+        null);
   }
 
   @Test
@@ -561,10 +562,9 @@ class JooqSensorRepositoryIT {
             new AlarmLimits(0.0, 100.0),
             true,
             null,
-            null);// todo: check if 1 instead of null
+            null);
 
-    // TODO MON-143
-    Sensor sensor = new Sensor(name, code, DAS.SOL_EXPERTS, null, null, coordinates, true, null);
+    Sensor sensor = new Sensor(name, code, Das.SOL_EXPERTS, null, null, coordinates, true, null);
     sensor.setParameters(new ArrayList<>(List.of(parameter)));
     return sensor;
   }

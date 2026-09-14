@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
+import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
@@ -17,7 +18,7 @@ public class Sensor implements Auditable {
 
   private String name;
   private String dasSensorAlias;
-  private DAS das;
+  private Das das;
   private UUID fulcrumId;
   private Experiment mainExperiment;
   private Coordinates coordinates;
@@ -35,7 +36,7 @@ public class Sensor implements Auditable {
   public Sensor(
       String name,
       String dasSensorAlias,
-      DAS das,
+      Das das,
       UUID fulcrumId,
       Experiment mainExperiment,
       Coordinates coordinates,
@@ -56,7 +57,7 @@ public class Sensor implements Auditable {
       UUID id,
       String name,
       String dasSensorAlias,
-      DAS das,
+      Das das,
       UUID fulcrumId,
       Experiment mainExperiment,
       Coordinates coordinates,
@@ -103,11 +104,11 @@ public class Sensor implements Auditable {
     this.dasSensorAlias = dasSensorAlias;
   }
 
-  public DAS getDAS() {
+  public Das getDAS() {
     return das;
   }
 
-  public void setDAS(DAS das) {
+  public void setDAS(Das das) {
     this.das = das;
   }
 

@@ -4,6 +4,7 @@ import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentSensor.E
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
 import static org.junit.jupiter.api.Assertions.*;
 
+import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.query.*;
@@ -448,9 +449,9 @@ class JooqExperimentRepositoryIT {
             new AlarmLimits(0.0, 100.0),
             true,
             null,
-            null);// todo: check if rather have 1 instead of null
+            null);
 
-    Sensor sensor = new Sensor(name, code, DAS.SOL_EXPERTS, null, null, coordinates, true, null);
+    Sensor sensor = new Sensor(name, code, Das.SOL_EXPERTS, null, null, coordinates, true, null);
     sensor.setParameters(new ArrayList<>(List.of(parameter)));
     return sensorRepository.create(sensor);
   }

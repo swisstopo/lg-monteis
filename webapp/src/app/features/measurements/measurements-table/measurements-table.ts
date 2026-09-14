@@ -117,7 +117,7 @@ export default class MeasurementsTable {
 
   protected readonly selectedSensorIds = computed<string[]>(() => {
     const ids = this.selectedRows()
-      .map((metric) => metric.metadataSensorId)
+      .map((metric) => metric.sensorParameterId)
       .filter((e) => e != null);
     return this.distinct(ids);
   });
@@ -160,8 +160,7 @@ export default class MeasurementsTable {
     this.selectedRows.set(rows);
   }
 
-  protected getMetricRowId = (row: ReadSimpleMetricDto): string =>
-    `${row.sensorParameterDasParameterAlias}-${row.timestamp}`;
+  protected getMetricRowId = (row: ReadSimpleMetricDto): string => `${row.dasKey}-${row.timestamp}`;
 
   protected onPlot() {
     if (this.rangeForm().invalid()) {

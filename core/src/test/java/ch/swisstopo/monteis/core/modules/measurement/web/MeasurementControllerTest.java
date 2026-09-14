@@ -42,7 +42,7 @@ class MeasurementControllerTest {
     ChartDataResponseDto dto =
         new ChartDataResponseDto(
             SENSOR_ID,
-            "TEMP-1",
+            "TEMP-1-P1",
             "monteis-001",
             Unit.KELVIN,
             List.of(new ChartPointDto(validFrom, 12.5)));
@@ -59,8 +59,7 @@ class MeasurementControllerTest {
                 .param("to", validTo.toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(SENSOR_ID.toString()))
-        // TODO: MON-143
-        .andExpect(jsonPath("$.code").value("TEMP-1"))
+        .andExpect(jsonPath("$.dasKey").value("TEMP-1-P1"))
         .andExpect(jsonPath("$.name").value("monteis-001"))
         .andExpect(jsonPath("$.unit").value("KELVIN"))
         .andExpect(jsonPath("$.points[0].value").value(12.5));
@@ -164,7 +163,7 @@ class MeasurementControllerTest {
   void should_return_200_when_from_equals_to() throws Exception {
     // given: the boundary the service guard explicitly allows (only "after" is rejected)
     ChartDataResponseDto dto =
-        new ChartDataResponseDto(SENSOR_ID, "TEMP-1", "monteis-001", Unit.KELVIN, List.of());
+        new ChartDataResponseDto(SENSOR_ID, "TEMP-1-P1", "monteis-001", Unit.KELVIN, List.of());
     given(measurementService.findMeasurements(SENSOR_ID, validFrom, validFrom))
         .willReturn(Optional.of(dto));
 

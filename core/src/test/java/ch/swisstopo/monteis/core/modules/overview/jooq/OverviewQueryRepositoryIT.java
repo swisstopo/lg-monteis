@@ -43,8 +43,13 @@ class OverviewQueryRepositoryIT {
               () -> assertNotNull(topRecord.timestamp(), "Timestamp must exist"),
               () ->
                   assertTrue(
-                      Set.of("TEMP-1-P1", "PRESS-1&2-P1", "DISP-2-P1", "FLOW-2-P1", "FLOW-Admin-P1")
-                          .contains(topRecord.sensorParameterDasParameterAlias()),
+                      Set.of(
+                              "SOL_EXPERTS__TEMP-1__temperature",
+                              "SOL_EXPERTS__PRESS-1&2__pressure",
+                              "SOL_EXPERTS__DISP-2__displacement",
+                              "SOL_EXPERTS__FLOW-2__flow",
+                              "SOL_EXPERTS__FLOW-Admin__flow")
+                          .contains(topRecord.dasKey()),
                       "Sensor ID must be from the seeded set"),
               () -> assertNotNull(topRecord.rawValue(), "Raw value must be calculated"),
               () -> assertNotNull(topRecord.normValue(), "Norm value must be calculated"),

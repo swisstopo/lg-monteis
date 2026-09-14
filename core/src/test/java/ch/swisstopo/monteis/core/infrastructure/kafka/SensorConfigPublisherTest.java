@@ -10,7 +10,6 @@ import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
-import ch.swisstopo.monteis.core.modules.sensor.domain.DAS;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
@@ -36,7 +35,7 @@ class SensorConfigPublisherTest {
     return new Sensor(
         "Test Sensor",
         "BH12-P03",
-        DAS.SOL_EXPERTS,
+        Das.SOL_EXPERTS,
         null,
         null,
         new Coordinates(0, 0, 0),
@@ -89,17 +88,22 @@ class SensorConfigPublisherTest {
   }
 
   @Test
-  void should_not_publish_inactive_parameter() {
-    // given
-    SensorConfigPublisher publisher =
-        new SensorConfigPublisher(kafkaTemplate, "internal-sensor-config");
-    SensorParameter parameter = parameter(UUID.randomUUID(), false, "temperature");
+  void should_publish_inactive_parameter() {
+    // given: active only filters what the UI fetches - the pipeline still needs an inactive
+    // parameter's config to keep normalizing/backfilling its readings correctly.
+    String topic = "internal-sensor-config";
+    SensorConfigPublisher publisher = new SensorConfigPublisher(kafkaTemplate, topic);
+    UUID parameterId = UUID.randomUUID();
+    SensorParameter parameter = parameter(parameterId, false, "temperature");
 
     // when
     publisher.publish(sensor(), parameter);
 
     // then
-    then(kafkaTemplate).should(never()).send(any(), any(), any());
+    then(kafkaTemplate)
+        .should()
+        .send(eq(topic), eq("SOL_EXPERTS__BH12-P03__temperature"), configCaptor.capture());
+    assertThat(configCaptor.getValue().getSensorParameterId()).isEqualTo(parameterId);
   }
 
   @Test

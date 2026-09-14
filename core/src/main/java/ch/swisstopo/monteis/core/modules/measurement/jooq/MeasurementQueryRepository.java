@@ -64,10 +64,19 @@ public class MeasurementQueryRepository implements MeasurementQuery {
     String combinedName =
         parameterInfo.get(SENSORS.NAME) + " - " + parameterInfo.get(SENSOR_PARAMETER.NAME);
 
+    String dasKey =
+        dsl.select(SENSOR_READING_SECURED.DAS_KEY)
+            .from(SENSOR_READING_SECURED)
+            .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(DSL.inline(id)))
+            .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
+            .limit(1)
+            .fetchOptional(SENSOR_READING_SECURED.DAS_KEY)
+            .orElseGet(() -> parameterInfo.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS));
+
     return Optional.of(
         new ChartDataResponseDto(
             parameterInfo.get(SENSOR_PARAMETER.ID),
-            parameterInfo.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
+            dasKey,
             combinedName,
             Unit.valueOf(parameterInfo.get(SENSOR_PARAMETER.UNIT).toString()),
             points));

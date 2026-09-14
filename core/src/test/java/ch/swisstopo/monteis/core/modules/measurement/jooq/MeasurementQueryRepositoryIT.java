@@ -23,12 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
  * sensor_parameter.id}, not a sensor id - each sensor below is seeded with exactly one parameter:
  *
  * <ul>
- *   <li>TEMP-1's parameter (alias TEMP-1-P1) — experiment "Mont Terri Alpha"
- *   <li>PRESS-1&amp;2's parameter (alias PRESS-1&amp;2-P1) — experiments "Mont Terri Alpha"
+ *   <li>TEMP-1's parameter (alias temperature) — experiment "Mont Terri Alpha"
+ *   <li>PRESS-1&amp;2's parameter (alias pressure) — experiments "Mont Terri Alpha"
  *       &amp; "Mont Terri Beta"
- *   <li>DISP-2's parameter (alias DISP-2-P1) — experiment "Mont Terri Beta"
- *   <li>FLOW-2's parameter (alias FLOW-2-P1) — experiment "Mont Terri Beta"
- *   <li>FLOW-Admin's parameter (alias FLOW-Admin-P1) — no experiment, admin-only
+ *   <li>DISP-2's parameter (alias displacement) — experiment "Mont Terri Beta"
+ *   <li>FLOW-2's parameter (alias flow) — experiment "Mont Terri Beta"
+ *   <li>FLOW-Admin's parameter (alias flow) — no experiment, admin-only
  * </ul>
  *
  * <p>Each of these sensors has readings spaced 5 minutes apart, spanning the 365 days before the
@@ -75,7 +75,7 @@ class MeasurementQueryRepositoryIT {
           assertTrue(result.isPresent());
           ChartDataResponseDto dto = result.get();
           assertEquals(TEMP_1_PARAM, dto.id());
-          assertEquals("TEMP-1-P1", dto.code());
+          assertEquals("SOL_EXPERTS__TEMP-1__temperature", dto.dasKey());
           assertEquals("monteis-001 - Temperature Param", dto.name());
           assertFalse(dto.points().isEmpty(), "Seed script generates readings for TEMP-1");
         });
@@ -112,7 +112,7 @@ class MeasurementQueryRepositoryIT {
                       SENSOR_READING_SECURED.RAW_VALUE,
                       SENSOR_READING_SECURED.NORM_VALUE)
                   .from(SENSOR_READING_SECURED)
-                  .where(SENSOR_READING_SECURED.DAS_KEY.eq("TEMP-1-P1"))
+                  .where(SENSOR_READING_SECURED.DAS_KEY.eq("SOL_EXPERTS__TEMP-1__temperature"))
                   .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc())
                   .limit(1)
                   .fetchOne();
@@ -142,8 +142,8 @@ class MeasurementQueryRepositoryIT {
               repository.findMeasurements(DISP_2_PARAM, wideFrom, wideTo);
 
           // Assert
-          assertEquals("TEMP-1-P1", temp.orElseThrow().code());
-          assertEquals("DISP-2-P1", disp.orElseThrow().code());
+          assertEquals("SOL_EXPERTS__TEMP-1__temperature", temp.orElseThrow().dasKey());
+          assertEquals("SOL_EXPERTS__DISP-2__displacement", disp.orElseThrow().dasKey());
         });
   }
 
@@ -195,7 +195,7 @@ class MeasurementQueryRepositoryIT {
 
           // Assert
           assertTrue(result.isPresent());
-          assertEquals("TEMP-1-P1", result.get().code());
+          assertEquals("SOL_EXPERTS__TEMP-1__temperature", result.get().dasKey());
           assertFalse(result.get().points().isEmpty());
         });
   }
@@ -211,7 +211,7 @@ class MeasurementQueryRepositoryIT {
 
           // Assert
           assertTrue(result.isPresent());
-          assertEquals("FLOW-Admin-P1", result.get().code());
+          assertEquals("SOL_EXPERTS__FLOW-Admin__flow", result.get().dasKey());
           assertFalse(result.get().points().isEmpty());
         });
   }
@@ -242,7 +242,7 @@ class MeasurementQueryRepositoryIT {
                   .fetch(SENSOR_READING_SECURED.DAS_KEY);
 
           assertEquals(
-              List.of("PRESS-1&2-P1", "TEMP-1-P1"),
+              List.of("SOL_EXPERTS__PRESS-1&2__pressure", "SOL_EXPERTS__TEMP-1__temperature"),
               visibleParameterAliases.stream().sorted().toList());
         });
   }

@@ -45,10 +45,10 @@ describe('MeasurementsTable', () => {
     };
 
     component.selectedRows.set([
-      { metadataSensorId: '1' },
-      { metadataSensorId: '2' },
-      { metadataSensorId: '2' },
-      { metadataSensorId: undefined },
+      { sensorParameterId: '1' },
+      { sensorParameterId: '2' },
+      { sensorParameterId: '2' },
+      { sensorParameterId: undefined },
     ]);
 
     expect(component.selectedSensorIds()).toEqual(['1', '2']);

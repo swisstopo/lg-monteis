@@ -50,7 +50,9 @@ class RowLevelSecurityIT {
         List.of(EXPERIMENT_ALPHA),
         () -> {
           assertEquals(12, dsl.fetchCount(SENSORS), "Experiment 1 has exactly 2 linked sensors");
-          assertEquals(Set.of("TEMP-1-P1", "PRESS-1&2-P1"), fetchVisibleSensorCodes());
+          assertEquals(
+              Set.of("SOL_EXPERTS__TEMP-1__temperature", "SOL_EXPERTS__PRESS-1&2__pressure"),
+              fetchVisibleSensorCodes());
         });
   }
 
@@ -61,7 +63,12 @@ class RowLevelSecurityIT {
         List.of(EXPERIMENT_BETA),
         () -> {
           assertEquals(3, dsl.fetchCount(SENSORS), "Experiment 2 has exactly 3 linked sensors");
-          assertEquals(Set.of("PRESS-1&2-P1", "DISP-2-P1", "FLOW-2-P1"), fetchVisibleSensorCodes());
+          assertEquals(
+              Set.of(
+                  "SOL_EXPERTS__PRESS-1&2__pressure",
+                  "SOL_EXPERTS__DISP-2__displacement",
+                  "SOL_EXPERTS__FLOW-2__flow"),
+              fetchVisibleSensorCodes());
         });
   }
 
@@ -85,7 +92,12 @@ class RowLevelSecurityIT {
           assertEquals(15, dsl.fetchCount(SENSORS), "Admin should see all seeded sensors");
           assertEquals(8, dsl.fetchCount(EXPERIMENTS), "Admin should see all seeded experiments");
           assertEquals(
-              Set.of("TEMP-1-P1", "PRESS-1&2-P1", "DISP-2-P1", "FLOW-2-P1", "FLOW-Admin-P1"),
+              Set.of(
+                  "SOL_EXPERTS__TEMP-1__temperature",
+                  "SOL_EXPERTS__PRESS-1&2__pressure",
+                  "SOL_EXPERTS__DISP-2__displacement",
+                  "SOL_EXPERTS__FLOW-2__flow",
+                  "SOL_EXPERTS__FLOW-Admin__flow"),
               fetchVisibleSensorCodes(),
               "Admin should see every seeded reading's sensor code");
         });
@@ -141,8 +153,6 @@ class RowLevelSecurityIT {
 
   private Set<String> fetchVisibleSensorCodes() {
     List<ReadSimpleMetricDto> readings = overviewQueryRepository.fetchRecentMetrics(1000);
-    return readings.stream()
-        .map(ReadSimpleMetricDto::sensorParameterDasParameterAlias)
-        .collect(Collectors.toSet());
+    return readings.stream().map(ReadSimpleMetricDto::dasKey).collect(Collectors.toSet());
   }
 }

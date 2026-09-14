@@ -55,9 +55,7 @@ class OverviewControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.size()").value(expectedResponse.size()))
         .andExpect(jsonPath("$[0].timestamp").value(expectedDto.timestamp().toString()))
-        .andExpect(
-            jsonPath("$[0].sensorParameterDasParameterAlias")
-                .value(expectedDto.sensorParameterDasParameterAlias()))
+        .andExpect(jsonPath("$[0].dasKey").value(expectedDto.dasKey()))
         .andExpect(jsonPath("$[0].rawValue").value(expectedDto.rawValue()))
         .andExpect(jsonPath("$[0].normValue").value(expectedDto.normValue()))
         .andExpect(jsonPath("$[0].version").value(Integer.valueOf(expectedDto.version())))

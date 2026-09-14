@@ -35,11 +35,11 @@ FROM (
                       interval '5 minutes'
               ) AS gs(ts)
                   CROSS JOIN (VALUES
-                                  ('TEMP-1-P1', 0.0, '00000000-0000-7000-8000-000000000401'::uuid),
-                                  ('PRESS-1&2-P1', 2.1, '00000000-0000-7000-8000-000000000402'::uuid),
-                                  ('FLOW-2-P1', 4.2, '00000000-0000-7000-8000-000000000404'::uuid),
-                                  ('DISP-2-P1', 3.7, '00000000-0000-7000-8000-000000000403'::uuid),
-                                  ('FLOW-Admin-P1', 5.8, '00000000-0000-7000-8000-000000000405'::uuid)
+                                  ('SOL_EXPERTS__TEMP-1__temperature', 0.0, '00000000-0000-7000-8000-000000000401'::uuid),
+                                  ('SOL_EXPERTS__PRESS-1&2__pressure', 2.1, '00000000-0000-7000-8000-000000000402'::uuid),
+                                  ('SOL_EXPERTS__FLOW-2__flow', 4.2, '00000000-0000-7000-8000-000000000404'::uuid),
+                                  ('SOL_EXPERTS__DISP-2__displacement', 3.7, '00000000-0000-7000-8000-000000000403'::uuid),
+                                  ('SOL_EXPERTS__FLOW-Admin__flow', 5.8, '00000000-0000-7000-8000-000000000405'::uuid)
          ) AS s(das_key, phase_shift, sensor_parameter_id)
      ) AS data;
 

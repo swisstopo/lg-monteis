@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -7,6 +8,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 class SensorParameterTest {
+
+  @Test
+  void should_default_das_parameter_alias_to_value_when_omitted() {
+    // given: mirrors the frontend omitting the alias when the DAS only reports one measurement
+    SensorParameter parameter = newSensorParameterWithAlias(null);
+
+    // when / then
+    assertEquals("value", parameter.getDasParameterAlias());
+  }
+
+  @Test
+  void should_default_das_parameter_alias_to_value_when_blank() {
+    // given
+    SensorParameter parameter = newSensorParameterWithAlias("   ");
+
+    // when / then
+    assertEquals("value", parameter.getDasParameterAlias());
+  }
+
+  @Test
+  void should_keep_explicit_das_parameter_alias() {
+    // given
+    SensorParameter parameter = newSensorParameterWithAlias("PARAM-01");
+
+    // when / then
+    assertEquals("PARAM-01", parameter.getDasParameterAlias());
+  }
 
   @Test
   void should_trigger_publish_when_old_parameter_is_null() {
@@ -88,6 +116,18 @@ class SensorParameterTest {
         Unit.METER,
         formula,
         alarmLimits,
+        true,
+        null);
+  }
+
+  private SensorParameter newSensorParameterWithAlias(String dasParameterAlias) {
+    return new SensorParameter(
+        "Test Sensor Parameter",
+        dasParameterAlias,
+        new SensorType(null, "Other", null),
+        Unit.METER,
+        new Formula("x * 2"),
+        new AlarmLimits(0.0, 100.0),
         true,
         null);
   }
