@@ -16,8 +16,8 @@ import tools.jackson.databind.json.JsonMapper;
  * generated model can cover (MON-142).
  *
  * <p>The spec is pinned to a commit of {@code fulcrumapp/api@v2} by {@code fulcrum.spec.ref} in
- * the root pom, downloaded during the contracts build and shipped in the contracts jar, so this
- * test reads exactly the document the models were generated from. Renovate raises a digest bump
+ * the contracts pom, committed alongside it in that module and shipped in the contracts jar, so
+ * this test reads exactly the document the models were generated from. Renovate raises a digest bump
  * for that pin and automerges it, which is only safe as long as something fails when Fulcrum
  * changes the endpoint, the authentication header or the parameters underneath us - that is this
  * test. A failure here means the Fulcrum client needs adjusting, not that the assertion is wrong.
