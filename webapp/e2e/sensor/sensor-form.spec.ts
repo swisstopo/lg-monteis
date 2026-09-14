@@ -241,10 +241,6 @@ test('should refuse to save a fulcrum id that no fulcrum record matches', async 
   await firstParameter.getByLabel('Sensor Type').fill('Temperature');
   await page.getByRole('option', { name: 'Temperature' }).click();
 
-  await dialog.getByLabel('X (Local)').fill('100');
-  await dialog.getByLabel('Y (Local)').fill('200');
-  await dialog.getByLabel('Z (Local)').fill('300');
-
   await firstParameter.getByLabel('Alarm Limit From').fill('10');
   await firstParameter.getByLabel('Alarm Limit To').fill('100');
 
@@ -260,6 +256,35 @@ test('should refuse to save a fulcrum id that no fulcrum record matches', async 
   // Nothing was saved, so the dialog has to stay open with the entered values intact.
   await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
   await expect(dialog.getByLabel('Fulcrum ID')).toHaveValue(UNKNOWN_FULCRUM_RECORD_ID);
+});
+
+test('should disable the coordinates while a fulcrum id is entered', async ({ page }) => {
+  await page.getByRole('button', { name: 'Create Sensor' }).click();
+  await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
+
+  const dialog = page.getByRole('dialog');
+
+  const x = dialog.getByLabel('X (Local)');
+  const y = dialog.getByLabel('Y (Local)');
+  const z = dialog.getByLabel('Z (Local)');
+
+  // Without a Fulcrum record the coordinates are the sensor's only source for them.
+  await expect(x).toBeEnabled();
+  await expect(y).toBeEnabled();
+  await expect(z).toBeEnabled();
+
+  await dialog.getByLabel('Fulcrum ID').fill(crypto.randomUUID());
+
+  await expect(x).toBeDisabled();
+  await expect(y).toBeDisabled();
+  await expect(z).toBeDisabled();
+
+  // Clearing the Fulcrum ID hands the coordinates back to the user.
+  await dialog.getByLabel('Fulcrum ID').fill('');
+
+  await expect(x).toBeEnabled();
+  await expect(y).toBeEnabled();
+  await expect(z).toBeEnabled();
 });
 
 test('should update sensor', async ({ page }) => {
