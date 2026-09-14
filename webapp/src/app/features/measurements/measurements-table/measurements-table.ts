@@ -25,7 +25,7 @@ import {
   MatTimepickerToggle,
 } from '@angular/material/timepicker';
 import { APP_ISO_TIMESTAMP_FORMAT } from '@core/date/date.provider';
-import { OverviewControllerService, ReadSimpleMetricDto } from '@core/generated';
+import { MeasurementControllerService, MeasurementResponseDto } from '@core/generated';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { MeasurementsService } from '@features/measurements/services/measurements.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -90,7 +90,7 @@ export default class MeasurementsTable {
   private readonly translateService = inject(TranslateService);
   private readonly dialog = inject(MatDialog);
   protected readonly measurementsService = inject(MeasurementsService);
-  protected readonly overviewService = inject(OverviewControllerService);
+  protected readonly measurementControllerService = inject(MeasurementControllerService);
   private readonly formErrorService = inject(FormErrorService);
   readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
@@ -110,14 +110,14 @@ export default class MeasurementsTable {
   );
 
   protected metricsResource = rxResource({
-    stream: () => this.overviewService.getMetrics(50),
+    stream: () => this.measurementControllerService.getMeasurements(),
   });
 
-  protected readonly selectedRows = signal<ReadSimpleMetricDto[]>([]);
+  protected readonly selectedRows = signal<MeasurementResponseDto[]>([]);
 
   protected readonly selectedSensorIds = computed<string[]>(() => {
     const ids = this.selectedRows()
-      .map((metric) => metric.metadataSensorId)
+      .map((metric) => metric.sensorId)
       .filter((e) => e != null);
     return this.distinct(ids);
   });
@@ -152,16 +152,15 @@ export default class MeasurementsTable {
     });
   }
 
-  onWrappedRow(row: ReadSimpleMetricDto) {
+  onWrappedRow(row: MeasurementResponseDto) {
     console.log(row);
   }
 
-  onSelectionChanged(rows: ReadSimpleMetricDto[]): void {
+  onSelectionChanged(rows: MeasurementResponseDto[]): void {
     this.selectedRows.set(rows);
   }
 
-  protected getMetricRowId = (row: ReadSimpleMetricDto): string =>
-    `${row.sensorParameterDasParameterAlias}-${row.timestamp}`;
+  protected getMetricRowId = (row: MeasurementResponseDto): string => `${row.sensorId}`;
 
   protected onPlot() {
     if (this.rangeForm().invalid()) {
