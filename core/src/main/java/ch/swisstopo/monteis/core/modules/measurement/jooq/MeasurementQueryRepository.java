@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.measurement.jooq;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
 import static org.jooq.Records.mapping;
+import static org.jooq.impl.DSL.*;
 
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
@@ -13,10 +14,7 @@ import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataR
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.impl.DSL;
@@ -107,22 +105,32 @@ public class MeasurementQueryRepository implements MeasurementQuery {
   @Transactional(readOnly = true)
   public PagedResult<MeasurementResponseDto> findPaged(PagedRequest request) {
 
-    // Default to a deterministic order so offset-based paging stays stable
-    PagedRequestJooqTranslator.JooqPageCriteria criteria =
+    var criteria =
         PagedRequestJooqTranslator.translate(
             request, MEASUREMENT_COLUMNS_BY_COL_ID, SENSORS.ID.asc());
 
     var latestReadings =
-        dsl.select(
-                SENSOR_READING_SECURED.SENSOR_ID,
-                SENSOR_READING_SECURED.TIMESTAMP,
-                SENSOR_READING_SECURED.NORM_VALUE)
-            .distinctOn(SENSOR_READING_SECURED.SENSOR_ID)
-            .from(SENSOR_READING_SECURED)
-            .orderBy(SENSOR_READING_SECURED.SENSOR_ID, SENSOR_READING_SECURED.TIMESTAMP.desc())
-            .asTable("latest_readings");
+        lateral(
+                dsl.select(SENSOR_READING_SECURED.TIMESTAMP, SENSOR_READING_SECURED.NORM_VALUE)
+                    .from(SENSOR_READING_SECURED)
+                    .where(
+                        SENSOR_READING_SECURED.SENSOR_ID.eq(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
+                    .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
+                    .limit(1))
+            .as("latest_readings");
 
-    List<MeasurementResponseDto> data =
+    var baseTable =
+        SENSORS
+            .join(SENSOR_PARAMETER)
+            .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
+            .leftJoin(EXPERIMENTS)
+            .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+            .leftJoin(SENSOR_TYPES)
+            .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID));
+
+    var fullTable = baseTable.leftJoin(latestReadings).on(trueCondition());
+
+    var data =
         dsl.select(
                 SENSORS.ID,
                 SENSORS.DAS_SENSOR_ALIAS,
@@ -139,39 +147,22 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                 SENSOR_PARAMETER.UPPER_ALARM_LIMIT,
                 SENSORS.ACTIVE,
                 SENSORS.COMMENT)
-            .from(SENSORS)
-            .join(SENSOR_PARAMETER)
-            .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
-            .leftJoin(EXPERIMENTS)
-            .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
-            .leftJoin(SENSOR_TYPES)
-            .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID))
-            .leftJoin(latestReadings)
-            .on(
-                latestReadings
-                    .field(SENSOR_READING_SECURED.SENSOR_ID)
-                    .eq(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
+            .from(fullTable)
             .where(criteria.condition())
             .orderBy(criteria.sortFields())
             .limit(request.limit())
             .offset(request.offset())
             .fetchInto(MeasurementResponseDto.class);
 
+    boolean needsReadings =
+        request.filterModel() != null
+            && (request.filterModel().containsKey("measureValue")
+                || request.filterModel().containsKey("newestMeasurement"));
+
     int totalCount =
         dsl.fetchCount(
             dsl.select(SENSORS.ID)
-                .from(SENSORS)
-                .join(SENSOR_PARAMETER)
-                .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
-                .leftJoin(EXPERIMENTS)
-                .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
-                .leftJoin(SENSOR_TYPES)
-                .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID))
-                .leftJoin(latestReadings)
-                .on(
-                    latestReadings
-                        .field(SENSOR_READING_SECURED.SENSOR_ID)
-                        .eq(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
+                .from(needsReadings ? fullTable : baseTable)
                 .where(criteria.condition()));
 
     return new PagedResult<>(data, totalCount);
