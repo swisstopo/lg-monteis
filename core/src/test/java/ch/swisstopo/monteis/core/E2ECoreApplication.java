@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core;
 
+import ch.swisstopo.monteis.core.itconfig.FulcrumStubConfiguration;
 import ch.swisstopo.monteis.core.itconfig.KafkaTestcontainersConfiguration;
 import ch.swisstopo.monteis.core.itconfig.KeycloakTestcontainersConfiguration;
 import ch.swisstopo.monteis.core.itconfig.TestcontainersConfiguration;
@@ -11,7 +12,8 @@ public class E2ECoreApplication {
         .with(
             TestcontainersConfiguration.class,
             KeycloakTestcontainersConfiguration.class,
-            KafkaTestcontainersConfiguration.class)
+            KafkaTestcontainersConfiguration.class,
+            FulcrumStubConfiguration.class)
         .run(args);
   }
 }
