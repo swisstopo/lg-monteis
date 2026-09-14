@@ -51,7 +51,6 @@ public interface SensorJooqMapper {
   @Mapping(target = "version", source = "paramRecord.version")
   @Mapping(target = "alarmLimits.lower", source = "paramRecord.lowerAlarmLimit")
   @Mapping(target = "alarmLimits.upper", source = "paramRecord.upperAlarmLimit")
-  @Mapping(target = "version", source = "paramRecord.version")
   @Mapping(target = "formula", source = "formulaRecord")
   @Mapping(target = "type", source = "typeRecord")
   SensorParameter toParameterDomain(

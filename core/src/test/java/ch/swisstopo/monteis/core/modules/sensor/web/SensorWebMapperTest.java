@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.sensor.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapperImpl;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
@@ -13,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 class SensorWebMapperTest {
 
-  private final SensorWebMapper mapper = new SensorWebMapperImpl();
+  private final SensorWebMapper mapper = new SensorWebMapperImpl(new ExperimentWebMapperImpl());
 
   @Test
   void should_default_formula_to_identity_expression_when_null() {
@@ -45,6 +46,7 @@ class SensorWebMapperTest {
             new WriteSensorTypeDto("Temperature"),
             new AlarmLimitsDto(-50.0, 100.0),
             true,
+            null,
             null,
             null);
 
