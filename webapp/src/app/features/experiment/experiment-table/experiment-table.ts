@@ -3,21 +3,25 @@ import { Component, effect, inject, inputBinding, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
+import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { ExperimentResponseDto } from '@core/generated';
+import { ToastService } from '@core/notifications/toast.service';
 import ExperimentEdit from '@features/experiment/experiment-edit/experiment-edit';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
+import { CsvDownloadService } from '@ui/table/csv-download.service';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
+import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
 import { createColumns } from './columns';
 
 @Component({
   selector: 'app-experiment-table',
-  imports: [TableHeader, MatButton, MatIcon, TranslatePipe, Table, InlineError],
+  imports: [TableHeader, MatButton, MatIcon, MatProgressSpinner, TranslatePipe, Table, InlineError],
   providers: [DatePipe],
   templateUrl: './experiment-table.html',
   styleUrl: './experiment-table.scss',
@@ -27,6 +31,8 @@ export default class ExperimentTable {
   private readonly dialog = inject(MatDialog);
   protected experimentService = inject(ExperimentService);
   private readonly translateService = inject(TranslateService);
+  private readonly csvDownloadService = inject(CsvDownloadService);
+  private readonly toastService = inject(ToastService);
 
   readonly searchTerm = signal<string>('');
 
@@ -34,6 +40,7 @@ export default class ExperimentTable {
   protected selectedExperimentId = signal<string | undefined>(undefined);
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
+  protected downloading = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
 
   protected datasource = createPagedDatasource(
@@ -87,8 +94,22 @@ export default class ExperimentTable {
     });
   }
 
-  onDownload(): void {
-    // Not implemented yet.
+  async onDownload(): Promise<void> {
+    const api = this.gridApi();
+    if (!api) return;
+
+    this.downloading.set(true);
+    try {
+      await this.csvDownloadService.download(
+        '/api/experiments/csv',
+        'experiments.csv',
+        toGridFilterSortParams(api),
+      );
+    } catch {
+      this.toastService.error(this.translateService.translate('experiment.error.downloadFailed')());
+    } finally {
+      this.downloading.set(false);
+    }
   }
 
   onSearch(term: string): void {

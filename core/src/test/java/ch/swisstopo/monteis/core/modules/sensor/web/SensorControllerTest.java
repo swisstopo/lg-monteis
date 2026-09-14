@@ -5,13 +5,18 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willAnswer;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
@@ -20,6 +25,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
@@ -32,6 +38,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameter
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.Writer;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -69,6 +76,7 @@ class SensorControllerTest {
   @MockitoBean private SensorWebMapper mapper;
   @MockitoBean private PagedRequestParser pagedRequestParser;
   @MockitoBean private Clock clock;
+  @MockitoBean private SensorCsvExportQueryRepository csvExportQueryRepository;
 
   @BeforeEach
   void setUpClock() {
@@ -136,6 +144,50 @@ class SensorControllerTest {
 
     then(service).should().getSensors(any());
     then(mapper).should().toPagedDto(eq(sensorPagedResult), any(LocalDate.class));
+  }
+
+  @Test
+  void should_route_get_sensors_csv_and_stream_csv_content() throws Exception {
+    // given
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    willAnswer(
+            invocation -> {
+              Writer writer = invocation.getArgument(1);
+              writer.write("dasSensorAlias,name\r\nSENS-01,Test\r\n");
+              return null;
+            })
+        .given(csvExportQueryRepository)
+        .streamCsv(eq(exportRequest), any());
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors/csv").with(jwt()))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType("text/csv;charset=UTF-8"))
+        .andExpect(header().string("Content-Disposition", "attachment; filename=\"sensors.csv\""))
+        .andExpect(content().string("dasSensorAlias,name\r\nSENS-01,Test\r\n"));
+
+    then(pagedRequestParser).should().parseForExport(any());
+    then(csvExportQueryRepository).should().streamCsv(eq(exportRequest), any());
+  }
+
+  @Test
+  void should_return_bad_request_when_csv_export_query_rejects_the_filter() throws Exception {
+    // given: the repository throws before writing any bytes (an unknown filter column) - this
+    // must still surface as a normal 400 via GlobalErrorControllerAdvice, not a broken/partial
+    // 200 response
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    willThrow(new InvalidPagedRequestException("Unknown sortable/filterable column: bogus"))
+        .given(csvExportQueryRepository)
+        .streamCsv(eq(exportRequest), any());
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors/csv").with(jwt()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
   }
 
   @Test

@@ -18,7 +18,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * TextFilterModel}/{@link NumberFilterModel} must tolerate rather than reject.
  */
 class PagedRequestParserTest {
-  private final PagedRequestParser parser = new PagedRequestParser();
+  private final PagedRequestParser parser = new PagedRequestParser(50000);
 
   @Test
   void should_parse_sort_model_with_unknown_fields() {
@@ -191,5 +191,41 @@ class PagedRequestParserTest {
     RawPagedRequest raw = new RawPagedRequest(0, 500, null, null);
 
     assertDoesNotThrow(() -> parser.parse(raw));
+  }
+
+  @Test
+  void should_parse_export_request_starting_at_zero_capped_at_configured_max_rows() {
+    // given: an export request has no startRow/endRow of its own
+    RawExportRequest raw =
+        new RawExportRequest("[{\"colId\":\"name\",\"sort\":\"asc\",\"type\":\"text\"}]", null);
+
+    // when
+    PagedRequest parsed = parser.parseForExport(raw);
+
+    // then: starts at 0, limit is the configured export cap (50000 in this test), not the 500
+    // page-size cap parse(...) enforces
+    assertEquals(0, parsed.startRow());
+    assertEquals(50000, parsed.endRow());
+    assertEquals(50000, parsed.limit());
+    assertEquals("name", parsed.sortModel().getFirst().colId());
+  }
+
+  @Test
+  void should_default_export_request_to_empty_sort_and_filter_when_blank() {
+    RawExportRequest raw = new RawExportRequest(null, null);
+
+    PagedRequest parsed = parser.parseForExport(raw);
+
+    assertTrue(parsed.sortModel().isEmpty());
+    assertTrue(parsed.filterModel().isEmpty());
+  }
+
+  @Test
+  void should_wrap_malformed_filter_model_json_in_export_request() {
+    RawExportRequest raw = new RawExportRequest(null, "{not json");
+
+    InvalidPagedRequestException ex =
+        assertThrows(InvalidPagedRequestException.class, () -> parser.parseForExport(raw));
+    assertInstanceOf(JsonProcessingException.class, ex.getCause());
   }
 }
