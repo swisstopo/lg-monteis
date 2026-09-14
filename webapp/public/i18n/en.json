@@ -72,7 +72,10 @@
     },
     "fulcrumId": {
       "label": "Fulcrum ID",
-      "placeholder": "e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      "placeholder": "e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "validation": {
+        "invalid": "Fulcrum ID must be a UUID, e.g. 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      }
     },
     "mainExperiment": {
       "label": "Main Experiment",
