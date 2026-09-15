@@ -1,24 +1,20 @@
 # ── MON-87 migration image (docker/migration/Dockerfile) ────────────────────────
 # The stock flyway/flyway base bundles JDBC drivers for databases MONTEIS does not use
 # (SQL Server, Cassandra, Couchbase, GCP Spanner, Databricks, Mongo, ...). Those unused
-# drivers + their netty / httpcore5 / shaded-jackson transitive jars carry HIGH CVEs
-# for code paths the Postgres-only migration Job never loads. We waive them by id here
+# drivers + their httpcore5 / shaded-jackson transitive jars carry HIGH CVEs for code
+# paths the Postgres-only migration Job never loads. We waive them by id here (the
+# Couchbase driver's netty CVEs are patched directly in the Dockerfile instead, since
+# a drop-in dependency update was available).
 # CVEs in the Postgres driver, the flyway engine, the JRE, or the OS are
 # deliberately NOT listed and still fail the gate.
 # Re-audit this list whenever the flyway base image digest is bumped.
 #
 # com.microsoft.sqlserver:mssql-jdbc (SQL Server driver)
 CVE-2025-59250
-# io.netty — netty-handler / netty-codec-http(2) / netty-codec-compression
-# (Cassandra / Couchbase / GCP Spanner transports)
-CVE-2026-44249
-CVE-2026-45416
-CVE-2026-50010
-CVE-2026-55831
-CVE-2026-55833
-CVE-2026-56745
-CVE-2026-56819
-CVE-2026-59901
+# io.netty CVEs formerly here (netty-handler / netty-codec-http(2) / netty-codec-compression,
+# shaded inside the bundled Couchbase core-io driver) are fixed by patching
+# core-io/java-client to 3.12.3 in the Dockerfile instead of being waived - see the
+# "Patch the bundled but unused Couchbase driver" RUN step.
 # org.apache.httpcomponents.core5:httpcore5 / httpcore5-h2 (Cassandra driver)
 CVE-2026-54399
 CVE-2026-54428

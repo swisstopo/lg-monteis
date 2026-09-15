@@ -321,11 +321,6 @@
       "save": "Save"
     }
   },
-  "measurements-overview": {
-    "totalRecords": "Total Database Records",
-    "syncing": "Syncing...",
-    "offline": "Offline"
-  },
   "measurements-table": {
     "heading": "AG Grid - Database Records",
     "loading": "Streaming logs from database...",
