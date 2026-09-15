@@ -14,7 +14,6 @@
   <properties>
     <download-maven-plugin.version>1.10.0</download-maven-plugin.version>
 
-
     <fulcrum.spec.ref>0e36397a6cc292645283587ec62d4d808f667b44</fulcrum.spec.ref>
     <fulcrum.spec.file>${project.basedir}/src/main/resources/fulcrum/rest-api.json</fulcrum.spec.file>
   </properties>
@@ -105,7 +104,6 @@
               </configOptions>
             </configuration>
           </execution>
-
 
           <execution>
             <id>generate-fulcrum-models</id>
