@@ -24,18 +24,13 @@ import tools.jackson.databind.ObjectMapper;
 public class FulcrumService {
 
   private static final Logger log = LoggerFactory.getLogger(FulcrumService.class);
-
-  /** JSON objects per row, which is what {@link FulcrumSensor} is mapped from. */
   private static final String JSON_FORMAT = "json";
 
   private static final boolean WITH_HEADERS = true;
-  // metadata=true would prepend the "fields" column listing to the response, which nothing here
-  // reads - FulcrumQueryResponse maps "rows" only.
   private static final boolean WITHOUT_COLUMN_METADATA = false;
   private static final boolean ROWS_AS_OBJECTS = false;
   private static final int FIRST_PAGE = 1;
 
-  /** Identifies MonTEIS in Fulcrum's request logs; the spec's own default is just "Application". */
   private static final String USER_AGENT = "monteis-core";
 
   private static final TypeReference<FulcrumQueryResponse<FulcrumSensor>> SENSOR_ROWS =
@@ -52,17 +47,6 @@ public class FulcrumService {
     this.objectMapper = objectMapper;
   }
 
-  /**
-   * Fetches a single record by its Fulcrum record id, i.e. the value MonTEIS stores as
-   * {@code Sensor.fulcrumId}.
-   *
-   * <p>The filter is pushed into the SQL statement instead of paging the whole table and
-   * filtering here. The id is a {@link UUID}, so interpolating it into the statement cannot
-   * inject anything.
-   *
-   * @param fulcrumRecordId the record id to look up
-   * @return the record, or empty when Fulcrum holds no record with that id
-   */
   public Optional<FulcrumSensor> getSensorById(UUID fulcrumRecordId) {
     String sql =
         "SELECT * FROM \"%s\" WHERE _record_id = '%s';"
@@ -79,10 +63,6 @@ public class FulcrumService {
     return rows.stream().findFirst();
   }
 
-  /**
-   * Fetches every record of the systems-and-sensors table, systems, packers and intervals
-   * included. Use {@link FulcrumSensor#isSensor()} to keep only the sensor rows.
-   */
   public List<FulcrumSensor> getSensors() {
     return query("SELECT * FROM \"%s\";".formatted(properties.sensorTable()));
   }

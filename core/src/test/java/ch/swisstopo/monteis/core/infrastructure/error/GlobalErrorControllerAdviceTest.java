@@ -116,12 +116,8 @@ class GlobalErrorControllerAdviceTest {
 
   @Test
   void should_translate_upstream_api_failure_return_502() throws Exception {
-    // given an endpoint whose upstream call failed with the documented Fulcrum error envelope
-
-    // when
     var response = mockMvc.perform(get("/dummy/upstream-error").with(jwt()));
 
-    // then the upstream detail stays in the log, the client gets a correlation id and the status
     response
         .andExpect(status().isBadGateway())
         .andExpect(jsonPath("$.target").value("GLOBAL"))
@@ -133,13 +129,8 @@ class GlobalErrorControllerAdviceTest {
   @Test
   void should_translate_upstream_api_failure_whose_body_cannot_be_converted_return_502()
       throws Exception {
-    // given an upstream failure carrying a body that is not the documented envelope, on an
-    // exception that cannot convert its body at all
-
-    // when
     var response = mockMvc.perform(get("/dummy/upstream-error-unconvertible").with(jwt()));
 
-    // then the handler still answers instead of failing while building the error
     response
         .andExpect(status().isBadGateway())
         .andExpect(jsonPath("$.messageKey").value("error.upstream.failed"))
@@ -319,7 +310,6 @@ class GlobalErrorControllerAdviceTest {
 
     @GetMapping("/dummy/upstream-error-unconvertible")
     public void throwUnconvertibleUpstreamError() {
-      // No body conversion function, which is what getResponseBodyAs refuses to work without.
       throw upstreamFailure("<html>gateway exploded</html>", null);
     }
 

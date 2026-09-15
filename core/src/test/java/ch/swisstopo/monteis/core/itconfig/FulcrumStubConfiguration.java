@@ -21,25 +21,6 @@ import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 
-/**
- * Stands in for the Fulcrum Query API while the e2e suite runs.
- *
- * <p>{@code SensorService.createSensor}/{@code updateSensor} read the sensor's coordinates from
- * Fulcrum on every write, so a browser test that saves a sensor makes the backend call out to
- * Fulcrum. That call leaves the server, not the browser, so Playwright's {@code page.route} cannot
- * intercept it - the substitution has to happen on this side.
- *
- * <p>A plain JDK {@link HttpServer} on an ephemeral port rather than a WireMock container: it needs
- * no extra dependency and no extra container in a startup that already boots two Postgres
- * instances, Keycloak and Kafka, and {@code monteis.fulcrum.base-url} is pointed at it so the
- * request still travels the real path through {@code FulcrumConfig} and the generated
- * {@code DefaultApi}. Being a server of its own it also stays clear of the application's security
- * filter chain, which would otherwise reject the token-only, JWT-less call with a 401.
- *
- * <p>Any record id is answered with a row carrying that same id, so tests can use a fresh
- * {@link UUID} without registering it first. {@link #UNKNOWN_RECORD_ID} is the one exception and
- * answers with no rows, which is how a Fulcrum record that does not exist reaches the service.
- */
 @TestConfiguration(proxyBeanMethods = false)
 @Profile("e2e-test")
 public class FulcrumStubConfiguration {
@@ -102,16 +83,6 @@ public class FulcrumStubConfiguration {
     }
   }
 
-  /**
-   * Pulls the looked-up record id back out of the SQL statement. Returns {@code null} for the
-   * unfiltered "fetch every row" statement and for a statement carrying no id at all, both of which
-   * the stub answers with an empty result.
-   *
-   * <p>The statement arrives percent-encoded - RestClient escapes the {@code =} of the filter as
-   * {@code %3D} and every space as {@code %20}, since both are query delimiters - so it has to be
-   * decoded before the filter can be matched. Decoding is safe to do unconditionally here: the
-   * statement contains no literal {@code %}.
-   */
   static UUID recordIdOf(URI requestUri) {
     String statement =
         UriComponentsBuilder.fromUri(requestUri)
@@ -139,10 +110,6 @@ public class FulcrumStubConfiguration {
     return "{\"rows\": []}";
   }
 
-  /**
-   * One sensor row, trimmed to what {@code SensorService} actually reads: the id it asked for and
-   * the three offset coordinates it copies onto the sensor.
-   */
   private static String sensorResponse(UUID recordId) {
     return """
     {
@@ -164,10 +131,6 @@ public class FulcrumStubConfiguration {
         .formatted(recordId, STUB_X, STUB_Y, STUB_Z);
   }
 
-  /**
-   * Owns the stub's lifecycle. {@link HttpServer#stop(int)} takes an argument, so Spring cannot
-   * infer it as a destroy method; {@link AutoCloseable#close()} it can.
-   */
   public record FulcrumStub(HttpServer server) implements AutoCloseable {
 
     private static final int STOP_IMMEDIATELY = 0;

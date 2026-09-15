@@ -211,8 +211,6 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
         ctx.errorId(),
         upstreamDetail(e));
 
-    // The upstream's message can carry query internals, so it stays in the log; clients get the
-    // correlation id and the status to distinguish "they are down" from "we sent nonsense".
     ErrorDto payload =
         ErrorDto.global(
             "error.upstream.failed",
@@ -221,14 +219,6 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
     return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(payload);
   }
 
-  /**
-   * Reads whatever the upstream said about the failure. Spring keeps the raw response body on the
-   * exception, so the upstream's own error contract is decoded here rather than in every client:
-   * Fulcrum documents {@link BadRequestResponse} for its failures. Any other body - a proxy error
-   * page, or a response from an upstream with a different contract - falls back to the raw text,
-   * as does an exception that was not produced by a client with message converters, where
-   * {@code getResponseBodyAs} refuses to convert at all.
-   */
   private static String upstreamDetail(RestClientResponseException e) {
     try {
       BadRequestResponse parsed = e.getResponseBodyAs(BadRequestResponse.class);
@@ -276,16 +266,6 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
     return ErrorDto.form(messageKey, params);
   }
 
-  /**
-   * Extracts annotation attributes from Bean Validation constraints so clients
-   * can render parameterized messages.
-   *
-   * <p>For example, {@code @Size(min = 3, max = 20)} becomes:
-   * {@code {"min": 3, "max": 20}}.
-   *
-   * @param error validation error containing the constraint metadata
-   * @return constraint parameters or an empty map if metadata cannot be extracted
-   */
   private Map<String, Object> extractConstraintParams(ObjectError error) {
 
     try {
