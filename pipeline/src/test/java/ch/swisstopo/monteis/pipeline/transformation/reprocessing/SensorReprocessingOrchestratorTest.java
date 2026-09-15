@@ -5,14 +5,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.ChunkProcessingResult;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +33,8 @@ class SensorReprocessingOrchestratorTest {
 
   private SensorReprocessingOrchestrator sensorReprocessingOrchestrator;
 
+  private static final String DAS_KEY = "SOL_EXPERTS__deviceA__temperature";
+
   @BeforeEach
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
@@ -37,37 +42,54 @@ class SensorReprocessingOrchestratorTest {
         new SensorReprocessingOrchestrator(sensorReadingRepository, chunkService, meterRegistry);
   }
 
-  @Test
-  void should_skip_reprocessing_when_no_outdated_records_found() {
-    // given
-    ActiveSensorConfig config =
-        new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 2));
+  private static ActiveSensorConfig config(UUID sensorParameterId, int version) {
+    return new ActiveSensorConfig(
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS,
+            "deviceA",
+            "temperature",
+            sensorParameterId,
+            "x + 1",
+            100.0,
+            0.0,
+            version));
+  }
 
-    given(sensorReadingRepository.checkOldSensorData(config.getConfig())).willReturn(false);
+  @Test
+  void should_skip_reprocessing_when_neither_branch_has_outdated_records() {
+    // given
+    UUID sensorParameterId = UUID.randomUUID();
+    ActiveSensorConfig config = config(sensorParameterId, (short) 2);
+
+    given(sensorReadingRepository.checkOldSensorDataById(sensorParameterId, (short) 2))
+        .willReturn(false);
+    given(sensorReadingRepository.checkOldSensorDataByDasKeyUnbackfilled(DAS_KEY, (short) 2))
+        .willReturn(false);
 
     // when
     sensorReprocessingOrchestrator.checkAndReprocessHistoricalData(config);
 
     // then
-    then(sensorReadingRepository).should().checkOldSensorData(config.getConfig());
     then(chunkService).shouldHaveNoInteractions();
-
-    assertThat(meterRegistry.get("pipeline.reprocessing.run.duration").timer().count()).isZero();
+    assertThat(meterRegistry.get("pipeline.reprocessing.run.duration").timer().count())
+        .isEqualTo(1);
   }
 
   @Test
-  void should_reprocess_in_chunks_until_no_records_left() {
+  void should_reprocess_id_matched_backlog_in_chunks_until_no_records_left() {
     // given
-    ActiveSensorConfig config =
-        new ActiveSensorConfig(new SensorConfig("deviceB", "x + 2", 100.0, 0.0, 3));
+    UUID sensorParameterId = UUID.randomUUID();
+    ActiveSensorConfig config = config(sensorParameterId, (short) 3);
 
-    given(sensorReadingRepository.checkOldSensorData(config.getConfig())).willReturn(true);
+    given(sensorReadingRepository.checkOldSensorDataById(sensorParameterId, (short) 3))
+        .willReturn(true);
+    given(sensorReadingRepository.checkOldSensorDataByDasKeyUnbackfilled(DAS_KEY, (short) 3))
+        .willReturn(false);
 
     OffsetDateTime firstCursor = OffsetDateTime.now().minusMinutes(1);
     OffsetDateTime secondCursor = OffsetDateTime.now().minusMinutes(2);
 
-    // Simulate returning 100 records on the first call, 50 on the second, and 0 on the third
-    given(chunkService.processNextChunk(eq(config), any()))
+    given(chunkService.processNextChunkById(eq(config), any()))
         .willReturn(
             new ChunkProcessingResult(100, firstCursor),
             new ChunkProcessingResult(50, secondCursor),
@@ -77,15 +99,43 @@ class SensorReprocessingOrchestratorTest {
     sensorReprocessingOrchestrator.checkAndReprocessHistoricalData(config);
 
     // then
-    then(sensorReadingRepository).should().checkOldSensorData(config.getConfig());
+    then(chunkService).should(times(3)).processNextChunkById(eq(config), any());
+    then(chunkService).should().processNextChunkById(config, null);
+    then(chunkService).should().processNextChunkById(config, firstCursor);
+    then(chunkService).should().processNextChunkById(config, secondCursor);
+    then(chunkService).should(never()).processNextChunkByDasKeyUnbackfilled(any(), any(), any());
 
-    // The do-while loop should have executed exactly 3 times before terminating
-    then(chunkService).should(times(3)).processNextChunk(eq(config), any());
+    assertThat(meterRegistry.get("pipeline.reprocessing.run.duration").timer().count())
+        .isEqualTo(1);
+  }
 
-    // Each call must resume from the cursor returned by the previous one, starting at null
-    then(chunkService).should().processNextChunk(config, null);
-    then(chunkService).should().processNextChunk(config, firstCursor);
-    then(chunkService).should().processNextChunk(config, secondCursor);
+  @Test
+  void should_reprocess_das_key_unbackfilled_backlog_in_chunks_until_no_records_left() {
+    // given
+    UUID sensorParameterId = UUID.randomUUID();
+    ActiveSensorConfig config = config(sensorParameterId, (short) 1);
+
+    given(sensorReadingRepository.checkOldSensorDataById(sensorParameterId, (short) 1))
+        .willReturn(false);
+    given(sensorReadingRepository.checkOldSensorDataByDasKeyUnbackfilled(DAS_KEY, (short) 1))
+        .willReturn(true);
+
+    OffsetDateTime firstCursor = OffsetDateTime.now().minusMinutes(1);
+
+    given(chunkService.processNextChunkByDasKeyUnbackfilled(eq(config), eq(DAS_KEY), any()))
+        .willReturn(
+            new ChunkProcessingResult(20, firstCursor), new ChunkProcessingResult(0, firstCursor));
+
+    // when
+    sensorReprocessingOrchestrator.checkAndReprocessHistoricalData(config);
+
+    // then
+    then(chunkService)
+        .should(times(2))
+        .processNextChunkByDasKeyUnbackfilled(eq(config), eq(DAS_KEY), any());
+    then(chunkService).should().processNextChunkByDasKeyUnbackfilled(config, DAS_KEY, null);
+    then(chunkService).should().processNextChunkByDasKeyUnbackfilled(config, DAS_KEY, firstCursor);
+    then(chunkService).should(never()).processNextChunkById(any(), any());
 
     assertThat(meterRegistry.get("pipeline.reprocessing.run.duration").timer().count())
         .isEqualTo(1);

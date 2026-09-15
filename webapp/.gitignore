@@ -32,6 +32,7 @@ __screenshots__/
 /libpeerconnection.log
 testem.log
 .vitest-attachments/
+.vitest/
 
 # Playwright
 node_modules/

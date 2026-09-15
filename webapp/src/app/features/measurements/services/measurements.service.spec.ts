@@ -63,21 +63,21 @@ describe('MeasurementsService', () => {
       {
         id: SENSOR_1,
         name: 'Temperature',
-        code: 'T1',
+        dasKey: 'T1',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
         points: [],
       },
       {
         id: SENSOR_2,
         name: 'Distance',
-        code: 'D1',
+        dasKey: 'D1',
         unit: ChartDataResponseDto.UnitEnum.Meter,
         points: [],
       },
       {
         id: SENSOR_3,
         name: 'Temperature 2',
-        code: 'T2',
+        dasKey: 'T2',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
         points: [],
       },
@@ -90,11 +90,14 @@ describe('MeasurementsService', () => {
     const result = service.chartData.value()!;
 
     expect(result.datasets).toEqual([
-      { id: SENSOR_1, label: 'T1 [KELVIN]', data: [], yAxisId: 'y' },
-      { id: SENSOR_2, label: 'D1 [METER]', data: [], yAxisId: 'y2' },
-      { id: SENSOR_3, label: 'T2 [KELVIN]', data: [], yAxisId: 'y' },
+      { id: SENSOR_1, label: 'T1 [sensor.unit.option.kelvin.symbol]', data: [], yAxisId: 'y' },
+      { id: SENSOR_2, label: 'D1 [sensor.unit.option.meter.symbol]', data: [], yAxisId: 'y2' },
+      { id: SENSOR_3, label: 'T2 [sensor.unit.option.kelvin.symbol]', data: [], yAxisId: 'y' },
     ]);
-    expect(result.yAxisLabels).toEqual({ y: 'KELVIN', y2: 'METER' });
+    expect(result.yAxisLabels).toEqual({
+      y: 'sensor.unit.option.kelvin.symbol',
+      y2: 'sensor.unit.option.meter.symbol',
+    });
     expect(service.error()).toBeUndefined();
   });
 
@@ -118,7 +121,7 @@ describe('MeasurementsService', () => {
       {
         id: SENSOR_1,
         name: 'Temperature',
-        code: 'T1',
+        dasKey: 'T1',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
         points: [
           { timestamp: '2024-01-01T00:00:00Z', value: 10 },
@@ -135,7 +138,7 @@ describe('MeasurementsService', () => {
     expect(service.chartData.value()!.datasets).toEqual([
       {
         id: SENSOR_1,
-        label: 'T1 [KELVIN]',
+        label: 'T1 [sensor.unit.option.kelvin.symbol]',
         data: [
           { x: Date.parse('2024-01-01T00:00:00Z'), y: 10 },
           { x: Date.parse('2024-01-01T01:00:00Z'), y: 12 },
@@ -151,7 +154,7 @@ describe('MeasurementsService', () => {
       {
         id: SENSOR_1,
         name: 'Temperature',
-        code: 'T1',
+        dasKey: 'T1',
         unit: ChartDataResponseDto.UnitEnum.Kelvin,
         points: [
           { timestamp: undefined, value: 10 },
@@ -167,7 +170,7 @@ describe('MeasurementsService', () => {
     expect(service.chartData.value()!.datasets).toEqual([
       {
         id: SENSOR_1,
-        label: 'T1 [KELVIN]',
+        label: 'T1 [sensor.unit.option.kelvin.symbol]',
         data: [{ x: Date.parse('2024-01-01T00:00:00Z'), y: 12 }],
         yAxisId: 'y',
       },

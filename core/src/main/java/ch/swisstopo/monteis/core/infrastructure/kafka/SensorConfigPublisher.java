@@ -1,6 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.kafka;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.DasKey;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,40 +12,44 @@ import org.springframework.stereotype.Component;
 @Component
 public class SensorConfigPublisher {
 
-  private final KafkaTemplate<String, SensorConfig> kafkaTemplate;
+  private final KafkaTemplate<String, SensorParameterConfig> kafkaTemplate;
   private final String sensorConfigTopic;
 
   public SensorConfigPublisher(
-      KafkaTemplate<String, SensorConfig> kafkaTemplate,
+      KafkaTemplate<String, SensorParameterConfig> kafkaTemplate,
       @Value("${app.kafka.topics.sensor-config}") String sensorConfigTopic) {
     this.kafkaTemplate = kafkaTemplate;
     this.sensorConfigTopic = sensorConfigTopic;
   }
 
-  public void publish(Sensor sensor) {
-    for (SensorParameter parameter : sensor.getParameters()) {
-
-      // TODO: MON-143 also send config of inactive sensors,
-      //  since the active flag is used for filtering rather than deciding which values we parse
-      if (Boolean.FALSE.equals(parameter.getActive())) {
-        continue;
-      }
-
-      String identifier = parameter.getDasParameterAlias();
-
-      if (identifier == null || identifier.isBlank()) {
-        continue;
-      }
-
-      SensorConfig config =
-          new SensorConfig()
-              .sensorId(identifier)
-              .formula(parameter.getFormula().getExpression())
-              .upperBound(parameter.getAlarmLimits().upper())
-              .lowerBound(parameter.getAlarmLimits().lower())
-              .version(sensor.getVersion());
-
-      kafkaTemplate.send(sensorConfigTopic, identifier, config);
+  /**
+   * Publishes the config for a single sensor parameter, keyed by the composite DAS ingest key
+   * ({@code <DAS>__<das_sensor_alias>__<das_parameter_alias>}). Published regardless of {@code
+   * active} - that flag only filters what the UI fetches, the pipeline still needs to normalize
+   * and backfill readings for inactive parameters so their historical/ongoing data stays correct
+   * and available whenever an inactive sensor is looked at. Skips only parameters with a blank
+   * {@code dasParameterAlias}, since that can't be resolved to a valid Kafka key.
+   */
+  public void publish(Sensor sensor, SensorParameter parameter) {
+    String dasParameterAlias = parameter.getDasParameterAlias();
+    if (dasParameterAlias == null || dasParameterAlias.isBlank()) {
+      return;
     }
+
+    Das das = sensor.getDAS();
+    String dasKey = DasKey.compose(das, sensor.getDasSensorAlias(), dasParameterAlias);
+
+    SensorParameterConfig config =
+        new SensorParameterConfig()
+            .das(das)
+            .dasSensorAlias(sensor.getDasSensorAlias())
+            .dasParameterAlias(dasParameterAlias)
+            .sensorParameterId(parameter.getId())
+            .formula(parameter.getFormula().getExpression())
+            .upperBound(parameter.getAlarmLimits().upper())
+            .lowerBound(parameter.getAlarmLimits().lower())
+            .version(parameter.getVersion());
+
+    kafkaTemplate.send(sensorConfigTopic, dasKey, config);
   }
 }

@@ -6,6 +6,8 @@ import java.util.UUID;
 import org.javers.core.metamodel.annotation.Id;
 
 public class SensorParameter {
+  private static final String DEFAULT_DAS_PARAMETER_ALIAS = "value";
+
   @Id private UUID id;
   private String name;
   private String dasParameterAlias;
@@ -33,7 +35,11 @@ public class SensorParameter {
       Boolean active,
       String comment) {
     this.name = name;
-    this.dasParameterAlias = dasParameterAlias;
+    // Most DAS devices only ever report a single measurement, conventionally named "value"
+    this.dasParameterAlias =
+        (dasParameterAlias == null || dasParameterAlias.isBlank())
+            ? DEFAULT_DAS_PARAMETER_ALIAS
+            : dasParameterAlias;
     this.type = type;
     this.unit = unit;
     this.formula = formula;

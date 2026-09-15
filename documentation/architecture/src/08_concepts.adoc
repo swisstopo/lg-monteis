@@ -336,9 +336,11 @@ Dieser Flow verarbeitet neue, normalisierte Sensordaten, standardisiert sie und 
 
 ===== Historische Daten-Reprozessierung (Reprocess-Flow)
 
-Dieser Flow wird durch ein Aktualisierungs-Event der Sensorkonfiguration (`SensorConfig`) getriggert und ist darauf ausgelegt, potenziell Hunderttausende historischer Zeitreihendaten rückwirkend an neue mathematische Formeln anzupassen. Die Architektur trennt dabei die Steuermechanismen strikt von den ressourcenintensiven Datenbankoperationen, um den Speicherbedarf konsistent niedrig zu halten und Deadlocks zu verhindern.
+Dieser Flow wird durch ein Aktualisierungs-Event der Sensorkonfiguration (`SensorParameterConfig`) getriggert und ist darauf ausgelegt, potenziell Hunderttausende historischer Zeitreihendaten rückwirkend an neue mathematische Formeln anzupassen. Die Architektur trennt dabei die Steuermechanismen strikt von den ressourcenintensiven Datenbankoperationen, um den Speicherbedarf konsistent niedrig zu halten und Deadlocks zu verhindern.
 
 * **High-Performance Guard:** Der `SensorReprocessingOrchestrator` führt initial eine leichte `EXISTS`-Abfrage auf der Datenbank aus. Sind für die betroffene Formelversion keine veralteten Datensätze vorhanden, terminiert der Prozess ressourcenschonend innerhalb weniger Millisekunden.
+
+* **Zwei getrennte Backlogs statt eines `OR`:** Ein Config-Event triggert zwei unabhängige Guard-Abfragen und - falls nötig - zwei unabhängige `do-while`-Chunk-Läufe: (1) Datensätze, die bereits mit `sensor_parameter_id` markiert sind (überlebt beliebig viele vergangene/zukünftige DAS-Key-Remappings, da die UUID nie wechselt), und (2) Datensätze mit noch `NULL`-`sensor_parameter_id` unter dem aktuellen DAS-Key (einmaliges Backfill, bevor die Config für diesen Key je bekannt war). Eine einzelne `OR`-verknüpfte Abfrage über beide Spalten würde denselben BitmapOr-plus-Sort-Effekt riskieren, den ein redundanter Index laut Kommentar in `sensor_reading_sensor_time_idx` bereits einmal verursacht hat - deshalb zwei separate, indexfreundliche Scans statt einer kombinierten Query.
 
 * **Feingranulare Transaktionsgrenzen via `TransactionTemplate`:**
 Um die Belegungsdauer wertvoller Datenbankverbindungen im HikariCP-Pool zu minimieren, wird im `HistoricalReadingChunkProcessor` bewusst auf eine deklarative Methodensperre via `@Transactional` verzichtet. Auch wenn die mathematische Auswertung der normalisierten Werte dank des hochperformanten Parsington-Expression-Cachings im Arbeitsspeicher nur wenige Millisekunden beansprucht, trennt die Architektur die Netzwerk-I/O-Phasen strikt voneinander:
@@ -370,6 +372,11 @@ Schlägt die mathematische Transformation eines historischen Datensatzes fehl (z
     // 2. norm_value auf null setzen: Verhindert die Auslieferung korrupter Berechnungen an nachgelagerte Systeme
     reading.setNormValue(null);
 
+    // 3. sensor_parameter_id trotzdem nachtragen: sonst bliebe diese Zeile dauerhaft im
+    // DAS-Key-Unbackfilled-Backlog haengen, da ihre version nun der Zielversion entspricht
+    // und sie von diesem Scan nie wieder gefunden wuerde.
+    reading.setSensorParameterId(sensorConfig.getSensorParameterId());
+
     return reading;
 }
 ----
@@ -394,7 +401,7 @@ Analog zur `RawSolExpertsSensorData`-Klasse muss ein spezifisches Java-Record f�
 Um das Messaging-Plumbing (Kafka) vollständig von der Datenübersetzung zu entkoppeln, setzt die Pipeline auf das **Strategy Pattern**. Für jede neue Datenquelle wird eine spezifische Implementierung des generischen Interfaces `VendorDataNormalizer<T>` als Spring `@Component` bereitgestellt.
 
 * **Zustandslose Transformation:** Der Normalizer nimmt das rohe Hersteller-Record entgegen und übersetzt es in eine Liste von standardisierten Spring `Message<NormalizedSensorData>`-Objekten.
-* **Kritisch – DAS-Key als Kafka Partitioning Key (`KafkaHeaders.KEY`):** Damit die nachgelagerte Pipeline (insbesondere der `SensorDataBatchListener`) Messwerte desselben Sensor-Parameters in strikter zeitlicher Reihenfolge und ohne Race-Conditions verarbeiten kann — und damit dieselbe Nachricht sich im `SensorConfigCache` verlustfrei auflösen lässt — muss beim Aufbau der ausgehenden Nachricht **zwingend** der zusammengesetzte DAS-Key (`<DAS>__<das_sensor_alias>__<das_parameter_alias>`, siehe <<DAS-Mapping: Inbound-Key vs. Persistenz-Referenz>>) als Kafka-Key gesetzt werden. Der `DAS`-Enum-Wert ist dabei je Adapter fix (z. B. `SOLEXPERTS`), `das_sensor_alias` entspricht dem Geräte-Identifier der Rohnachricht (`deviceName`) und `das_parameter_alias` dem Feldnamen innerhalb der `values`-Map. Dies geschieht über den `MessageBuilder` mittels `.setHeader(KafkaHeaders.KEY, dasKey)`.
+* **Kritisch – DAS-Key als Kafka Partitioning Key (`KafkaHeaders.KEY`):** Damit die nachgelagerte Pipeline (insbesondere der `SensorDataBatchListener`) Messwerte desselben Sensor-Parameters in strikter zeitlicher Reihenfolge und ohne Race-Conditions verarbeiten kann — und damit dieselbe Nachricht sich im `SensorConfigCache` verlustfrei auflösen lässt — muss beim Aufbau der ausgehenden Nachricht **zwingend** der zusammengesetzte DAS-Key (`<DAS>__<das_sensor_alias>__<das_parameter_alias>`, siehe <<DAS-Mapping: Inbound-Key vs. Persistenz-Referenz>>) als Kafka-Key gesetzt werden. Der `DAS`-Enum-Wert ist dabei je Adapter fix (z. B. `SOL_EXPERTS`), `das_sensor_alias` entspricht dem Geräte-Identifier der Rohnachricht (`deviceName`) und `das_parameter_alias` dem Feldnamen innerhalb der `values`-Map. Dies geschieht über den `MessageBuilder` mittels `.setHeader(KafkaHeaders.KEY, dasKey)`.
 
 **Beispiel-Implementierung des Normalizers:**
 
@@ -403,7 +410,7 @@ Um das Messaging-Plumbing (Kafka) vollständig von der Datenübersetzung zu entk
 @Component
 public class SolExpertsSensorDataNormalizer implements VendorDataNormalizer<RawSolExpertsSensorData> {
 
-    private static final Das DAS = Das.SOLEXPERTS;
+    private static final Das DAS = Das.SOL_EXPERTS;
 
     @Override
     public List<Message<NormalizedSensorData>> normalizeToMessages(RawSolExpertsSensorData rawPayload) {
@@ -524,10 +531,10 @@ Rohmessungen treffen ausschliesslich mit den Identifikatoren des jeweiligen Erfa
 ----
 <DAS>__<das_sensor_alias>__<das_parameter_alias>
 
-Beispiel: SOLEXPERTS__BH12-P03__temperature
+Beispiel: SOL_EXPERTS__BH12-P03__temperature
 ----
 
-* **Präfix `DAS`:** Der Enum-Wert des Erfassungssystems (z. B. `SOLEXPERTS`). Damit Core (Publisher) und Pipeline (Konsument) exakt dasselbe Vokabular verwenden, ist der `Das`-Enum **nicht** dupliziert, sondern einmalig im geteilten Maven-Modul `contracts` definiert und wird von beiden Modulen als Abhängigkeit eingebunden.
+* **Präfix `DAS`:** Der Enum-Wert des Erfassungssystems (z. B. `SOL_EXPERTS`). Damit Core (Publisher) und Pipeline (Konsument) exakt dasselbe Vokabular verwenden, ist der `Das`-Enum **nicht** dupliziert, sondern einmalig im geteilten Maven-Modul `contracts` definiert und wird von beiden Modulen als Abhängigkeit eingebunden.
 * **Mittelteil `das_sensor_alias`:** Der auf dem DAS verwendete Geräte-/Sensor-Identifier (`sensor.das_sensor_alias`), z. B. der `deviceName` aus der Rohnachricht.
 * **Suffix `das_parameter_alias`:** Der auf dem DAS verwendete Feldname der konkreten Messgrösse (`sensor_parameter.das_parameter_alias`), z. B. der Key innerhalb der `values`-Map einer Rohnachricht.
 
@@ -536,7 +543,9 @@ Dieser zusammengesetzte Key wird an zwei Stellen verwendet:
 1. **Als Kafka-Message-Key** auf `internal-sensor-config`, analog zum bisherigen Pattern (bisher `sensor.code`, siehe <<Übersicht der Kafka Topics>>). Der `Normalizer` einer Datenquelle (siehe <<Integration neuer externer Datenquellen>>) baut denselben Key beim Verarbeiten einer Rohnachricht auf und verwendet ihn ebenfalls als Kafka-Partitionierungs-Key für die nachgelagerten Topics.
 2. **Als Lookup-Key im `SensorConfigCache`** der Pipeline-Worker: Der Cache-Miss/Hit erfolgt weiterhin wie bisher über eine simple Map, nur ist der Key jetzt der zusammengesetzte DAS-Key statt eines flachen `sensorId`-Strings.
 
-Der eigentliche Cache-*Wert* (das `SensorConfig`/`SensorParameterConfig`-Objekt, siehe <<API-Schnittstellen (Contracts)>>) transportiert zusätzlich `sensor_parameter_id`. **Genau diese UUID — nicht der DAS-Key — wird beim Schreiben in die TimeScaleDB als Fremdschlüssel persistiert** (siehe `sensor_reading.sensor_parameter_id` weiter unten). Die restliche Transformation (Formel-Anwendung, SI-Standardisierung, Grenzwert-Validierung) bleibt dabei unverändert.
+Der eigentliche Cache-*Wert* (das `SensorParameterConfig`-Objekt, siehe <<API-Schnittstellen (Contracts)>>) transportiert zusätzlich `sensor_parameter_id`. Diese UUID wird beim Schreiben in die TimeScaleDB zusätzlich zum DAS-Key in einer separaten, nullable `sensor_parameter_id`-Spalte abgelegt (siehe `sensor_reading.sensor_parameter_id` weiter unten) — **nicht als Ersatz des Primärschlüssels**. Die restliche Transformation (Formel-Anwendung, SI-Standardisierung, Grenzwert-Validierung) bleibt dabei unverändert.
+
+NOTE: Rohmessungen können eintreffen, bevor die Pipeline die zugehörige `sensor_parameter_id` überhaupt kennt (Cache-Miss: Core hat den Parameter noch nie publiziert, oder der Pod wurde neu gestartet, bevor die Config erneut konsumiert wurde). Der Primärschlüssel von `sensor_reading` muss daher auf dem DAS-Key bleiben, der aus jeder Rohnachricht immer deterministisch ableitbar ist - `sensor_parameter_id` ist eine separate, nullable Spalte, die beim Schreiben gesetzt wird, sobald sie bekannt ist, und andernfalls retroaktiv vom bestehenden Reprocessing-Flow nachgetragen wird, sobald ein Config-Event für den betroffenen DAS-Key eintrifft (siehe <<Historische Daten-Reprozessierung (Reprocess-Flow)>>).
 
 Diese Entkopplung von Inbound-Key (volatil, DAS-spezifisch) und Persistenz-Referenz (stabil, systemübergreifend eindeutig) ist bewusst gewählt: Ändert sich z. B. die Benennung eines Geräts auf dem DAS (Vendor benennt `das_sensor_alias` um) oder wird ein Sensor auf ein neues Erfassungssystem migriert, aktualisiert Core lediglich `sensor.das`/`das_sensor_alias`/`sensor_parameter.das_parameter_alias` und publiziert die neue Zuordnung (neuer DAS-Key → dieselbe `sensor_parameter_id`) auf `internal-sensor-config`. Der Pipeline-Cache re-keyed sich dadurch selbständig; bereits geschriebene historische Messwerte bleiben unverändert über dieselbe `sensor_parameter_id` referenziert und gehen bei einer Remapping-Änderung nicht verloren.
 
@@ -551,28 +560,41 @@ Das Schema der TimeScaleDB für die hochfrequenten Zeitreihendaten umfasst neben
 CREATE TYPE range_category AS ENUM ('too_low', 'correct', 'too_high');
 
 -- 2. Base Table erstellen (Raw Data)
--- Hinweis: sensor_parameter_id referenziert fachlich sensor_parameter.id
--- in der Metadaten-DB (kein DB-FK, getrenntes System) - der Pipeline via
--- Kafka Config-Objekt mitgeteilt, statt wie bisher ueber einen sensor_code.
+-- sensor_id ist der zusammengesetzte DAS-Key (<DAS>__<das_sensor_alias>__<das_parameter_alias>),
+-- immer deterministisch aus der Rohnachricht ableitbar - bleibt deshalb der Primaerschluessel.
+-- sensor_parameter_id referenziert fachlich sensor_parameter.id in der Metadaten-DB (kein DB-FK,
+-- getrenntes System), via Kafka Config-Objekt mitgeteilt. Sie ist NULL, bis die Pipeline die
+-- Config fuer diesen DAS-Key kennt, und wird retroaktiv vom Reprocessing-Flow nachgetragen -
+-- kann daher nicht Teil des Primaerschluessels sein.
 CREATE TABLE sensor_reading (
     timestamp           TIMESTAMPTZ NOT NULL,
-    sensor_parameter_id UUID NOT NULL,
+    sensor_id            TEXT NOT NULL,
+    sensor_parameter_id UUID,
     raw_value           DOUBLE PRECISION NOT NULL,
     norm_value          DOUBLE PRECISION,
     version             SMALLINT DEFAULT 1,
     status              range_category,
 
-    -- Composite Primary Key: Erzwingt Eindeutigkeit pro Sensor-Parameter & Zeitstempel
-    PRIMARY KEY (timestamp, sensor_parameter_id)
+    -- Composite Primary Key: Erzwingt Eindeutigkeit pro DAS-Key & Zeitstempel
+    PRIMARY KEY (timestamp, sensor_id)
 );
+
+-- Serves the reprocessing backlog matched by sensor_parameter_id with a plain index scan that
+-- satisfies ORDER BY timestamp DESC for free (see <<Historische Daten-Reprozessierung (Reprocess-Flow)>>).
+-- A plain (sensor_id, timestamp DESC) index (analogous, for the DAS-key-matched backlog) already
+-- serves per-sensor range scans via the primary key above.
+CREATE INDEX sensor_reading_sensor_parameter_time_idx
+    ON sensor_reading (sensor_parameter_id, timestamp DESC);
 
 -- 3. In eine Hypertable konvertieren (Partitionierung nach 'timestamp')
 SELECT create_hypertable('sensor_reading', 'timestamp');
 
 -- 4. Native Kompression für Originaldaten aktivieren (nach 120 Tagen)
+-- compress_segmentby bleibt auf sensor_id (immer gesetzt), nicht sensor_parameter_id (nullable) -
+-- TimescaleDB erfordert eine NOT NULL-taugliche Segmentierungsspalte.
 ALTER TABLE sensor_reading SET (
     timescaledb.compress,
-    timescaledb.compress_segmentby = 'sensor_parameter_id'
+    timescaledb.compress_segmentby = 'sensor_id'
 );
 SELECT add_compression_policy('sensor_reading', INTERVAL '120 days');
 
@@ -690,7 +712,7 @@ paths:
             (see "DAS-Mapping: Inbound-Key vs. Persistenz-Referenz").
           schema:
             type: string
-            example: "SOLEXPERTS__BH12-P03__temperature"
+            example: "SOL_EXPERTS__BH12-P03__temperature"
       responses:
         '200':
           description: Successful response containing the sensor parameter configuration.
@@ -721,7 +743,7 @@ components:
           description: The DAS (data acquisition system) enum value this parameter is sourced from. Defined
             once in the shared "contracts" module and referenced by both core (publisher) and pipeline
             (SensorConfigCache), so both sides agree on the same vocabulary.
-          example: "SOLEXPERTS"
+          example: "SOL_EXPERTS"
         das_sensor_alias:
           type: string
           description: The device/sensor identifier used on the DAS (sensor.das_sensor_alias). Forms the

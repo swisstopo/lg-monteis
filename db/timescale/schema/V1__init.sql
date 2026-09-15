@@ -3,7 +3,6 @@
 CREATE TYPE range_category AS ENUM ('too_low', 'correct', 'too_high');
 
 -- 2. Base Table erstellen (Raw Data)
--- Hinweis: sensor_id ist sensor_code in der Metadaten DB
 CREATE TABLE IF NOT EXISTS sensor_reading (
                                               timestamp   TIMESTAMPTZ NOT NULL,
                                               sensor_id   TEXT NOT NULL,

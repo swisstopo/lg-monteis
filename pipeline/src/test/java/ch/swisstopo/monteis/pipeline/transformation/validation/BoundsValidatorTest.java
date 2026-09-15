@@ -3,13 +3,15 @@ package ch.swisstopo.monteis.pipeline.transformation.validation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.then;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent;
 import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent.BoundType;
 import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +41,9 @@ class BoundsValidatorTest {
   @Test
   void should_return_ok_when_value_is_strictly_within_bounds() {
     // given
-    SensorConfig config = new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1);
+    SensorParameterConfig config =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x + 1", 100.0, 0.0, 1);
 
     // when
     BoundStatus status =
@@ -53,7 +57,9 @@ class BoundsValidatorTest {
   @Test
   void should_return_too_high_and_publish_upper_breach_event_with_exact_timestamp() {
     // given
-    SensorConfig config = new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1);
+    SensorParameterConfig config =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x + 1", 100.0, 0.0, 1);
 
     // when
     BoundStatus status =
@@ -75,7 +81,9 @@ class BoundsValidatorTest {
   @Test
   void should_return_too_low_and_publish_lower_breach_event_with_exact_timestamp() {
     // given
-    SensorConfig config = new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1);
+    SensorParameterConfig config =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceB", "temperature", UUID.randomUUID(), "x + 2", 50.0, -10.0, 1);
 
     // when
     BoundStatus status =
@@ -97,7 +105,9 @@ class BoundsValidatorTest {
   @Test
   void should_return_too_high_but_not_publish_event_when_reprocessing() {
     // given
-    SensorConfig config = new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1);
+    SensorParameterConfig config =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x + 1", 100.0, 0.0, 1);
 
     // when
     BoundStatus status =
@@ -111,7 +121,9 @@ class BoundsValidatorTest {
   @Test
   void should_return_too_low_but_not_publish_event_when_reprocessing() {
     // given
-    SensorConfig config = new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1);
+    SensorParameterConfig config =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceB", "temperature", UUID.randomUUID(), "x + 2", 50.0, -10.0, 1);
 
     // when
     BoundStatus status =

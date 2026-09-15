@@ -56,12 +56,15 @@ public interface SensorWebMapper {
   @Mapping(target = "version", ignore = true)
   SensorType toDomain(WriteSensorTypeDto dto);
 
-  // id/version aren't provided by the write DTO: JooqSensorRepository resolves/creates the
-  // Formula by expression (findOrCreateFormulaByExpression), so they're intentionally not mapped
-  // here.
-  @Mapping(target = "id", ignore = true)
-  @Mapping(target = "version", ignore = true)
-  Formula toDomain(WriteFormulaDto dto);
+  // A null/omitted formula means the caller wants the default identity formula, not a missing
+  // Formula - the frontend leaves it out entirely when the field is blank (see sensor-edit.ts),
+  // relying on this default rather than sending an explicit "x". Written by hand instead of
+  // generated: MapStruct's default null-handling would just propagate null here, leaving
+  // SensorParameter.formula null and NPEing downstream (JooqSensorRepository,
+  // SensorConfigPublisher).
+  default Formula toDomain(WriteFormulaDto dto) {
+    return dto == null ? new Formula() : new Formula(dto.expression());
+  }
 
   Coordinates toDomain(CoordinatesDto dto);
 

@@ -358,7 +358,7 @@
       }
     },
     "column": {
-      "sensorId": "Sensor ID",
+      "dasKey": "DAS Key",
       "timestamp": "Timestamp",
       "normValue": "Value (Normalized)",
       "rawValue": "Value (Raw)"

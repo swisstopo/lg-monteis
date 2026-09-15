@@ -11,11 +11,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
-import ch.swisstopo.monteis.core.modules.sensor.domain.DAS;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
@@ -208,7 +208,7 @@ class SensorControllerTest {
             null,
             "SENS-02",
             "Formula",
-            DAS.SOL_EXPERTS,
+            Das.SOL_EXPERTS,
             null,
             null,
             null,
@@ -234,7 +234,7 @@ class SensorControllerTest {
             SENSOR_ID,
             "SENS-02",
             "Formula",
-            DAS.SOL_EXPERTS,
+            Das.SOL_EXPERTS,
             null,
             null,
             new CoordinatesDto(0, 0, 0),
@@ -410,7 +410,7 @@ class SensorControllerTest {
         id,
         "Test",
         "SENS-01",
-        DAS.SOL_EXPERTS,
+        Das.SOL_EXPERTS,
         null,
         null,
         null,
@@ -440,7 +440,7 @@ class SensorControllerTest {
         id,
         name,
         "SENS-01",
-        DAS.SOL_EXPERTS,
+        Das.SOL_EXPERTS,
         null,
         null,
         new CoordinatesDto(0, 0, 0),

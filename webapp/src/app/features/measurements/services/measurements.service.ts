@@ -1,7 +1,8 @@
 import { computed, inject, Injectable, resource, signal } from '@angular/core';
 import { ChartDataResponseDto, ErrorDto, MeasurementControllerService } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
-import { translate, TranslateService } from '@ngx-translate/core';
+import { getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
+import { translate } from '@ngx-translate/core';
 import { ChartDataset, ChartPoint } from '@ui/chart';
 import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
 
@@ -20,7 +21,7 @@ interface LoadedChartData {
 @Injectable({ providedIn: 'root' })
 export class MeasurementsService {
   private readonly api = inject(MeasurementControllerService);
-  private readonly translateService = inject(TranslateService);
+  private readonly unitMetadata = getUnitMetadata();
   private readonly chartsRequest = signal<ChartRequest | undefined>(undefined);
   readonly error = computed<ErrorDto[] | undefined>(() => {
     const err = this.chartData.error();
@@ -72,8 +73,7 @@ export class MeasurementsService {
       // use flatMap to safely filter out bad points without crashing the whole chart
       const data: ChartPoint[] = (sensor.points ?? []).flatMap((item) => {
         if (item.timestamp === undefined || item.value === undefined) {
-          // TODO MON-143
-          console.warn(`[Telemetry] Dropped malformed point for sensor ${sensor.code}`);
+          console.warn(`[Telemetry] Dropped malformed point for sensor ${sensor.dasKey}`);
           return [];
         }
         return [{ x: Date.parse(item.timestamp), y: item.value }];
@@ -81,8 +81,7 @@ export class MeasurementsService {
 
       return {
         id: sensor.id ?? `sensor-${index}`,
-        // TODO MON-143
-        label: `${sensor.code ?? 'unknown'} [${sensor.unit ?? ''}]`,
+        label: `${sensor.dasKey ?? 'unknown'} [${this.unitMetadata[sensor.unit as Unit]?.symbol() ?? ''}]`,
         data: data,
         yAxisId: axisIdsByUnit.get(sensor.unit ?? ''),
       };
@@ -92,7 +91,7 @@ export class MeasurementsService {
   private buildYAxisLabels(axisIdsByUnit: Map<string, string>): Record<string, string> {
     const labels: Record<string, string> = {};
     axisIdsByUnit.forEach((axisId, unit) => {
-      labels[axisId] = unit ? `${unit}` : '';
+      labels[axisId] = this.unitMetadata[unit as Unit]?.symbol() ?? '';
     });
     return labels;
   }

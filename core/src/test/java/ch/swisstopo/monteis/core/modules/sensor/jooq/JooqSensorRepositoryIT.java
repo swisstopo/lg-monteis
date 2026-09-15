@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.query.NumberFilterModel;
@@ -142,8 +143,8 @@ class JooqSensorRepositoryIT {
           List<Sensor> rows = repository.findPaged(request).rows();
 
           // Assert: among our two sensors, the Z one must come first in descending order
-          int indexOfZ = indexOfCode(rows, "SORT-Z");
-          int indexOfA = indexOfCode(rows, "SORT-A");
+          int indexOfZ = indexOfDasKey(rows, "SORT-Z");
+          int indexOfA = indexOfDasKey(rows, "SORT-A");
           assertTrue(
               indexOfZ < indexOfA, "ZZZ_SORT_TEST should sort before AAA_SORT_TEST in DESC order");
         });
@@ -214,7 +215,7 @@ class JooqSensorRepositoryIT {
 
   @Test
   @Transactional
-  void should_throw_on_duplicate_code() {
+  void should_throw_on_duplicate_das_key() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
@@ -425,7 +426,7 @@ class JooqSensorRepositoryIT {
 
   @Test
   @Transactional
-  void should_throw_on_update_duplicated_code() {
+  void should_throw_on_update_duplicated_das_key() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
@@ -541,13 +542,13 @@ class JooqSensorRepositoryIT {
   /**
    * Helper to quickly build a valid domain Sensor for testing.
    */
-  private Sensor createDummySensor(String code, String name, String formulaExpression) {
+  private Sensor createDummySensor(String dasKey, String name, String formulaExpression) {
     return createDummySensorWithCoordinates(
-        code, name, formulaExpression, new Coordinates(2400, -12007, -1600));
+        dasKey, name, formulaExpression, new Coordinates(2400, -12007, -1600));
   }
 
   private Sensor createDummySensorWithCoordinates(
-      String code, String name, String formulaExpression, Coordinates coordinates) {
+      String dasKey, String name, String formulaExpression, Coordinates coordinates) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
     SensorParameter parameter =
@@ -563,18 +564,17 @@ class JooqSensorRepositoryIT {
             null,
             null);
 
-    // TODO MON-143
-    Sensor sensor = new Sensor(name, code, DAS.SOL_EXPERTS, null, null, coordinates, true, null);
+    Sensor sensor = new Sensor(name, dasKey, Das.SOL_EXPERTS, null, null, coordinates, true, null);
     sensor.setParameters(new ArrayList<>(List.of(parameter)));
     return sensor;
   }
 
-  private int indexOfCode(List<Sensor> rows, String code) {
+  private int indexOfDasKey(List<Sensor> rows, String dasKey) {
     for (int i = 0; i < rows.size(); i++) {
-      if (code.equals(rows.get(i).getDasSensorAlias())) {
+      if (dasKey.equals(rows.get(i).getDasSensorAlias())) {
         return i;
       }
     }
-    throw new AssertionError("Expected to find sensor with code " + code);
+    throw new AssertionError("Expected to find sensor with dasKey " + dasKey);
   }
 }

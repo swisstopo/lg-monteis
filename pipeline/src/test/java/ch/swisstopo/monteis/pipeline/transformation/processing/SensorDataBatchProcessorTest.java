@@ -5,7 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.mock;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.internal.model.NormalizedSensorData;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
@@ -17,6 +18,7 @@ import ch.swisstopo.monteis.pipeline.transformation.processing.cache.SensorConfi
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,9 +81,27 @@ class SensorDataBatchProcessorTest {
     List<NormalizedSensorData> batch = List.of(data1, data2);
 
     ActiveSensorConfig configA =
-        new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1));
+        new ActiveSensorConfig(
+            new SensorParameterConfig(
+                Das.SOL_EXPERTS,
+                "deviceA",
+                "temperature",
+                UUID.randomUUID(),
+                "x + 1",
+                100.0,
+                0.0,
+                1));
     ActiveSensorConfig configB =
-        new ActiveSensorConfig(new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1));
+        new ActiveSensorConfig(
+            new SensorParameterConfig(
+                Das.SOL_EXPERTS,
+                "deviceB",
+                "temperature",
+                UUID.randomUUID(),
+                "x + 2",
+                50.0,
+                -10.0,
+                1));
 
     given(sensorConfigCache.getActiveConfig("deviceA")).willReturn(configA);
     given(sensorConfigCache.getActiveConfig("deviceB")).willReturn(configB);
@@ -122,9 +142,27 @@ class SensorDataBatchProcessorTest {
     List<NormalizedSensorData> batch = List.of(validData, poisonData);
 
     ActiveSensorConfig configA =
-        new ActiveSensorConfig(new SensorConfig("deviceA", "x + 1", 100.0, 0.0, 1));
+        new ActiveSensorConfig(
+            new SensorParameterConfig(
+                Das.SOL_EXPERTS,
+                "deviceA",
+                "temperature",
+                UUID.randomUUID(),
+                "x + 1",
+                100.0,
+                0.0,
+                1));
     ActiveSensorConfig configB =
-        new ActiveSensorConfig(new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1));
+        new ActiveSensorConfig(
+            new SensorParameterConfig(
+                Das.SOL_EXPERTS,
+                "deviceB",
+                "temperature",
+                UUID.randomUUID(),
+                "x + 2",
+                50.0,
+                -10.0,
+                1));
 
     given(sensorConfigCache.getActiveConfig("deviceA")).willReturn(configA);
     given(sensorConfigCache.getActiveConfig("deviceB")).willReturn(configB);
@@ -170,7 +208,16 @@ class SensorDataBatchProcessorTest {
     List<NormalizedSensorData> batch = List.of(poisonData);
 
     ActiveSensorConfig configB =
-        new ActiveSensorConfig(new SensorConfig("deviceB", "x + 2", 50.0, -10.0, 1));
+        new ActiveSensorConfig(
+            new SensorParameterConfig(
+                Das.SOL_EXPERTS,
+                "deviceB",
+                "temperature",
+                UUID.randomUUID(),
+                "x + 2",
+                50.0,
+                -10.0,
+                1));
     given(sensorConfigCache.getActiveConfig("deviceB")).willReturn(configB);
 
     TransformationException poisonException = mock(TransformationException.class);

@@ -3,7 +3,9 @@ package ch.swisstopo.monteis.pipeline.transformation.processing.cache;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,7 +18,9 @@ class ActiveSensorConfigTest {
   @Test
   void should_return_underlying_sensor_config() {
     // given
-    SensorConfig config = new SensorConfig("deviceA", "x", 100.0, 0.0, 1);
+    SensorParameterConfig config =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x", 100.0, 0.0, 1);
 
     // when
     ActiveSensorConfig activeConfig = new ActiveSensorConfig(config);
@@ -35,7 +39,9 @@ class ActiveSensorConfigTest {
   void should_evaluate_valid_formulas_correctly(
       String formula, Double rawValue, Double expectedResult) {
     // given
-    SensorConfig config = new SensorConfig("deviceA", formula, 100.0, 0.0, 1);
+    SensorParameterConfig config =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), formula, 100.0, 0.0, 1);
     ActiveSensorConfig activeConfig = new ActiveSensorConfig(config);
 
     // when
@@ -49,7 +55,16 @@ class ActiveSensorConfigTest {
   void should_throw_illegal_argument_exception_on_invalid_syntax_during_instantiation() {
     // given
     // A syntactically broken formula
-    SensorConfig invalidConfig = new SensorConfig("deviceA", "x * / + 10", 100.0, 0.0, 1);
+    SensorParameterConfig invalidConfig =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS,
+            "deviceA",
+            "temperature",
+            UUID.randomUUID(),
+            "x * / + 10",
+            100.0,
+            0.0,
+            1);
 
     // when & then
     IllegalArgumentException exception =
@@ -62,7 +77,9 @@ class ActiveSensorConfigTest {
   void should_throw_illegal_argument_exception_on_unknown_variable_in_expression() {
     // given
     // Valid syntax, but contains an unknown variable 'y'
-    SensorConfig poisonPillConfig = new SensorConfig("deviceA", "x + y", 100.0, 0.0, 1);
+    SensorParameterConfig poisonPillConfig =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x + y", 100.0, 0.0, 1);
     ActiveSensorConfig activeConfig = new ActiveSensorConfig(poisonPillConfig);
 
     // when & then
@@ -77,7 +94,9 @@ class ActiveSensorConfigTest {
   void should_throw_illegal_argument_exception_on_single_unknown_variable() {
     // given
     // A single, unknown variable with no operators to trigger native resolution
-    SensorConfig poisonPillConfig = new SensorConfig("deviceA", "y", 100.0, 0.0, 1);
+    SensorParameterConfig poisonPillConfig =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "y", 100.0, 0.0, 1);
     ActiveSensorConfig activeConfig = new ActiveSensorConfig(poisonPillConfig);
 
     // when & then
@@ -104,7 +123,9 @@ class ActiveSensorConfigTest {
   void should_throw_illegal_argument_exception_on_infinite_results(
       String formula, Class<? extends Exception> expectedException, String message) {
     // given
-    SensorConfig poisonPillConfig = new SensorConfig("deviceA", formula, 100.0, 0.0, 1);
+    SensorParameterConfig poisonPillConfig =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), formula, 100.0, 0.0, 1);
     ActiveSensorConfig activeConfig = new ActiveSensorConfig(poisonPillConfig);
 
     // when & then

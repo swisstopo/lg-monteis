@@ -57,7 +57,8 @@ public class SensorController {
   @Operation(
       summary = "Create a new sensor",
       description =
-          "Creates a new sensor in the system. The 'code' must be unique across all sensors.")
+          "Creates a new sensor in the system. The 'dasSensorAlias' must be unique across all"
+              + " sensors.")
   @ApiResponses(
       value = {@ApiResponse(responseCode = "201", description = "Sensor successfully created")})
   @PostMapping(
@@ -129,5 +130,19 @@ public class SensorController {
     PagedResult<Sensor> result = service.getSensors(pagedRequestParser.parse(raw));
     LocalDate today = LocalDate.now(clock);
     return mapper.toPagedDto(result, today);
+  }
+
+  @Operation(
+      summary = "Republish every sensor parameter's config",
+      description =
+          "One-time operational tool for MON-143's rollout: re-publishes every sensor parameter's"
+              + " current config to internal-sensor-config, unconditionally, so the pipeline's"
+              + " existing reprocessing flow backfills sensor_parameter_id on historical readings"
+              + " ingested before each parameter's config was ever known.")
+  @ApiResponse(responseCode = "202", description = "Republish triggered")
+  @PostMapping(path = "/republish-config")
+  public ResponseEntity<Void> republishAllActiveParameterConfigs() {
+    service.republishAllActiveParameterConfigs();
+    return ResponseEntity.accepted().build();
   }
 }

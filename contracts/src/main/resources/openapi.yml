@@ -2,64 +2,94 @@ openapi: 3.0.3
 info:
   title: Sensor Configuration API
   version: 1.0.0
-  description: API to retrieve sensor calibration, formula (via JSONLogic), and boundary data.
+  description: API to retrieve sensor parameter calibration, formula (via JSONLogic), and boundary data.
 paths:
-  /sensors/config:
+  /sensor-parameters/config:
     get:
-      summary: Retrieve sensor metadata
-      description: Fetches the JSONLogic formula, boundaries, and version information for a specific sensor.
-      operationId: getSensorConfig
+      summary: Retrieve sensor parameter metadata
+      description: Fetches the JSONLogic formula, boundaries, and version information for a specific sensor parameter.
+      operationId: getSensorParameterConfig
       parameters:
-        - name: sensorid
+        - name: dasKey
           in: query
           required: true
-          description: The unique identifier of the sensor.
+          description: The composite DAS mapping key ("<DAS>__<das_sensor_alias>__<das_parameter_alias>"),
+            i.e. the same value used as the Kafka message key on internal-sensor-config.
           schema:
             type: string
+            example: "SOL_EXPERTS__BH12-P03__temperature"
       responses:
         '200':
-          description: Successful response containing the sensor configuration.
+          description: Successful response containing the sensor parameter configuration.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SensorConfig'
+                $ref: '#/components/schemas/SensorParameterConfig'
         '400':
-          description: Bad Request - Missing or invalid sensorid.
+          description: Bad Request - Missing or invalid dasKey.
         '404':
-          description: Not Found - The specified sensorid does not exist.
+          description: Not Found - The specified dasKey does not exist.
 components:
   schemas:
-    SensorConfig:
+    Das:
+      type: string
+      description: The data acquisition system (DAS) enum value this parameter is sourced from. Defined
+        once here so both core (publisher) and pipeline (normalizer, SensorConfigCache) agree on the same
+        vocabulary instead of duplicating it.
+      enum:
+        - SOL_EXPERTS
+      example: "SOL_EXPERTS"
+    SensorParameterConfig:
       type: object
       required:
-        - sensor_id
+        - das
+        - das_sensor_alias
+        - das_parameter_alias
+        - sensor_parameter_id
         - formula
         - upper_bound
         - lower_bound
         - version
       properties:
-        sensor_id:
+        das:
+          $ref: '#/components/schemas/Das'
+        das_sensor_alias:
           type: string
-          description: The unique identifier for the sensor.
-          example: "sensor-geo-8472"
+          description: The device/sensor identifier used on the DAS (sensor.das_sensor_alias). Forms the
+            middle segment of the composite DAS mapping key.
+          example: "BH12-P03"
+        das_parameter_alias:
+          type: string
+          description: The field name used on the DAS for this specific measurement (sensor_parameter.das_parameter_alias).
+            Forms the suffix of the composite DAS mapping key.
+          example: "temperature"
+        sensor_parameter_id:
+          type: string
+          format: uuid
+          description: The unique identifier (UUIDv7) of the sensor parameter. Sent unchanged to the pipeline
+            and used as the foreign key when persisting readings in TimeScaleDB, decoupled from the
+            das/das_sensor_alias/das_parameter_alias mapping used only for inbound routing - replacing the
+            previous brittle sensor_code-based mapping and allowing DAS-side remapping without orphaning
+            historical readings.
+          example: "018f2e6a-7c3e-7c3e-8b3e-1a2b3c4d5e6f"
         formula:
           type: string
-          description: The dynamic mathematical expression used to standardize raw readings into SI units. 
+          description: The dynamic mathematical expression used to standardize raw readings into SI units.
             Must use standard infix notation and include the variable 'x' (representing the raw value).
           default: "x"
           example: "x * 1.8 + 32"
         upper_bound:
           type: number
           format: double
-          description: The maximum limit for this sensor used for alerting.
+          description: The maximum limit for this sensor parameter used for alerting.
           example: 150000.5
         lower_bound:
           type: number
           format: double
-          description: The minimum limit for this sensor used for alerting.
+          description: The minimum limit for this sensor parameter used for alerting.
           example: -100.0
         version:
           type: integer
           format: int16
-          description: The version number of this specific configuration record.
+          description: The version number of this specific sensor parameter configuration record.
           example: 2

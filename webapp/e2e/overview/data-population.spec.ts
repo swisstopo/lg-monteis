@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 test('should find calculation data in table', async ({ page }) => {
   await page.getByRole('link', { name: 'Table' }).click();
 
-  await expect(page.getByRole('columnheader', { name: 'Sensor ID' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'DAS Key' })).toBeVisible();
 });
 
 test('should find sensor date in table', async ({ page }) => {

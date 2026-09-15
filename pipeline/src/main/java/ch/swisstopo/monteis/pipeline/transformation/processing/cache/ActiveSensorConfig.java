@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.pipeline.transformation.processing.cache;
 
-import ch.swisstopo.monteis.contracts.SensorConfig;
+import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import org.scijava.parsington.ExpressionParser;
 import org.scijava.parsington.SyntaxTree;
 import org.scijava.parsington.Variable;
@@ -8,17 +8,17 @@ import org.scijava.parsington.eval.DefaultTreeEvaluator;
 
 public class ActiveSensorConfig {
 
-  private final SensorConfig config;
+  private final SensorParameterConfig config;
   private final SyntaxTree preParsedTree;
 
   private static final String X_VARIABLE = "x";
 
-  public ActiveSensorConfig(SensorConfig config) {
+  public ActiveSensorConfig(SensorParameterConfig config) {
     this.config = config;
     this.preParsedTree = new ExpressionParser().parseTree(config.getFormula());
   }
 
-  public SensorConfig getConfig() {
+  public SensorParameterConfig getConfig() {
     return config;
   }
 

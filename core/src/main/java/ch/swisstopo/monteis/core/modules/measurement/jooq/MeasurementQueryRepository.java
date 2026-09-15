@@ -52,10 +52,10 @@ public class MeasurementQueryRepository implements MeasurementQuery {
     List<ChartPointDto> points =
         dsl.select(SENSOR_READING_SECURED.TIMESTAMP, SENSOR_READING_SECURED.NORM_VALUE)
             .from(SENSOR_READING_SECURED)
-            // sensor_reading_secured now links via sensor_parameter.das_parameter_alias
-            .where(
-                SENSOR_READING_SECURED.SENSOR_ID.eq(
-                    parameterInfo.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS)))
+            // sensor_reading_secured links via sensor_parameter.id /
+            // sensor_reading.sensor_parameter_id
+            // (both UUID, globally unique) - see db/meta/schema/V13.
+            .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(DSL.inline(id)))
             // INLINE from and to in order to bypass string conversion via fdw
             .and(SENSOR_READING_SECURED.TIMESTAMP.between(DSL.inline(from), DSL.inline(to)))
             .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc())
@@ -64,10 +64,19 @@ public class MeasurementQueryRepository implements MeasurementQuery {
     String combinedName =
         parameterInfo.get(SENSORS.NAME) + " - " + parameterInfo.get(SENSOR_PARAMETER.NAME);
 
+    String dasKey =
+        dsl.select(SENSOR_READING_SECURED.DAS_KEY)
+            .from(SENSOR_READING_SECURED)
+            .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(DSL.inline(id)))
+            .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
+            .limit(1)
+            .fetchOptional(SENSOR_READING_SECURED.DAS_KEY)
+            .orElseGet(() -> parameterInfo.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS));
+
     return Optional.of(
         new ChartDataResponseDto(
             parameterInfo.get(SENSOR_PARAMETER.ID),
-            parameterInfo.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
+            dasKey,
             combinedName,
             Unit.valueOf(parameterInfo.get(SENSOR_PARAMETER.UNIT).toString()),
             points));
