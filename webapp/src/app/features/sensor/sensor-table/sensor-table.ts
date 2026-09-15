@@ -97,11 +97,9 @@ export default class SensorTable {
 
     this.downloading.set(true);
     try {
-      await this.csvDownloadService.download(
-        '/api/sensors/csv',
-        'sensors.csv',
-        toGridFilterSortParams(api),
-      );
+      const { sortModel, filterModel } = toGridFilterSortParams(api);
+      const blob = await this.sensorService.getSensorsCsv(sortModel, filterModel);
+      this.csvDownloadService.download(blob, 'sensors.csv');
     } catch {
       this.toastService.error(this.translateService.translate('sensor.error.downloadFailed')());
     } finally {

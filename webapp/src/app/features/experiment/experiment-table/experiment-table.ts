@@ -100,11 +100,9 @@ export default class ExperimentTable {
 
     this.downloading.set(true);
     try {
-      await this.csvDownloadService.download(
-        '/api/experiments/csv',
-        'experiments.csv',
-        toGridFilterSortParams(api),
-      );
+      const { sortModel, filterModel } = toGridFilterSortParams(api);
+      const blob = await this.experimentService.getExperimentsCsv(sortModel, filterModel);
+      this.csvDownloadService.download(blob, 'experiments.csv');
     } catch {
       this.toastService.error(this.translateService.translate('experiment.error.downloadFailed')());
     } finally {
