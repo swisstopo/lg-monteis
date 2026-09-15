@@ -12,7 +12,7 @@
     "generate-api": "openapi-generator-cli generate",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
     "format:write": "prettier --write \"src/**/*.{ts,html,scss}\"",
-    "e2e:headed": "playwright test --headed",
+    "e2e:headed": "playwright test --ui",
     "e2e:headless": "playwright test",
     "e2e:report": "playwright show-report"
   },

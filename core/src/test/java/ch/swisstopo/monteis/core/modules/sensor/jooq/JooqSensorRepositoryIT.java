@@ -159,7 +159,10 @@ class JooqSensorRepositoryIT {
           // NumberFilterModel - this exercises the numeric CAST rather than an unsafe cast.
           repository.create(
               createDummySensorWithCoordinates(
-                  "NUM-FILTER-01", "Number Filter Sensor", "x", new Coordinates(123456789, 0, 0)));
+                  "NUM-FILTER-01",
+                  "Number Filter Sensor",
+                  "x",
+                  new Coordinates(123456789d, 0d, 0d)));
 
           PagedRequest request =
               new PagedRequest(
@@ -544,7 +547,7 @@ class JooqSensorRepositoryIT {
    */
   private Sensor createDummySensor(String dasKey, String name, String formulaExpression) {
     return createDummySensorWithCoordinates(
-        dasKey, name, formulaExpression, new Coordinates(2400, -12007, -1600));
+        dasKey, name, formulaExpression, new Coordinates(2400d, -12007d, -1600d));
   }
 
   private Sensor createDummySensorWithCoordinates(

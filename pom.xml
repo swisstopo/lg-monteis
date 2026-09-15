@@ -59,6 +59,7 @@
     <tomcat.version>11.0.25</tomcat.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
+
   </properties>
 
   <dependencyManagement>
@@ -239,6 +240,13 @@
                 <include>**/src/main/java/**/*.java</include>
                 <include>**/src/test/java/**/*.java</include>
               </includes>
+              <!-- openapi-generator and jOOQ write their output under target/ into a
+                   .../src/main/java/... layout, which the includes above would otherwise match.
+                   Build output is never formatted, and on a built tree spotless:check would fail
+                   on files nobody can fix by hand. -->
+              <excludes>
+                <exclude>**/target/**/*.java</exclude>
+              </excludes>
               <googleJavaFormat>
                 <reflowLongStrings>true</reflowLongStrings>
                 <formatJavadoc>false</formatJavadoc>

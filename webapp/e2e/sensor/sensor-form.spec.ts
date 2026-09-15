@@ -1,6 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from '../support/login';
 
+// Coordinates FulcrumStubConfiguration (core/src/test) reports for every record it is asked for.
+// Keep both in step.
+const STUB_FULCRUM_COORDINATES = { x: 2579321, y: 1247865, z: 512 };
+
+// The one record id that same stub reports as missing (UNKNOWN_RECORD_ID over there). A
+// well-formed UUID, so it passes the form's own validation and only fails once Fulcrum is asked.
+const UNKNOWN_FULCRUM_RECORD_ID = '00000000-0000-4000-8000-000000000000';
+
 test.beforeEach(async ({ page }) => {
   await page.goto('http://localhost:4200/');
   await loginAsAdmin(page);
@@ -59,6 +67,147 @@ test('should create sensor', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 
   await expect(page.getByText('Sensor saved successfully.')).toBeVisible();
+});
+
+test('should create sensor with a fulcrum id and take its coordinates from fulcrum', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Create Sensor' }).click();
+  await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
+
+  const dialog = page.getByRole('dialog');
+
+  const uniqueId = crypto.randomUUID();
+  // Unique per run: the three browser projects run in parallel and (das, das_sensor_alias) is
+  // unique in the DB, so a fixed alias collides with the row an earlier run already created.
+  await dialog.getByLabel('DAS Sensor Alias').fill(`SN-FULCRUM-${uniqueId}`);
+  await dialog.getByLabel('Sensor Name').fill('E2E FULCRUM TEST');
+
+  // The stub answers any record id with a row carrying that same id, so this needs no fixture
+  // registered up front.
+  await dialog.getByLabel('Fulcrum ID').fill(uniqueId);
+
+  // 'DAS' alone substring-matches 'DAS Sensor Alias' and 'DAS Parameter Alias' too - scope exactly.
+  await dialog.getByLabel('DAS', { exact: true }).click();
+  await page.getByRole('option', { name: 'SolExperts' }).click();
+
+  const firstParameter = dialog.getByTestId('parameter-block-0');
+  await firstParameter.getByLabel('Parameter Name').fill('Temperature Reading');
+
+  await firstParameter.getByLabel('Unit').click();
+  await page.getByRole('option', { name: 'Ampere (A)' }).click();
+
+  await firstParameter.getByLabel('Sensor Type').fill('Temperature');
+  await page.getByRole('option', { name: 'Temperature' }).click();
+
+  await expect(dialog.getByLabel('X (Local)')).toBeDisabled();
+
+  await firstParameter.getByLabel('Alarm Limit From').fill('10');
+  await firstParameter.getByLabel('Alarm Limit To').fill('100');
+
+  // The response of the create call is what proves the backend really went to Fulcrum: createSensor
+  // overwrites the coordinates from the form with the ones the record carries. Armed before the
+  // click, so the response cannot be missed.
+  const created = page.waitForResponse(
+    (response) => response.request().method() === 'POST' && response.url().endsWith('/api/sensors'),
+  );
+
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+
+  await expect(page.getByText('Sensor saved successfully.')).toBeVisible();
+
+  const createdSensor = await (await created).json();
+  expect(createdSensor.fulcrumId).toBe(uniqueId);
+  expect(createdSensor.coordinates).toEqual(STUB_FULCRUM_COORDINATES);
+});
+
+test('should reject a fulcrum id that is not a uuid', async ({ page }) => {
+  await page.getByRole('button', { name: 'Create Sensor' }).click();
+
+  const dialog = page.getByRole('dialog');
+
+  await dialog.getByLabel('Fulcrum ID').fill('not-a-uuid');
+  await dialog.getByLabel('Fulcrum ID').blur();
+
+  await expect(
+    page.getByText('Fulcrum ID must be a UUID, e.g. 3fa85f64-5717-4562-b3fc-2c963f66afa6'),
+  ).toBeVisible();
+});
+
+test('should refuse to save a fulcrum id that no fulcrum record matches', async ({ page }) => {
+  await page.getByRole('button', { name: 'Create Sensor' }).click();
+  await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
+
+  const dialog = page.getByRole('dialog');
+
+  const uniqueId = crypto.randomUUID();
+  await dialog.getByLabel('DAS Sensor Alias').fill(`SN-MISSING-${uniqueId}`);
+  await dialog.getByLabel('Sensor Name').fill('E2E FULCRUM MISSING');
+
+  // Well-formed, so the form itself is happy - only the backend can tell that Fulcrum holds no
+  // such record.
+  await dialog.getByLabel('Fulcrum ID').fill(UNKNOWN_FULCRUM_RECORD_ID);
+  await expect(
+    page.getByText('Fulcrum ID must be a UUID, e.g. 3fa85f64-5717-4562-b3fc-2c963f66afa6'),
+  ).toHaveCount(0);
+
+  // 'DAS' alone substring-matches 'DAS Sensor Alias' and 'DAS Parameter Alias' too - scope exactly.
+  await dialog.getByLabel('DAS', { exact: true }).click();
+  await page.getByRole('option', { name: 'SolExperts' }).click();
+
+  const firstParameter = dialog.getByTestId('parameter-block-0');
+  await firstParameter.getByLabel('Parameter Name').fill('Temperature Reading');
+
+  await firstParameter.getByLabel('Unit').click();
+  await page.getByRole('option', { name: 'Ampere (A)' }).click();
+
+  await firstParameter.getByLabel('Sensor Type').fill('Temperature');
+  await page.getByRole('option', { name: 'Temperature' }).click();
+
+  await firstParameter.getByLabel('Alarm Limit From').fill('10');
+  await firstParameter.getByLabel('Alarm Limit To').fill('100');
+
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+
+  // createSensor answers object.deleted, which carries no field and therefore surfaces as a toast
+  // rather than against the Fulcrum ID input.
+  await expect(
+    page.getByText('The record no longer exists. It may have been deleted in the meantime.'),
+  ).toBeVisible();
+  await expect(page.getByText('Sensor saved successfully.')).toHaveCount(0);
+
+  // Nothing was saved, so the dialog has to stay open with the entered values intact.
+  await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
+  await expect(dialog.getByLabel('Fulcrum ID')).toHaveValue(UNKNOWN_FULCRUM_RECORD_ID);
+});
+
+test('should disable the coordinates while a fulcrum id is entered', async ({ page }) => {
+  await page.getByRole('button', { name: 'Create Sensor' }).click();
+  await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
+
+  const dialog = page.getByRole('dialog');
+
+  const x = dialog.getByLabel('X (Local)');
+  const y = dialog.getByLabel('Y (Local)');
+  const z = dialog.getByLabel('Z (Local)');
+
+  // Without a Fulcrum record the coordinates are the sensor's only source for them.
+  await expect(x).toBeEnabled();
+  await expect(y).toBeEnabled();
+  await expect(z).toBeEnabled();
+
+  await dialog.getByLabel('Fulcrum ID').fill(crypto.randomUUID());
+
+  await expect(x).toBeDisabled();
+  await expect(y).toBeDisabled();
+  await expect(z).toBeDisabled();
+
+  // Clearing the Fulcrum ID hands the coordinates back to the user.
+  await dialog.getByLabel('Fulcrum ID').fill('');
+
+  await expect(x).toBeEnabled();
+  await expect(y).toBeEnabled();
+  await expect(z).toBeEnabled();
 });
 
 test('should update sensor', async ({ page }) => {

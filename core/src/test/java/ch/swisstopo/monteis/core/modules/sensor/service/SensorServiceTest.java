@@ -9,6 +9,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
@@ -31,8 +33,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SensorServiceTest {
+
+  private static final UUID FULCRUM_RECORD_ID =
+      UUID.fromString("29d8aee7-d9c6-4459-ac9d-bbd6e10f6518");
+
   @Mock private SensorRepository repository;
   @Mock private SensorConfigPublisher configPublisher;
+  @Mock private FulcrumService fulcrumService;
 
   @InjectMocks private SensorService service;
 
@@ -58,6 +65,7 @@ class SensorServiceTest {
     Sensor inputSensor = mock(Sensor.class);
     Sensor expectedSensor = mock(Sensor.class);
     SensorParameter createdParameter = parameter(UUID.randomUUID(), "x * 2");
+    givenTheSensorExistsInFulcrum(inputSensor);
 
     given(repository.create(inputSensor)).willReturn(expectedSensor);
     given(expectedSensor.getParameters()).willReturn(List.of(createdParameter));
@@ -76,6 +84,7 @@ class SensorServiceTest {
     // given
     Sensor inputSensor = mock(Sensor.class);
     Sensor expectedSensor = mock(Sensor.class);
+    givenTheSensorExistsInFulcrum(inputSensor);
 
     given(repository.update(inputSensor)).willReturn(expectedSensor);
 
@@ -96,6 +105,7 @@ class SensorServiceTest {
 
     Sensor before = mock(Sensor.class);
     Sensor after = mock(Sensor.class);
+    givenTheSensorExistsInFulcrum(after);
     given(before.getParameters()).willReturn(List.of(parameterBefore));
     given(after.getParameters()).willReturn(List.of(parameterAfter));
 
@@ -118,6 +128,7 @@ class SensorServiceTest {
 
     Sensor before = mock(Sensor.class);
     Sensor after = mock(Sensor.class);
+    givenTheSensorExistsInFulcrum(after);
     given(before.getParameters()).willReturn(List.of(parameterBefore));
     given(after.getParameters()).willReturn(List.of(parameterAfter));
 
@@ -129,6 +140,79 @@ class SensorServiceTest {
 
     // then
     then(configPublisher).should(never()).publish(any(), any());
+  }
+
+  @Test
+  void should_reject_create_when_the_sensor_is_unknown_to_fulcrum() {
+    // given
+    Sensor inputSensor = mock(Sensor.class);
+
+    given(inputSensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
+    given(fulcrumService.getSensorById(FULCRUM_RECORD_ID)).willReturn(Optional.empty());
+
+    // when
+    ObjectBusinessValidationException exception =
+        assertThrows(
+            ObjectBusinessValidationException.class, () -> service.createSensor(inputSensor));
+
+    // then
+    assertEquals("object.deleted", exception.getMessageKey());
+    then(repository).should(never()).create(any());
+  }
+
+  @Test
+  void should_create_without_asking_fulcrum_when_the_sensor_has_no_fulcrum_id() {
+    // given: the Fulcrum ID is optional on a sensor, and a sensor without one has no record to
+    // read coordinates from - the ones it was given have to survive
+    Sensor inputSensor = mock(Sensor.class);
+    Sensor expectedSensor = mock(Sensor.class);
+
+    given(repository.create(inputSensor)).willReturn(expectedSensor);
+
+    // when
+    Sensor actualSensor = service.createSensor(inputSensor);
+
+    // then
+    then(fulcrumService).should(never()).getSensorById(any());
+    then(inputSensor).should(never()).setCoordinates(any());
+    then(repository).should().create(inputSensor);
+    assertEquals(expectedSensor, actualSensor);
+  }
+
+  @Test
+  void should_update_without_asking_fulcrum_when_the_sensor_has_no_fulcrum_id() {
+    // given
+    Sensor inputSensor = mock(Sensor.class);
+    Sensor expectedSensor = mock(Sensor.class);
+
+    given(repository.update(inputSensor)).willReturn(expectedSensor);
+
+    // when
+    Sensor actualSensor = service.updateSensor(inputSensor);
+
+    // then
+    then(fulcrumService).should(never()).getSensorById(any());
+    then(inputSensor).should(never()).setCoordinates(any());
+    then(repository).should().update(inputSensor);
+    assertEquals(expectedSensor, actualSensor);
+  }
+
+  @Test
+  void should_reject_update_when_the_sensor_is_unknown_to_fulcrum() {
+    // given
+    Sensor inputSensor = mock(Sensor.class);
+
+    given(inputSensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
+    given(fulcrumService.getSensorById(FULCRUM_RECORD_ID)).willReturn(Optional.empty());
+
+    // when
+    ObjectBusinessValidationException exception =
+        assertThrows(
+            ObjectBusinessValidationException.class, () -> service.updateSensor(inputSensor));
+
+    // then
+    assertEquals("object.deleted", exception.getMessageKey());
+    then(repository).should(never()).update(any());
   }
 
   @Test
@@ -202,5 +286,16 @@ class SensorServiceTest {
 
     // then
     assertEquals(expectedTypes, actualTypes);
+  }
+
+  /**
+   * Both write paths look the sensor up in Fulcrum when it carries a Fulcrum ID, and refuse to
+   * continue when the record is not there. A sensor without an ID skips the lookup entirely, so a
+   * test that wants the lookup to happen has to give the sensor one.
+   */
+  private void givenTheSensorExistsInFulcrum(Sensor sensor) {
+    given(sensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
+    given(fulcrumService.getSensorById(FULCRUM_RECORD_ID))
+        .willReturn(Optional.of(mock(FulcrumSensor.class)));
   }
 }

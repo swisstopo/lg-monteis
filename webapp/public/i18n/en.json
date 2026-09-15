@@ -23,6 +23,7 @@
     }
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
+  "object.deleted": "The record no longer exists. It may have been deleted in the meantime.",
   "validation": {
     "required": "There is a validation error with this field.",
     "mustBeNull": "",
@@ -62,7 +63,10 @@
     },
     "fulcrumId": {
       "label": "Fulcrum ID",
-      "placeholder": "e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      "placeholder": "e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "validation": {
+        "invalid": "Fulcrum ID must be a UUID, e.g. 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      }
     },
     "mainExperiment": {
       "label": "Main Experiment",
