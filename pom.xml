@@ -46,7 +46,7 @@
     <!-- Override the Spring Boot BOM's managed flyway.version so the test-scoped
          flyway-core + flyway-database-postgresql (Testcontainers validation) and the
          flyway-maven-plugin (jOOQ codegen) match the migration image runner (MON-87:
-         docker/migration builds FROM flyway/flyway 12.11.0-alpine). Keeps validator ==
+         docker/migration builds FROM flyway/flyway 13.6.0-alpine). Keeps validator ==
          runner so CI actually exercises the version that migrates cloud RDS/TimescaleDB. -->
     <flyway.version>13.6.0</flyway.version>
 
