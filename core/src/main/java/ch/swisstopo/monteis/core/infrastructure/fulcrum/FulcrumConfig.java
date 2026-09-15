@@ -28,10 +28,6 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 @Configuration
 public class FulcrumConfig {
 
-  /**
-   * Fulcrum authenticates with a static API token rather than OAuth2, as the {@code ApiToken}
-   * security scheme in the spec documents. FulcrumSpecTest keeps this header name honest.
-   */
   public static final String API_TOKEN_HEADER = "X-ApiToken";
 
   @Bean
