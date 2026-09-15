@@ -1,8 +1,11 @@
 package ch.swisstopo.monteis.core.modules.measurement.service;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
@@ -18,12 +21,16 @@ public class MeasurementService {
     this.query = query;
   }
 
-  public Optional<ChartDataResponseDto> findMeasurements(
+  public Optional<ChartDataResponseDto> findChartData(
       UUID id, OffsetDateTime from, OffsetDateTime to) {
     if (from.isAfter(to)) {
       throw new ObjectBusinessValidationException(
           "measurement.dateRange.invalid", Map.of("from", from, "to", to));
     }
-    return query.findMeasurements(id, from, to);
+    return query.findChartData(id, from, to);
+  }
+
+  public PagedResult<MeasurementResponseDto> getMeasurements(PagedRequest request) {
+    return query.findPaged(request);
   }
 }

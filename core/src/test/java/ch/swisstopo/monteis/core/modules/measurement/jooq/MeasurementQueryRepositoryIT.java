@@ -69,7 +69,7 @@ class MeasurementQueryRepositoryIT {
         () -> {
           // Act
           Optional<ChartDataResponseDto> result =
-              repository.findMeasurements(TEMP_1_PARAM, wideFrom, wideTo);
+              repository.findChartData(TEMP_1_PARAM, wideFrom, wideTo);
 
           // Assert
           assertTrue(result.isPresent());
@@ -137,9 +137,9 @@ class MeasurementQueryRepositoryIT {
         () -> {
           // Act: the endpoint serves one sensor per call, so each id resolves on its own
           Optional<ChartDataResponseDto> temp =
-              repository.findMeasurements(TEMP_1_PARAM, wideFrom, wideTo);
+              repository.findChartData(TEMP_1_PARAM, wideFrom, wideTo);
           Optional<ChartDataResponseDto> disp =
-              repository.findMeasurements(DISP_2_PARAM, wideFrom, wideTo);
+              repository.findChartData(DISP_2_PARAM, wideFrom, wideTo);
 
           // Assert
           assertEquals("TEMP-1-P1", temp.orElseThrow().code());
@@ -158,7 +158,7 @@ class MeasurementQueryRepositoryIT {
 
           // Act
           Optional<ChartDataResponseDto> result =
-              repository.findMeasurements(TEMP_1_PARAM, futureFrom, futureTo);
+              repository.findChartData(TEMP_1_PARAM, futureFrom, futureTo);
 
           // Assert: the sensor itself is still returned, just with no data points
           assertTrue(result.isPresent());
@@ -170,7 +170,7 @@ class MeasurementQueryRepositoryIT {
   @Transactional
   void should_return_empty_when_id_does_not_exist() {
     SecurityContextTestSupport.runAsAdmin(
-        () -> assertTrue(repository.findMeasurements(NON_EXISTENT_ID, wideFrom, wideTo).isEmpty()));
+        () -> assertTrue(repository.findChartData(NON_EXISTENT_ID, wideFrom, wideTo).isEmpty()));
   }
 
   @Test
@@ -179,8 +179,7 @@ class MeasurementQueryRepositoryIT {
     SecurityContextTestSupport.runAsUser(
         EXPERIMENT_1_ONLY,
         // FLOW-Admin belongs to no experiment, explicitly requesting its id must not help
-        () ->
-            assertTrue(repository.findMeasurements(FLOW_ADMIN_PARAM, wideFrom, wideTo).isEmpty()));
+        () -> assertTrue(repository.findChartData(FLOW_ADMIN_PARAM, wideFrom, wideTo).isEmpty()));
   }
 
   @Test
@@ -191,7 +190,7 @@ class MeasurementQueryRepositoryIT {
         () -> {
           // Act: TEMP-1 belongs to experiment 1
           Optional<ChartDataResponseDto> result =
-              repository.findMeasurements(TEMP_1_PARAM, wideFrom, wideTo);
+              repository.findChartData(TEMP_1_PARAM, wideFrom, wideTo);
 
           // Assert
           assertTrue(result.isPresent());
@@ -207,7 +206,7 @@ class MeasurementQueryRepositoryIT {
         () -> {
           // Act
           Optional<ChartDataResponseDto> result =
-              repository.findMeasurements(FLOW_ADMIN_PARAM, wideFrom, wideTo);
+              repository.findChartData(FLOW_ADMIN_PARAM, wideFrom, wideTo);
 
           // Assert
           assertTrue(result.isPresent());
@@ -222,7 +221,7 @@ class MeasurementQueryRepositoryIT {
     SecurityContextTestSupport.runAsUser(
         EXPERIMENT_1_ONLY,
         // DISP-2 belongs only to experiment 2
-        () -> assertTrue(repository.findMeasurements(DISP_2_PARAM, wideFrom, wideTo).isEmpty()));
+        () -> assertTrue(repository.findChartData(DISP_2_PARAM, wideFrom, wideTo).isEmpty()));
   }
 
   /**
@@ -302,6 +301,6 @@ class MeasurementQueryRepositoryIT {
   }
 
   private List<ChartPointDto> dataOf(UUID id, OffsetDateTime from, OffsetDateTime to) {
-    return repository.findMeasurements(id, from, to).orElseThrow().points();
+    return repository.findChartData(id, from, to).orElseThrow().points();
   }
 }

@@ -46,7 +46,7 @@ class MeasurementControllerTest {
             "monteis-001",
             Unit.KELVIN,
             List.of(new ChartPointDto(validFrom, 12.5)));
-    given(measurementService.findMeasurements(SENSOR_ID, validFrom, validTo))
+    given(measurementService.findChartData(SENSOR_ID, validFrom, validTo))
         .willReturn(Optional.of(dto));
 
     // when / then: one sensor per request, so the body is an object rather than an array
@@ -65,7 +65,7 @@ class MeasurementControllerTest {
         .andExpect(jsonPath("$.unit").value("KELVIN"))
         .andExpect(jsonPath("$.points[0].value").value(12.5));
 
-    then(measurementService).should().findMeasurements(SENSOR_ID, validFrom, validTo);
+    then(measurementService).should().findChartData(SENSOR_ID, validFrom, validTo);
   }
 
   @Test
@@ -73,7 +73,7 @@ class MeasurementControllerTest {
     // given: the service reports absent and hidden-by-RLS identically, so the API cannot be
     // used to probe whether a sensor the caller may not see exists
     UUID unknownId = UUID.randomUUID();
-    given(measurementService.findMeasurements(unknownId, validFrom, validTo))
+    given(measurementService.findChartData(unknownId, validFrom, validTo))
         .willReturn(Optional.empty());
 
     // when / then
@@ -165,7 +165,7 @@ class MeasurementControllerTest {
     // given: the boundary the service guard explicitly allows (only "after" is rejected)
     ChartDataResponseDto dto =
         new ChartDataResponseDto(SENSOR_ID, "TEMP-1", "monteis-001", Unit.KELVIN, List.of());
-    given(measurementService.findMeasurements(SENSOR_ID, validFrom, validFrom))
+    given(measurementService.findChartData(SENSOR_ID, validFrom, validFrom))
         .willReturn(Optional.of(dto));
 
     // when / then
@@ -186,7 +186,7 @@ class MeasurementControllerTest {
     // it, so this simulates the service's ObjectBusinessValidationException reaching the client
     OffsetDateTime laterDate = validTo;
     OffsetDateTime earlierDate = validFrom;
-    given(measurementService.findMeasurements(SENSOR_ID, laterDate, earlierDate))
+    given(measurementService.findChartData(SENSOR_ID, laterDate, earlierDate))
         .willThrow(
             new ObjectBusinessValidationException(
                 "measurement.dateRange.invalid", Map.of("from", laterDate, "to", earlierDate)));
