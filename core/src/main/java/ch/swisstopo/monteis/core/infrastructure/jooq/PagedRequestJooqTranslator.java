@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.SortField;
@@ -130,12 +132,20 @@ public final class PagedRequestJooqTranslator {
   }
 
   private static Condition setCondition(Field<?> raw, SetFilterModel model) {
-    if (model.values() == null || model.values().isEmpty()) {
+    Set<String> values = model.values();
+    if (values == null || values.isEmpty()) {
       return DSL.falseCondition();
     }
 
+    // Mirrors ag-grid's own Set Filter convention: a null entry in `values` means "match blank
+    // (null) cells" - e.g. MultiSelectFilter's "No Main Experiment" pseudo-option for a sensor
+    // with no main experiment.
+    List<String> nonNullValues = values.stream().filter(Objects::nonNull).toList();
+    boolean includeBlanks = nonNullValues.size() != values.size();
+
     Field<String> field = raw.cast(String.class);
-    return field.in(model.values());
+    Condition condition = nonNullValues.isEmpty() ? DSL.falseCondition() : field.in(nonNullValues);
+    return includeBlanks ? condition.or(field.isNull()) : condition;
   }
 
   private static final class AgGridFilter {

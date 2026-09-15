@@ -1,5 +1,6 @@
 import { Component, computed, ElementRef, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '@ngx-translate/core';
 import { IFilterAngularComp } from 'ag-grid-angular';
 import { IDoesFilterPassParams, IFilterParams } from 'ag-grid-community';
 
@@ -14,16 +15,22 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 interface SetFilterModel {
   filterType: 'set';
-  values: string[];
+  values: (string | null)[];
 }
 
 interface FilterOption {
   displayName: string;
-  value: string;
+  value: string | null;
 }
 
 interface MultiSelectFilterParams extends IFilterParams {
   valuesProvider: () => Promise<FilterOption[]>;
+  /**
+   * When set, a pseudo-option with this label and a `null` value is appended to the options
+   * returned by valuesProvider, letting the user filter for rows where this column is blank
+   * (e.g. "No Main Experiment"). Only meaningful for nullable columns.
+   */
+  blankOptionLabel?: string;
 }
 
 @Component({
@@ -38,6 +45,7 @@ interface MultiSelectFilterParams extends IFilterParams {
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    TranslatePipe,
   ],
   templateUrl: './multi-select-filter.html',
   styleUrls: ['./multi-select-filter.scss'],
@@ -46,14 +54,14 @@ export class MultiSelectFilter implements IFilterAngularComp {
   readonly filterOptionsContainer = viewChild<ElementRef<HTMLDivElement>>('filterOptions');
 
   private params!: MultiSelectFilterParams;
-  private initialValues = new Set<string>();
+  private initialValues = new Set<string | null>();
 
   readonly isLoading = signal(true);
   readonly hasError = signal(false);
   readonly showFilter = signal(false);
   searchText = signal('');
   readonly filterOptions = signal<FilterOption[]>([]);
-  readonly selectedValues = signal<Set<string>>(new Set());
+  readonly selectedValues = signal<Set<string | null>>(new Set());
 
   readonly filteredOptions = computed(() => {
     const searchString = this.searchText().toLowerCase();
@@ -92,7 +100,12 @@ export class MultiSelectFilter implements IFilterAngularComp {
     params
       .valuesProvider()
       .then((options) => {
-        this.filterOptions.set(options || []);
+        const blankOptionLabel = params.blankOptionLabel;
+        this.filterOptions.set(
+          blankOptionLabel
+            ? [...(options || []), { displayName: blankOptionLabel, value: null }]
+            : options || [],
+        );
       })
       .catch((error) => {
         console.error("AG Grid Filter Error: 'valuesProvider' failed.", error);
@@ -123,7 +136,7 @@ export class MultiSelectFilter implements IFilterAngularComp {
     const selected = this.selectedValues();
 
     const value = this.params.getValue(params.node);
-    return selected.has(value);
+    return selected.has(value ?? null);
   }
 
   getModel(): SetFilterModel | null {
@@ -137,7 +150,7 @@ export class MultiSelectFilter implements IFilterAngularComp {
   }
 
   setModel(model: SetFilterModel | null): void {
-    const newSet = new Set<string>();
+    const newSet = new Set<string | null>();
 
     if (model?.values) {
       model.values.forEach((value) => newSet.add(value));
@@ -173,7 +186,7 @@ export class MultiSelectFilter implements IFilterAngularComp {
     this.clearAndCheckFilter();
   }
 
-  onValueChanged(value: string, event: MatCheckboxChange) {
+  onValueChanged(value: string | null, event: MatCheckboxChange) {
     this.selectedValues.update((currentSet) => {
       const newSet = new Set(currentSet);
       if (event.checked) {

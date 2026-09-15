@@ -6,6 +6,15 @@
     "copy": {
       "label": "Copy",
       "success": "Copied to clipboard"
+    },
+    "multiSelectFilter": {
+      "loading": "Loading...",
+      "loadError": "Failed to load options",
+      "search": "Search",
+      "selectAll": "(Select all)",
+      "noResults": "No results found",
+      "cancel": "Cancel",
+      "apply": "Apply"
     }
   },
   "error": {
@@ -67,6 +76,7 @@
     "mainExperiment": {
       "label": "Main Experiment",
       "placeholder": "Search for an experiment...",
+      "none": "No Main Experiment",
       "validation": {
         "notSelected": "Select an experiment from the suggestions"
       }
