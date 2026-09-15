@@ -6,6 +6,16 @@
     "copy": {
       "label": "Copy",
       "success": "Copied to clipboard"
+    },
+    "multiSelectFilter": {
+      "loading": "Loading...",
+      "loadError": "Failed to load options",
+      "search": "Search",
+      "selectAll": "(Select all)",
+      "noResults": "No results found",
+      "cancel": "Cancel",
+      "apply": "Apply",
+      "floatingFilterSummary": "{{count}} selected"
     }
   },
   "error": {
@@ -67,6 +77,7 @@
     "mainExperiment": {
       "label": "Main Experiment",
       "placeholder": "Search for an experiment...",
+      "none": "No Main Experiment",
       "validation": {
         "notSelected": "Select an experiment from the suggestions"
       }
@@ -230,7 +241,8 @@
     "success": "Sensor saved successfully.",
     "error": {
       "noId": "No sensor id provided",
-      "connection": "Failed to connect to the backend server."
+      "connection": "Failed to connect to the backend server.",
+      "downloadFailed": "Failed to download sensors as CSV."
     }
   },
   "experiment": {
@@ -296,7 +308,8 @@
         "message": "An unspecified error occurred while saving the experiment."
       },
       "noId": "No experiment id provided",
-      "connection": "Failed to connect to the backend server."
+      "connection": "Failed to connect to the backend server.",
+      "downloadFailed": "Failed to download experiments as CSV."
     },
     "tableHeader": {
       "download": "Download",

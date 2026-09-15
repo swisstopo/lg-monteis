@@ -1,6 +1,7 @@
 import { Injectable, inject, resource, signal } from '@angular/core';
 import { ErrorDto, SensorControllerService, WriteSensorDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
+import { skipGlobalErrorToast } from '@core/http/http-context';
 import { translate } from '@ngx-translate/core';
 import { toPagedRequestParams } from '@ui/table/paged-request.mapper';
 import { IGetRowsParams } from 'ag-grid-community';
@@ -65,5 +66,13 @@ export class SensorService {
   getSensors(params: IGetRowsParams) {
     const { startRow, endRow, sortModel, filterModel } = toPagedRequestParams(params);
     return firstValueFrom(this.api.getSensors(startRow, endRow, sortModel, filterModel));
+  }
+
+  getSensorsCsv(sortModel?: string, filterModel?: string): Promise<Blob> {
+    return firstValueFrom(
+      this.api.getSensorsCsv(sortModel, filterModel, 'body', false, {
+        context: skipGlobalErrorToast(),
+      }),
+    );
   }
 }

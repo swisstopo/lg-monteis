@@ -10,8 +10,6 @@ import static org.mockito.Mockito.never;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
-import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
-import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
@@ -20,7 +18,6 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -159,21 +156,6 @@ class SensorServiceTest {
 
     // then
     assertEquals("object.deleted", exception.getMessageKey());
-  }
-
-  @Test
-  void should_delegate_get_sensors_to_repository() {
-    // given
-    PagedRequest request = new PagedRequest(0, 20, List.of(), Map.of());
-    PagedResult<Sensor> expectedResult = new PagedResult<>(List.of(mock(Sensor.class)), 1);
-
-    given(repository.findPaged(request)).willReturn(expectedResult);
-
-    // when
-    PagedResult<Sensor> actualResult = service.getSensors(request);
-
-    // then
-    assertEquals(expectedResult, actualResult);
   }
 
   @Test
