@@ -1,6 +1,7 @@
 import { Injectable, inject, resource, signal } from '@angular/core';
 import { ErrorDto, ExperimentControllerService, WriteExperimentDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
+import { skipGlobalErrorToast } from '@core/http/http-context';
 import { translate } from '@ngx-translate/core';
 import { toPagedRequestParams } from '@ui/table/paged-request.mapper';
 import { IGetRowsParams } from 'ag-grid-community';
@@ -63,5 +64,13 @@ export class ExperimentService {
   getExperiments(params: IGetRowsParams) {
     const { startRow, endRow, sortModel, filterModel } = toPagedRequestParams(params);
     return firstValueFrom(this.api.getExperiments(startRow, endRow, sortModel, filterModel));
+  }
+
+  getExperimentsCsv(sortModel?: string, filterModel?: string): Promise<Blob> {
+    return firstValueFrom(
+      this.api.getExperimentsCsv(sortModel, filterModel, 'body', false, {
+        context: skipGlobalErrorToast(),
+      }),
+    );
   }
 }
