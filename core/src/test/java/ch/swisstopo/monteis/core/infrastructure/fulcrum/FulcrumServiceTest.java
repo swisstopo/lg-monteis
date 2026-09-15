@@ -113,9 +113,6 @@ class FulcrumServiceTest {
 
     JsonMapper objectMapper = JsonMapper.builder().build();
 
-    // Mirrors what FulcrumConfig wires, except for the request factory it installs -
-    // MockRestServiceServer has to keep its own, so the proxy is built here rather than by
-    // calling the bean method. That the real wiring works is covered by CoreApplicationIT.
     RestClient.Builder builder =
         RestClient.builder()
             .baseUrl(properties.baseUrl())
@@ -236,10 +233,6 @@ class FulcrumServiceTest {
     server.verify();
   }
 
-  /**
-   * Matches the SQL sent as the {@code q} parameter. Spring's own {@code queryParam} matcher
-   * compares the raw, percent-encoded value, which would make the expectation unreadable.
-   */
   private static RequestMatcher sqlQuery(String expectedSql) {
     return request -> {
       String rawSql =

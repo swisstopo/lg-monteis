@@ -18,19 +18,7 @@ import java.util.UUID;
  * <p>Fulcrum leaves absent values as {@code null} rather than omitting them, and the meaning of a
  * column depends on the record's category (a {@code System}, {@code Packer}, {@code Interval} or
  * {@code Sensor} row fills different columns), so every component here is nullable.
- *
- * @param recordId Fulcrum's record id, matching {@code Sensor.fulcrumId} in MonTEIS
- * @param title Fulcrum's computed record title, identical to {@link #automaticName()}
- * @param categoryAndType category path of the record, e.g. {@code ["Sensor", "Point", "T"]} or
- *     {@code ["System", "MMMS"]} - the first element tells apart sensors from systems, packers
- *     and intervals
- * @param systemLink record ids of the system this record belongs to
- * @param sensorId identifier used by the data acquisition system (free text, not a UUID)
- * @param fdzPointOffset vertical offset between the sensor's cabinet/rack centerline and its
- *     actual measuring point
- */
-@SuppressWarnings("java:S107") // A flat projection of a wide upstream table; grouping would only
-// hide which Fulcrum column each value came from.
+ **/
 public record FulcrumSensor(
     // --- Fulcrum record metadata ---
     @JsonProperty("_record_id") UUID recordId,
