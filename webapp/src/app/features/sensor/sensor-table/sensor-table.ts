@@ -3,7 +3,7 @@ import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
-import { SensorResponseDto } from '@core/generated';
+import { SensorParameterRowResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
 import { SensorService } from '@features/sensor/services/sensor.service';
@@ -67,12 +67,12 @@ export default class SensorTable {
     this.gridApi.set(api);
   }
 
-  onWrappedRow(row: SensorResponseDto) {
+  onWrappedRow(row: SensorParameterRowResponseDto) {
     console.log(row);
   }
 
-  onSelectionChanged(rows: SensorResponseDto[]): void {
-    this.selectedSensorId.set(rows[0]?.id);
+  onSelectionChanged(rows: SensorParameterRowResponseDto[]): void {
+    this.selectedSensorId.set(rows[0]?.sensorId);
   }
 
   onCreate(): void {
@@ -113,5 +113,8 @@ export default class SensorTable {
     this.searchTerm.set(term);
   }
 
-  protected getSensorRowId = (row: SensorResponseDto): string => String(row.id);
+  // One row per (Sensor, SensorParameter) pair; a sensor with no parameters still gets exactly
+  // one row (parameter is null), so its own id has to stand in for the missing parameter id.
+  protected getSensorParameterRowId = (row: SensorParameterRowResponseDto): string =>
+    `${row.sensorId}::${row.parameter?.id ?? 'none'}`;
 }

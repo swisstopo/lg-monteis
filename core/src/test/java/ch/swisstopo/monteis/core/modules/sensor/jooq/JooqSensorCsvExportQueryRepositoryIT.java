@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.sensor.jooq;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.SortDirection;
 import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
@@ -23,9 +24,21 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * All test bodies run as admin ({@link SecurityContextTestSupport#runAsAdmin}) - these tests
  * exercise the CSV export query itself, not row-level security.
+ *
+ * <p>Same (Sensor, SensorParameter) row grain as {@link JooqSensorParameterRowQueryRepositoryIT}
+ * (the grid's backing query): a sensor with N parameters yields N rows, a sensor with none still
+ * yields exactly one row with blank parameter columns.
  */
 @IT
 class JooqSensorCsvExportQueryRepositoryIT {
+
+  private static final String HEADER =
+      "dasSensorAlias,name,das,fulcrumId,mainExperiment.name,coordinates.x,coordinates.y,"
+          + "coordinates.z,active,comment,parameter.name,parameter.dasParameterAlias,"
+          + "parameter.type.name,parameter.unit,parameter.formula.expression,"
+          + "parameter.alarmLimits.lower,parameter.alarmLimits.upper,parameter.active,"
+          + "parameter.comment";
+
   @Autowired private JooqSensorRepository sensorRepository;
 
   @Autowired private JooqSensorCsvExportQueryRepository exportRepository;
@@ -51,12 +64,138 @@ class JooqSensorCsvExportQueryRepositoryIT {
 
           // then
           List<String> lines = List.of(csv.split("\r\n"));
-          assertEquals(
-              "dasSensorAlias,name,das,fulcrumId,mainExperiment.name,coordinates.x,coordinates.y,"
-                  + "coordinates.z,active,comment",
-              lines.getFirst());
+          assertEquals(HEADER, lines.getFirst());
           assertEquals(2, lines.size(), "Header plus exactly one matching row");
-          assertTrue(lines.get(1).startsWith("CSV-01,UniqueCsvExportName,"));
+          assertTrue(
+              lines
+                  .get(1)
+                  .startsWith(
+                      "CSV-01,UniqueCsvExportName,SOL_EXPERTS,,,0,0,0,true,,UniqueCsvExportName,"));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_stream_multiple_rows_for_a_multi_parameter_sensor() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given
+          Sensor sensor = createDummySensor("CSV-MULTI-01", "UniqueCsvMultiName", "x");
+          sensor.setParameters(
+              new ArrayList<>(
+                  List.of(
+                      buildParameter("Param One", "x", 0.0, 100.0),
+                      buildParameter("Param Two", "x * 2", 0.0, 50.0))));
+          sensorRepository.create(sensor);
+
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of("name", new TextFilterModel("contains", "uniquecsvmulti", null)));
+
+          // when
+          String csv = streamToString(request);
+
+          // then: header plus one row per parameter, same sensor identity on both
+          List<String> lines = List.of(csv.split("\r\n"));
+          assertEquals(3, lines.size(), "Header plus one row per parameter");
+          assertTrue(lines.get(1).startsWith("CSV-MULTI-01,UniqueCsvMultiName,"));
+          assertTrue(lines.get(2).startsWith("CSV-MULTI-01,UniqueCsvMultiName,"));
+          assertTrue(
+              List.of(lines.get(1), lines.get(2)).stream()
+                  .anyMatch(line -> line.contains("Param One")));
+          assertTrue(
+              List.of(lines.get(1), lines.get(2)).stream()
+                  .anyMatch(line -> line.contains("Param Two")));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_stream_a_single_row_with_blank_parameter_columns_for_a_parameterless_sensor() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given: a sensor created with no parameters at all
+          Sensor sensor = createDummySensor("CSV-NONE-01", "UniqueCsvNoneName", "x");
+          sensor.setParameters(new ArrayList<>());
+          sensorRepository.create(sensor);
+
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of("name", new TextFilterModel("contains", "uniquecsvnone", null)));
+
+          // when
+          String csv = streamToString(request);
+
+          // then: the sensor is not dropped by the LEFT JOIN, its one row just has blank
+          // parameter columns
+          List<String> lines = List.of(csv.split("\r\n"));
+          assertEquals(2, lines.size(), "Header plus exactly one row");
+          assertEquals(
+              String.join(
+                  ",",
+                  "CSV-NONE-01",
+                  "UniqueCsvNoneName",
+                  "SOL_EXPERTS",
+                  "", // fulcrumId
+                  "", // mainExperiment.name
+                  "0",
+                  "0",
+                  "0",
+                  "true",
+                  "", // comment
+                  "", // parameter.name
+                  "", // parameter.dasParameterAlias
+                  "", // parameter.type.name
+                  "", // parameter.unit
+                  "", // parameter.formula.expression
+                  "", // parameter.alarmLimits.lower
+                  "", // parameter.alarmLimits.upper
+                  "", // parameter.active
+                  "" // parameter.comment
+                  ),
+              lines.get(1));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_filter_by_a_parameter_level_field() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given: two sensors, only one has a parameter matching the filter
+          Sensor matching = createDummySensor("CSV-PARAM-FILTER-01", "ParamFilterSensorA", "x");
+          matching.setParameters(
+              new ArrayList<>(
+                  List.of(buildParameter("UniqueCsvParamFilterName", "x", 0.0, 100.0))));
+          sensorRepository.create(matching);
+
+          Sensor nonMatching = createDummySensor("CSV-PARAM-FILTER-02", "ParamFilterSensorB", "x");
+          nonMatching.setParameters(
+              new ArrayList<>(List.of(buildParameter("Other Param Name", "x", 0.0, 100.0))));
+          sensorRepository.create(nonMatching);
+
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "parameter.name",
+                      new TextFilterModel("contains", "uniquecsvparamfilter", null)));
+
+          // when
+          String csv = streamToString(request);
+
+          // then
+          List<String> lines = List.of(csv.split("\r\n"));
+          assertEquals(2, lines.size(), "Header plus exactly one matching row");
+          assertTrue(lines.get(1).startsWith("CSV-PARAM-FILTER-01,"));
         });
   }
 
@@ -152,25 +291,28 @@ class JooqSensorCsvExportQueryRepositoryIT {
     return writer.toString();
   }
 
-  private Sensor createDummySensor(String code, String name, String formulaExpression) {
+  private SensorParameter buildParameter(
+      String name, String formulaExpression, double lower, double upper) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
-    SensorParameter parameter =
-        new SensorParameter(
-            null,
-            name,
-            null,
-            new SensorType(null, "Other", null),
-            Unit.METER,
-            formula,
-            new AlarmLimits(0.0, 100.0),
-            true,
-            null,
-            null);
+    return new SensorParameter(
+        null,
+        name,
+        null,
+        new SensorType(null, "Other", null),
+        Unit.METER,
+        formula,
+        new AlarmLimits(lower, upper),
+        true,
+        null,
+        null);
+  }
 
+  private Sensor createDummySensor(String code, String name, String formulaExpression) {
     Sensor sensor =
-        new Sensor(name, code, DAS.SOL_EXPERTS, null, null, new Coordinates(0, 0, 0), true, null);
-    sensor.setParameters(new ArrayList<>(List.of(parameter)));
+        new Sensor(name, code, Das.SOL_EXPERTS, null, null, new Coordinates(0, 0, 0), true, null);
+    sensor.setParameters(
+        new ArrayList<>(List.of(buildParameter(name, formulaExpression, 0.0, 100.0))));
     return sensor;
   }
 }

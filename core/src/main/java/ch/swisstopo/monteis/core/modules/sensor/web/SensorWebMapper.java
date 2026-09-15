@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
-import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapper;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
@@ -84,7 +83,4 @@ public interface SensorWebMapper {
   CoordinatesDto toDto(Coordinates domain);
 
   AlarmLimitsDto toDto(AlarmLimits domain);
-
-  PagedResult<SensorResponseDto> toPagedDto(
-      PagedResult<Sensor> pagedResult, @Context LocalDate today);
 }

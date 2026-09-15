@@ -10,9 +10,11 @@ import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,18 +47,21 @@ public class SensorController {
   private final Clock clock;
   private final PagedRequestParser pagedRequestParser;
   private final SensorCsvExportQueryRepository csvExportQueryRepository;
+  private final SensorParameterRowQueryRepository parameterRowQueryRepository;
 
   public SensorController(
       SensorService service,
       SensorWebMapper mapper,
       Clock clock,
       PagedRequestParser pagedRequestParser,
-      SensorCsvExportQueryRepository csvExportQueryRepository) {
+      SensorCsvExportQueryRepository csvExportQueryRepository,
+      SensorParameterRowQueryRepository parameterRowQueryRepository) {
     this.service = service;
     this.mapper = mapper;
     this.clock = clock;
     this.pagedRequestParser = pagedRequestParser;
     this.csvExportQueryRepository = csvExportQueryRepository;
+    this.parameterRowQueryRepository = parameterRowQueryRepository;
   }
 
   @Operation(summary = "Get a sensor by id", description = "Retrieves a sensor by id")
@@ -131,18 +136,19 @@ public class SensorController {
 
   @Operation(
       summary = "Get sensors",
-      description = "Retrieves a page of sensors with optional sorting/filtering.")
+      description =
+          "Retrieves a page of sensors at (Sensor, SensorParameter) grain - one row per parameter,"
+              + " with a sensor with none appearing once with a null parameter - with optional"
+              + " sorting/filtering.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved sensors")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-  public PagedResult<SensorResponseDto> getSensors(
+  public PagedResult<SensorParameterRowResponseDto> getSensors(
       @RequestParam @Min(0) int startRow,
       @RequestParam @Min(0) int endRow,
       @RequestParam(required = false) String sortModel,
       @RequestParam(required = false) String filterModel) {
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
-    PagedResult<Sensor> result = service.getSensors(pagedRequestParser.parse(raw));
-    LocalDate today = LocalDate.now(clock);
-    return mapper.toPagedDto(result, today);
+    return parameterRowQueryRepository.findPaged(pagedRequestParser.parse(raw));
   }
 
   @Operation(
@@ -162,8 +168,9 @@ public class SensorController {
   @Operation(
       summary = "Download sensors as CSV",
       description =
-          "Streams all sensors matching the optional sorting/filtering as a CSV file, capped at a"
-              + " server-configured maximum row count.")
+          "Streams all (sensor, sensor parameter) rows matching the optional sorting/filtering as"
+              + " a CSV file - a sensor with no parameters still yields one row, a sensor with N"
+              + " parameters yields N rows - capped at a server-configured maximum row count.")
   @ApiResponse(
       responseCode = "200",
       description = "Successfully streamed sensors as CSV",
