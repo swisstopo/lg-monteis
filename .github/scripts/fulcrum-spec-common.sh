@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Shared helpers for the Fulcrum spec scripts (MON-142). Sourced, never run directly.
+# Helpers shared by the Fulcrum spec scripts. Sourced, never run directly.
 #
-# The spec lives in this repository as a committed file of the contracts module, whose pom records
-# the single thing needed to identify it: the upstream commit it came from (fulcrum.spec.ref), the
-# "pin" the sibling script names refer to. Renovate bumps that pin, verify-fulcrum-spec-matches-pin.sh
-# compares the committed file against the document at it, and sync-fulcrum-spec-to-pin.sh brings
-# the file back in line when the two differ.
+# The spec is committed in the contracts module, and contracts/pom.xml records the upstream commit
+# it came from in fulcrum.spec.ref - the "pin" the sibling scripts refer to. Renovate bumps that
+# pin, verify-fulcrum-spec-matches-pin.sh checks the committed file still matches it, and
+# sync-fulcrum-spec-to-pin.sh brings the file back in line.
 
 readonly UPSTREAM_REPO="fulcrumapp/api"
 readonly UPSTREAM_SPEC_PATH="reference/rest-api.json"
@@ -14,21 +13,22 @@ readonly PINNED_COMMIT_PROPERTY="fulcrum.spec.ref"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 readonly REPO_ROOT
 readonly CONTRACTS_POM="${REPO_ROOT}/contracts/pom.xml"
-readonly COMMITTED_SPEC="${REPO_ROOT}/contracts/src/main/resources/fulcrum/rest-api.json"
 
-# GitHub Actions turns ::error:: into an annotation, but only when it is written to stdout;
-# elsewhere it is just a readable line.
+# Kept as both forms: the absolute path to work with, the relative one for messages to a reader.
+readonly COMMITTED_SPEC_PATH="contracts/src/main/resources/fulcrum/rest-api.json"
+readonly COMMITTED_SPEC="${REPO_ROOT}/${COMMITTED_SPEC_PATH}"
+
+# ::error:: becomes a GitHub Actions annotation, but only on stdout.
 abort() {
   echo "::error::$1"
   exit 1
 }
 
-# Reads the commit the committed spec is supposed to come from into PINNED_SPEC_COMMIT. Read
-# through Maven rather than by parsing the XML, so the contracts pom stays the single source of
-# truth even if the property moves into a profile or gets inherited from the parent.
+# Reads fulcrum.spec.ref into PINNED_SPEC_COMMIT.
 #
-# Sets a variable instead of echoing the value, so that a failure here can still reach the console
-# with its message - inside a $( ) the abort text would be captured along with the value.
+# Through Maven rather than by parsing the XML, so the property is free to move into a profile or
+# be inherited. Assigns instead of echoing: inside a $( ) an abort message would be captured as
+# part of the value rather than reaching the console.
 resolve_pinned_spec_commit() {
   PINNED_SPEC_COMMIT="$(
     mvn -q -B -N -f "${CONTRACTS_POM}" \
@@ -36,10 +36,10 @@ resolve_pinned_spec_commit() {
       tail -n 1 | tr -d '[:space:]'
   )"
 
-  # A missing property makes help:evaluate print "null object or invalid expression" instead of
-  # failing, so the shape of the value is what tells us it is real.
+  # A missing property prints "null object or invalid expression" rather than failing, so the
+  # shape of the value is what tells us it is real.
   if ! [[ "${PINNED_SPEC_COMMIT}" =~ ^[0-9a-f]{40}$ ]]; then
-    abort "${PINNED_COMMIT_PROPERTY} in contracts/pom.xml is not a commit SHA (got: ${PINNED_SPEC_COMMIT:-<empty>})."
+    abort "${PINNED_COMMIT_PROPERTY} in ${CONTRACTS_POM} is not a commit SHA (got: ${PINNED_SPEC_COMMIT:-<empty>})."
   fi
 }
 
@@ -48,8 +48,6 @@ upstream_spec_url() {
   echo "https://raw.githubusercontent.com/${UPSTREAM_REPO}/${commit}/${UPSTREAM_SPEC_PATH}"
 }
 
-# Fails on anything but a JSON body: raw.githubusercontent answers an unknown commit with a
-# plain-text 404 page rather than an HTTP error in some cases.
 download_upstream_spec() {
   local commit="$1" destination="$2" url
   url="$(upstream_spec_url "${commit}")"
@@ -59,6 +57,7 @@ download_upstream_spec() {
     abort "Could not download the Fulcrum spec from ${url}."
   fi
 
+  # An unknown commit can come back as a plain-text 404 page instead of an HTTP error.
   if ! head -c 1 "${destination}" | grep -q '{'; then
     abort "${url} did not return a JSON document."
   fi
