@@ -8,6 +8,7 @@ import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.query.NumberFilterModel;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.infrastructure.query.SetFilterModel;
 import ch.swisstopo.monteis.core.infrastructure.query.SortDirection;
 import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
 import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
@@ -18,6 +19,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameter
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -157,6 +159,41 @@ class JooqSensorParameterRowQueryRepositoryIT {
 
           // then
           assertEquals(1, result.totalCount());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_filter_a_boolean_column_by_a_set_filter_model() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given
+          Sensor activeSensor = createDummySensor("ROW-BOOL-ACTIVE", "BoolFilterActiveSensor", "x");
+          sensorRepository.create(activeSensor);
+
+          Sensor inactiveSensor =
+              createDummySensor("ROW-BOOL-INACTIVE", "BoolFilterInactiveSensor", "x");
+          inactiveSensor.setActive(false);
+          sensorRepository.create(inactiveSensor);
+
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "name",
+                      new TextFilterModel("contains", "BoolFilter", null),
+                      "active",
+                      new SetFilterModel("set", Set.of("true"))));
+
+          // when
+          PagedResult<SensorParameterRowResponseDto> result =
+              parameterRowQueryRepository.findPaged(request);
+
+          // then
+          assertEquals(1, result.totalCount());
+          assertEquals("ROW-BOOL-ACTIVE", result.rows().getFirst().dasSensorAlias());
         });
   }
 

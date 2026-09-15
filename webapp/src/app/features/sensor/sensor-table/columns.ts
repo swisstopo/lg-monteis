@@ -1,13 +1,26 @@
 import { inject } from '@angular/core';
-import { SensorParameterResponseDto, SensorParameterRowResponseDto } from '@core/generated';
-import { getDasMetadata, getUnitMetadata } from '@features/sensor/models/sensor.model';
+import {
+  ExperimentControllerService,
+  SensorParameterResponseDto,
+  SensorParameterRowResponseDto,
+} from '@core/generated';
+import { getDasMetadata, getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { TranslateService } from '@ngx-translate/core';
+import { MultiSelectFilter } from '@ui/filters/multi-select-filter/multi-select-filter';
 import { TableColumn } from '@ui/table/table.types';
+import { firstValueFrom } from 'rxjs';
 
 export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
   const translateService = inject(TranslateService);
+  const experimentApi = inject(ExperimentControllerService);
   const dasMetadata = getDasMetadata();
   const unitMetadata = getUnitMetadata();
+
+  const booleanFilterOptions = () =>
+    Promise.resolve([
+      { displayName: translateService.translate('sensor.active.column.yes')(), value: 'true' },
+      { displayName: translateService.translate('sensor.active.column.no')(), value: 'false' },
+    ]);
 
   return [
     {
@@ -26,8 +39,16 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
       field: 'das',
       headerName: translateService.translate('sensor.das.label')(),
       sortable: true,
-      // Not text-filterable: the backend column is a DB-level enum, not a plain string.
-      filter: false,
+      filter: MultiSelectFilter,
+      filterParams: {
+        valuesProvider: () =>
+          Promise.resolve(
+            Object.entries(dasMetadata).map(([value, meta]) => ({
+              value,
+              displayName: meta.label(),
+            })),
+          ),
+      },
       valueFormatter: (params) =>
         dasMetadata[params.value as SensorParameterRowResponseDto.DasEnum]?.label() ?? '',
     },
@@ -41,7 +62,17 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
       field: 'mainExperiment.name',
       headerName: translateService.translate('sensor.mainExperiment.label')(),
       sortable: true,
-      filter: false,
+      filter: MultiSelectFilter,
+      filterParams: {
+        valuesProvider: async () => {
+          const experiments = await firstValueFrom(experimentApi.getAllExperiments());
+          return experiments
+            .map((experiment) => experiment.name)
+            .filter((name): name is string => !!name)
+            .map((name) => ({ displayName: name, value: name }));
+        },
+        blankOptionLabel: translateService.translate('sensor.mainExperiment.none')(),
+      },
     },
     {
       field: 'coordinates.x',
@@ -65,9 +96,8 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
       field: 'active',
       headerName: translateService.translate('sensor.active.label')(),
       sortable: true,
-      // Not filterable: a boolean Yes/No column would need agSetColumnFilter, a different
-      // filter-model shape the backend doesn't translate yet.
-      filter: false,
+      filter: MultiSelectFilter,
+      filterParams: { valuesProvider: booleanFilterOptions },
       // Without this, ag-grid infers the boolean cell data type from the row data and renders a
       // (valueFormatter-ignoring) checkbox instead of the Yes/No text below.
       cellDataType: false,
@@ -114,8 +144,16 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
       field: 'parameter.unit',
       headerName: translateService.translate('sensor.unit.label')(),
       sortable: true,
-      // Not text-filterable: same enum-column reasoning as the sensor-level `das` column above.
-      filter: false,
+      filter: MultiSelectFilter,
+      filterParams: {
+        valuesProvider: () =>
+          Promise.resolve(
+            Object.values(SensorParameterResponseDto.UnitEnum).map((value) => ({
+              value,
+              displayName: unitMetadata[value as Unit]?.symbol() ?? value,
+            })),
+          ),
+      },
       valueFormatter: (params) =>
         unitMetadata[params.value as SensorParameterResponseDto.UnitEnum]?.symbol() ?? '',
     },
@@ -126,24 +164,23 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
       filter: 'agTextColumnFilter',
     },
     {
-      field: 'parameter.alarmLimits',
-      headerName: translateService.translate('sensor.alarmLimit.column')(),
-      // A compound lower/upper display, not a single backend-sortable/filterable field.
-      sortable: false,
-      filter: false,
-      valueFormatter: (params) =>
-        params.value
-          ? translateService.translate('sensor.alarmLimit.display', {
-              lower: params.value.lower,
-              upper: params.value.upper,
-            })()
-          : '',
+      field: 'parameter.alarmLimits.lower',
+      headerName: translateService.translate('sensor.alarmLimit.from.label')(),
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+    },
+    {
+      field: 'parameter.alarmLimits.upper',
+      headerName: translateService.translate('sensor.alarmLimit.to.label')(),
+      sortable: true,
+      filter: 'agNumberColumnFilter',
     },
     {
       field: 'parameter.active',
       headerName: translateService.translate('sensor.parameter.active.label')(),
       sortable: true,
-      filter: false,
+      filter: MultiSelectFilter,
+      filterParams: { valuesProvider: booleanFilterOptions },
       cellDataType: false,
       valueFormatter: (params) =>
         params.value
