@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSORS;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 
 import ch.swisstopo.monteis.core.infrastructure.csv.CsvWriter;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
@@ -17,13 +16,18 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Streams all sensors matching a filter/sort as CSV, one row at a time, without ever
- * materializing the full result set in memory: the header row, the jOOQ cursor iteration and
- * every row write all happen inside this single {@code @Transactional(readOnly = true)} method,
- * so the DB connection (and the RLS context Postgres enforces against it) stays open for the
- * whole export. This intentionally isn't a {@code StreamingResponseBody} callback - that runs on
- * a separate thread after the controller method (and thus this transaction) has already
- * returned/committed.
+ * Streams all (Sensor, SensorParameter) rows matching a filter/sort as CSV, one row at a time,
+ * without ever materializing the full result set in memory: the header row, the jOOQ cursor
+ * iteration and every row write all happen inside this single
+ * {@code @Transactional(readOnly = true)} method, so the DB connection (and the RLS context
+ * Postgres enforces against it) stays open for the whole export. This intentionally isn't a
+ * {@code StreamingResponseBody} callback - that runs on a separate thread after the controller
+ * method (and thus this transaction) has already returned/committed.
+ *
+ * <p>Same row grain, join, filter/sort semantics and default sort as {@link
+ * JooqSensorParameterRowQueryRepository} (the grid's backing query) - a sensor with zero
+ * parameters still yields exactly one row (parameter columns blank), a sensor with N parameters
+ * yields N rows.
  */
 @Repository
 public class JooqSensorCsvExportQueryRepository implements SensorCsvExportQueryRepository {
@@ -39,7 +43,16 @@ public class JooqSensorCsvExportQueryRepository implements SensorCsvExportQueryR
           "coordinates.y",
           "coordinates.z",
           "active",
-          "comment");
+          "comment",
+          "parameter.name",
+          "parameter.dasParameterAlias",
+          "parameter.type.name",
+          "parameter.unit",
+          "parameter.formula.expression",
+          "parameter.alarmLimits.lower",
+          "parameter.alarmLimits.upper",
+          "parameter.active",
+          "parameter.comment");
 
   private final DSLContext dsl;
 
@@ -50,11 +63,11 @@ public class JooqSensorCsvExportQueryRepository implements SensorCsvExportQueryR
   @Override
   @Transactional(readOnly = true)
   public void streamCsv(PagedRequest exportRequest, Writer writer) throws IOException {
-    // Reuses JooqSensorRepository's colId->Field map so the export honors exactly the same
-    // filter/sort semantics as the grid.
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
         PagedRequestJooqTranslator.translate(
-            exportRequest, JooqSensorRepository.COLUMNS_BY_COL_ID, SENSORS.ID.asc());
+            exportRequest,
+            JooqSensorParameterRowQueryRepository.COLUMNS_BY_COL_ID,
+            SENSORS.NAME.asc());
 
     CsvWriter.writeRow(writer, HEADER);
 
@@ -69,12 +82,20 @@ public class JooqSensorCsvExportQueryRepository implements SensorCsvExportQueryR
                 SENSORS.Y,
                 SENSORS.Z,
                 SENSORS.ACTIVE,
-                SENSORS.COMMENT)
-            .from(SENSORS)
-            .leftJoin(EXPERIMENTS)
-            .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+                SENSORS.COMMENT,
+                SENSOR_PARAMETER.NAME,
+                SENSOR_PARAMETER.DAS_PARAMETER_ALIAS,
+                SENSOR_TYPES.NAME,
+                SENSOR_PARAMETER.UNIT,
+                FORMULAS.EXPRESSION,
+                SENSOR_PARAMETER.LOWER_ALARM_LIMIT,
+                SENSOR_PARAMETER.UPPER_ALARM_LIMIT,
+                SENSOR_PARAMETER.ACTIVE,
+                SENSOR_PARAMETER.COMMENT)
+            .from(JooqSensorParameterRowQueryRepository.joinedFrom())
             .where(criteria.condition())
-            .orderBy(criteria.sortFields())
+            .orderBy(
+                JooqSensorParameterRowQueryRepository.withStableTiebreaker(criteria.sortFields()))
             .limit(exportRequest.limit())
             .fetchLazy()) {
       for (Record r : cursor) {
@@ -90,7 +111,16 @@ public class JooqSensorCsvExportQueryRepository implements SensorCsvExportQueryR
                 r.get(SENSORS.Y),
                 r.get(SENSORS.Z),
                 r.get(SENSORS.ACTIVE),
-                r.get(SENSORS.COMMENT)));
+                r.get(SENSORS.COMMENT),
+                r.get(SENSOR_PARAMETER.NAME),
+                r.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
+                r.get(SENSOR_TYPES.NAME),
+                r.get(SENSOR_PARAMETER.UNIT),
+                r.get(FORMULAS.EXPRESSION),
+                r.get(SENSOR_PARAMETER.LOWER_ALARM_LIMIT),
+                r.get(SENSOR_PARAMETER.UPPER_ALARM_LIMIT),
+                r.get(SENSOR_PARAMETER.ACTIVE),
+                r.get(SENSOR_PARAMETER.COMMENT)));
         writer.flush();
       }
     }
