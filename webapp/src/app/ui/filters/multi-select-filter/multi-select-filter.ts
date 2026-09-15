@@ -1,6 +1,6 @@
-import { Component, computed, ElementRef, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { IFilterAngularComp } from 'ag-grid-angular';
 import { IDoesFilterPassParams, IFilterParams } from 'ag-grid-community';
 
@@ -52,6 +52,8 @@ interface MultiSelectFilterParams extends IFilterParams {
 })
 export class MultiSelectFilter implements IFilterAngularComp {
   readonly filterOptionsContainer = viewChild<ElementRef<HTMLDivElement>>('filterOptions');
+
+  private readonly translateService = inject(TranslateService);
 
   private params!: MultiSelectFilterParams;
   private initialValues = new Set<string | null>();
@@ -147,6 +149,23 @@ export class MultiSelectFilter implements IFilterAngularComp {
       filterType: 'set',
       values: Array.from(selected),
     };
+  }
+
+  getModelAsString(model: SetFilterModel | null): string {
+    if (!model?.values?.length) return '';
+
+    const displayNameByValue = new Map(
+      this.filterOptions().map((option) => [option.value, option.displayName]),
+    );
+    const displayNames = model.values.map(
+      (value) => displayNameByValue.get(value) ?? String(value),
+    );
+
+    if (displayNames.length === 1) return displayNames[0];
+
+    return this.translateService.translate('common.multiSelectFilter.floatingFilterSummary', {
+      count: displayNames.length,
+    })();
   }
 
   setModel(model: SetFilterModel | null): void {

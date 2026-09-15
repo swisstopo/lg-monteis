@@ -14,7 +14,8 @@
       "selectAll": "(Select all)",
       "noResults": "No results found",
       "cancel": "Cancel",
-      "apply": "Apply"
+      "apply": "Apply",
+      "floatingFilterSummary": "{{count}} selected"
     }
   },
   "error": {
