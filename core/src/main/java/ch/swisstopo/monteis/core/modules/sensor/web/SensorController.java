@@ -57,7 +57,8 @@ public class SensorController {
   @Operation(
       summary = "Create a new sensor",
       description =
-          "Creates a new sensor in the system. The 'code' must be unique across all sensors.")
+          "Creates a new sensor in the system. The 'dasSensorAlias' must be unique across all"
+              + " sensors.")
   @ApiResponses(
       value = {@ApiResponse(responseCode = "201", description = "Sensor successfully created")})
   @PostMapping(

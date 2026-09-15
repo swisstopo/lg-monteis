@@ -13,7 +13,7 @@ public class SensorConfigCache {
   // raw alias - see contracts.DasKey.
   private final ConcurrentMap<String, ActiveSensorConfig> cache = new ConcurrentHashMap<>();
 
-  private static final String DEFAULT_DAS_SENSOR_ALIAS = "UNKNOWN_SENSOR";
+  private static final String DEFAULT_DAS_KEY = "UNKNOWN_SENSOR";
   private static final String DEFAULT_FORMULA = "x";
   private static final Integer DEFAULT_SENSOR_VERSION = 0;
   private static final Double DEFAULT_SENSOR_UPPER_BOUND = Double.MAX_VALUE;
@@ -22,7 +22,7 @@ public class SensorConfigCache {
   private static final SensorParameterConfig DEFAULT_SENSOR_CONFIG =
       new SensorParameterConfig(
           null,
-          DEFAULT_DAS_SENSOR_ALIAS,
+          DEFAULT_DAS_KEY,
           null,
           null,
           DEFAULT_FORMULA,

@@ -434,7 +434,7 @@ class JooqExperimentRepositoryIT {
   /**
    * Helper to quickly build a valid, persisted Sensor for linking to an experiment.
    */
-  private Sensor createDummySensor(String code, String name, String formulaExpression) {
+  private Sensor createDummySensor(String dasKey, String name, String formulaExpression) {
     Formula formula = new Formula();
     formula.setExpression(formulaExpression);
     Coordinates coordinates = new Coordinates(2400, -12007, -1600);
@@ -451,7 +451,7 @@ class JooqExperimentRepositoryIT {
             null,
             null);
 
-    Sensor sensor = new Sensor(name, code, Das.SOL_EXPERTS, null, null, coordinates, true, null);
+    Sensor sensor = new Sensor(name, dasKey, Das.SOL_EXPERTS, null, null, coordinates, true, null);
     sensor.setParameters(new ArrayList<>(List.of(parameter)));
     return sensorRepository.create(sensor);
   }
