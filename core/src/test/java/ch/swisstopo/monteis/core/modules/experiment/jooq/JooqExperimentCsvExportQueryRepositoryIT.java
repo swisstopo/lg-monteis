@@ -25,10 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
  * All test bodies run as admin ({@link SecurityContextTestSupport#runAsAdmin}) - these tests
  * exercise the CSV export query itself, not row-level security.
  *
- * <p>Status is computed in SQL via {@code JooqExperimentRepository.STATUS_FIELD}, against the
- * database's actual current date ({@code CURRENT_DATE}, not an injectable {@code Clock}) - periods
- * here are therefore built relative to {@link LocalDate#now()} rather than fixed dates, so these
- * assertions hold regardless of when the test runs.
+ * <p>Status is computed via the domain layer ({@code Period.getStatus}), against the app's
+ * injected {@code Clock} bean (which is {@code Clock.systemDefaultZone()} in this Spring context,
+ * same as {@link LocalDate#now()}) - periods here are therefore built relative to {@code
+ * LocalDate.now()} rather than fixed dates, so these assertions hold regardless of when the test
+ * runs.
  */
 @IT
 class JooqExperimentCsvExportQueryRepositoryIT {

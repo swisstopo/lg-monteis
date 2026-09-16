@@ -11,4 +11,10 @@ public record Period(LocalDate start, LocalDate end) {
           "experiment.period.invalid", Map.of("end", end, "start", start));
     }
   }
+
+  public Status getStatus(LocalDate today) {
+    if (start != null && today.isBefore(start)) return Status.UPCOMING;
+    if (end != null && today.isAfter(end)) return Status.HISTORIC;
+    return Status.ACTIVE;
+  }
 }

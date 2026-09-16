@@ -112,69 +112,17 @@ class ExperimentTest {
   }
 
   @Test
-  void should_set_status_to_historic_when_end_date_is_before_today() {
-    // given
+  void should_delegate_status_computation_to_its_period() {
+    // given: boundary-case coverage (historic/upcoming/active) lives in PeriodTest - this only
+    // confirms Experiment.getStatus delegates to it rather than computing status itself.
     Period historicPeriod =
         new Period(LocalDate.of(2022, Month.JANUARY, 1), LocalDate.of(2023, Month.JANUARY, 1));
     Experiment experiment = new Experiment("Name", "Owner", historicPeriod, "Desc");
 
     // when
-    experiment.getStatus(referenceToday);
+    Status status = experiment.getStatus(referenceToday);
 
     // then
-    assertEquals(Status.HISTORIC, experiment.getStatus(referenceToday));
-  }
-
-  @Test
-  void should_set_status_to_upcoming_when_start_date_is_after_today() {
-    // given
-    Period upcomingPeriod =
-        new Period(LocalDate.of(2025, Month.JANUARY, 1), LocalDate.of(2026, Month.JANUARY, 1));
-    Experiment experiment = new Experiment("Name", "Owner", upcomingPeriod, "Desc");
-
-    // when
-    experiment.getStatus(referenceToday);
-
-    // then
-    assertEquals(Status.UPCOMING, experiment.getStatus(referenceToday));
-  }
-
-  @Test
-  void should_set_status_to_active_when_today_is_between_start_and_end_dates() {
-    // given
-    Period activePeriod =
-        new Period(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2025, Month.JANUARY, 1));
-    Experiment experiment = new Experiment("Name", "Owner", activePeriod, "Desc");
-
-    // when
-    experiment.getStatus(referenceToday); // reference is 2024-06-15
-
-    // then
-    assertEquals(Status.ACTIVE, experiment.getStatus(referenceToday));
-  }
-
-  @Test
-  void should_set_status_to_active_when_today_is_exactly_start_or_end_date() {
-    // given
-    LocalDate start = LocalDate.of(2024, Month.JUNE, 15);
-    LocalDate end = LocalDate.of(2024, Month.DECEMBER, 15);
-    Period period = new Period(start, end);
-    Experiment experiment = new Experiment("Name", "Owner", period, "Desc");
-
-    // when (testing start boundary)
-    experiment.getStatus(start);
-    // then
-    assertEquals(
-        Status.ACTIVE,
-        experiment.getStatus(referenceToday),
-        "Should be active exactly on start date");
-
-    // when (testing end boundary)
-    experiment.getStatus(end);
-    // then
-    assertEquals(
-        Status.ACTIVE,
-        experiment.getStatus(referenceToday),
-        "Should be active exactly on end date");
+    assertEquals(historicPeriod.getStatus(referenceToday), status);
   }
 }

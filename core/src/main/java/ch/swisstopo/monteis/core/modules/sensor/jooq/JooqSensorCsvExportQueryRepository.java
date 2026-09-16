@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
  * yields N rows.
  */
 @Repository
+@Transactional(readOnly = true)
 public class JooqSensorCsvExportQueryRepository implements SensorCsvExportQueryRepository {
 
   private static final List<String> HEADER =
@@ -61,7 +62,6 @@ public class JooqSensorCsvExportQueryRepository implements SensorCsvExportQueryR
   }
 
   @Override
-  @Transactional(readOnly = true)
   public void streamCsv(PagedRequest exportRequest, Writer writer) throws IOException {
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
         PagedRequestJooqTranslator.translate(

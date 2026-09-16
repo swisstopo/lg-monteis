@@ -5,9 +5,12 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 import ch.swisstopo.monteis.core.infrastructure.csv.CsvWriter;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
 import java.io.IOException;
 import java.io.Writer;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import org.jooq.DSLContext;
@@ -25,19 +28,21 @@ import org.springframework.transaction.annotation.Transactional;
  * returned/committed.
  */
 @Repository
+@Transactional(readOnly = true)
 public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExportQueryRepository {
 
   private static final List<String> HEADER =
       List.of("name", "status", "period.start", "period.end", "sensorCount", "comment", "id");
 
   private final DSLContext dsl;
+  private final Clock clock;
 
-  public JooqExperimentCsvExportQueryRepository(DSLContext dsl) {
+  public JooqExperimentCsvExportQueryRepository(DSLContext dsl, Clock clock) {
     this.dsl = dsl;
+    this.clock = clock;
   }
 
   @Override
-  @Transactional(readOnly = true)
   public void streamCsv(PagedRequest exportRequest, Writer writer) throws IOException {
     // Reuses JooqExperimentRepository's colId->Field map so the export honors exactly the same
     // filter/sort semantics as the grid.
@@ -45,12 +50,12 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
         PagedRequestJooqTranslator.translate(
             exportRequest, JooqExperimentRepository.COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
 
+    LocalDate today = LocalDate.now(clock);
     CsvWriter.writeRow(writer, HEADER);
 
     try (var cursor =
         dsl.select(
                 EXPERIMENTS.NAME,
-                JooqExperimentRepository.STATUS_FIELD,
                 EXPERIMENTS.START,
                 EXPERIMENTS.END,
                 JooqExperimentRepository.SENSOR_COUNT_FIELD.as(
@@ -63,11 +68,12 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
             .limit(exportRequest.limit())
             .fetchLazy()) {
       for (Record r : cursor) {
+        Period period = new Period(r.get(EXPERIMENTS.START), r.get(EXPERIMENTS.END));
         CsvWriter.writeRow(
             writer,
             Arrays.asList(
                 r.get(EXPERIMENTS.NAME),
-                r.get(JooqExperimentRepository.STATUS_FIELD),
+                period.getStatus(today),
                 r.get(EXPERIMENTS.START),
                 r.get(EXPERIMENTS.END),
                 r.get(JooqExperimentRepository.SENSOR_COUNT_FIELD_NAME, Integer.class),
