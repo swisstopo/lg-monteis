@@ -27,15 +27,18 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class JooqExperimentRepository implements ExperimentRepository {
 
-  private static final String SENSOR_COUNT_FIELD_NAME = "sensorCount";
+  // Package-private (not private): also reused by JooqExperimentCsvExportQueryRepository.
+  static final String SENSOR_COUNT_FIELD_NAME = "sensorCount";
 
-  private static final Field<Integer> SENSOR_COUNT_FIELD =
+  static final Field<Integer> SENSOR_COUNT_FIELD =
       DSL.selectCount()
           .from(EXPERIMENT_SENSOR)
           .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
           .asField();
 
-  private static final Field<String> STATUS_FIELD =
+  // Package-private (not private): also reused by JooqExperimentCsvExportQueryRepository, to
+  // select the exact same computed "status" value the grid filters/sorts by.
+  static final Field<String> STATUS_FIELD =
       DSL.case_()
           .when(
               EXPERIMENTS.START.isNotNull().and(DSL.currentLocalDate().lt(EXPERIMENTS.START)),
@@ -45,7 +48,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
               DSL.inline("HISTORIC"))
           .else_(DSL.inline("ACTIVE"));
 
-  private static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
+  // Package-private (not private): also reused by JooqExperimentCsvExportQueryRepository, so a
+  // CSV export honors the exact same filter/sort semantics as the grid.
+  static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
       Map.of(
           "id",
           EXPERIMENTS.ID,

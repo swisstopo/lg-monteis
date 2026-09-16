@@ -2,21 +2,21 @@
   @if (isLoading()) {
     <div class="filter-state-container">
       <mat-spinner diameter="30"></mat-spinner>
-      <span>Laden...</span>
+      <span>{{ 'common.multiSelectFilter.loading' | translate }}</span>
     </div>
   }
 
   @if (!isLoading() && hasError()) {
     <div class="filter-state-container">
       <mat-icon color="warn">error_outline</mat-icon>
-      <span>Fehler beim Laden</span>
+      <span>{{ 'common.multiSelectFilter.loadError' | translate }}</span>
     </div>
   }
 
   @if (!isLoading() && !hasError()) {
     @if (showFilter()) {
       <mat-form-field class="search-field" appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Suche</mat-label>
+        <mat-label>{{ 'common.multiSelectFilter.search' | translate }}</mat-label>
         <mat-icon matPrefix>search</mat-icon>
         <input matInput [(ngModel)]="searchText" autocomplete="off" />
       </mat-form-field>
@@ -28,7 +28,7 @@
       [indeterminate]="isIndeterminate()"
       (change)="onAllChanged($event)"
     >
-      (Alle selektieren)
+      {{ 'common.multiSelectFilter.selectAll' | translate }}
     </mat-checkbox>
 
     <mat-divider></mat-divider>
@@ -43,15 +43,21 @@
           {{ option.displayName }}
         </mat-checkbox>
       } @empty {
-        <span class="no-results-message">Keine Resultate gefunden</span>
+        <span class="no-results-message">{{
+          'common.multiSelectFilter.noResults' | translate
+        }}</span>
       }
     </div>
 
     <mat-divider></mat-divider>
 
     <div class="filter-actions">
-      <button mat-button (click)="onCancelClick()">Abbrechen</button>
-      <button mat-flat-button color="primary" (click)="onApplyClick()">Anwenden</button>
+      <button mat-button (click)="onCancelClick()">
+        {{ 'common.multiSelectFilter.cancel' | translate }}
+      </button>
+      <button mat-flat-button color="primary" (click)="onApplyClick()">
+        {{ 'common.multiSelectFilter.apply' | translate }}
+      </button>
     </div>
   }
 </div>

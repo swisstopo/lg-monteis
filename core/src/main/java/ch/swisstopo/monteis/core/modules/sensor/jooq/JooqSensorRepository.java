@@ -26,7 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class JooqSensorRepository implements SensorRepository {
 
   // Updated to match the new columns on the sensors table
-  private static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
+  // Package-private (not private): also reused by JooqSensorCsvExportQueryRepository, so a CSV
+  // export honors the exact same filter/sort semantics as the grid.
+  static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
       Map.ofEntries(
           Map.entry("name", SENSORS.NAME),
           Map.entry("dasSensorAlias", SENSORS.DAS_SENSOR_ALIAS),

@@ -44,9 +44,7 @@ public class Experiment implements Auditable {
   }
 
   public Status getStatus(LocalDate today) {
-    if (period.start() != null && today.isBefore(period.start())) return Status.UPCOMING;
-    if (period.end() != null && today.isAfter(period.end())) return Status.HISTORIC;
-    return Status.ACTIVE;
+    return period.getStatus(today);
   }
 
   public UUID getId() {

@@ -5,13 +5,18 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willAnswer;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
@@ -20,6 +25,8 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
@@ -29,9 +36,11 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.Writer;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -69,6 +78,8 @@ class SensorControllerTest {
   @MockitoBean private SensorWebMapper mapper;
   @MockitoBean private PagedRequestParser pagedRequestParser;
   @MockitoBean private Clock clock;
+  @MockitoBean private SensorCsvExportQueryRepository csvExportQueryRepository;
+  @MockitoBean private SensorParameterRowQueryRepository parameterRowQueryRepository;
 
   @BeforeEach
   void setUpClock() {
@@ -107,16 +118,23 @@ class SensorControllerTest {
 
   @Test
   void should_route_get_sensors_and_return_paged_result() throws Exception {
-    // given
-    SensorResponseDto dto1 = defaultResponseDto(SENSOR_ID, "Test 1", 1, 1);
-
-    Sensor mockDomain = mock(Sensor.class);
+    // given: one row, carrying its parameter nested (the one-per-SensorParameter grain)
+    SensorParameterRowResponseDto row =
+        new SensorParameterRowResponseDto(
+            SENSOR_ID,
+            "Test 1",
+            "SENS-01",
+            Das.SOL_EXPERTS,
+            null,
+            null,
+            new CoordinatesDto(0, 0, 0),
+            true,
+            null,
+            defaultResponseParameterDto(1));
 
     given(pagedRequestParser.parse(any())).willReturn(new PagedRequest(0, 20, List.of(), Map.of()));
-    PagedResult<Sensor> sensorPagedResult = new PagedResult<>(List.of(mockDomain), 1);
-    given(service.getSensors(any())).willReturn(sensorPagedResult);
-    given(mapper.toPagedDto(eq(sensorPagedResult), any(LocalDate.class)))
-        .willReturn(new PagedResult<>(List.of(dto1), 1));
+    given(parameterRowQueryRepository.findPaged(any()))
+        .willReturn(new PagedResult<>(List.of(row), 1));
 
     // when / then
     mockMvc
@@ -128,14 +146,56 @@ class SensorControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalCount").value(1))
-        .andExpect(jsonPath("$.rows[0].id").value(dto1.id().toString()))
-        .andExpect(jsonPath("$.rows[0].dasSensorAlias").value(dto1.dasSensorAlias()))
-        .andExpect(
-            jsonPath("$.rows[0].parameters[0].type.name")
-                .value(dto1.parameters().getFirst().type().name()));
+        .andExpect(jsonPath("$.rows[0].sensorId").value(row.sensorId().toString()))
+        .andExpect(jsonPath("$.rows[0].dasSensorAlias").value(row.dasSensorAlias()))
+        .andExpect(jsonPath("$.rows[0].parameter.type.name").value(row.parameter().type().name()));
 
-    then(service).should().getSensors(any());
-    then(mapper).should().toPagedDto(eq(sensorPagedResult), any(LocalDate.class));
+    then(pagedRequestParser).should().parse(any());
+    then(parameterRowQueryRepository).should().findPaged(any());
+  }
+
+  @Test
+  void should_route_get_sensors_csv_and_stream_csv_content() throws Exception {
+    // given
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    willAnswer(
+            invocation -> {
+              Writer writer = invocation.getArgument(1);
+              writer.write("dasSensorAlias,name\r\nSENS-01,Test\r\n");
+              return null;
+            })
+        .given(csvExportQueryRepository)
+        .streamCsv(eq(exportRequest), any());
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors/csv").with(jwt()))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType("text/csv;charset=UTF-8"))
+        .andExpect(header().string("Content-Disposition", "attachment; filename=\"sensors.csv\""))
+        .andExpect(content().string("dasSensorAlias,name\r\nSENS-01,Test\r\n"));
+
+    then(pagedRequestParser).should().parseForExport(any());
+    then(csvExportQueryRepository).should().streamCsv(eq(exportRequest), any());
+  }
+
+  @Test
+  void should_return_bad_request_when_csv_export_query_rejects_the_filter() throws Exception {
+    // given: the repository throws before writing any bytes (an unknown filter column) - this
+    // must still surface as a normal 400 via GlobalErrorControllerAdvice, not a broken/partial
+    // 200 response
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    willThrow(new InvalidPagedRequestException("Unknown sortable/filterable column: bogus"))
+        .given(csvExportQueryRepository)
+        .streamCsv(eq(exportRequest), any());
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors/csv").with(jwt()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
   }
 
   @Test
@@ -318,6 +378,45 @@ class SensorControllerTest {
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().updateSensor(mockDomain);
     then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
+  }
+
+  @Test
+  void should_route_update_sensor_with_a_new_parameter_lacking_id_and_version() throws Exception {
+    // given: an update mixing an existing parameter (id+version) with a brand new one being
+    // added in the same request (no id/version yet, since it doesn't exist until this save)
+    WriteSensorDto requestDto =
+        new WriteSensorDto(
+            SENSOR_ID,
+            "Test",
+            "SENS-01",
+            Das.SOL_EXPERTS,
+            null,
+            null,
+            null,
+            new CoordinatesDto(0, 0, 0),
+            true,
+            1,
+            List.of(
+                defaultWriteParameterDto(PARAMETER_ID, 1), defaultWriteParameterDto(null, null)));
+    SensorResponseDto expectedResponseDto = defaultResponseDto(SENSOR_ID, "Updated", 2, 1);
+
+    Sensor mockDomain = mock(Sensor.class);
+
+    given(mapper.toDomain(any(WriteSensorDto.class))).willReturn(mockDomain);
+    given(service.updateSensor(mockDomain)).willReturn(mockDomain);
+    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
+
+    // when / then: must pass bean validation (not 422) despite the second parameter's missing
+    // id/version
+    mockMvc
+        .perform(
+            put("/api/sensors/{id}", SENSOR_ID)
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestDto)))
+        .andExpect(status().isOk());
+
+    then(service).should().updateSensor(mockDomain);
   }
 
   @Test

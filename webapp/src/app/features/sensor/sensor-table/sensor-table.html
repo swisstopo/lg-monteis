@@ -1,7 +1,11 @@
 <div class="metrics-panel">
   <app-table-header (searchAction)="onSearch($event)">
-    <button read-action matButton="text" (click)="onDownload()">
-      <mat-icon fontIcon="download"></mat-icon>
+    <button read-action matButton="text" [disabled]="downloading()" (click)="onDownload()">
+      @if (downloading()) {
+        <mat-spinner diameter="16"></mat-spinner>
+      } @else {
+        <mat-icon fontIcon="download"></mat-icon>
+      }
       {{ 'sensor.tableHeader.download' | translate }}
     </button>
 
@@ -26,7 +30,7 @@
       [rowModelType]="'infinite'"
       [datasource]="datasource"
       [gridOptions]="{ domLayout: 'normal' }"
-      [getRowId]="getSensorRowId"
+      [getRowId]="getSensorParameterRowId"
       (rowClicked)="onWrappedRow($event)"
       (selectionChanged)="onSelectionChanged($event)"
       (gridReady)="onGridReady($event)"

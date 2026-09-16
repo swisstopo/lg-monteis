@@ -5,7 +5,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.query.*;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -158,7 +161,15 @@ class PagedRequestJooqTranslatorTest {
         Arguments.of("null values", null, DSL.falseCondition()),
         Arguments.of("empty values", Set.of(), DSL.falseCondition()),
         Arguments.of(
-            "valid values", Set.of("ACTIVE", "HISTORIC"), f.in(Set.of("ACTIVE", "HISTORIC"))));
+            "valid values", Set.of("ACTIVE", "HISTORIC"), f.in(Set.of("ACTIVE", "HISTORIC"))),
+        Arguments.of(
+            "a null entry (blank)",
+            new LinkedHashSet<>(Arrays.asList("ACTIVE", null)),
+            f.in(Set.of("ACTIVE")).or(f.isNull())),
+        Arguments.of(
+            "only a null entry (blank only)",
+            new LinkedHashSet<>(Collections.singletonList(null)),
+            DSL.falseCondition().or(f.isNull())));
   }
 
   @ParameterizedTest(name = "set filter with {0} translates correctly")

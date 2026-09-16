@@ -56,4 +56,58 @@ class PeriodTest {
     assertEquals(
         "experiment.period.invalid", exception.getMessage(), "Exception message code should match");
   }
+
+  @Test
+  void should_return_historic_when_end_date_is_before_today() {
+    // given
+    Period period =
+        new Period(LocalDate.of(2022, Month.JANUARY, 1), LocalDate.of(2023, Month.JANUARY, 1));
+    LocalDate today = LocalDate.of(2024, Month.JUNE, 15);
+
+    // when
+    Status status = period.getStatus(today);
+
+    // then
+    assertEquals(Status.HISTORIC, status);
+  }
+
+  @Test
+  void should_return_upcoming_when_start_date_is_after_today() {
+    // given
+    Period period =
+        new Period(LocalDate.of(2025, Month.JANUARY, 1), LocalDate.of(2026, Month.JANUARY, 1));
+    LocalDate today = LocalDate.of(2024, Month.JUNE, 15);
+
+    // when
+    Status status = period.getStatus(today);
+
+    // then
+    assertEquals(Status.UPCOMING, status);
+  }
+
+  @Test
+  void should_return_active_when_today_is_between_start_and_end_dates() {
+    // given
+    Period period =
+        new Period(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2025, Month.JANUARY, 1));
+    LocalDate today = LocalDate.of(2024, Month.JUNE, 15);
+
+    // when
+    Status status = period.getStatus(today);
+
+    // then
+    assertEquals(Status.ACTIVE, status);
+  }
+
+  @Test
+  void should_return_active_when_today_is_exactly_the_start_or_end_date() {
+    // given
+    LocalDate start = LocalDate.of(2024, Month.JUNE, 15);
+    LocalDate end = LocalDate.of(2024, Month.DECEMBER, 15);
+    Period period = new Period(start, end);
+
+    // when / then
+    assertEquals(Status.ACTIVE, period.getStatus(start), "Should be active exactly on start date");
+    assertEquals(Status.ACTIVE, period.getStatus(end), "Should be active exactly on end date");
+  }
 }

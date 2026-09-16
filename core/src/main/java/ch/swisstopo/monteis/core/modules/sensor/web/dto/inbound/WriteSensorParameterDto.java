@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound;
 
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.NullOrNotBlank;
-import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,12 +13,7 @@ import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
 public record WriteSensorParameterDto(
-    // a missing/unmatched id is inserted as a new row with a freshly generated id;
-    // any existing id absent from the incoming list is deleted.
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-        @Null(groups = Create.class)
-        @NotNull(groups = Update.class)
-        UUID id,
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) @Null(groups = Create.class) UUID id,
     @NotBlank @Size(min = 2, max = 255) String name,
     @NullOrNotBlank @Size(max = 255) String dasParameterAlias,
     @NotNull Unit unit,
@@ -33,7 +27,5 @@ public record WriteSensorParameterDto(
         @Valid
         WriteFormulaDto formula,
     @NullOrNotBlank @Size(max = 4096) String comment,
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-        @Null(groups = Create.class)
-        @NotNull(groups = Update.class)
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) @Null(groups = Create.class)
         Integer version) {}
