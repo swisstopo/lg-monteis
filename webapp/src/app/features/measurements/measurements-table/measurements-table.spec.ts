@@ -1,28 +1,29 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { OverviewControllerService, ReadSimpleMetricDto } from '@core/generated';
+import { MeasurementControllerService, MeasurementResponseDto } from '@core/generated';
 import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import MeasurementsTable from './measurements-table';
 
-const overviewServiceMock = {
-  getMetrics: vi.fn().mockReturnValue(of([])),
+const measurementControllerMock = {
+  getMeasurements: vi.fn().mockReturnValue(of({ rows: [], totalCount: 0 })),
+  getChartData: vi.fn().mockReturnValue(of([])),
 };
 
 describe('MeasurementsTable', () => {
   let fixture: ComponentFixture<MeasurementsTable>;
 
   beforeEach(async () => {
-    overviewServiceMock.getMetrics.mockReturnValue(of([]));
+    measurementControllerMock.getMeasurements.mockReturnValue(of({ rows: [], totalCount: 0 }));
 
     await TestBed.configureTestingModule({
       imports: [MeasurementsTable],
       providers: [
         {
-          provide: OverviewControllerService,
-          useValue: overviewServiceMock,
+          provide: MeasurementControllerService,
+          useValue: measurementControllerMock,
         },
         WorkbenchView,
         provideTranslateService(),
@@ -40,7 +41,7 @@ describe('MeasurementsTable', () => {
 
   it('derives distinct, defined sensor ids from the selected rows only', () => {
     const component = TestBed.createComponent(MeasurementsTable).componentInstance as unknown as {
-      selectedRows: { set: (rows: ReadSimpleMetricDto[]) => void };
+      selectedRows: { set: (rows: MeasurementResponseDto[]) => void };
       selectedSensorIds: () => string[];
     };
 

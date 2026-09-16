@@ -1,75 +1,80 @@
 <div class="metrics-panel">
-  <h2 class="panel-heading">{{ 'measurements-table.heading' | translate }}</h2>
+  <div class="range-controls">
+    <mat-form-field>
+      <mat-label>{{ 'measurements-table.form.startDate.label' | translate }}</mat-label>
+      <input
+        matInput
+        [matDatepicker]="startPicker"
+        [formField]="rangeForm.start.date"
+        placeholder="Start date"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+      <mat-datepicker #startPicker></mat-datepicker>
+      @if (rangeForm.start.date().touched() && rangeForm.start.date().invalid()) {
+        <mat-error>{{
+          'measurements-table.form.startDate.validation.required' | translate
+        }}</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>{{ 'measurements-table.form.startTime.label' | translate }}</mat-label>
+      <input
+        matInput
+        [matTimepicker]="startTimePicker"
+        [formField]="rangeForm.start.time"
+        placeholder="HH:mm"
+      />
+      <mat-timepicker-toggle matIconSuffix [for]="startTimePicker"></mat-timepicker-toggle>
+      <mat-timepicker #startTimePicker></mat-timepicker>
+      @if (rangeForm.start.time().touched() && rangeForm.start.time().invalid()) {
+        <mat-error>{{
+          'measurements-table.form.startTime.validation.required' | translate
+        }}</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>{{ 'measurements-table.form.endDate.label' | translate }}</mat-label>
+      <input
+        matInput
+        [matDatepicker]="endPicker"
+        [formField]="rangeForm.end.date"
+        placeholder="End date"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+      <mat-datepicker #endPicker></mat-datepicker>
+      @if (rangeForm.end.date().touched() && rangeForm.end.date().invalid()) {
+        <mat-error>{{
+          'measurements-table.form.endDate.validation.required' | translate
+        }}</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>{{ 'measurements-table.form.endTime.label' | translate }}</mat-label>
+      <input
+        matInput
+        [matTimepicker]="endTimePicker"
+        [formField]="rangeForm.end.time"
+        placeholder="HH:mm"
+      />
+      <mat-timepicker-toggle matIconSuffix [for]="endTimePicker"></mat-timepicker-toggle>
+      <mat-timepicker #endTimePicker></mat-timepicker>
+      @if (rangeForm.end.time().touched() && rangeForm.end.time().invalid()) {
+        <mat-error>{{
+          'measurements-table.form.endTime.validation.required' | translate
+        }}</mat-error>
+      }
+    </mat-form-field>
 
-  <mat-form-field>
-    <mat-label>{{ 'measurements-table.form.startDate.label' | translate }}</mat-label>
-    <input
-      matInput
-      [matDatepicker]="startPicker"
-      [formField]="rangeForm.start.date"
-      placeholder="Start date"
-    />
-    <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
-    <mat-datepicker #startPicker></mat-datepicker>
-    @if (rangeForm.start.date().touched() && rangeForm.start.date().invalid()) {
-      <mat-error>{{
-        'measurements-table.form.startDate.validation.required' | translate
-      }}</mat-error>
-    }
-  </mat-form-field>
-  <mat-form-field>
-    <mat-label>{{ 'measurements-table.form.startTime.label' | translate }}</mat-label>
-    <input
-      matInput
-      [matTimepicker]="startTimePicker"
-      [formField]="rangeForm.start.time"
-      placeholder="HH:mm"
-    />
-    <mat-timepicker-toggle matIconSuffix [for]="startTimePicker"></mat-timepicker-toggle>
-    <mat-timepicker #startTimePicker></mat-timepicker>
-    @if (rangeForm.start.time().touched() && rangeForm.start.time().invalid()) {
-      <mat-error>{{
-        'measurements-table.form.startTime.validation.required' | translate
-      }}</mat-error>
-    }
-  </mat-form-field>
-  <mat-form-field>
-    <mat-label>{{ 'measurements-table.form.endDate.label' | translate }}</mat-label>
-    <input
-      matInput
-      [matDatepicker]="endPicker"
-      [formField]="rangeForm.end.date"
-      placeholder="End date"
-    />
-    <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
-    <mat-datepicker #endPicker></mat-datepicker>
-    @if (rangeForm.end.date().touched() && rangeForm.end.date().invalid()) {
-      <mat-error>{{ 'measurements-table.form.endDate.validation.required' | translate }}</mat-error>
-    }
-  </mat-form-field>
-  <mat-form-field>
-    <mat-label>{{ 'measurements-table.form.endTime.label' | translate }}</mat-label>
-    <input
-      matInput
-      [matTimepicker]="endTimePicker"
-      [formField]="rangeForm.end.time"
-      placeholder="HH:mm"
-    />
-    <mat-timepicker-toggle matIconSuffix [for]="endTimePicker"></mat-timepicker-toggle>
-    <mat-timepicker #endTimePicker></mat-timepicker>
-    @if (rangeForm.end.time().touched() && rangeForm.end.time().invalid()) {
-      <mat-error>{{ 'measurements-table.form.endTime.validation.required' | translate }}</mat-error>
-    }
-  </mat-form-field>
-
-  <button
-    matButton="filled"
-    (click)="onPlot()"
-    [disabled]="measurementsService.chartData.isLoading() || selectedRows().length === 0"
-  >
-    <mat-icon fontIcon="add_chart"></mat-icon>
-    {{ 'measurements-table.plot' | translate }}
-  </button>
+    <button
+      matButton="filled"
+      class="plot-button"
+      (click)="onPlot()"
+      [disabled]="measurementsService.chartData.isLoading() || selectedRows().length === 0"
+    >
+      <mat-icon fontIcon="add_chart"></mat-icon>
+      {{ 'measurements-table.plot' | translate }}
+    </button>
+  </div>
 
   @if (loadError()) {
     <app-inline-error [message]="'measurements.error.connection' | translate"></app-inline-error>
@@ -77,12 +82,12 @@
     <app-table
       class="custom-grid"
       [checkboxes]="true"
-      [multiple]="false"
+      [multiple]="true"
       [columns]="wrappedCols"
       [rowModelType]="'infinite'"
       [datasource]="datasource"
       [gridOptions]="{ domLayout: 'normal' }"
-      [getRowId]="getMetricRowId"
+      [getRowId]="getMeasurementRowId"
       (rowClicked)="onWrappedRow($event)"
       (selectionChanged)="onSelectionChanged($event)"
       (gridReady)="onGridReady($event)"

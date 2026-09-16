@@ -13,10 +13,12 @@ import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDt
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.*;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,13 +28,46 @@ import org.springframework.transaction.annotation.Transactional;
 public class MeasurementQueryRepository implements MeasurementQuery {
 
   private final DSLContext dsl;
+  private final Clock clock;
+
+  // Correlated per sensor_parameter, joined once below and reused by both the projection and the
+  // sort/filter map so "dasKey" resolves against the exact same lateral alias either way.
+  private static final Table<?> LATEST_READINGS =
+      lateral(
+              select(
+                      SENSOR_READING_SECURED.TIMESTAMP,
+                      SENSOR_READING_SECURED.NORM_VALUE,
+                      SENSOR_READING_SECURED.DAS_KEY)
+                  .from(SENSOR_READING_SECURED)
+                  .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(SENSOR_PARAMETER.ID))
+                  .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
+                  .limit(1))
+          .as("latest_readings");
+
+  // Prefers the das_key actually stored on the latest reading - readings keep the key that was
+  // valid when they were ingested even if the sensor/parameter alias is later remapped (see
+  // db/meta/schema/V14) - falling back to composing it from current metadata (mirrors
+  // ch.swisstopo.monteis.contracts.DasKey.compose) for a parameter with no readings yet.
+  private static final Field<String> DAS_KEY =
+      DSL.coalesce(
+              LATEST_READINGS.field(SENSOR_READING_SECURED.DAS_KEY),
+              DSL.concat(
+                  SENSORS.DAS,
+                  DSL.inline("__"),
+                  SENSORS.DAS_SENSOR_ALIAS,
+                  DSL.inline("__"),
+                  SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
+          .as("das_key");
 
   private static final Map<String, Field<?>> MEASUREMENT_COLUMNS_BY_COL_ID =
       Map.ofEntries(
-          Map.entry("sensorId", SENSORS.ID),
-          Map.entry("dasSensorAlias", SENSORS.DAS_SENSOR_ALIAS),
+          Map.entry("sensorParameterId", SENSOR_PARAMETER.ID),
+          Map.entry("dasKey", DAS_KEY),
           Map.entry("experimentName", EXPERIMENTS.NAME),
+          Map.entry("sensorParameterName", SENSOR_PARAMETER.NAME),
           Map.entry("sensorName", SENSORS.NAME),
+          Map.entry("newestMeasurement", LATEST_READINGS.field(SENSOR_READING_SECURED.TIMESTAMP)),
+          Map.entry("measureValue", LATEST_READINGS.field(SENSOR_READING_SECURED.NORM_VALUE)),
           Map.entry("unit", SENSOR_PARAMETER.UNIT),
           Map.entry("sensorType", SENSOR_TYPES.NAME),
           Map.entry("x", SENSORS.X),
@@ -43,8 +78,9 @@ public class MeasurementQueryRepository implements MeasurementQuery {
           Map.entry("active", SENSORS.ACTIVE),
           Map.entry("comment", SENSORS.COMMENT));
 
-  public MeasurementQueryRepository(DSLContext dsl) {
+  public MeasurementQueryRepository(DSLContext dsl, Clock clock) {
     this.dsl = dsl;
+    this.clock = clock;
   }
 
   @Override
@@ -107,17 +143,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
 
     var criteria =
         PagedRequestJooqTranslator.translate(
-            request, MEASUREMENT_COLUMNS_BY_COL_ID, SENSORS.ID.asc());
-
-    var latestReadings =
-        lateral(
-                dsl.select(SENSOR_READING_SECURED.TIMESTAMP, SENSOR_READING_SECURED.NORM_VALUE)
-                    .from(SENSOR_READING_SECURED)
-                    .where(
-                        SENSOR_READING_SECURED.SENSOR_ID.eq(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
-                    .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
-                    .limit(1))
-            .as("latest_readings");
+            request, MEASUREMENT_COLUMNS_BY_COL_ID, SENSOR_PARAMETER.SENSOR_ID.asc());
 
     var baseTable =
         SENSORS
@@ -128,16 +154,32 @@ public class MeasurementQueryRepository implements MeasurementQuery {
             .leftJoin(SENSOR_TYPES)
             .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID));
 
-    var fullTable = baseTable.leftJoin(latestReadings).on(trueCondition());
+    var fullTable = baseTable.leftJoin(LATEST_READINGS).on(trueCondition());
+
+    OffsetDateTime trendFrom = OffsetDateTime.now(clock).minusDays(4);
+
+    var trend =
+        multiset(
+                dsl.select(SENSOR_READING_SECURED.TIMESTAMP, SENSOR_READING_SECURED.NORM_VALUE)
+                    .from(SENSOR_READING_SECURED)
+                    .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(SENSOR_PARAMETER.ID))
+                    // INLINE trendFrom in order to bypass string conversion via fdw, so the
+                    // bound is pushed down to timescaledb instead of pulling every reading
+                    // across the fdw and filtering locally.
+                    .and(SENSOR_READING_SECURED.TIMESTAMP.ge(DSL.inline(trendFrom)))
+                    .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc()))
+            .convertFrom(r -> r.map(mapping(ChartPointDto::new)))
+            .as("trend");
 
     var data =
         dsl.select(
-                SENSORS.ID,
-                SENSORS.DAS_SENSOR_ALIAS,
+                SENSOR_PARAMETER.ID,
+                DAS_KEY,
                 EXPERIMENTS.NAME,
                 SENSORS.NAME,
-                latestReadings.field(SENSOR_READING_SECURED.TIMESTAMP),
-                latestReadings.field(SENSOR_READING_SECURED.NORM_VALUE),
+                SENSOR_PARAMETER.NAME,
+                LATEST_READINGS.field(SENSOR_READING_SECURED.TIMESTAMP),
+                LATEST_READINGS.field(SENSOR_READING_SECURED.NORM_VALUE),
                 SENSOR_PARAMETER.UNIT,
                 SENSOR_TYPES.NAME,
                 SENSORS.X,
@@ -146,7 +188,8 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                 SENSOR_PARAMETER.LOWER_ALARM_LIMIT,
                 SENSOR_PARAMETER.UPPER_ALARM_LIMIT,
                 SENSORS.ACTIVE,
-                SENSORS.COMMENT)
+                SENSORS.COMMENT,
+                trend)
             .from(fullTable)
             .where(criteria.condition())
             .orderBy(criteria.sortFields())
@@ -157,7 +200,9 @@ public class MeasurementQueryRepository implements MeasurementQuery {
     boolean needsReadings =
         request.filterModel() != null
             && (request.filterModel().containsKey("measureValue")
-                || request.filterModel().containsKey("newestMeasurement"));
+                || request.filterModel().containsKey("newestMeasurement")
+                // dasKey now resolves against latest_readings too (see DAS_KEY above)
+                || request.filterModel().containsKey("dasKey"));
 
     int totalCount =
         dsl.fetchCount(

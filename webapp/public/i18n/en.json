@@ -335,7 +335,6 @@
     }
   },
   "measurements-table": {
-    "heading": "AG Grid - Database Records",
     "loading": "Streaming logs from database...",
     "error": "Failed to connect to the backend server.",
     "plot": "Plot",
@@ -366,10 +365,17 @@
       }
     },
     "column": {
+      "experimentName": "Experiment",
       "dasKey": "DAS Key",
-      "timestamp": "Timestamp",
-      "normValue": "Value (Normalized)",
-      "rawValue": "Value (Raw)"
+      "sensorName": "Sensor Name",
+      "sensorParameterName": "Parameter",
+      "sensorType": "Sensor Type",
+      "newestMeasurement": "Newest Measurement",
+      "measureValue": "Value",
+      "unit": "Unit",
+      "active": "Active",
+      "comment": "Comment",
+      "trend": "Trend (4d)"
     }
   },
   "measurements-visualization": {

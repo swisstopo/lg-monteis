@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
@@ -31,6 +32,8 @@ class MeasurementControllerTest {
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private MeasurementService measurementService;
+
+  @MockitoBean private PagedRequestParser pagedRequestParser;
 
   // A valid, ascending, past date pair reused by tests that only care about the happy path.
   private final OffsetDateTime validFrom = OffsetDateTime.parse("2024-01-01T00:00:00Z");

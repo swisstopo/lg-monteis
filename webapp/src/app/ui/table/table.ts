@@ -71,7 +71,7 @@ export default class Table<T = any> {
       ? {
           mode: 'multiRow',
           checkboxes: this.checkboxes(),
-          headerCheckbox: this.checkboxes(),
+          headerCheckbox: this.rowModelType() !== 'infinite',
           enableClickSelection: true,
         }
       : {

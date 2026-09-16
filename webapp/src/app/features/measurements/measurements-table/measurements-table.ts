@@ -174,7 +174,8 @@ export default class MeasurementsTable {
     this.selectedRows.set(rows);
   }
 
-  protected getMetricRowId = (row: ReadSimpleMetricDto): string => `${row.dasKey}-${row.timestamp}`;
+  protected getMeasurementRowId = (row: MeasurementResponseDto): string =>
+    row.sensorParameterId ?? '';
 
   protected onPlot() {
     if (this.rangeForm().invalid()) {

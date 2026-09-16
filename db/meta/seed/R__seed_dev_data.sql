@@ -168,7 +168,7 @@ SELECT
     true,                                              -- active
     '00000000-0000-7000-8000-000000000301',            -- main_experiment (Alpha)
     1                                                  -- version
-FROM generate_series(1, 100) AS i
+FROM generate_series(1, 10) AS i
     RETURNING id, das_sensor_alias
 ),
 bulk_parameters AS (

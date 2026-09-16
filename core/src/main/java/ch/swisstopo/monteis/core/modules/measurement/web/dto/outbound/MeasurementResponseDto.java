@@ -1,13 +1,16 @@
 package ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound;
 
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record MeasurementResponseDto(
-    UUID sensorId,
-    String dasSensorAlias,
+    UUID sensorParameterId,
+    String dasKey,
     String experimentName,
     String sensorName,
+    String sensorParameterName,
     OffsetDateTime newestMeasurement,
     Double measureValue,
     String unit,
@@ -18,4 +21,5 @@ public record MeasurementResponseDto(
     Double alarmLimitFrom,
     Double alarmLimitTo,
     Boolean active,
-    String comment) {}
+    String comment,
+    List<ChartPointDto> trend) {}
