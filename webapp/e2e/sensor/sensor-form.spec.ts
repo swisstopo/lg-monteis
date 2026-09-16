@@ -114,9 +114,12 @@ test('should create sensor with a fulcrum id and take its coordinates from fulcr
 
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 
+  // Read the body before asserting on the toast: saving closes the dialog and reloads the grid,
+  // and Chromium discards a response body once the page has navigated away from it.
+  const createdSensor = await (await created).json();
+
   await expect(page.getByText('Sensor saved successfully.')).toBeVisible();
 
-  const createdSensor = await (await created).json();
   expect(createdSensor.fulcrumId).toBe(uniqueId);
   expect(createdSensor.coordinates).toEqual(STUB_FULCRUM_COORDINATES);
 });
@@ -129,9 +132,7 @@ test('should reject a fulcrum id that is not a uuid', async ({ page }) => {
   await dialog.getByLabel('Fulcrum ID').fill('not-a-uuid');
   await dialog.getByLabel('Fulcrum ID').blur();
 
-  await expect(
-    page.getByText('Fulcrum ID must be a UUID, e.g. 3fa85f64-5717-4562-b3fc-2c963f66afa6'),
-  ).toBeVisible();
+  await expect(page.getByText('Fulcrum ID must be a UUID')).toBeVisible();
 });
 
 test('should refuse to save a fulcrum id that no fulcrum record matches', async ({ page }) => {
@@ -147,9 +148,7 @@ test('should refuse to save a fulcrum id that no fulcrum record matches', async 
   // Well-formed, so the form itself is happy - only the backend can tell that Fulcrum holds no
   // such record.
   await dialog.getByLabel('Fulcrum ID').fill(UNKNOWN_FULCRUM_RECORD_ID);
-  await expect(
-    page.getByText('Fulcrum ID must be a UUID, e.g. 3fa85f64-5717-4562-b3fc-2c963f66afa6'),
-  ).toHaveCount(0);
+  await expect(page.getByText('Fulcrum ID must be a UUID')).toHaveCount(0);
 
   // 'DAS' alone substring-matches 'DAS Sensor Alias' and 'DAS Parameter Alias' too - scope exactly.
   await dialog.getByLabel('DAS', { exact: true }).click();

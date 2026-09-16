@@ -60,9 +60,20 @@ public class FulcrumStubConfiguration {
     return stub;
   }
 
+  /**
+   * Token the stub is pointed at. The stub serves every request regardless of it, but
+   * FulcrumService refuses to send a request at all when no token is configured, so the e2e run
+   * would otherwise depend on whatever {@code FULCRUM_API_TOKEN} the machine happens to export -
+   * green on a developer box with a real token in docker/.env, red on CI where there is none.
+   */
+  private static final String STUB_API_TOKEN = "e2e-stub-token";
+
   @Bean
   DynamicPropertyRegistrar fulcrumStubPropertyRegistrar(FulcrumStub fulcrumStub) {
-    return registry -> registry.add("monteis.fulcrum.base-url", fulcrumStub::baseUrl);
+    return registry -> {
+      registry.add("monteis.fulcrum.base-url", fulcrumStub::baseUrl);
+      registry.add("monteis.fulcrum.api-token", () -> STUB_API_TOKEN);
+    };
   }
 
   private static void handleQuery(HttpExchange exchange) throws IOException {
