@@ -7,7 +7,9 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withUnauthorizedRequest;
 
 import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
@@ -107,9 +109,13 @@ class FulcrumServiceTest {
 
   @BeforeEach
   void setUp() {
+    givenAnApiTokenOf("test-token");
+  }
+
+  private void givenAnApiTokenOf(String apiToken) {
     FulcrumProperties properties =
         new FulcrumProperties(
-            BASE_URL, "test-token", TABLE, 20000, Duration.ofSeconds(5), Duration.ofSeconds(60));
+            BASE_URL, apiToken, TABLE, 20000, Duration.ofSeconds(5), Duration.ofSeconds(60));
 
     JsonMapper objectMapper = JsonMapper.builder().build();
 
@@ -216,6 +222,44 @@ class FulcrumServiceTest {
                   .extracting(BadRequestResponse::getError)
                   .isEqualTo("relation does not exist");
             });
+  }
+
+  @Test
+  void getSensorById_fails_without_calling_fulcrum_when_no_api_token_is_configured() {
+    givenAnApiTokenOf("");
+
+    assertThatThrownBy(() -> service.getSensorById(SENSOR_RECORD_ID))
+        .isInstanceOf(FulcrumAuthenticationException.class)
+        .hasMessageContaining("monteis.fulcrum.api-token");
+
+    server.verify();
+  }
+
+  @Test
+  void getSensorById_translates_a_rejected_token_into_an_authentication_failure() {
+    server
+        .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
+        .andRespond(withUnauthorizedRequest());
+
+    assertThatThrownBy(() -> service.getSensorById(SENSOR_RECORD_ID))
+        .isInstanceOf(FulcrumAuthenticationException.class)
+        .hasMessageContaining("401")
+        .hasCauseInstanceOf(RestClientResponseException.class);
+
+    server.verify();
+  }
+
+  @Test
+  void getSensors_translates_a_forbidden_token_into_an_authentication_failure() {
+    server
+        .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
+        .andRespond(withStatus(HttpStatus.FORBIDDEN));
+
+    assertThatThrownBy(() -> service.getSensors())
+        .isInstanceOf(FulcrumAuthenticationException.class)
+        .hasMessageContaining("403");
+
+    server.verify();
   }
 
   @Test
