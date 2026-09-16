@@ -1,27 +1,9 @@
-import { Component, inject } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
-import { MatCard, MatCardContent, MatCardHeader, MatCardSubtitle } from '@angular/material/card';
-import { MatProgressSpinner } from '@angular/material/progress-spinner';
-import { OverviewControllerService } from '@core/generated';
-import { TranslatePipe } from '@ngx-translate/core';
+import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-measurements-overview',
-  imports: [
-    MatCard,
-    MatCardHeader,
-    MatCardSubtitle,
-    MatCardContent,
-    MatProgressSpinner,
-    TranslatePipe,
-  ],
+  imports: [],
   templateUrl: './measurements-overview.html',
   styleUrl: './measurements-overview.scss',
 })
-export default class MeasurementsOverview {
-  protected overviewService = inject(OverviewControllerService);
-
-  protected metricsResource = rxResource({
-    stream: () => this.overviewService.getMetrics(100),
-  });
-}
+export default class MeasurementsOverview {}

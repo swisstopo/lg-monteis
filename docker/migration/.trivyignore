@@ -19,6 +19,7 @@ CVE-2026-55833
 CVE-2026-56745
 CVE-2026-56819
 CVE-2026-59901
+CVE-2026-75595
 # org.apache.httpcomponents.core5:httpcore5 / httpcore5-h2 (Cassandra driver)
 CVE-2026-54399
 CVE-2026-54428
