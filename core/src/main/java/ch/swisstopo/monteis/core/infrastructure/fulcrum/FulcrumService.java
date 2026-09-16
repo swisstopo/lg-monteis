@@ -21,6 +21,10 @@ import tools.jackson.databind.ObjectMapper;
  * to read it, taking SQL over the app's tables. The request itself goes through {@link DefaultApi},
  * generated from the Fulcrum spec, so this class only decides what to ask for and what the answer
  * means.
+ *
+ * <p>The SELECT statements below are therefore request payload, not a query this application runs:
+ * they travel as the {@code q} parameter of an HTTP GET and are executed by Fulcrum against its own
+ * storage. Nothing here touches a Monteis database or a JDBC connection.
  */
 @Service
 public class FulcrumService {
@@ -38,6 +42,22 @@ public class FulcrumService {
   private static final TypeReference<FulcrumQueryResponse<FulcrumSensor>> SENSOR_ROWS =
       new TypeReference<>() {};
 
+  /**
+   * The columns {@link FulcrumSensor} is built from. Fulcrum's table carries roughly 120 of them,
+   * most of its own bookkeeping, so they are listed rather than asked for with {@code *}: the
+   * response stays small, and a column disappearing upstream shows up as a rejected statement
+   * instead of a silently null field.
+   */
+  private static final String SENSOR_COLUMNS =
+      String.join(
+          ", ",
+          "_record_id",
+          "_title",
+          "system_or_component_category_and_type",
+          "fx_point_with_offset",
+          "fy_point_with_offset",
+          "fz_point_with_offset");
+
   private final DefaultApi fulcrumApi;
   private final FulcrumProperties properties;
   private final ObjectMapper objectMapper;
@@ -50,11 +70,11 @@ public class FulcrumService {
   }
 
   public Optional<FulcrumSensor> getSensorById(UUID fulcrumRecordId) {
-    String sql =
-        "SELECT * FROM \"%s\" WHERE _record_id = '%s';"
-            .formatted(properties.sensorTable(), fulcrumRecordId);
+    String statement =
+        "SELECT %s FROM \"%s\" WHERE _record_id = '%s';"
+            .formatted(SENSOR_COLUMNS, properties.sensorTable(), fulcrumRecordId);
 
-    List<FulcrumSensor> rows = query(sql);
+    List<FulcrumSensor> rows = query(statement);
     if (rows.size() > 1) {
       log.warn(
           "Fulcrum returned {} records for record id {}, using the first one",
@@ -66,31 +86,33 @@ public class FulcrumService {
   }
 
   public List<FulcrumSensor> getSensors() {
-    return query("SELECT * FROM \"%s\";".formatted(properties.sensorTable()));
+    return query("SELECT %s FROM \"%s\";".formatted(SENSOR_COLUMNS, properties.sensorTable()));
   }
 
-  private List<FulcrumSensor> query(String sql) {
-    log.debug("Querying Fulcrum: {}", sql);
+  private List<FulcrumSensor> query(String statement) {
+    log.debug("Querying Fulcrum: {}", statement);
 
     if (properties.apiToken() == null || properties.apiToken().isBlank()) {
       throw new FulcrumAuthenticationException(
           "No Fulcrum API token configured (monteis.fulcrum.api-token)");
     }
 
-    Object body = queryApi(sql);
+    Object body = queryApi(statement);
 
     if (body == null) {
       return List.of();
     }
 
+    // The spec types this response as an empty object (see FulcrumSpecTest), so the generated
+    // signature can only promise Object and the row envelope is converted here.
     return objectMapper.convertValue(body, SENSOR_ROWS).rows();
   }
 
-  private Object queryApi(String sql) {
+  private Object queryApi(String statement) {
     try {
       return fulcrumApi
           .queryGet(
-              sql,
+              statement,
               JSON_FORMAT,
               WITH_HEADERS,
               WITHOUT_COLUMN_METADATA,
