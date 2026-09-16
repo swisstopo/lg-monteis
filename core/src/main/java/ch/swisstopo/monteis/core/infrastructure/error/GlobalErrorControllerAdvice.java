@@ -197,7 +197,7 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
 
   /**
    * A misconfigured or rejected Fulcrum token is a deployment problem, not something the user can
-   * act on, and naming the upstream would tell them which third party MonTEIS talks to and that its
+   * act on, and naming the upstream would tell them which third party Monteis talks to and that its
    * credentials are broken. The response is therefore the generic system error, carrying only the
    * error id; the cause is written to the log under that same id, so support can correlate the two
    * and see that it is Fulcrum's authentication that failed.
@@ -205,7 +205,7 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
   @ExceptionHandler(FulcrumAuthenticationException.class)
   @ApiResponse(
       responseCode = "502",
-      description = "An upstream API MonTEIS depends on refused the request.",
+      description = "An upstream API Monteis depends on refused the request.",
       content = @Content(schema = @Schema(implementation = ErrorDto.class)))
   public ResponseEntity<ErrorDto> handleFulcrumAuthenticationFailure(
       FulcrumAuthenticationException e, HttpServletRequest request) {
@@ -227,7 +227,7 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
   @ExceptionHandler(RestClientResponseException.class)
   @ApiResponse(
       responseCode = "502",
-      description = "An upstream API MonTEIS depends on refused or failed the request.",
+      description = "An upstream API Monteis depends on refused or failed the request.",
       content = @Content(schema = @Schema(implementation = ErrorDto.class)))
   public ResponseEntity<ErrorDto> handleUpstreamApiFailure(
       RestClientResponseException e, HttpServletRequest request) {
@@ -293,6 +293,22 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
     return ErrorDto.form(messageKey, params);
   }
 
+  /**
+   * Extracts annotation attributes from Bean Validation constraints so clients can render
+   * parameterized messages.
+   *
+   * <p>For example, {@code @Size(min = 3, max = 20)} becomes: {@code {"min": 3, "max": 20}}.
+   * The attributes Bean Validation puts on every constraint ({@code message}, {@code groups},
+   * {@code payload}, see {@link #INTERNAL_ANNOTATION_KEYS}) are dropped: they describe the
+   * constraint's own wiring, not the rule the user broke.
+   *
+   * <p>An error that carries no {@link ConstraintViolation} - a programmatically registered
+   * {@link ObjectError}, for instance - has no attributes to extract, which is not a failure:
+   * the message key alone then has to carry the meaning, and the parameters stay empty.
+   *
+   * @param error validation error containing the constraint metadata
+   * @return constraint parameters or an empty map if metadata cannot be extracted
+   */
   private Map<String, Object> extractConstraintParams(ObjectError error) {
 
     try {
