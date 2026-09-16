@@ -252,6 +252,45 @@ class SensorServiceTest {
   }
 
   @Test
+  void should_reject_create_when_the_fulcrum_record_has_no_coordinates() {
+    // given: the record exists, but Fulcrum never computed a height for it
+    Sensor inputSensor = mock(Sensor.class);
+
+    givenTheSensorExistsInFulcrum(inputSensor, 2579000.0, 1247000.0, null);
+
+    // when
+    ObjectBusinessValidationException exception =
+        assertThrows(
+            ObjectBusinessValidationException.class, () -> service.createSensor(inputSensor));
+
+    // then
+    assertEquals("sensor.fulcrum.coordinatesMissing", exception.getMessageKey());
+    assertEquals("z", exception.getParams().get("missing"));
+    assertEquals(FULCRUM_RECORD_ID.toString(), exception.getParams().get("fulcrumId"));
+    then(inputSensor).should(never()).setCoordinates(any());
+    then(repository).should(never()).create(any());
+  }
+
+  @Test
+  void should_reject_update_when_the_fulcrum_record_has_no_coordinates() {
+    // given
+    Sensor inputSensor = mock(Sensor.class);
+
+    givenTheSensorExistsInFulcrum(inputSensor, null, null, 500.0);
+
+    // when
+    ObjectBusinessValidationException exception =
+        assertThrows(
+            ObjectBusinessValidationException.class, () -> service.updateSensor(inputSensor));
+
+    // then
+    assertEquals("sensor.fulcrum.coordinatesMissing", exception.getMessageKey());
+    assertEquals("x, y", exception.getParams().get("missing"));
+    then(inputSensor).should(never()).setCoordinates(any());
+    then(repository).should(never()).update(any());
+  }
+
+  @Test
   void should_return_sensor_when_found_by_id() {
     // given
     UUID id = UUID.randomUUID();
