@@ -75,8 +75,11 @@
       "label": "Fulcrum ID",
       "placeholder": "e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6",
       "validation": {
-        "invalid": "Fulcrum ID must be a UUID, e.g. 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        "invalid": "Fulcrum ID must be a UUID"
       }
+    },
+    "fulcrum": {
+      "coordinatesMissing": "Fulcrum record {{fulcrumId}} has no coordinates ({{missing}} missing). Add them in Fulcrum, or clear the Fulcrum ID and enter the coordinates manually."
     },
     "mainExperiment": {
       "label": "Main Experiment",

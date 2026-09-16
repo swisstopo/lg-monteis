@@ -6,8 +6,10 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
@@ -70,29 +72,44 @@ public class FulcrumService {
   private List<FulcrumSensor> query(String sql) {
     log.debug("Querying Fulcrum: {}", sql);
 
-    Object body =
-        fulcrumApi
-            .queryGet(
-                sql,
-                JSON_FORMAT,
-                WITH_HEADERS,
-                WITHOUT_COLUMN_METADATA,
-                ROWS_AS_OBJECTS,
-                null, // table_name applies to the postgres format only
-                null, // sorting is expressed in the statement itself
-                null,
-                FIRST_PAGE,
-                properties.perPage(),
-                MediaType.APPLICATION_JSON_VALUE,
-                USER_AGENT)
-            .getBody();
+    if (properties.apiToken() == null || properties.apiToken().isBlank()) {
+      throw new FulcrumAuthenticationException(
+          "No Fulcrum API token configured (monteis.fulcrum.api-token)");
+    }
+
+    Object body = queryApi(sql);
 
     if (body == null) {
       return List.of();
     }
 
-    // The spec types this response as an empty object (see FulcrumSpecTest), so the generated
-    // signature can only promise Object and the row envelope is converted here.
     return objectMapper.convertValue(body, SENSOR_ROWS).rows();
+  }
+
+  private Object queryApi(String sql) {
+    try {
+      return fulcrumApi
+          .queryGet(
+              sql,
+              JSON_FORMAT,
+              WITH_HEADERS,
+              WITHOUT_COLUMN_METADATA,
+              ROWS_AS_OBJECTS,
+              null, // table_name applies to the postgres format only
+              null, // sorting is expressed in the statement itself
+              null,
+              FIRST_PAGE,
+              properties.perPage(),
+              MediaType.APPLICATION_JSON_VALUE,
+              USER_AGENT)
+          .getBody();
+    } catch (RestClientResponseException e) {
+      if (e.getStatusCode() == HttpStatus.UNAUTHORIZED
+          || e.getStatusCode() == HttpStatus.FORBIDDEN) {
+        throw new FulcrumAuthenticationException(
+            "Fulcrum rejected the configured API token with %s".formatted(e.getStatusCode()), e);
+      }
+      throw e;
+    }
   }
 }

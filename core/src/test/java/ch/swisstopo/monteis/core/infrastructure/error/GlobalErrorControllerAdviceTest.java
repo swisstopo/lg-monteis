@@ -1,9 +1,12 @@
 package ch.swisstopo.monteis.core.infrastructure.error;
 
 import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
+import static org.hamcrest.Matchers.containsStringIgnoringCase;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -11,6 +14,7 @@ import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAuthenticationException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import jakarta.validation.Constraint;
 import jakarta.validation.Valid;
@@ -121,9 +125,10 @@ class GlobalErrorControllerAdviceTest {
     response
         .andExpect(status().isBadGateway())
         .andExpect(jsonPath("$.target").value("GLOBAL"))
-        .andExpect(jsonPath("$.messageKey").value("error.upstream.failed"))
-        .andExpect(jsonPath("$.params.upstreamStatus").value(400))
-        .andExpect(jsonPath("$.params.errorId").isString());
+        .andExpect(jsonPath("$.messageKey").value("error.system.internal"))
+        .andExpect(jsonPath("$.params.length()").value(1))
+        .andExpect(jsonPath("$.params.errorId").isString())
+        .andExpect(content().string(not(containsStringIgnoringCase("relation does not exist"))));
   }
 
   @Test
@@ -133,8 +138,24 @@ class GlobalErrorControllerAdviceTest {
 
     response
         .andExpect(status().isBadGateway())
-        .andExpect(jsonPath("$.messageKey").value("error.upstream.failed"))
-        .andExpect(jsonPath("$.params.upstreamStatus").value(400));
+        .andExpect(jsonPath("$.messageKey").value("error.system.internal"))
+        .andExpect(jsonPath("$.params.errorId").isString())
+        .andExpect(content().string(not(containsStringIgnoringCase("gateway exploded"))));
+  }
+
+  @Test
+  void should_translate_fulcrum_authentication_failure_return_502() throws Exception {
+
+    var response = mockMvc.perform(get("/dummy/fulcrum-auth-error").with(jwt()));
+
+    response
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.target").value("GLOBAL"))
+        .andExpect(jsonPath("$.messageKey").value("error.system.internal"))
+        .andExpect(jsonPath("$.params.errorId").isString())
+        .andExpect(jsonPath("$.params.length()").value(1))
+        .andExpect(content().string(not(containsStringIgnoringCase("fulcrum"))))
+        .andExpect(content().string(not(containsStringIgnoringCase("token"))));
   }
 
   @Test
@@ -326,6 +347,12 @@ class GlobalErrorControllerAdviceTest {
         e.setBodyConvertFunction(type -> converted);
       }
       return e;
+    }
+
+    @GetMapping("/dummy/fulcrum-auth-error")
+    public void throwFulcrumAuthError() {
+      throw new FulcrumAuthenticationException(
+          "Fulcrum rejected the configured API token with 401");
     }
 
     @GetMapping("/dummy/method-validation-error")
