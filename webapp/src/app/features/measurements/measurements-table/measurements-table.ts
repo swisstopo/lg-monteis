@@ -159,6 +159,10 @@ export default class MeasurementsTable {
     api.setGridOption('datasource', this.datasource);
   }
 
+  onReload(): void {
+    this.gridApi()?.refreshInfiniteCache();
+  }
+
   resetRange(): void {
     this.dateRangeModel.set({
       start: { date: null, time: atTime(0, 0) },

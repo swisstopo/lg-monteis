@@ -74,6 +74,11 @@
       <mat-icon fontIcon="add_chart"></mat-icon>
       {{ 'measurements-table.plot' | translate }}
     </button>
+
+    <button matButton="text" class="reload-button" (click)="onReload()">
+      <mat-icon fontIcon="refresh"></mat-icon>
+      {{ 'measurements-table.reload' | translate }}
+    </button>
   </div>
 
   @if (loadError()) {

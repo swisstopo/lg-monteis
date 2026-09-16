@@ -338,6 +338,7 @@
     "loading": "Streaming logs from database...",
     "error": "Failed to connect to the backend server.",
     "plot": "Plot",
+    "reload": "Reload",
     "form": {
       "startDate": {
         "label": "Start Date",
