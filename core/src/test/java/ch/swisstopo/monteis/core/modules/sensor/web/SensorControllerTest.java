@@ -127,7 +127,7 @@ class SensorControllerTest {
             Das.SOL_EXPERTS,
             null,
             null,
-            new CoordinatesDto(0, 0, 0),
+            new CoordinatesDto(0.0, 0.0, 0.0),
             true,
             null,
             defaultResponseParameterDto(1));
@@ -393,7 +393,7 @@ class SensorControllerTest {
             null,
             null,
             null,
-            new CoordinatesDto(0, 0, 0),
+            new CoordinatesDto(0.0, 0.0, 0.0),
             true,
             1,
             List.of(
