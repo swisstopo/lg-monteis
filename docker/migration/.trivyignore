@@ -1,10 +1,8 @@
 # ── MON-87 migration image (docker/migration/Dockerfile) ────────────────────────
 # The stock flyway/flyway base bundles JDBC drivers for databases MONTEIS does not use
 # (SQL Server, Cassandra, Couchbase, GCP Spanner, Databricks, Mongo, ...). Those unused
-# drivers + their httpcore5 / shaded-jackson transitive jars carry HIGH CVEs for code
-# paths the Postgres-only migration Job never loads. We waive them by id here (the
-# Couchbase driver's netty CVEs are patched directly in the Dockerfile instead, since
-# a drop-in dependency update was available).
+# drivers + their netty / httpcore5 / shaded-jackson transitive jars carry HIGH CVEs
+# for code paths the Postgres-only migration Job never loads. We waive them by id here
 # CVEs in the Postgres driver, the flyway engine, the JRE, or the OS are
 # deliberately NOT listed and still fail the gate.
 # Re-audit this list whenever the flyway base image digest is bumped.
