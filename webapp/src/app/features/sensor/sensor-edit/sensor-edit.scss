@@ -1,7 +1,7 @@
 .form-layout {
   padding: 0.5rem 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -11,4 +11,21 @@
 
 .full-width {
   grid-column: 1 / -1;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.parameter-block {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.parameter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }

@@ -2,49 +2,7 @@
 
 <mat-dialog-content>
   <form id="sensorCreateForm" class="form-layout" (submit)="onSubmit($event)" novalidate>
-    <div class="form-row">
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.dasSensorAlias.label' | translate }}</mat-label>
-        <input
-          matInput
-          [formField]="sensorForm.dasSensorAlias"
-          [placeholder]="'sensor.dasSensorAlias.placeholder' | translate"
-        />
-        @if (sensorForm.dasSensorAlias().touched() && sensorForm.dasSensorAlias().invalid()) {
-          <mat-error>
-            @for (error of sensorForm.dasSensorAlias().errors(); track error) {
-              {{ error.message }}
-            }
-          </mat-error>
-        }
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.name.label' | translate }}</mat-label>
-        <input
-          matInput
-          [formField]="sensorForm.name"
-          [placeholder]="'sensor.name.placeholder' | translate"
-        />
-        @if (sensorForm.name().touched() && sensorForm.name().invalid()) {
-          <mat-error>
-            @for (error of sensorForm.name().errors(); track error) {
-              {{ error.message }}
-            }
-          </mat-error>
-        }
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.active.label' | translate }}</mat-label>
-        <mat-select [formField]="sensorForm.active">
-          <mat-option [value]="true">{{ 'sensor.active.option.active' | translate }}</mat-option>
-          <mat-option [value]="false">{{ 'sensor.active.option.inactive' | translate }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-    </div>
-
-    <div class="form-row">
+    <div class="form-column">
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.das.label' | translate }}</mat-label>
         <mat-select [formField]="sensorForm.das">
@@ -55,22 +13,6 @@
         @if (sensorForm.das().touched() && sensorForm.das().invalid()) {
           <mat-error>
             @for (error of sensorForm.das().errors(); track error) {
-              {{ error.message }}
-            }
-          </mat-error>
-        }
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'sensor.fulcrumId.label' | translate }}</mat-label>
-        <input
-          matInput
-          [formField]="sensorForm.fulcrumId"
-          [placeholder]="'sensor.fulcrumId.placeholder' | translate"
-        />
-        @if (sensorForm.fulcrumId().touched() && sensorForm.fulcrumId().invalid()) {
-          <mat-error>
-            @for (error of sensorForm.fulcrumId().errors(); track error) {
               {{ error.message }}
             }
           </mat-error>
@@ -106,14 +48,67 @@
           </mat-error>
         }
       </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.active.label' | translate }}</mat-label>
+        <mat-select [formField]="sensorForm.active">
+          <mat-option [value]="true">{{ 'sensor.active.option.active' | translate }}</mat-option>
+          <mat-option [value]="false">{{ 'sensor.active.option.inactive' | translate }}</mat-option>
+        </mat-select>
+      </mat-form-field>
     </div>
 
-    <mat-form-field class="full-width" appearance="outline">
-      <mat-label>{{ 'sensor.comment.label' | translate }}</mat-label>
-      <textarea matInput [formField]="sensorForm.comment" rows="3"></textarea>
-    </mat-form-field>
+    <div class="form-column">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.name.label' | translate }}</mat-label>
+        <input
+          matInput
+          [formField]="sensorForm.name"
+          [placeholder]="'sensor.name.placeholder' | translate"
+        />
+        @if (sensorForm.name().touched() && sensorForm.name().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.name().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
 
-    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.dasSensorAlias.label' | translate }}</mat-label>
+        <input
+          matInput
+          [formField]="sensorForm.dasSensorAlias"
+          [placeholder]="'sensor.dasSensorAlias.placeholder' | translate"
+        />
+        @if (sensorForm.dasSensorAlias().touched() && sensorForm.dasSensorAlias().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.dasSensorAlias().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'sensor.fulcrumId.label' | translate }}</mat-label>
+        <input
+          matInput
+          [formField]="sensorForm.fulcrumId"
+          [placeholder]="'sensor.fulcrumId.placeholder' | translate"
+        />
+        @if (sensorForm.fulcrumId().touched() && sensorForm.fulcrumId().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.fulcrumId().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="form-column">
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.coordinate.xLocal.label' | translate }}</mat-label>
         <input matInput type="number" [formField]="sensorForm.coordinates.x" />
@@ -151,21 +146,22 @@
       </mat-form-field>
     </div>
 
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'sensor.comment.label' | translate }}</mat-label>
+      <textarea matInput [formField]="sensorForm.comment" rows="5"></textarea>
+    </mat-form-field>
+
+    <div class="parameter-header full-width">
+      <h3>{{ 'sensor.parameter.heading' | translate }}</h3>
+      <button matButton="tonal" color="secondary" type="button" (click)="addParameter()">
+        <mat-icon fontIcon="add"></mat-icon>
+        {{ 'sensor.parameter.addButton' | translate }}
+      </button>
+    </div>
+
     @for (parameter of sensorForm.parameters; track parameterKeys()[i]; let i = $index) {
-      <fieldset class="parameter-block" [attr.data-testid]="'parameter-block-' + i">
-        <legend>{{ 'sensor.parameter.heading' | translate: { number: i + 1 } }}</legend>
-
-        <button
-          matIconButton
-          type="button"
-          [disabled]="!canRemoveParameter()"
-          [attr.aria-label]="'sensor.parameter.removeButton' | translate"
-          (click)="removeParameter(i)"
-        >
-          <mat-icon fontIcon="delete"></mat-icon>
-        </button>
-
-        <div class="form-row">
+      <fieldset class="parameter-block full-width" [attr.data-testid]="'parameter-block-' + i">
+        <div class="form-column">
           <mat-form-field appearance="outline">
             <mat-label>{{ 'sensor.parameter.name.label' | translate }}</mat-label>
             <input
@@ -190,20 +186,6 @@
               [placeholder]="'sensor.parameter.dasParameterAlias.placeholder' | translate"
             />
           </mat-form-field>
-        </div>
-
-        <div class="form-row">
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'sensor.unit.label' | translate }}</mat-label>
-            <mat-select [formField]="parameter.unit">
-              <mat-option value="">{{ 'sensor.unit.placeholder' | translate }}</mat-option>
-              @for (unit of unitValues; track unit) {
-                <mat-option [value]="unit"
-                  >{{ unitMetadata[unit].label() }} ({{ unitMetadata[unit].symbol() }})
-                </mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>{{ 'sensor.type.label' | translate }}</mat-label>
@@ -216,9 +198,9 @@
             />
             <mat-autocomplete #autoType="matAutocomplete">
               @for (type of filteredTypesFor(parameter); track type.id) {
-                <mat-option [value]="type.name" (onSelectionChange)="selectType(parameter, type)">{{
-                  type.name
-                }}</mat-option>
+                <mat-option [value]="type.name" (onSelectionChange)="selectType(parameter, type)"
+                  >{{ type.name }}
+                </mat-option>
               }
             </mat-autocomplete>
             @if (parameter.type.name().touched() && parameter.type.name().invalid()) {
@@ -228,6 +210,32 @@
                 }
               </mat-error>
             }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.parameter.active.label' | translate }}</mat-label>
+            <mat-select [formField]="parameter.active">
+              <mat-option [value]="true"
+                >{{ 'sensor.active.option.active' | translate }}
+              </mat-option>
+              <mat-option [value]="false"
+                >{{ 'sensor.active.option.inactive' | translate }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="form-column">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.unit.label' | translate }}</mat-label>
+            <mat-select [formField]="parameter.unit">
+              <mat-option value="">{{ 'sensor.unit.placeholder' | translate }}</mat-option>
+              @for (unit of unitValues; track unit) {
+                <mat-option [value]="unit"
+                  >{{ unitMetadata[unit].label() }} ({{ unitMetadata[unit].symbol() }})
+                </mat-option>
+              }
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -260,9 +268,7 @@
               </mat-error>
             }
           </mat-form-field>
-        </div>
 
-        <div class="form-row">
           <mat-form-field appearance="outline">
             <mat-label>{{ 'sensor.alarmLimit.from.label' | translate }}</mat-label>
             <input matInput type="number" [formField]="parameter.alarmLimits.lower" />
@@ -290,31 +296,25 @@
               </mat-error>
             }
           </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'sensor.parameter.active.label' | translate }}</mat-label>
-            <mat-select [formField]="parameter.active">
-              <mat-option [value]="true">{{
-                'sensor.active.option.active' | translate
-              }}</mat-option>
-              <mat-option [value]="false">{{
-                'sensor.active.option.inactive' | translate
-              }}</mat-option>
-            </mat-select>
-          </mat-form-field>
         </div>
 
-        <mat-form-field class="full-width" appearance="outline">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'sensor.parameter.comment.label' | translate }}</mat-label>
-          <textarea matInput [formField]="parameter.comment" rows="2"></textarea>
+          <textarea matInput [formField]="parameter.comment" rows="5"></textarea>
         </mat-form-field>
+
+        <button
+          matButton
+          type="button"
+          [disabled]="!canRemoveParameter()"
+          [attr.aria-label]="'sensor.parameter.removeButton' | translate"
+          (click)="removeParameter(i)"
+        >
+          <mat-icon fontIcon="delete"></mat-icon>
+          {{ 'sensor.parameter.removeButton' | translate }}
+        </button>
       </fieldset>
     }
-
-    <button matButton type="button" (click)="addParameter()">
-      <mat-icon fontIcon="add"></mat-icon>
-      {{ 'sensor.parameter.addButton' | translate }}
-    </button>
   </form>
 
   <mat-dialog-actions align="end">
@@ -322,16 +322,18 @@
       <mat-icon fontIcon="cancel"></mat-icon>
       {{ 'sensor.button.cancel' | translate }}
     </button>
-    <button
-      matButton="tonal"
-      [disabled]="sensorForm().submitting() || sensorForm().invalid()"
-      type="submit"
-      form="sensorCreateForm"
-      data-action="saveAndCreate"
-    >
-      <mat-icon fontIcon="save"></mat-icon>
-      {{ 'sensor.button.saveAndCreate' | translate }}
-    </button>
+    @if (!this.sensorId()) {
+      <button
+        matButton="tonal"
+        [disabled]="sensorForm().submitting() || sensorForm().invalid()"
+        type="submit"
+        form="sensorCreateForm"
+        data-action="saveAndCreate"
+      >
+        <mat-icon fontIcon="save"></mat-icon>
+        {{ 'sensor.button.saveAndCreate' | translate }}
+      </button>
+    }
     <button
       matButton="filled"
       [disabled]="sensorForm().submitting() || sensorForm().invalid()"
