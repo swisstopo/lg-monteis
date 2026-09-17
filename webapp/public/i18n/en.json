@@ -16,7 +16,8 @@
       "cancel": "Cancel",
       "apply": "Apply",
       "floatingFilterSummary": "{{count}} selected"
-    }
+    },
+    "search": "Input Text"
   },
   "error": {
     "system": {

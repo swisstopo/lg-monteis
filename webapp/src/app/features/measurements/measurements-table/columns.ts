@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ReadSimpleMetricDto } from '@core/generated';
 import { translate } from '@ngx-translate/core';
+import { MinCharsTextFilter } from '@ui/filters/min-chars-text-filter/min-chars-text-filter';
 import { TableColumn } from '@ui/table/table.types';
 
 export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetricDto>[] {
@@ -10,6 +11,8 @@ export function createColumns(datePipe: DatePipe): TableColumn<ReadSimpleMetricD
       headerName: translate('measurements-table.column.dasKey')(),
       sortable: true,
       filter: 'agTextColumnFilter',
+      // Searched as you type, but only from MIN_SEARCH_CHARS on - see MinCharsTextFilter.
+      floatingFilterComponent: MinCharsTextFilter,
       flex: 2,
     },
     {
