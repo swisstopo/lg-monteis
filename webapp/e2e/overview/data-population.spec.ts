@@ -17,5 +17,5 @@ test('should find calculation data in table', async ({ page }) => {
 test('should find sensor date in table', async ({ page }) => {
   await page.getByRole('link', { name: 'Table' }).click();
 
-  await expect(page.getByRole('columnheader', { name: 'Timestamp' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Newest Measurement' })).toBeVisible();
 });

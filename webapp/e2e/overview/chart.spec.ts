@@ -18,7 +18,12 @@ async function fillRange(page: Page): Promise<void> {
 
 // Plot only charts the selected rows, so at least one row must be checked before clicking it.
 async function selectFirstRow(page: Page): Promise<void> {
-  await page.locator('.ag-row').first().getByRole('checkbox').check();
+  const firstRow = page.locator('.ag-row').first();
+  // The infinite row model renders a row's shell (checkbox included) before its data has
+  // loaded, so checking it too early is a silent no-op selection. Wait for a real cell
+  // value first.
+  await expect(firstRow.locator('[col-id="dasKey"]')).not.toBeEmpty();
+  await firstRow.getByRole('checkbox').check();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -106,6 +111,9 @@ test('should render the chart toolbar with zoom controls', async ({ page }) => {
   await expect(icons.nth(4)).toHaveAttribute('fontIcon', 'file_download');
 
   await buttons.nth(3).click();
+  // Reset Zoom re-fetches chart data for the (unchanged) initial range; wait for that
+  // reload to settle before closing, otherwise closing can race the in-flight request.
+  await expect(dialog.locator('.loading-overlay')).toHaveCount(0);
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(dialog).not.toBeVisible();
 });

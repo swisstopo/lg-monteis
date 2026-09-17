@@ -147,7 +147,7 @@ export default class MeasurementsTable {
         this.formErrorService.mapApiErrorsToFormErrors(
           errors,
           this.rangeForm,
-          'chart.error.unspecified.message',
+          'chart.error.unspecified',
         );
         this.dialog.closeAll();
       }
@@ -202,7 +202,7 @@ export default class MeasurementsTable {
       if (!range) return '';
 
       return this.translateService.translate('chart.title', {
-        name: 'MyFancyExperiment',
+        name: 'MeasurementPlot',
         rangeFrom: this.datePipe.transform(range.start),
         rangeTo: this.datePipe.transform(range.end),
       })();
