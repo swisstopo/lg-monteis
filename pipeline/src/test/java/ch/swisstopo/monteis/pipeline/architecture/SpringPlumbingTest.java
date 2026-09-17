@@ -11,6 +11,7 @@ import ch.swisstopo.monteis.pipeline.PipelineApplication;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.AccessTarget;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import java.util.stream.Stream;
@@ -104,6 +105,15 @@ class SpringPlumbingTest {
         "proxied via method or class",
         target ->
             Stream.of(Transactional.class, Async.class, Cacheable.class)
-                .anyMatch(a -> target.isAnnotatedWith(a) || target.getOwner().isAnnotatedWith(a)));
+                    .anyMatch(
+                        a -> target.isAnnotatedWith(a) || target.getOwner().isAnnotatedWith(a))
+                && !isPrivate(target));
+  }
+
+  private static boolean isPrivate(AccessTarget.MethodCallTarget target) {
+    return target
+        .resolveMember()
+        .map(member -> member.getModifiers().contains(JavaModifier.PRIVATE))
+        .orElse(false);
   }
 }
