@@ -9,10 +9,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -121,5 +126,22 @@ class MeasurementServiceTest {
     assertThrows(
         ObjectBusinessValidationException.class, () -> service.findChartData(SENSOR_ID, from, to));
     verifyNoInteractions(query);
+  }
+
+  @Test
+  void should_delegate_to_query_when_getting_paged_measurements() {
+    // given
+    PagedRequest request = new PagedRequest(0, 20, List.of(), Map.of());
+    PagedResult<MeasurementResponseDto> expected =
+        new PagedResult<>(List.of(mock(MeasurementResponseDto.class)), 1);
+
+    given(query.findPaged(request)).willReturn(expected);
+
+    // when
+    PagedResult<MeasurementResponseDto> actual = service.getMeasurements(request);
+
+    // then
+    then(query).should().findPaged(request);
+    assertEquals(expected, actual);
   }
 }
