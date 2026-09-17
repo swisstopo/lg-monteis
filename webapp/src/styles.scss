@@ -157,3 +157,14 @@ h2 {
     )
   );
 }
+
+/* Popup that are managed by three.js/giro3d, so outside of angular's grasp */
+.giro3d-popup {
+  position: absolute;
+  z-index: 1;
+  background: white;
+  padding: 0.25rem;
+  border-radius: var(--sci-workbench-tab-border-radius);
+  white-space: pre-line;
+  max-width: 10rem;
+}

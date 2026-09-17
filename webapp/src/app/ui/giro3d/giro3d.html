@@ -4,9 +4,5 @@
   @if (loading()) {
     <mat-spinner [attr.aria-label]="'measurements-visualization.loading' | translate"></mat-spinner>
   }
-  <div #view class="view">
-    @if (popupContent()) {
-      <div #popup class="popup">{{ popupContent() }}</div>
-    }
-  </div>
+  <div #view class="view"></div>
 }

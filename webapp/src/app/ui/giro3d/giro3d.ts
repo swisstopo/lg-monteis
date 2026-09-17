@@ -28,12 +28,28 @@ import {
   SphereGeometry,
   Vector3,
 } from 'three';
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
 import { SensorResponseDto } from '../../core/generated';
 import { InlineError } from '../inline-error/inline-error';
 import { TilesFetch, TilesFetchPlugin } from './tiles-fetch-plugin';
 
 const BLACK = new Color('#000');
+
+function getMeshInfo(obj: Mesh) {
+  const data = obj.userData;
+  if (data['type'] === 'sensor') {
+    return `type: sensor\nname: ${data['name']}\ncomment: ${data['comment']}`;
+  } else {
+    return `class: ${data['class']}\nname: ${data['name']}`;
+  }
+}
+
+function createInfoDiv() {
+  const domElem = document.createElement('div');
+  domElem.className = 'giro3d-popup';
+  return domElem;
+}
 
 @Component({
   imports: [TranslatePipe, MatProgressSpinner, MatTooltipModule, InlineError],
@@ -54,7 +70,6 @@ export class Giro3d implements AfterViewInit {
 
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
-  protected readonly popupContent = signal<string | null>(null);
 
   private readonly instance = signal<Instance | null>(null);
   private readonly tileset = computed(() => {
@@ -76,6 +91,8 @@ export class Giro3d implements AfterViewInit {
   private readonly sensorsObj = computed(() => this.sensors().map(this.createSensorObject3D));
 
   private _mouseMoveEventListener: ((evt: MouseEvent) => void) | null = null;
+  private _mouseDownEventListener: ((evt: MouseEvent) => void) | null = null;
+  private _mouseUpEventListener: ((evt: MouseEvent) => void) | null = null;
 
   constructor() {
     effect((onCleanup) => {
@@ -199,73 +216,134 @@ export class Giro3d implements AfterViewInit {
     this.controls.set(controls);
   }
 
-  private getMeshInfo(obj: Mesh) {
-    const data = obj.userData;
-    if (data['type'] === 'sensor') {
-      return `sensor ${data['name']}, ${data['comment']}`;
-    } else {
-      return `${data['class']}: ${data['name']}`;
-    }
-  }
-
   private setupPicking(instance: Instance) {
     let highlightedElem: Mesh | null = null;
+    let highlightedInfo = new CSS2DObject(createInfoDiv());
+    highlightedInfo.center.set(0, 0);
+    instance.add(highlightedInfo);
 
-    function highlightElem(elem: Mesh) {
-      highlightedElem = elem;
+    let selectedElem: Mesh | null = null;
+    let selectedInfo = new CSS2DObject(createInfoDiv());
+    selectedInfo.center.set(0, 0);
+    instance.add(selectedInfo);
+
+    let canPick = true;
+
+    function darkenObjectColor(elem: Mesh, ratio: number) {
       if ('color' in elem.material) {
-        const originalColor = elem.material.color as Color;
-        elem.userData['originalColor'] = originalColor.clone();
-        originalColor.lerp(BLACK, 0.5);
+        if (!('originalColor' in elem.userData)) {
+          const originalColor = elem.material.color as Color;
+          elem.userData['originalColor'] = originalColor.clone();
+        }
+        (elem.material.color as Color).lerp(BLACK, ratio);
         // there is no cases where the material has a color but no needsUpdate
         (elem.material as MeshLambertMaterial).needsUpdate = true;
         instance.notifyChange(elem);
       }
     }
 
-    function resetHighlightedObject() {
+    function selectElem(elem: Mesh) {
+      selectedElem = elem;
+      darkenObjectColor(elem, 0.3);
+    }
+
+    function deselectElem() {
+      if (selectedElem != null) {
+        resetObjectColor(selectedElem);
+        instance.notifyChange(selectedElem);
+        selectedElem = null;
+      }
+    }
+
+    function highlightElem(elem: Mesh) {
+      highlightedElem = elem;
+      darkenObjectColor(elem, 0.5);
+    }
+
+    function setInfo(info3DElem: CSS2DObject, elem: Mesh, position: Vector3) {
+      info3DElem.element.innerHTML = getMeshInfo(elem);
+      info3DElem.visible = true;
+      info3DElem.position.copy(position);
+      info3DElem.updateMatrixWorld();
+    }
+
+    function resetInfo(info3DElem: CSS2DObject) {
+      // remove content
+      info3DElem.element.innerHTML = '';
+      info3DElem.visible = false;
+    }
+
+    function resetObjectColor(elem: Mesh) {
       if (
-        highlightedElem &&
-        highlightedElem.material != null &&
-        !Array.isArray(highlightedElem.material)
+        elem &&
+        elem.material != null &&
+        !Array.isArray(elem.material) &&
+        'color' in elem.material
       ) {
-        if ('color' in highlightedElem.material) {
-          highlightedElem.material.color = highlightedElem.userData['originalColor'];
-          highlightedElem.material.needsUpdate = true;
-          instance.notifyChange(highlightedElem);
-        }
-        highlightedElem = null;
+        elem.material.color = elem.userData['originalColor'].clone();
+        elem.material.needsUpdate = true;
+        instance.notifyChange(elem);
       }
     }
 
     this._mouseMoveEventListener = (event) => {
+      canPick = false;
       const picked = instance.pickObjectsAt(event, { sortByDistance: true });
-      resetHighlightedObject();
+      if (highlightedElem != null) {
+        resetObjectColor(highlightedElem);
+        resetInfo(highlightedInfo);
+        highlightedElem = null;
+      }
       if (picked.length > 0) {
         // let's consider the first one in the picking order
         // we *don't* iterate, as we don't want to highlight a sensor that would be behind another object
         const object = picked[0].object;
-        if (object === highlightedElem) {
+        if (object === highlightedElem || object == selectedElem) {
           // nothing to do
           return;
         }
         if (object instanceof Mesh) {
           // highlight object
           highlightElem(object);
-          this.popupContent.set(this.getMeshInfo(object));
+          setInfo(highlightedInfo, object, picked[0].point);
         }
+      }
+    };
+    this._mouseDownEventListener = () => (canPick = true);
+    this._mouseUpEventListener = (event) => {
+      if (!canPick) {
+        return;
+      }
+      const picked = instance.pickObjectsAt(event, { sortByDistance: true });
+      if (picked.length == 0) {
+        deselectElem();
+        resetInfo(selectedInfo);
       } else {
-        this.popupContent.set(null);
+        // let's consider the first one in the picking order
+        // we *don't* iterate, as we don't want to highlight a sensor that would be behind another object
+        const object = picked[0].object;
+        if (selectedElem == object) {
+          // nothing to do
+          return;
+        }
+        deselectElem();
+        resetInfo(selectedInfo);
+        if (object instanceof Mesh) {
+          selectElem(object);
+          setInfo(selectedInfo, object, picked[0].point);
+        }
       }
     };
     instance.domElement.addEventListener('mousemove', this._mouseMoveEventListener);
+    instance.domElement.addEventListener('mousedown', this._mouseDownEventListener);
+    instance.domElement.addEventListener('mouseup', this._mouseUpEventListener);
   }
 
   private initInstance() {
     const instance = new Instance({
       target: this.view().nativeElement,
       crs: CoordinateSystem.epsg3857,
-      backgroundColor: 0xcccccc,
+      backgroundColor: 0xf6f4f4,
     });
 
     this.setupLights(instance);
@@ -286,6 +364,12 @@ export class Giro3d implements AfterViewInit {
   private removeEventListeners(instance: Instance) {
     if (this._mouseMoveEventListener != null) {
       instance.domElement.removeEventListener('mousemove', this._mouseMoveEventListener);
+    }
+    if (this._mouseDownEventListener != null) {
+      instance.domElement.removeEventListener('mousedown', this._mouseDownEventListener);
+    }
+    if (this._mouseUpEventListener != null) {
+      instance.domElement.removeEventListener('mouseup', this._mouseUpEventListener);
     }
   }
 
