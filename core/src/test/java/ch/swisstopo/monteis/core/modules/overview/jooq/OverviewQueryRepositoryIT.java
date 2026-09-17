@@ -2,17 +2,22 @@ package ch.swisstopo.monteis.core.modules.overview.jooq;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.swisstopo.monteis.core.infrastructure.query.FilterModelItem;
+import ch.swisstopo.monteis.core.infrastructure.query.NumberFilterModel;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.query.SortDirection;
 import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
+import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -128,5 +133,36 @@ class OverviewQueryRepositoryIT {
     return page.rows().stream()
         .map(row -> row.timestamp() + "|" + row.dasKey())
         .collect(Collectors.toSet());
+  }
+
+  @Test
+  void should_apply_the_conditions_of_every_filtered_column_together() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          Map<String, FilterModelItem> filters = new LinkedHashMap<>();
+          filters.put("dasKey", new TextFilterModel("contains", "TEMP", null));
+          // Seeded raw values follow 50 + 30*sin(...), so "> 70" always matches some readings of
+          // every sensor and never all of them.
+          filters.put("rawValue", new NumberFilterModel("greaterThan", 70.0, null));
+
+          PagedResult<ReadSimpleMetricDto> bothColumns =
+              repository.findPagedMetrics(new PagedRequest(0, 20, List.of(), filters));
+          PagedResult<ReadSimpleMetricDto> dasKeyOnly =
+              repository.findPagedMetrics(
+                  new PagedRequest(
+                      0,
+                      20,
+                      List.of(),
+                      Map.of("dasKey", new TextFilterModel("contains", "TEMP", null))));
+
+          assertFalse(bothColumns.rows().isEmpty(), "Seed must hold high temperature readings");
+          assertTrue(
+              bothColumns.rows().stream()
+                  .allMatch(row -> row.dasKey().contains("TEMP") && row.rawValue() > 70),
+              "Every row must satisfy both column conditions");
+          assertTrue(
+              bothColumns.totalCount() < dasKeyOnly.totalCount(),
+              "Adding a second column's condition must narrow the result");
+        });
   }
 }
