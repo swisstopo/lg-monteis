@@ -395,6 +395,54 @@ class MeasurementQueryRepositoryIT {
         });
   }
 
+  /**
+   * Trend is fetched via a separate batched query keyed by {@code sensor_parameter_id} and merged
+   * back onto each row in Java (see {@code MeasurementQueryRepository.fetchTrends}) - this guards
+   * against a grouping/zip bug that could silently swap or duplicate trend lists across rows of a
+   * multi-row page.
+   */
+  @Test
+  @Transactional
+  void should_not_mix_up_trend_points_across_rows_of_a_multi_row_page() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given: the 4 fixed "monteis-*" sensors, each with its own parameter and readings
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of("sensorName", new TextFilterModel("contains", "monteis", null)));
+
+          // when
+          List<MeasurementResponseDto> rows = repository.findPaged(request).rows();
+
+          // then: each row's trend matches exactly what an independent query for its own
+          // sensor_parameter_id returns
+          assertEquals(4, rows.size());
+          for (MeasurementResponseDto row : rows) {
+            OffsetDateTime trendFrom = OffsetDateTime.now().minusDays(4);
+            List<ChartPointDto> expectedTrend =
+                dsl.select(SENSOR_READING_SECURED.TIMESTAMP, SENSOR_READING_SECURED.NORM_VALUE)
+                    .from(SENSOR_READING_SECURED)
+                    .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(row.sensorParameterId()))
+                    .and(SENSOR_READING_SECURED.TIMESTAMP.ge(trendFrom))
+                    .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc())
+                    .fetch(r -> new ChartPointDto(r.value1(), r.value2()));
+
+            assertEquals(
+                expectedTrend,
+                row.trend(),
+                "trend for " + row.sensorName() + " must match its own sensor_parameter_id");
+          }
+
+          // and: sanity-check the rows don't all coincidentally share one identical trend list,
+          // which would mask a bug that always grouped everything under a single key
+          long distinctTrends = rows.stream().map(MeasurementResponseDto::trend).distinct().count();
+          assertTrue(distinctTrends > 1, "fixture sanity check: sensors have distinct trends");
+        });
+  }
+
   @Test
   @Transactional
   void should_fall_back_to_composed_das_key_when_parameter_has_no_readings_yet() {

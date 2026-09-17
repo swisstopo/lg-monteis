@@ -156,22 +156,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
 
     var fullTable = baseTable.leftJoin(LATEST_READINGS).on(trueCondition());
 
-    OffsetDateTime trendFrom = OffsetDateTime.now(clock).minusDays(4);
-
-    var trend =
-        multiset(
-                dsl.select(SENSOR_READING_SECURED.TIMESTAMP, SENSOR_READING_SECURED.NORM_VALUE)
-                    .from(SENSOR_READING_SECURED)
-                    .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(SENSOR_PARAMETER.ID))
-                    // INLINE trendFrom in order to bypass string conversion via fdw, so the
-                    // bound is pushed down to timescaledb instead of pulling every reading
-                    // across the fdw and filtering locally.
-                    .and(SENSOR_READING_SECURED.TIMESTAMP.ge(DSL.inline(trendFrom)))
-                    .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc()))
-            .convertFrom(r -> r.map(mapping(ChartPointDto::new)))
-            .as("trend");
-
-    var data =
+    List<MeasurementRow> rows =
         dsl.select(
                 SENSOR_PARAMETER.ID,
                 DAS_KEY,
@@ -188,14 +173,39 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                 SENSOR_PARAMETER.LOWER_ALARM_LIMIT,
                 SENSOR_PARAMETER.UPPER_ALARM_LIMIT,
                 SENSORS.ACTIVE,
-                SENSORS.COMMENT,
-                trend)
+                SENSORS.COMMENT)
             .from(fullTable)
             .where(criteria.condition())
             .orderBy(criteria.sortFields())
             .limit(request.limit())
             .offset(request.offset())
-            .fetchInto(MeasurementResponseDto.class);
+            .fetch(mapping(MeasurementRow::new));
+
+    Map<UUID, List<ChartPointDto>> trendByParamId = fetchTrends(rows);
+
+    List<MeasurementResponseDto> data =
+        rows.stream()
+            .map(
+                row ->
+                    new MeasurementResponseDto(
+                        row.sensorParameterId(),
+                        row.dasKey(),
+                        row.experimentName(),
+                        row.sensorName(),
+                        row.sensorParameterName(),
+                        row.newestMeasurement(),
+                        row.measureValue(),
+                        row.unit().name(),
+                        row.sensorType(),
+                        row.x() == null ? null : row.x().doubleValue(),
+                        row.y() == null ? null : row.y().doubleValue(),
+                        row.z() == null ? null : row.z().doubleValue(),
+                        row.alarmLimitFrom(),
+                        row.alarmLimitTo(),
+                        row.active(),
+                        row.comment(),
+                        trendByParamId.getOrDefault(row.sensorParameterId(), List.of())))
+            .toList();
 
     boolean needsReadings =
         request.filterModel() != null
@@ -212,4 +222,55 @@ public class MeasurementQueryRepository implements MeasurementQuery {
 
     return new PagedResult<>(data, totalCount);
   }
+
+  // The per-row correlated "trend" subquery used to re-run this range scan once per page row
+  // across the FDW link into TimescaleDB (N round trips). Since trend is display-only - it never
+  // participates in sort/filter/pagination, unlike latest_readings above - it can be split out
+  // into a single batched range scan for exactly this page's parameter ids instead.
+  private Map<UUID, List<ChartPointDto>> fetchTrends(List<MeasurementRow> rows) {
+    if (rows.isEmpty()) {
+      return Map.of();
+    }
+
+    List<UUID> parameterIds = rows.stream().map(MeasurementRow::sensorParameterId).toList();
+    OffsetDateTime trendFrom = OffsetDateTime.now(clock).minusDays(4);
+
+    return dsl.select(
+            SENSOR_READING_SECURED.SENSOR_PARAMETER_ID,
+            SENSOR_READING_SECURED.TIMESTAMP,
+            SENSOR_READING_SECURED.NORM_VALUE)
+        .from(SENSOR_READING_SECURED)
+        .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.in(parameterIds))
+        // INLINE trendFrom in order to bypass string conversion via fdw, so the
+        // bound is pushed down to timescaledb instead of pulling every reading
+        // across the fdw and filtering locally.
+        .and(SENSOR_READING_SECURED.TIMESTAMP.ge(DSL.inline(trendFrom)))
+        .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc())
+        .fetchGroups(
+            SENSOR_READING_SECURED.SENSOR_PARAMETER_ID,
+            r ->
+                new ChartPointDto(
+                    r.get(SENSOR_READING_SECURED.TIMESTAMP),
+                    r.get(SENSOR_READING_SECURED.NORM_VALUE)));
+  }
+
+  // Mirrors MeasurementResponseDto minus "trend", which is fetched and merged separately by
+  // fetchTrends() (see findPaged above).
+  private record MeasurementRow(
+      UUID sensorParameterId,
+      String dasKey,
+      String experimentName,
+      String sensorName,
+      String sensorParameterName,
+      OffsetDateTime newestMeasurement,
+      Double measureValue,
+      ch.swisstopo.monteis.core.jooq.generated.enums.Unit unit,
+      String sensorType,
+      Integer x,
+      Integer y,
+      Integer z,
+      Double alarmLimitFrom,
+      Double alarmLimitTo,
+      Boolean active,
+      String comment) {}
 }
