@@ -1,5 +1,7 @@
 package ch.swisstopo.monteis.core.modules.overview.service;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.overview.query.QueryInterface;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.util.List;
@@ -25,5 +27,9 @@ public class OverviewService {
       log.warn("Recent metrics query returned no rows");
     }
     return results;
+  }
+
+  public PagedResult<ReadSimpleMetricDto> findPagedMetrics(PagedRequest request) {
+    return repository.findPagedMetrics(request);
   }
 }

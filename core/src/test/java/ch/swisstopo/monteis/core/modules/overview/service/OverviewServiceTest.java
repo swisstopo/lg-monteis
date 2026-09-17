@@ -6,9 +6,12 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.overview.jooq.OverviewQueryRepository;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -56,5 +59,22 @@ class OverviewServiceTest {
     then(repository).should().fetchRecentMetrics(limit);
     assertTrue(actualResults.isEmpty());
     assertEquals(expectedResults, actualResults);
+  }
+
+  @Test
+  void should_delegate_find_paged_metrics_to_repository() {
+    // given
+    PagedRequest request = new PagedRequest(0, 100, List.of(), Map.of());
+    PagedResult<ReadSimpleMetricDto> expected =
+        new PagedResult<>(List.of(mock(ReadSimpleMetricDto.class)), 42);
+
+    given(repository.findPagedMetrics(request)).willReturn(expected);
+
+    // when
+    PagedResult<ReadSimpleMetricDto> actual = service.findPagedMetrics(request);
+
+    // then
+    then(repository).should().findPagedMetrics(request);
+    assertEquals(expected, actual);
   }
 }

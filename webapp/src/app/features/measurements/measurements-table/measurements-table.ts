@@ -8,7 +8,6 @@ import {
   outputBinding,
   signal,
 } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
 import { form, FormField, required, schema } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import {
@@ -25,12 +24,14 @@ import {
   MatTimepickerToggle,
 } from '@angular/material/timepicker';
 import { APP_ISO_TIMESTAMP_FORMAT } from '@core/date/date.provider';
-import { OverviewControllerService, ReadSimpleMetricDto } from '@core/generated';
+import { ReadSimpleMetricDto } from '@core/generated';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { MeasurementsService } from '@features/measurements/services/measurements.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions } from '@ui/chart';
+import { InlineError } from '@ui/inline-error/inline-error';
+import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import Table from '@ui/table/table';
 import { subDays } from 'date-fns';
 import { createColumns } from './columns';
@@ -80,6 +81,7 @@ function combineDateAndTime(date: Date | null, time: Date | null): Date | null {
     MatTimepickerToggle,
     FormField,
     MatError,
+    InlineError,
   ],
   providers: [DatePipe],
   templateUrl: './measurements-table.html',
@@ -90,7 +92,6 @@ export default class MeasurementsTable {
   private readonly translateService = inject(TranslateService);
   private readonly dialog = inject(MatDialog);
   protected readonly measurementsService = inject(MeasurementsService);
-  protected readonly overviewService = inject(OverviewControllerService);
   private readonly formErrorService = inject(FormErrorService);
   readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
@@ -109,9 +110,14 @@ export default class MeasurementsTable {
     }),
   );
 
-  protected metricsResource = rxResource({
-    stream: () => this.overviewService.getMetrics(50),
-  });
+  protected readonly totalCount = signal<number | undefined>(undefined);
+  protected readonly loadError = signal(false);
+
+  protected datasource = createPagedDatasource(
+    (params) => this.measurementsService.getMetricsPage(params),
+    this.totalCount,
+    this.loadError,
+  );
 
   protected readonly selectedRows = signal<ReadSimpleMetricDto[]>([]);
 

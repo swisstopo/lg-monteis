@@ -5,12 +5,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.infrastructure.query.SortDirection;
+import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -71,5 +77,56 @@ class OverviewQueryRepositoryIT {
             assertTrue(isDescSorted, "Records must be sorted by timestamp descending");
           }
         });
+  }
+
+  @Test
+  void should_page_metrics_without_overlap_between_consecutive_pages() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          PagedResult<ReadSimpleMetricDto> firstPage =
+              repository.findPagedMetrics(new PagedRequest(0, 5, List.of(), Map.of()));
+          PagedResult<ReadSimpleMetricDto> secondPage =
+              repository.findPagedMetrics(new PagedRequest(5, 10, List.of(), Map.of()));
+
+          assertEquals(5, firstPage.rows().size(), "Should return exactly the requested page size");
+          assertTrue(firstPage.totalCount() >= 10, "Seed must hold at least two pages of readings");
+          assertEquals(
+              firstPage.totalCount(),
+              secondPage.totalCount(),
+              "Total count must not depend on the page requested");
+
+          // The seed ties timestamps across sensors (CROSS JOIN), so this is the case the
+          // primary-key tie-break in findPagedMetrics exists for.
+          Set<String> firstPageKeys = rowKeys(firstPage);
+          assertTrue(
+              rowKeys(secondPage).stream().noneMatch(firstPageKeys::contains),
+              "Consecutive pages must not repeat rows");
+        });
+  }
+
+  @Test
+  void should_apply_the_requested_sort_model() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          PagedResult<ReadSimpleMetricDto> page =
+              repository.findPagedMetrics(
+                  new PagedRequest(
+                      0, 10, List.of(new SortModelItem("timestamp", SortDirection.ASC)), Map.of()));
+
+          for (int i = 0; i < page.rows().size() - 1; i++) {
+            OffsetDateTime current = page.rows().get(i).timestamp();
+            OffsetDateTime next = page.rows().get(i + 1).timestamp();
+
+            assertTrue(
+                current.isBefore(next) || current.isEqual(next),
+                "Records must be sorted by timestamp ascending");
+          }
+        });
+  }
+
+  private static Set<String> rowKeys(PagedResult<ReadSimpleMetricDto> page) {
+    return page.rows().stream()
+        .map(row -> row.timestamp() + "|" + row.dasKey())
+        .collect(Collectors.toSet());
   }
 }

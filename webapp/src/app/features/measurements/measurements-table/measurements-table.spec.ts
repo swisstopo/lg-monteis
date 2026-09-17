@@ -8,14 +8,14 @@ import { vi } from 'vitest';
 import MeasurementsTable from './measurements-table';
 
 const overviewServiceMock = {
-  getMetrics: vi.fn().mockReturnValue(of([])),
+  getPagedMetrics: vi.fn().mockReturnValue(of({ rows: [], totalCount: 0 })),
 };
 
 describe('MeasurementsTable', () => {
   let fixture: ComponentFixture<MeasurementsTable>;
 
   beforeEach(async () => {
-    overviewServiceMock.getMetrics.mockReturnValue(of([]));
+    overviewServiceMock.getPagedMetrics.mockReturnValue(of({ rows: [], totalCount: 0 }));
 
     await TestBed.configureTestingModule({
       imports: [MeasurementsTable],

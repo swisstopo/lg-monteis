@@ -1,13 +1,7 @@
 <div class="metrics-panel">
   <h2 class="panel-heading">{{ 'measurements-table.heading' | translate }}</h2>
 
-  @if (metricsResource.isLoading()) {
-    <div class="loading-container">
-      <p class="loading-text">{{ 'measurements-table.loading' | translate }}</p>
-    </div>
-  } @else if (metricsResource.error()) {
-    <p class="error-text">{{ 'measurements-table.error' | translate }}</p>
-  } @else {
+  <div class="range-form">
     <mat-form-field>
       <mat-label>{{ 'measurements-table.form.startDate.label' | translate }}</mat-label>
       <input
@@ -80,12 +74,19 @@
       <mat-icon fontIcon="add_chart"></mat-icon>
       {{ 'measurements-table.plot' | translate }}
     </button>
+  </div>
+
+  @if (loadError()) {
+    <app-inline-error [message]="'measurements-table.error' | translate"></app-inline-error>
+  } @else {
     <app-table
       class="custom-grid"
       [multiple]="true"
       [checkboxes]="true"
-      [rows]="metricsResource.value() ?? []"
       [columns]="wrappedCols"
+      [rowModelType]="'infinite'"
+      [datasource]="datasource"
+      [gridOptions]="{ domLayout: 'normal' }"
       [getRowId]="getMetricRowId"
       (rowClicked)="onWrappedRow($event)"
       (selectionChanged)="onSelectionChanged($event)"

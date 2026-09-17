@@ -336,7 +336,6 @@
   },
   "measurements-table": {
     "heading": "AG Grid - Database Records",
-    "loading": "Streaming logs from database...",
     "error": "Failed to connect to the backend server.",
     "plot": "Plot",
     "form": {

@@ -1,9 +1,16 @@
 import { computed, inject, Injectable, resource, signal } from '@angular/core';
-import { ChartDataResponseDto, ErrorDto, MeasurementControllerService } from '@core/generated';
+import {
+  ChartDataResponseDto,
+  ErrorDto,
+  MeasurementControllerService,
+  OverviewControllerService,
+} from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { translate } from '@ngx-translate/core';
 import { ChartDataset, ChartPoint } from '@ui/chart';
+import { toPagedRequestParams } from '@ui/table/paged-request.mapper';
+import { IGetRowsParams } from 'ag-grid-community';
 import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
 
 interface ChartRequest {
@@ -21,6 +28,7 @@ interface LoadedChartData {
 @Injectable({ providedIn: 'root' })
 export class MeasurementsService {
   private readonly api = inject(MeasurementControllerService);
+  private readonly overviewApi = inject(OverviewControllerService);
   private readonly unitMetadata = getUnitMetadata();
   private readonly chartsRequest = signal<ChartRequest | undefined>(undefined);
   readonly error = computed<ErrorDto[] | undefined>(() => {
@@ -56,6 +64,14 @@ export class MeasurementsService {
       };
     },
   });
+
+  /** One page of readings for the measurements table's infinite row model. */
+  getMetricsPage(params: IGetRowsParams) {
+    const { startRow, endRow, sortModel, filterModel } = toPagedRequestParams(params);
+    return firstValueFrom(
+      this.overviewApi.getPagedMetrics(startRow, endRow, sortModel, filterModel),
+    );
+  }
 
   getChartData(ids: string[], rangeFrom: string, rangeTo: string) {
     if (!ids.length) {

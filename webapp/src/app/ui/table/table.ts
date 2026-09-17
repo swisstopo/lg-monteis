@@ -71,7 +71,10 @@ export default class Table<T = any> {
       ? {
           mode: 'multiRow',
           checkboxes: this.checkboxes(),
-          headerCheckbox: this.checkboxes(),
+          // ag-grid supports the select-all header checkbox on the clientSide/serverSide row
+          // models only (error #129) - the infinite row model has no notion of "all rows", just
+          // the blocks it happens to hold.
+          headerCheckbox: this.checkboxes() && this.rowModelType() !== 'infinite',
           enableClickSelection: true,
         }
       : {
