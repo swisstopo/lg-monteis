@@ -97,14 +97,7 @@ export function buildChartConfig(
       },
       plugins: {
         title: {
-          display: !!options.title,
-          text: options.title ?? '',
-          color: palette.textColor,
-          position: 'top',
-          align: 'center',
-          font: {
-            size: 18,
-          },
+          display: false,
         },
         subtitle: {
           display: !!options.subtitle,
@@ -139,6 +132,7 @@ export function buildChartConfig(
         tooltip: {
           enabled: true,
           displayColors: false,
+          cornerRadius: 0,
           backgroundColor: (context) => {
             const dataPoint = context.tooltip.dataPoints?.[0];
             if (!dataPoint) {
