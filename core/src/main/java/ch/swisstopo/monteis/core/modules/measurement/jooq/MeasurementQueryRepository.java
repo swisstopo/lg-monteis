@@ -13,6 +13,8 @@ import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDt
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -70,11 +72,11 @@ public class MeasurementQueryRepository implements MeasurementQuery {
           Map.entry("measureValue", LATEST_READINGS.field(SENSOR_READING_SECURED.NORM_VALUE)),
           Map.entry("unit", SENSOR_PARAMETER.UNIT),
           Map.entry("sensorType", SENSOR_TYPES.NAME),
-          Map.entry("x", SENSORS.X),
-          Map.entry("y", SENSORS.Y),
-          Map.entry("z", SENSORS.Z),
-          Map.entry("alarmLimitFrom", SENSOR_PARAMETER.LOWER_ALARM_LIMIT),
-          Map.entry("alarmLimitTo", SENSOR_PARAMETER.UPPER_ALARM_LIMIT),
+          Map.entry("coordinates.x", SENSORS.X),
+          Map.entry("coordinates.y", SENSORS.Y),
+          Map.entry("coordinates.z", SENSORS.Z),
+          Map.entry("alarmLimits.lower", SENSOR_PARAMETER.LOWER_ALARM_LIMIT),
+          Map.entry("alarmLimits.upper", SENSOR_PARAMETER.UPPER_ALARM_LIMIT),
           Map.entry("active", SENSORS.ACTIVE),
           Map.entry("comment", SENSORS.COMMENT));
 
@@ -197,14 +199,8 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                         row.measureValue(),
                         row.unit().name(),
                         row.sensorType(),
-                        row.x() == null
-                            ? null
-                            : row.x()
-                                .doubleValue(), // TODO: Parse can be removed after #142 gets merged
-                        row.y() == null ? null : row.y().doubleValue(),
-                        row.z() == null ? null : row.z().doubleValue(),
-                        row.alarmLimitFrom(),
-                        row.alarmLimitTo(),
+                        new CoordinatesDto(row.x(), row.y(), row.z()),
+                        new AlarmLimitsDto(row.alarmLimitFrom(), row.alarmLimitTo()),
                         row.active(),
                         row.comment(),
                         trendByParamId.getOrDefault(row.sensorParameterId(), List.of())))
@@ -273,9 +269,9 @@ public class MeasurementQueryRepository implements MeasurementQuery {
       Double measureValue,
       ch.swisstopo.monteis.core.jooq.generated.enums.Unit unit,
       String sensorType,
-      Integer x,
-      Integer y,
-      Integer z,
+      Double x,
+      Double y,
+      Double z,
       Double alarmLimitFrom,
       Double alarmLimitTo,
       Boolean active,
