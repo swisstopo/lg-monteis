@@ -412,8 +412,8 @@
     }
   },
   "tab": {
-    "sensor": "Setup Sensors ({{count}})",
-    "experiment": "Setup Experiment ({{count}})",
+    "sensor": "Setup Sensors",
+    "experiment": "Setup Experiment",
     "measurements-table": "Measurements",
     "measurements-visualization": "Measurements 3D View"
   },

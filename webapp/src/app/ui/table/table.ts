@@ -6,6 +6,7 @@ import {
   GridApi,
   GridOptions,
   GridReadyEvent,
+  iconSetMaterial,
   IDatasource,
   RowClickedEvent,
   RowModelType,
@@ -47,7 +48,7 @@ export default class Table<T = any> {
   // 'infinite' row model's cache after data changes elsewhere (ag-grid has no way to detect that).
   gridReady = output<GridApi<T>>();
 
-  protected theme = themeBalham;
+  protected theme = themeBalham.withPart(iconSetMaterial);
   // Ids (via getRowId) of the currently selected rows, tracked so a later 'infinite' row model
   // cache refresh can tell whether a selected row was evicted and needs deselecting.
   private readonly selectedIds = signal<Set<string>>(new Set());
