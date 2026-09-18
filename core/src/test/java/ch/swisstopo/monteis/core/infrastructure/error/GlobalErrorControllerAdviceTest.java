@@ -1,15 +1,20 @@
 package ch.swisstopo.monteis.core.infrastructure.error;
 
 import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
+import static org.hamcrest.Matchers.containsStringIgnoringCase;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAuthenticationException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import jakarta.validation.Constraint;
 import jakarta.validation.Valid;
@@ -21,11 +26,14 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ContextConfiguration;
@@ -35,6 +43,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientResponseException;
 
 @ControllerTest
 @ContextConfiguration(
@@ -106,6 +116,46 @@ class GlobalErrorControllerAdviceTest {
         .andExpect(
             jsonPath("$.params.errorId").exists()) // Ensures the UUID is generated for tracing
         .andExpect(jsonPath("$.params.errorId").isString());
+  }
+
+  @Test
+  void should_translate_upstream_api_failure_return_502() throws Exception {
+    var response = mockMvc.perform(get("/dummy/upstream-error").with(jwt()));
+
+    response
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.target").value("GLOBAL"))
+        .andExpect(jsonPath("$.messageKey").value("error.system.internal"))
+        .andExpect(jsonPath("$.params.length()").value(1))
+        .andExpect(jsonPath("$.params.errorId").isString())
+        .andExpect(content().string(not(containsStringIgnoringCase("relation does not exist"))));
+  }
+
+  @Test
+  void should_translate_upstream_api_failure_whose_body_cannot_be_converted_return_502()
+      throws Exception {
+    var response = mockMvc.perform(get("/dummy/upstream-error-unconvertible").with(jwt()));
+
+    response
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.messageKey").value("error.system.internal"))
+        .andExpect(jsonPath("$.params.errorId").isString())
+        .andExpect(content().string(not(containsStringIgnoringCase("gateway exploded"))));
+  }
+
+  @Test
+  void should_translate_fulcrum_authentication_failure_return_502() throws Exception {
+
+    var response = mockMvc.perform(get("/dummy/fulcrum-auth-error").with(jwt()));
+
+    response
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.target").value("GLOBAL"))
+        .andExpect(jsonPath("$.messageKey").value("error.system.internal"))
+        .andExpect(jsonPath("$.params.errorId").isString())
+        .andExpect(jsonPath("$.params.length()").value(1))
+        .andExpect(content().string(not(containsStringIgnoringCase("fulcrum"))))
+        .andExpect(content().string(not(containsStringIgnoringCase("token"))));
   }
 
   @Test
@@ -270,6 +320,39 @@ class GlobalErrorControllerAdviceTest {
     @GetMapping("/dummy/unexpected-error")
     public void throwUnexpectedError() {
       throw new RuntimeException("Simulated catastrophic failure, like a DB timeout");
+    }
+
+    @GetMapping("/dummy/upstream-error")
+    public void throwUpstreamError() {
+      throw upstreamFailure(
+          "{\"error\":\"relation does not exist\",\"status\":400}",
+          new BadRequestResponse().error("relation does not exist").status(400));
+    }
+
+    @GetMapping("/dummy/upstream-error-unconvertible")
+    public void throwUnconvertibleUpstreamError() {
+      throw upstreamFailure("<html>gateway exploded</html>", null);
+    }
+
+    private static RestClientResponseException upstreamFailure(
+        String body, BadRequestResponse converted) {
+      RestClientResponseException e =
+          HttpClientErrorException.create(
+              HttpStatus.BAD_REQUEST,
+              "Bad Request",
+              HttpHeaders.EMPTY,
+              body.getBytes(StandardCharsets.UTF_8),
+              StandardCharsets.UTF_8);
+      if (converted != null) {
+        e.setBodyConvertFunction(type -> converted);
+      }
+      return e;
+    }
+
+    @GetMapping("/dummy/fulcrum-auth-error")
+    public void throwFulcrumAuthError() {
+      throw new FulcrumAuthenticationException(
+          "Fulcrum rejected the configured API token with 401");
     }
 
     @GetMapping("/dummy/method-validation-error")

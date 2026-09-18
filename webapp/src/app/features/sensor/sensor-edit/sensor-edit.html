@@ -68,6 +68,13 @@
           [formField]="sensorForm.fulcrumId"
           [placeholder]="'sensor.fulcrumId.placeholder' | translate"
         />
+        @if (sensorForm.fulcrumId().touched() && sensorForm.fulcrumId().invalid()) {
+          <mat-error>
+            @for (error of sensorForm.fulcrumId().errors(); track error) {
+              {{ error.message }}
+            }
+          </mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline">

@@ -1,8 +1,10 @@
 package ch.swisstopo.monteis.core.infrastructure.error;
 
+import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAuthenticationException;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,6 +31,7 @@ import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
@@ -192,6 +195,70 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
     return ResponseEntity.status(statusCode).headers(headers).body(payload);
   }
 
+  /**
+   * A misconfigured or rejected Fulcrum token is a deployment problem, not something the user can
+   * act on, and naming the upstream would tell them which third party Monteis talks to and that its
+   * credentials are broken. The response is therefore the generic system error, carrying only the
+   * error id; the cause is written to the log under that same id, so support can correlate the two
+   * and see that it is Fulcrum's authentication that failed.
+   */
+  @ExceptionHandler(FulcrumAuthenticationException.class)
+  @ApiResponse(
+      responseCode = "502",
+      description = "An upstream API Monteis depends on refused the request.",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  public ResponseEntity<ErrorDto> handleFulcrumAuthenticationFailure(
+      FulcrumAuthenticationException e, HttpServletRequest request) {
+    RequestErrorContext ctx = getErrorContext(request);
+
+    log.error(
+        "Fulcrum authentication failed during {} {} [ErrorID: {}]: {}",
+        ctx.method(),
+        ctx.uri(),
+        ctx.errorId(),
+        e.getMessage(),
+        e);
+
+    ErrorDto payload = ErrorDto.global(Map.of(ERROR_ID, ctx.errorId()));
+
+    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(payload);
+  }
+
+  @ExceptionHandler(RestClientResponseException.class)
+  @ApiResponse(
+      responseCode = "502",
+      description = "An upstream API Monteis depends on refused or failed the request.",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  public ResponseEntity<ErrorDto> handleUpstreamApiFailure(
+      RestClientResponseException e, HttpServletRequest request) {
+    RequestErrorContext ctx = getErrorContext(request);
+
+    log.error(
+        "Upstream API failed with {} during {} {} [ErrorID: {}]: {}",
+        e.getStatusCode(),
+        ctx.method(),
+        ctx.uri(),
+        ctx.errorId(),
+        upstreamDetail(e));
+
+    ErrorDto payload = ErrorDto.global(Map.of(ERROR_ID, ctx.errorId()));
+
+    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(payload);
+  }
+
+  private static String upstreamDetail(RestClientResponseException e) {
+    try {
+      BadRequestResponse parsed = e.getResponseBodyAs(BadRequestResponse.class);
+      if (parsed != null && parsed.getError() != null) {
+        return parsed.getError();
+      }
+    } catch (RuntimeException conversionFailure) {
+      log.debug("Upstream error body is not the documented envelope", conversionFailure);
+    }
+
+    return e.getResponseBodyAsString();
+  }
+
   @ExceptionHandler(Exception.class)
   @ApiResponse(
       responseCode = "500",
@@ -227,11 +294,17 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
   }
 
   /**
-   * Extracts annotation attributes from Bean Validation constraints so clients
-   * can render parameterized messages.
+   * Extracts annotation attributes from Bean Validation constraints so clients can render
+   * parameterized messages.
    *
-   * <p>For example, {@code @Size(min = 3, max = 20)} becomes:
-   * {@code {"min": 3, "max": 20}}.
+   * <p>For example, {@code @Size(min = 3, max = 20)} becomes: {@code {"min": 3, "max": 20}}.
+   * The attributes Bean Validation puts on every constraint ({@code message}, {@code groups},
+   * {@code payload}, see {@link #INTERNAL_ANNOTATION_KEYS}) are dropped: they describe the
+   * constraint's own wiring, not the rule the user broke.
+   *
+   * <p>An error that carries no {@link ConstraintViolation} - a programmatically registered
+   * {@link ObjectError}, for instance - has no attributes to extract, which is not a failure:
+   * the message key alone then has to carry the meaning, and the parameters stay empty.
    *
    * @param error validation error containing the constraint metadata
    * @return constraint parameters or an empty map if metadata cannot be extracted

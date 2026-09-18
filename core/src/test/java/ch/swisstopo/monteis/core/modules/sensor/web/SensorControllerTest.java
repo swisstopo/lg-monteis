@@ -127,7 +127,7 @@ class SensorControllerTest {
             Das.SOL_EXPERTS,
             null,
             null,
-            new CoordinatesDto(0, 0, 0),
+            new CoordinatesDto(0.0, 0.0, 0.0),
             true,
             null,
             defaultResponseParameterDto(1));
@@ -272,7 +272,7 @@ class SensorControllerTest {
             null,
             null,
             null,
-            new CoordinatesDto(0, 0, 0),
+            new CoordinatesDto(0.0, 0.0, 0.0),
             true,
             null,
             List.of(parameterDto));
@@ -297,7 +297,7 @@ class SensorControllerTest {
             Das.SOL_EXPERTS,
             null,
             null,
-            new CoordinatesDto(0, 0, 0),
+            new CoordinatesDto(0.0, 0.0, 0.0),
             true,
             null,
             1,
@@ -393,7 +393,7 @@ class SensorControllerTest {
             null,
             null,
             null,
-            new CoordinatesDto(0, 0, 0),
+            new CoordinatesDto(0.0, 0.0, 0.0),
             true,
             1,
             List.of(
@@ -513,7 +513,7 @@ class SensorControllerTest {
         null,
         null,
         null,
-        new CoordinatesDto(0, 0, 0),
+        new CoordinatesDto(0.0, 0.0, 0.0),
         true,
         version,
         List.of(defaultWriteParameterDto(paramId, paramVersion)));
@@ -542,7 +542,7 @@ class SensorControllerTest {
         Das.SOL_EXPERTS,
         null,
         null,
-        new CoordinatesDto(0, 0, 0),
+        new CoordinatesDto(0.0, 0.0, 0.0),
         true,
         null,
         sensorVersion,

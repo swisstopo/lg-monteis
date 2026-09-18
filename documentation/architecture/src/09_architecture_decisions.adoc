@@ -152,3 +152,39 @@ Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Re
 | Konsequenzen
 | Das Config-Objekt (`SensorParameterConfig`) transportiert zwangsläufig mehr Felder (`das`, `das_sensor_alias`, `das_parameter_alias`, `sensor_parameter_id`) statt eines einzelnen Identifiers. Der `Das`-Enum muss zentral im geteilten Modul `contracts` gepflegt werden, damit Core (Publisher) und Pipeline (Normalizer, `SensorConfigCache`) nicht auseinanderlaufen. Weil `sensor_parameter_id` nullable und nicht Teil des Primärschlüssels ist, triggert jedes Config-Event zwei getrennte Reprocessing-Backlogs statt eines einzelnen: Datensätze, die bereits über `sensor_parameter_id` gefunden werden (überlebt beliebige DAS-Key-Wechsel), und noch unbefüllte Datensätze unter dem aktuellen DAS-Key (einmaliges Backfill). Rows, die nie wieder ein Formel-/Grenzwert-Update für ihren Sensor-Parameter erleben, behalten `sensor_parameter_id = NULL`, bis ein solches Event eintrifft oder ein manuelles Re-Publish (siehe `POST /api/sensors/republish-config`) angestossen wird.
 |===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: Eingecheckte Fulcrum-OpenAPI-Spec mit Commit-Pin statt Live-Fetch zur Generierungszeit
+
+| Datum
+| 14.09.2026
+
+| Status
+| entschieden
+
+| Kontext & Problem
+| Für die Anbindung an Fulcrum wird ein typisierter HTTP-Client benötigt, der aus der offiziellen OpenAPI-Spec generiert wird. Diese Spec wird ausschliesslich auf dem `v2`-Branch von `github.com/fulcrumapp/api` publiziert, also in einem Repository ohne Tags und ohne Releases, das wir nicht kontrollieren. Naheliegend war zunächst, das Dokument bei jedem Generierungslauf direkt von GitHub zu holen (`download-maven-plugin`, gebunden an `generate-sources`) und unmittelbar an den `openapi-generator` weiterzureichen. Damit hinge jedoch jeder Build an der Erreichbarkeit und dem Rate-Limit von GitHub, lokal wie in der CI, und auch dann, wenn die geänderte Stelle mit Fulcrum nichts zu tun hat. Ein Fetch gegen den Branch-Head `v2` wäre zusätzlich nicht reproduzierbar: derselbe Commit unseres Repositories könnte je nach Zeitpunkt unterschiedliche Java-Klassen erzeugen, und eine brechende Änderung bei Fulcrum würde den Build ohne jede Code-Änderung unsererseits rot färben. Ein Fetch gegen einen gepinnten Commit stellt die Reproduzierbarkeit zwar wieder her, beseitigt die Netzwerkabhängigkeit im Generierungsschritt aber nicht.
+
+| Entscheidung
+| Die Spec wird als normale Ressource eingecheckt (`contracts/src/main/resources/fulcrum/rest-api.json`) und der Client im Modul `contracts` daraus generiert (Execution `generate-fulcrum-models` am `openapi-generator-maven-plugin`, Modelle plus API als Spring-`@HttpExchange`-Interface). Kein Build geht dafür ins Netz. Der Upstream-Commit, aus dem die eingecheckte Kopie stammt, ist als einziger Wert über das Fremddokument in `contracts/pom.xml` festgehalten (`fulcrum.spec.ref`, zwingend eine SHA). Renovate hält diesen Pin über einen `customManager` mit der `git-refs`-Datasource aktuell, und der Job `Fulcrum Spec In Sync` im PR-Gate lädt die Spec am gepinnten Commit und vergleicht sie mit der eingecheckten Kopie. Das Nachziehen der Kopie ist der einzige Schritt, der das Netz benutzt, und erfolgt bewusst manuell über `.github/scripts/sync-fulcrum-spec-to-pin.sh`. Ablauf und Datenflussdiagramm sind in `contracts/README_FUlCRUM_API_SPEC.md` beschrieben.
+
+| Begründung
+| **Keine Netzwerkabhängigkeit im Generierungsschritt:** Die Generierung liest eine lokale Datei. Ein GitHub-Ausfall, ein Rate-Limit oder ein offline arbeitender Entwickler legen den Build nicht lahm, und ein Fremdsystem kann keinen Einfluss darauf nehmen, ob unsere Pipeline grün ist.
+
+**Reproduzierbare Builds:** Ein Commit unseres Repositories erzeugt immer dieselben generierten Klassen, unabhängig davon, wann er gebaut wird. Das ist der Grund, weshalb `fulcrum.spec.ref` eine SHA sein muss und nicht `v2`. Ein zur Build-Zeit aufgelöster Branch-Head würde diese Eigenschaft wieder aufgeben und Renovate zudem nichts zum Aktualisieren lassen.
+
+**Die Änderung wird reviewbar:** Ein Upstream-Wechsel erscheint als Diff am eingecheckten Dokument und durchläuft denselben PR-Prozess wie jede andere Änderung. Bei einem Live-Fetch würde sich die Vertragsgrundlage unbemerkt zwischen zwei Builds verschieben.
+
+**Aktualität bleibt trotzdem automatisiert:** Der Verzicht auf den Live-Fetch bedeutet keinen manuell gepflegten Stand. Renovate verfolgt den Branch-Head weiter und hebt den Pin an; die überwiegende Mehrheit dieser Commits berührt die Spec nicht, der Sync-Check bleibt grün und der PR merged automatisch. Nur wenn sich die Spec tatsächlich geändert hat, ist ein Mensch beteiligt.
+
+**Der Pin ist die einzige gespeicherte Information:** Der Check lädt das Dokument am gepinnten Commit und vergleicht es direkt mit der eingecheckten Kopie. Es gibt keinen zweiten Hash im Repository, der aus dem Tritt geraten könnte, und der Check deckt beide Abweichungsrichtungen ab: einen Renovate-Bump auf einen Commit, der die Spec geändert hat, ebenso wie eine von Hand editierte Kopie.
+
+**Ein Ort für generierte Contract-Typen:** Die Generierung liegt in `contracts`, wo bereits die aus `openapi.yml` erzeugten Typen entstehen. Der Fulcrum-Client wird heute nur von `core` genutzt, würde also auch dort passen; ihn trotzdem in `contracts` zu generieren erspart eine zweite Generierungsstelle und das Kopieren einer Spec über Modulgrenzen hinweg zur Build-Zeit.
+
+| Konsequenzen
+| Wenn der Sync-Check failed, ist ein manueller Schritt auf dem Renovate-Branch nötig (Skript ausführen, Ergebnis committen); bis dahin bleibt der PR blockiert, was gewollt ist, da genau dann die generierten Klassen ihre Grundlage wechseln. Der Renovate-`customManager` muss auf `contracts/pom.xml` zeigen, sonst wird der Digest-Bump nicht mehr erzeugt und der Pin altert stillschweigend. Das `download-maven-plugin` bleibt in `contracts` nur verwaltet (`pluginManagement`), ohne Phasenbindung, damit kein Build versehentlich doch ins Netz geht. Da die Spec als Ressource auch im `contracts`-Jar landet, kann `FulcrumSpecTest` in `core` genau das Dokument prüfen, aus dem generiert wurde: Der Test sichert die Stellen ab, die der Client hart kodiert (den `X-ApiToken`-Header, die Basis-URL und die Response-Formen von `/v2/query`) und die kein generiertes Modell abdeckt. Er ist die Bedingung dafür, dass die Digest-Bumps automatisch mergen dürfen.
+|===
