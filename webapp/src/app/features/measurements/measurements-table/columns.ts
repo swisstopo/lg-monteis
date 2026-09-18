@@ -23,18 +23,18 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       { displayName: translateService.translate('sensor.active.column.no')(), value: 'false' },
     ]);
 
-/**
- * MON-71: the normalised value is colored by how the reading relates to its sensor parameter's
- * limits. The backend derives the state (see MeasurementState), so the thresholds live in one
- * place; the classes themselves are global, in styles.scss, because ag-grid renders cells
- * outside any component template.
- */
-const MEASUREMENT_STATE_CLASS: Record<ReadSimpleMetricDto.MeasurementStateEnum, string> = {
-  [ReadSimpleMetricDto.MeasurementStateEnum.Alarm]: 'measurement-state-alarm',
-  [ReadSimpleMetricDto.MeasurementStateEnum.ExceedsRange]: 'measurement-state-exceeds-range',
-  // Within both limits - left in the table's default foreground color.
-  [ReadSimpleMetricDto.MeasurementStateEnum.Ok]: '',
-};
+  /**
+   * MON-71: the normalised value is colored by how the reading relates to its sensor parameter's
+   * limits. The backend derives the state (see MeasurementState), so the thresholds live in one
+   * place; the classes themselves are global, in styles.scss, because ag-grid renders cells
+   * outside any component template.
+   */
+  const MEASUREMENT_STATE_CLASS: Record<MeasurementResponseDto.MeasurementStateEnum, string> = {
+    [MeasurementResponseDto.MeasurementStateEnum.Alarm]: 'measurement-state-alarm',
+    [MeasurementResponseDto.MeasurementStateEnum.ExceedsRange]: 'measurement-state-exceeds-range',
+    // Within both limits - left in the table's default foreground color.
+    [MeasurementResponseDto.MeasurementStateEnum.Ok]: '',
+  };
 
   return [
     {
@@ -91,6 +91,8 @@ const MEASUREMENT_STATE_CLASS: Record<ReadSimpleMetricDto.MeasurementStateEnum, 
       sortable: true,
       filter: 'agNumberColumnFilter',
       valueFormatter: (params) => (params.value != null ? Number(params.value).toFixed(2) : '-'),
+      cellClass: (params) =>
+        params.data?.measurementState ? MEASUREMENT_STATE_CLASS[params.data.measurementState] : '',
     },
     {
       field: 'unit',
@@ -153,8 +155,6 @@ const MEASUREMENT_STATE_CLASS: Record<ReadSimpleMetricDto.MeasurementStateEnum, 
       sortable: true,
       filter: 'agNumberColumnFilter',
       flex: 1,
-      cellClass: (params) =>
-        params.data?.measurementState ? MEASUREMENT_STATE_CLASS[params.data.measurementState] : '',
     },
     {
       field: 'coordinates.z',
