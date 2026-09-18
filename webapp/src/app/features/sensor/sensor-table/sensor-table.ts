@@ -49,8 +49,7 @@ export default class SensorTable {
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
-      const count = this.totalCount() ?? 0;
-      view.title = this.translateService.translate('tab.sensor', { count })();
+      view.title = this.translateService.translate('tab.sensor')();
     });
 
     // Re-fetch the currently visible pages whenever a sensor is created/updated elsewhere
