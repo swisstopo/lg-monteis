@@ -197,7 +197,10 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                         row.measureValue(),
                         row.unit().name(),
                         row.sensorType(),
-                        row.x() == null ? null : row.x().doubleValue(),
+                        row.x() == null
+                            ? null
+                            : row.x()
+                                .doubleValue(), // TODO: Parse can be removed after #142 gets merged
                         row.y() == null ? null : row.y().doubleValue(),
                         row.z() == null ? null : row.z().doubleValue(),
                         row.alarmLimitFrom(),
@@ -232,7 +235,11 @@ public class MeasurementQueryRepository implements MeasurementQuery {
       return Map.of();
     }
 
-    List<UUID> parameterIds = rows.stream().map(MeasurementRow::sensorParameterId).toList();
+    // INLINE the ids for the same reason as trendFrom below: as bind values they reach
+    // timescaledb as remote parameters, which keeps postgres_fdw from pushing this IN list into
+    // the foreign scan.
+    List<Field<UUID>> parameterIds =
+        rows.stream().map(MeasurementRow::sensorParameterId).<Field<UUID>>map(DSL::inline).toList();
     OffsetDateTime trendFrom = OffsetDateTime.now(clock).minusDays(4);
 
     return dsl.select(
