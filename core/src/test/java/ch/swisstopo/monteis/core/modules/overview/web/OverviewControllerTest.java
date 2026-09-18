@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.MeasurementState;
 import ch.swisstopo.monteis.core.modules.overview.service.OverviewService;
-import ch.swisstopo.monteis.core.modules.overview.web.dto.MeasurementState;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;

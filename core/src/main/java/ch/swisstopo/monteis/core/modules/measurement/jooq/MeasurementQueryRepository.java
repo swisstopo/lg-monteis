@@ -38,7 +38,8 @@ public class MeasurementQueryRepository implements MeasurementQuery {
               select(
                       SENSOR_READING_SECURED.TIMESTAMP,
                       SENSOR_READING_SECURED.NORM_VALUE,
-                      SENSOR_READING_SECURED.DAS_KEY)
+                      SENSOR_READING_SECURED.DAS_KEY,
+                      SENSOR_READING_SECURED.STATUS)
                   .from(SENSOR_READING_SECURED)
                   .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(SENSOR_PARAMETER.ID))
                   .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
@@ -166,6 +167,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                 SENSOR_PARAMETER.NAME,
                 LATEST_READINGS.field(SENSOR_READING_SECURED.TIMESTAMP),
                 LATEST_READINGS.field(SENSOR_READING_SECURED.NORM_VALUE),
+                LATEST_READINGS.field(SENSOR_READING_SECURED.STATUS),
                 SENSOR_PARAMETER.UNIT,
                 SENSOR_TYPES.NAME,
                 SENSORS.X,
@@ -209,7 +211,11 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                         row.active(),
                         row.comment(),
                         trendByParamId.getOrDefault(row.sensorParameterId(), List.of()),
-                        calculateState(row.measureValue(), row.alarmLimitFrom(), row.alarmLimitTo)))
+                        MeasurementState.of(
+                            row.measureValue(),
+                            row.alarmLimitFrom(),
+                            row.alarmLimitTo(),
+                            row.rangeStatus())))
             .toList();
 
     boolean needsReadings =
@@ -273,6 +279,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
       String sensorParameterName,
       OffsetDateTime newestMeasurement,
       Double measureValue,
+      String rangeStatus,
       ch.swisstopo.monteis.core.jooq.generated.enums.Unit unit,
       String sensorType,
       Integer x,
@@ -282,20 +289,4 @@ public class MeasurementQueryRepository implements MeasurementQuery {
       Double alarmLimitTo,
       Boolean active,
       String comment) {}
-
-  private MeasurementState calculateState(Double value, Double lowerLimit, Double upperLimit) {
-    if (value == null) {
-      return MeasurementState.OK;
-    }
-
-    if (lowerLimit != null && value < lowerLimit) {
-      return MeasurementState.ALARM;
-    }
-
-    if (upperLimit != null && value > upperLimit) {
-      return MeasurementState.ALARM;
-    }
-
-    return MeasurementState.OK;
-  }
 }
