@@ -205,7 +205,7 @@
       "display": "[{{lower}} to {{upper}}]"
     },
     "parameter": {
-      "heading": "Parameter {{number}}",
+      "heading": "Parameter",
       "name": {
         "label": "Parameter Name",
         "placeholder": "e.g., Axial Displacement",
