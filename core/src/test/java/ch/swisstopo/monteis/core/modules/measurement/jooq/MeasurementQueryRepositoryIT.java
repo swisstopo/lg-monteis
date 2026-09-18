@@ -353,11 +353,11 @@ class MeasurementQueryRepositoryIT {
           assertNotNull(row.measureValue());
           assertEquals("KELVIN", row.unit());
           assertEquals("Temperature", row.sensorType());
-          assertEquals(100.0, row.x());
-          assertEquals(200.0, row.y());
-          assertEquals(300.0, row.z());
-          assertEquals(-50.0, row.alarmLimitFrom());
-          assertEquals(100.0, row.alarmLimitTo());
+          assertEquals(100.0, row.coordinates().x());
+          assertEquals(200.0, row.coordinates().y());
+          assertEquals(300.0, row.coordinates().z());
+          assertEquals(-50.0, row.alarmLimits().lower());
+          assertEquals(100.0, row.alarmLimits().upper());
           assertEquals(true, row.active());
           assertEquals("Air temperature sensor near ventilation intake", row.comment());
           assertFalse(row.trend().isEmpty());
@@ -469,7 +469,7 @@ class MeasurementQueryRepositoryIT {
                   Das.SOL_EXPERTS,
                   null,
                   null,
-                  new Coordinates(0, 0, 0),
+                  new Coordinates(0d, 0d, 0d),
                   true,
                   null);
           sensor.setParameters(new ArrayList<>(List.of(parameter)));
