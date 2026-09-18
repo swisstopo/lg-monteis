@@ -87,6 +87,12 @@ body {
   --mat-sys-corner-extra-small: 0px;
   --mat-dialog-headline-padding: 11px 23px 33px;
 
+  // MON-71: fixed measurement-state colors from the design spec. Not Material system colors -
+  // they carry the same meaning in either color scheme, so they are not re-themed for dark mode.
+  // They have to be global since they are applied by ag-grid which only uses global styles
+  --app-measurement-alarm-color: #c20009;
+  --app-measurement-exceeds-range-color: #b26200;
+
   @include mat.form-field-overrides(
     (
       filled-container-color: var(--mat-sys-surface-container-high),
@@ -169,4 +175,15 @@ h2 {
   max-width: 10rem;
   margin-left: 0.3rem;
   margin-top: 0.3rem;
+}
+
+// MON-71: applied by the measurements table to the normalised value cell (see its columns.ts).
+// Global on purpose: ag-grid renders its cells outside any component template, so a
+// component-scoped rule would never match them.
+.measurement-state-alarm {
+  color: var(--app-measurement-alarm-color);
+}
+
+.measurement-state-exceeds-range {
+  color: var(--app-measurement-exceeds-range-color);
 }

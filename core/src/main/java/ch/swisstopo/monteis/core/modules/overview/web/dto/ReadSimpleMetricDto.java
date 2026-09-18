@@ -10,4 +10,5 @@ public record ReadSimpleMetricDto(
     Double normValue,
     Short version,
     String status,
-    UUID sensorParameterId) {}
+    UUID sensorParameterId,
+    MeasurementState measurementState) {}
