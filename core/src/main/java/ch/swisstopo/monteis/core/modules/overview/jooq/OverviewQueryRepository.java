@@ -2,9 +2,9 @@ package ch.swisstopo.monteis.core.modules.overview.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_PARAMETER;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
-import static org.jooq.Records.mapping;
 
 import ch.swisstopo.monteis.core.modules.overview.query.QueryInterface;
+import ch.swisstopo.monteis.core.modules.overview.web.dto.MeasurementState;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import java.util.List;
 import org.jooq.DSLContext;
@@ -35,12 +35,30 @@ public class OverviewQueryRepository implements QueryInterface {
             SENSOR_READING_SECURED.NORM_VALUE,
             SENSOR_READING_SECURED.VERSION,
             SENSOR_READING_SECURED.STATUS,
-            SENSOR_PARAMETER.ID)
+            SENSOR_PARAMETER.ID,
+            // Fetched only to derive measurementState below; the limits themselves are the
+            // sensor's configuration and are not part of a reading's payload.
+            SENSOR_PARAMETER.LOWER_ALARM_LIMIT,
+            SENSOR_PARAMETER.UPPER_ALARM_LIMIT)
         .from(SENSOR_READING_SECURED)
         .join(SENSOR_PARAMETER)
         .on(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(SENSOR_PARAMETER.ID))
         .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
         .limit(limit)
-        .fetch(mapping(ReadSimpleMetricDto::new));
+        .fetch(
+            r ->
+                new ReadSimpleMetricDto(
+                    r.get(SENSOR_READING_SECURED.TIMESTAMP),
+                    r.get(SENSOR_READING_SECURED.DAS_KEY),
+                    r.get(SENSOR_READING_SECURED.RAW_VALUE),
+                    r.get(SENSOR_READING_SECURED.NORM_VALUE),
+                    r.get(SENSOR_READING_SECURED.VERSION),
+                    r.get(SENSOR_READING_SECURED.STATUS),
+                    r.get(SENSOR_PARAMETER.ID),
+                    MeasurementState.of(
+                        r.get(SENSOR_READING_SECURED.NORM_VALUE),
+                        r.get(SENSOR_PARAMETER.LOWER_ALARM_LIMIT),
+                        r.get(SENSOR_PARAMETER.UPPER_ALARM_LIMIT),
+                        r.get(SENSOR_READING_SECURED.STATUS))));
   }
 }
