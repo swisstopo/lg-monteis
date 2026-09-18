@@ -3,12 +3,29 @@ package ch.swisstopo.monteis.core.modules.measurement.jooq;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
 import static org.junit.jupiter.api.Assertions.*;
 
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.infrastructure.query.SortDirection;
+import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
+import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import ch.swisstopo.monteis.core.modules.sensor.jooq.JooqSensorRepository;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.jooq.DSLContext;
@@ -59,6 +76,8 @@ class MeasurementQueryRepositoryIT {
 
   @Autowired private DSLContext dsl;
 
+  @Autowired private JooqSensorRepository sensorRepository;
+
   private final OffsetDateTime wideFrom = OffsetDateTime.now().minusDays(1);
   private final OffsetDateTime wideTo = OffsetDateTime.now().plusMinutes(5);
 
@@ -69,7 +88,7 @@ class MeasurementQueryRepositoryIT {
         () -> {
           // Act
           Optional<ChartDataResponseDto> result =
-              repository.findMeasurements(TEMP_1_PARAM, wideFrom, wideTo);
+              repository.findChartData(TEMP_1_PARAM, wideFrom, wideTo);
 
           // Assert
           assertTrue(result.isPresent());
@@ -137,9 +156,9 @@ class MeasurementQueryRepositoryIT {
         () -> {
           // Act: the endpoint serves one sensor per call, so each id resolves on its own
           Optional<ChartDataResponseDto> temp =
-              repository.findMeasurements(TEMP_1_PARAM, wideFrom, wideTo);
+              repository.findChartData(TEMP_1_PARAM, wideFrom, wideTo);
           Optional<ChartDataResponseDto> disp =
-              repository.findMeasurements(DISP_2_PARAM, wideFrom, wideTo);
+              repository.findChartData(DISP_2_PARAM, wideFrom, wideTo);
 
           // Assert
           assertEquals("SOL_EXPERTS__TEMP-1__temperature", temp.orElseThrow().dasKey());
@@ -158,7 +177,7 @@ class MeasurementQueryRepositoryIT {
 
           // Act
           Optional<ChartDataResponseDto> result =
-              repository.findMeasurements(TEMP_1_PARAM, futureFrom, futureTo);
+              repository.findChartData(TEMP_1_PARAM, futureFrom, futureTo);
 
           // Assert: the sensor itself is still returned, just with no data points
           assertTrue(result.isPresent());
@@ -170,7 +189,7 @@ class MeasurementQueryRepositoryIT {
   @Transactional
   void should_return_empty_when_id_does_not_exist() {
     SecurityContextTestSupport.runAsAdmin(
-        () -> assertTrue(repository.findMeasurements(NON_EXISTENT_ID, wideFrom, wideTo).isEmpty()));
+        () -> assertTrue(repository.findChartData(NON_EXISTENT_ID, wideFrom, wideTo).isEmpty()));
   }
 
   @Test
@@ -179,8 +198,7 @@ class MeasurementQueryRepositoryIT {
     SecurityContextTestSupport.runAsUser(
         EXPERIMENT_1_ONLY,
         // FLOW-Admin belongs to no experiment, explicitly requesting its id must not help
-        () ->
-            assertTrue(repository.findMeasurements(FLOW_ADMIN_PARAM, wideFrom, wideTo).isEmpty()));
+        () -> assertTrue(repository.findChartData(FLOW_ADMIN_PARAM, wideFrom, wideTo).isEmpty()));
   }
 
   @Test
@@ -191,7 +209,7 @@ class MeasurementQueryRepositoryIT {
         () -> {
           // Act: TEMP-1 belongs to experiment 1
           Optional<ChartDataResponseDto> result =
-              repository.findMeasurements(TEMP_1_PARAM, wideFrom, wideTo);
+              repository.findChartData(TEMP_1_PARAM, wideFrom, wideTo);
 
           // Assert
           assertTrue(result.isPresent());
@@ -207,7 +225,7 @@ class MeasurementQueryRepositoryIT {
         () -> {
           // Act
           Optional<ChartDataResponseDto> result =
-              repository.findMeasurements(FLOW_ADMIN_PARAM, wideFrom, wideTo);
+              repository.findChartData(FLOW_ADMIN_PARAM, wideFrom, wideTo);
 
           // Assert
           assertTrue(result.isPresent());
@@ -222,7 +240,7 @@ class MeasurementQueryRepositoryIT {
     SecurityContextTestSupport.runAsUser(
         EXPERIMENT_1_ONLY,
         // DISP-2 belongs only to experiment 2
-        () -> assertTrue(repository.findMeasurements(DISP_2_PARAM, wideFrom, wideTo).isEmpty()));
+        () -> assertTrue(repository.findChartData(DISP_2_PARAM, wideFrom, wideTo).isEmpty()));
   }
 
   /**
@@ -302,6 +320,374 @@ class MeasurementQueryRepositoryIT {
   }
 
   private List<ChartPointDto> dataOf(UUID id, OffsetDateTime from, OffsetDateTime to) {
-    return repository.findMeasurements(id, from, to).orElseThrow().points();
+    return repository.findChartData(id, from, to).orElseThrow().points();
+  }
+
+  @Test
+  @Transactional
+  void should_map_all_fields_of_a_measurement_row() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "dasKey",
+                      new TextFilterModel("equals", "SOL_EXPERTS__TEMP-1__temperature", null)));
+
+          // when
+          PagedResult<MeasurementResponseDto> result = repository.findPaged(request);
+
+          // then
+          assertEquals(1, result.totalCount());
+          MeasurementResponseDto row = result.rows().getFirst();
+          assertEquals(TEMP_1_PARAM, row.sensorParameterId());
+          assertEquals("SOL_EXPERTS__TEMP-1__temperature", row.dasKey());
+          assertEquals("Mont Terri Alpha", row.experimentName());
+          assertEquals("monteis-001", row.sensorName());
+          assertEquals("Temperature Param", row.sensorParameterName());
+          assertNotNull(row.newestMeasurement());
+          assertNotNull(row.measureValue());
+          assertEquals("KELVIN", row.unit());
+          assertEquals("Temperature", row.sensorType());
+          assertEquals(100.0, row.x());
+          assertEquals(200.0, row.y());
+          assertEquals(300.0, row.z());
+          assertEquals(-50.0, row.alarmLimitFrom());
+          assertEquals(100.0, row.alarmLimitTo());
+          assertEquals(true, row.active());
+          assertEquals("Air temperature sensor near ventilation intake", row.comment());
+          assertFalse(row.trend().isEmpty());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_include_trend_points_from_the_last_four_days_ordered_ascending() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "dasKey",
+                      new TextFilterModel("equals", "SOL_EXPERTS__TEMP-1__temperature", null)));
+
+          // when
+          List<ChartPointDto> trend = repository.findPaged(request).rows().getFirst().trend();
+
+          // then: seed data has readings every 5 minutes for the past year, so the trend window
+          // (now - 4 days) is never empty
+          assertFalse(trend.isEmpty());
+          OffsetDateTime fourDaysAgo = OffsetDateTime.now().minusDays(4).minusMinutes(5);
+          for (int i = 0; i < trend.size(); i++) {
+            assertTrue(trend.get(i).timestamp().isAfter(fourDaysAgo));
+            if (i > 0) {
+              assertFalse(trend.get(i - 1).timestamp().isAfter(trend.get(i).timestamp()));
+            }
+          }
+        });
+  }
+
+  /**
+   * Trend is fetched via a separate batched query keyed by {@code sensor_parameter_id} and merged
+   * back onto each row in Java (see {@code MeasurementQueryRepository.fetchTrends}) - this guards
+   * against a grouping/zip bug that could silently swap or duplicate trend lists across rows of a
+   * multi-row page.
+   */
+  @Test
+  @Transactional
+  void should_not_mix_up_trend_points_across_rows_of_a_multi_row_page() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given: the 4 fixed "monteis-*" sensors, each with its own parameter and readings
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of("sensorName", new TextFilterModel("contains", "monteis", null)));
+
+          // when
+          List<MeasurementResponseDto> rows = repository.findPaged(request).rows();
+
+          // then: each row's trend matches exactly what an independent query for its own
+          // sensor_parameter_id returns
+          assertEquals(4, rows.size());
+          for (MeasurementResponseDto row : rows) {
+            OffsetDateTime trendFrom = OffsetDateTime.now().minusDays(4);
+            List<ChartPointDto> expectedTrend =
+                dsl.select(SENSOR_READING_SECURED.TIMESTAMP, SENSOR_READING_SECURED.NORM_VALUE)
+                    .from(SENSOR_READING_SECURED)
+                    .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(row.sensorParameterId()))
+                    .and(SENSOR_READING_SECURED.TIMESTAMP.ge(trendFrom))
+                    .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc())
+                    .fetch(r -> new ChartPointDto(r.value1(), r.value2()));
+
+            assertEquals(
+                expectedTrend,
+                row.trend(),
+                "trend for " + row.sensorName() + " must match its own sensor_parameter_id");
+          }
+
+          // and: sanity-check the rows don't all coincidentally share one identical trend list,
+          // which would mask a bug that always grouped everything under a single key
+          long distinctTrends = rows.stream().map(MeasurementResponseDto::trend).distinct().count();
+          assertTrue(distinctTrends > 1, "fixture sanity check: sensors have distinct trends");
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_fall_back_to_composed_das_key_when_parameter_has_no_readings_yet() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given: a freshly created sensor/parameter has no matching row in TimescaleDB, so
+          // DAS_KEY must fall back to composing it from current metadata
+          Formula formula = new Formula();
+          formula.setExpression("x");
+          SensorParameter parameter =
+              new SensorParameter(
+                  "NoReadingFallbackParam",
+                  "voltage",
+                  new SensorType(null, "Other", null),
+                  Unit.METER,
+                  formula,
+                  new AlarmLimits(0.0, 100.0),
+                  true,
+                  null);
+          Sensor sensor =
+              new Sensor(
+                  "No Reading Sensor",
+                  "NOREAD-1",
+                  Das.SOL_EXPERTS,
+                  null,
+                  null,
+                  new Coordinates(0, 0, 0),
+                  true,
+                  null);
+          sensor.setParameters(new ArrayList<>(List.of(parameter)));
+          sensorRepository.create(sensor);
+
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "sensorParameterName",
+                      new TextFilterModel("contains", "noreadingfallback", null)));
+
+          // when
+          PagedResult<MeasurementResponseDto> result = repository.findPaged(request);
+
+          // then
+          assertEquals(1, result.totalCount());
+          MeasurementResponseDto row = result.rows().getFirst();
+          assertEquals("SOL_EXPERTS__NOREAD-1__voltage", row.dasKey());
+          assertNull(row.newestMeasurement());
+          assertTrue(row.trend().isEmpty());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_default_sort_by_sensor_id_ascending_when_no_sort_model_given() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given: narrows the 5 fixed seeded sensors down to the 4 named "monteis-*" (excludes
+          // "ADMIN" and any bulk-* load-testing sensors)
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of("sensorName", new TextFilterModel("contains", "monteis", null)));
+
+          // when
+          List<MeasurementResponseDto> rows = repository.findPaged(request).rows();
+
+          // then: fixed sensor ids ascend TEMP-1 (...201) < PRESS-1&2 (...202) < DISP-2 (...203)
+          // < FLOW-2 (...204)
+          assertEquals(
+              List.of("monteis-001", "monteis-002", "monteis-003", "monteis-004"),
+              rows.stream().map(MeasurementResponseDto::sensorName).toList());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_honor_an_explicit_sort_model_over_the_default() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(new SortModelItem("sensorName", SortDirection.DESC)),
+                  Map.of("sensorName", new TextFilterModel("contains", "monteis", null)));
+
+          // when
+          List<MeasurementResponseDto> rows = repository.findPaged(request).rows();
+
+          // then
+          assertEquals(
+              List.of("monteis-004", "monteis-003", "monteis-002", "monteis-001"),
+              rows.stream().map(MeasurementResponseDto::sensorName).toList());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_cap_rows_at_the_requests_limit_while_total_count_reflects_all_matches() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  2,
+                  List.of(),
+                  Map.of("sensorName", new TextFilterModel("contains", "monteis", null)));
+
+          // when
+          PagedResult<MeasurementResponseDto> result = repository.findPaged(request);
+
+          // then
+          assertEquals(4, result.totalCount(), "totalCount reflects all matching rows");
+          assertEquals(2, result.rows().size(), "but only the requested page size is returned");
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_exclude_admin_only_sensor_from_paged_results_for_regular_user() {
+    SecurityContextTestSupport.runAsUser(
+        EXPERIMENT_1_ONLY,
+        () -> {
+          // given: FLOW-Admin belongs to no experiment, explicitly filtering for it must not help
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "dasKey",
+                      new TextFilterModel("equals", "SOL_EXPERTS__FLOW-Admin__flow", null)));
+
+          // when
+          PagedResult<MeasurementResponseDto> result = repository.findPaged(request);
+
+          // then
+          assertEquals(0, result.totalCount());
+          assertTrue(result.rows().isEmpty());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_include_admin_only_sensor_in_paged_results_for_admin() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "dasKey",
+                      new TextFilterModel("equals", "SOL_EXPERTS__FLOW-Admin__flow", null)));
+
+          // when
+          PagedResult<MeasurementResponseDto> result = repository.findPaged(request);
+
+          // then
+          assertEquals(1, result.totalCount());
+          MeasurementResponseDto row = result.rows().getFirst();
+          assertEquals("ADMIN", row.sensorName());
+          assertNull(row.experimentName());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_include_sensor_in_paged_results_for_regular_user_with_matching_experiment() {
+    SecurityContextTestSupport.runAsUser(
+        EXPERIMENT_1_ONLY,
+        () -> {
+          // given: TEMP-1 belongs to experiment 1
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "dasKey",
+                      new TextFilterModel("equals", "SOL_EXPERTS__TEMP-1__temperature", null)));
+
+          // when
+          PagedResult<MeasurementResponseDto> result = repository.findPaged(request);
+
+          // then
+          assertEquals(1, result.totalCount());
+          assertEquals("Mont Terri Alpha", result.rows().getFirst().experimentName());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_exclude_sensor_from_other_experiment_from_paged_results_for_regular_user() {
+    SecurityContextTestSupport.runAsUser(
+        EXPERIMENT_1_ONLY,
+        () -> {
+          // given: DISP-2 belongs only to experiment 2
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "dasKey",
+                      new TextFilterModel("equals", "SOL_EXPERTS__DISP-2__displacement", null)));
+
+          // when
+          PagedResult<MeasurementResponseDto> result = repository.findPaged(request);
+
+          // then
+          assertEquals(0, result.totalCount());
+          assertTrue(result.rows().isEmpty());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_return_empty_page_when_filter_matches_nothing() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "sensorName",
+                      new TextFilterModel("contains", "no-such-sensor-exists", null)));
+
+          // when
+          PagedResult<MeasurementResponseDto> result = repository.findPaged(request);
+
+          // then
+          assertEquals(0, result.totalCount());
+          assertTrue(result.rows().isEmpty());
+        });
   }
 }

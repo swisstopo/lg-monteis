@@ -8,7 +8,6 @@ import {
   outputBinding,
   signal,
 } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
 import { form, FormField, required, schema } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import {
@@ -25,13 +24,16 @@ import {
   MatTimepickerToggle,
 } from '@angular/material/timepicker';
 import { APP_ISO_TIMESTAMP_FORMAT } from '@core/date/date.provider';
-import { OverviewControllerService, ReadSimpleMetricDto } from '@core/generated';
+import { MeasurementResponseDto } from '@core/generated';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { MeasurementsService } from '@features/measurements/services/measurements.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions } from '@ui/chart';
+import { InlineError } from '@ui/inline-error/inline-error';
+import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import Table from '@ui/table/table';
+import { GridApi } from 'ag-grid-community';
 import { subDays } from 'date-fns';
 import { createColumns } from './columns';
 
@@ -80,6 +82,7 @@ function combineDateAndTime(date: Date | null, time: Date | null): Date | null {
     MatTimepickerToggle,
     FormField,
     MatError,
+    InlineError,
   ],
   providers: [DatePipe],
   templateUrl: './measurements-table.html',
@@ -90,7 +93,6 @@ export default class MeasurementsTable {
   private readonly translateService = inject(TranslateService);
   private readonly dialog = inject(MatDialog);
   protected readonly measurementsService = inject(MeasurementsService);
-  protected readonly overviewService = inject(OverviewControllerService);
   private readonly formErrorService = inject(FormErrorService);
   readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
@@ -109,11 +111,17 @@ export default class MeasurementsTable {
     }),
   );
 
-  protected metricsResource = rxResource({
-    stream: () => this.overviewService.getMetrics(50),
-  });
+  protected totalCount = signal<number | undefined>(undefined);
+  protected loadError = signal(false);
+  private readonly gridApi = signal<GridApi | undefined>(undefined);
 
-  protected readonly selectedRows = signal<ReadSimpleMetricDto[]>([]);
+  protected datasource = createPagedDatasource(
+    (params) => this.measurementsService.getMeasurements(params),
+    this.totalCount,
+    this.loadError,
+  );
+
+  protected readonly selectedRows = signal<MeasurementResponseDto[]>([]);
 
   protected readonly selectedSensorIds = computed<string[]>(() => {
     const ids = this.selectedRows()
@@ -129,7 +137,8 @@ export default class MeasurementsTable {
   constructor(view: WorkbenchView) {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
-      view.title = this.translateService.translate('tab.measurements-table')();
+      const count = this.totalCount() ?? 0;
+      view.title = this.translateService.translate('tab.measurements-table', { count })();
     });
 
     effect(() => {
@@ -138,11 +147,20 @@ export default class MeasurementsTable {
         this.formErrorService.mapApiErrorsToFormErrors(
           errors,
           this.rangeForm,
-          'chart.error.unspecified.message',
+          'chart.error.unspecified',
         );
         this.dialog.closeAll();
       }
     });
+  }
+
+  onGridReady(api: GridApi): void {
+    this.gridApi.set(api);
+    api.setGridOption('datasource', this.datasource);
+  }
+
+  onReload(): void {
+    this.gridApi()?.refreshInfiniteCache();
   }
 
   resetRange(): void {
@@ -152,15 +170,16 @@ export default class MeasurementsTable {
     });
   }
 
-  onWrappedRow(row: ReadSimpleMetricDto) {
+  onWrappedRow(row: MeasurementResponseDto) {
     console.log(row);
   }
 
-  onSelectionChanged(rows: ReadSimpleMetricDto[]): void {
+  onSelectionChanged(rows: MeasurementResponseDto[]): void {
     this.selectedRows.set(rows);
   }
 
-  protected getMetricRowId = (row: ReadSimpleMetricDto): string => `${row.dasKey}-${row.timestamp}`;
+  protected getMeasurementRowId = (row: MeasurementResponseDto): string =>
+    row.sensorParameterId ?? '';
 
   protected onPlot() {
     if (this.rangeForm().invalid()) {
@@ -183,13 +202,12 @@ export default class MeasurementsTable {
       if (!range) return '';
 
       return this.translateService.translate('chart.title', {
-        name: 'MyFancyExperiment',
+        name: 'MeasurementPlot',
         rangeFrom: this.datePipe.transform(range.start),
         rangeTo: this.datePipe.transform(range.end),
       })();
     });
-    // use computed to avoid re-creating the chart options on every change
-    // angular's inputBinding normally re-evaluates on every change
+
     const chartOptions = computed((): ChartOptions => {
       const data = this.measurementsService.chartData.value();
       return createTimeChartOptions({

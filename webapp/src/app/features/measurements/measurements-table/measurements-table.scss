@@ -1,26 +1,41 @@
 :host {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
 
+  height: 100%;
   padding: 2rem;
   width: 100%;
   box-sizing: border-box;
 }
 .metrics-panel {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 1200px;
+  height: 100%;
+  // Flex children don't shrink below their content's size by default; without this the grid
+  // would grow unbounded instead of scrolling within the space actually available to it.
+  min-height: 0;
 
-  .custom-grid {
-    width: 100%;
+  .range-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.75rem;
+
+    margin-bottom: 1rem;
+
+    .plot-button,
+    .reload-button {
+      // mat-form-field reserves space below the input for hints/errors, so align the button
+      // with the input boxes themselves rather than with the field's outer (taller) box.
+      margin-top: 8px;
+    }
   }
 
-  .panel-heading {
-    font-size: var(--mat-sys-title-large-size, 1.375rem);
-    font-weight: var(--mat-sys-title-large-weight, 500);
-
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--mat-sys-outline-variant, #cac4d0);
+  .custom-grid {
+    flex: 1 1 0;
+    min-height: 0;
+    width: 100%;
   }
 }

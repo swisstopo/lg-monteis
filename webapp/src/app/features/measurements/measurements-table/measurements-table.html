@@ -1,13 +1,5 @@
 <div class="metrics-panel">
-  <h2 class="panel-heading">{{ 'measurements-table.heading' | translate }}</h2>
-
-  @if (metricsResource.isLoading()) {
-    <div class="loading-container">
-      <p class="loading-text">{{ 'measurements-table.loading' | translate }}</p>
-    </div>
-  } @else if (metricsResource.error()) {
-    <p class="error-text">{{ 'measurements-table.error' | translate }}</p>
-  } @else {
+  <div class="range-controls">
     <mat-form-field>
       <mat-label>{{ 'measurements-table.form.startDate.label' | translate }}</mat-label>
       <input
@@ -72,23 +64,38 @@
         }}</mat-error>
       }
     </mat-form-field>
+
     <button
       matButton="filled"
+      class="plot-button"
       (click)="onPlot()"
       [disabled]="measurementsService.chartData.isLoading() || selectedRows().length === 0"
     >
       <mat-icon fontIcon="add_chart"></mat-icon>
       {{ 'measurements-table.plot' | translate }}
     </button>
+
+    <button matButton="text" class="reload-button" (click)="onReload()">
+      <mat-icon fontIcon="refresh"></mat-icon>
+      {{ 'measurements-table.reload' | translate }}
+    </button>
+  </div>
+
+  @if (loadError()) {
+    <app-inline-error [message]="'measurements-table.error' | translate"></app-inline-error>
+  } @else {
     <app-table
       class="custom-grid"
-      [multiple]="true"
       [checkboxes]="true"
-      [rows]="metricsResource.value() ?? []"
+      [multiple]="true"
       [columns]="wrappedCols"
-      [getRowId]="getMetricRowId"
+      [rowModelType]="'infinite'"
+      [datasource]="datasource"
+      [gridOptions]="{ domLayout: 'normal' }"
+      [getRowId]="getMeasurementRowId"
       (rowClicked)="onWrappedRow($event)"
       (selectionChanged)="onSelectionChanged($event)"
+      (gridReady)="onGridReady($event)"
     >
     </app-table>
   }

@@ -4,6 +4,8 @@ import { toErrorDtos } from '@core/http/api-error.model';
 import { getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { translate } from '@ngx-translate/core';
 import { ChartDataset, ChartPoint } from '@ui/chart';
+import { toPagedRequestParams } from '@ui/table/paged-request.mapper';
+import { IGetRowsParams } from 'ag-grid-community';
 import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
 
 interface ChartRequest {
@@ -109,5 +111,10 @@ export class MeasurementsService {
     });
 
     return axisIdsByUnit;
+  }
+
+  getMeasurements(params: IGetRowsParams) {
+    const { startRow, endRow, sortModel, filterModel } = toPagedRequestParams(params);
+    return firstValueFrom(this.api.getMeasurements(startRow, endRow, sortModel, filterModel));
   }
 }
