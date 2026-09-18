@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.MeasurementState;
 import ch.swisstopo.monteis.core.modules.overview.service.OverviewService;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,7 +39,14 @@ class OverviewControllerTest {
 
     ReadSimpleMetricDto expectedDto =
         new ReadSimpleMetricDto(
-            timestamp, "SENS-01", 25.4, 0.98, (short) 1, "ACTIVE", UUID.randomUUID());
+            timestamp,
+            "SENS-01",
+            25.4,
+            0.98,
+            (short) 1,
+            "too_high",
+            UUID.randomUUID(),
+            MeasurementState.ALARM);
 
     List<ReadSimpleMetricDto> expectedResponse = List.of(expectedDto);
 
@@ -59,7 +67,8 @@ class OverviewControllerTest {
         .andExpect(jsonPath("$[0].rawValue").value(expectedDto.rawValue()))
         .andExpect(jsonPath("$[0].normValue").value(expectedDto.normValue()))
         .andExpect(jsonPath("$[0].version").value(Integer.valueOf(expectedDto.version())))
-        .andExpect(jsonPath("$[0].status").value(expectedDto.status()));
+        .andExpect(jsonPath("$[0].status").value(expectedDto.status()))
+        .andExpect(jsonPath("$[0].measurementState").value(expectedDto.measurementState().name()));
 
     // Verify interaction sequence
     then(overviewService).should().fetchRecentMetrics(limit);

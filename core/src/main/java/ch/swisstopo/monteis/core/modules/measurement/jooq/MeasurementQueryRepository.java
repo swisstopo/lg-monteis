@@ -9,6 +9,7 @@ import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.MeasurementState;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
@@ -37,7 +38,8 @@ public class MeasurementQueryRepository implements MeasurementQuery {
               select(
                       SENSOR_READING_SECURED.TIMESTAMP,
                       SENSOR_READING_SECURED.NORM_VALUE,
-                      SENSOR_READING_SECURED.DAS_KEY)
+                      SENSOR_READING_SECURED.DAS_KEY,
+                      SENSOR_READING_SECURED.STATUS)
                   .from(SENSOR_READING_SECURED)
                   .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(SENSOR_PARAMETER.ID))
                   .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
@@ -165,6 +167,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                 SENSOR_PARAMETER.NAME,
                 LATEST_READINGS.field(SENSOR_READING_SECURED.TIMESTAMP),
                 LATEST_READINGS.field(SENSOR_READING_SECURED.NORM_VALUE),
+                LATEST_READINGS.field(SENSOR_READING_SECURED.STATUS),
                 SENSOR_PARAMETER.UNIT,
                 SENSOR_TYPES.NAME,
                 SENSORS.X,
@@ -207,7 +210,12 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                         row.alarmLimitTo(),
                         row.active(),
                         row.comment(),
-                        trendByParamId.getOrDefault(row.sensorParameterId(), List.of())))
+                        trendByParamId.getOrDefault(row.sensorParameterId(), List.of()),
+                        MeasurementState.of(
+                            row.measureValue(),
+                            row.alarmLimitFrom(),
+                            row.alarmLimitTo(),
+                            row.rangeStatus())))
             .toList();
 
     boolean needsReadings =
@@ -271,6 +279,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
       String sensorParameterName,
       OffsetDateTime newestMeasurement,
       Double measureValue,
+      String rangeStatus,
       ch.swisstopo.monteis.core.jooq.generated.enums.Unit unit,
       String sensorType,
       Integer x,
