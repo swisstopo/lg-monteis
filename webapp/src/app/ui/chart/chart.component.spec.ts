@@ -537,11 +537,11 @@ describe('Chart', () => {
     it('should update the chart configuration when options inputs change', async () => {
       const instance = (component as any).instance;
 
-      fixture.componentRef.setInput('options', { title: 'Updated Title' });
+      fixture.componentRef.setInput('options', { subtitle: 'Updated Title' });
 
       await fixture.whenStable();
 
-      expect(instance.options.plugins.title.text).toBe('Updated Title');
+      expect(instance.options.plugins.subtitle.text).toBe('Updated Title');
     });
   });
 });

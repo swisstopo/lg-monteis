@@ -110,9 +110,7 @@ describe('buildChartConfig', () => {
       const scales = config.options?.scales as any;
 
       expect(plugins.title).toMatchObject({
-        display: true,
-        text: 'Experiment Chart',
-        color: '#111111',
+        display: false,
       });
       expect(plugins.subtitle).toMatchObject({
         display: true,

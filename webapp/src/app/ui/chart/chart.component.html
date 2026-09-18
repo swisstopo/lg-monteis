@@ -1,6 +1,16 @@
-<h2 mat-dialog-title>
-  {{ title() }}
-</h2>
+<div class="dialog-header">
+  <h2 mat-dialog-title>
+    {{ title() }}
+  </h2>
+
+  <mat-dialog-actions>
+    <button matButton mat-dialog-close>
+      <mat-icon fontIcon="cancel"></mat-icon>
+      {{ 'chart.button.cancel' | translate }}
+    </button>
+  </mat-dialog-actions>
+</div>
+
 <mat-dialog-content>
   <div class="chart-layout">
     <div class="chart-area">
@@ -21,9 +31,3 @@
     ></app-chart-toolbar>
   </div>
 </mat-dialog-content>
-<mat-dialog-actions>
-  <button matButton mat-dialog-close>
-    <mat-icon fontIcon="cancel"></mat-icon>
-    {{ 'chart.button.cancel' | translate }}
-  </button>
-</mat-dialog-actions>
