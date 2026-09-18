@@ -138,7 +138,7 @@ class MeasurementServiceTest {
     given(query.findPaged(request)).willReturn(expected);
 
     // when
-    PagedResult<MeasurementResponseDto> actual = service.getMeasurements(request);
+    PagedResult<MeasurementResponseDto> actual = service.getPagedMeasurements(request);
 
     // then
     then(query).should().findPaged(request);

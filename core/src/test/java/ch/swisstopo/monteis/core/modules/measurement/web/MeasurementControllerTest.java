@@ -236,7 +236,7 @@ class MeasurementControllerTest {
             List.of(new ChartPointDto(validFrom, 12.5)));
     PagedRequest parsed = new PagedRequest(0, 20, List.of(), Map.of());
     given(pagedRequestParser.parse(any())).willReturn(parsed);
-    given(measurementService.getMeasurements(parsed))
+    given(measurementService.getPagedMeasurements(parsed))
         .willReturn(new PagedResult<>(List.of(row), 1));
 
     // when / then
@@ -254,7 +254,7 @@ class MeasurementControllerTest {
         .andExpect(jsonPath("$.rows[0].trend[0].value").value(12.5));
 
     then(pagedRequestParser).should().parse(any());
-    then(measurementService).should().getMeasurements(parsed);
+    then(measurementService).should().getPagedMeasurements(parsed);
   }
 
   @Test
@@ -262,7 +262,8 @@ class MeasurementControllerTest {
     // given
     PagedRequest parsed = new PagedRequest(0, 20, List.of(), Map.of());
     given(pagedRequestParser.parse(any())).willReturn(parsed);
-    given(measurementService.getMeasurements(parsed)).willReturn(new PagedResult<>(List.of(), 0));
+    given(measurementService.getPagedMeasurements(parsed))
+        .willReturn(new PagedResult<>(List.of(), 0));
 
     String sortModel = "[{\"colId\":\"sensorName\",\"sort\":\"asc\"}]";
     String filterModel = "{\"active\":{\"filterType\":\"set\",\"values\":[\"true\"]}}";

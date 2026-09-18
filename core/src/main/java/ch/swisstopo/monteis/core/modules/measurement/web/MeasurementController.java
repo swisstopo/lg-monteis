@@ -59,7 +59,7 @@ public class MeasurementController {
       @RequestParam(required = false) String filterModel) {
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
     PagedResult<MeasurementResponseDto> measurements =
-        measurementService.getMeasurements(pagedRequestParser.parse(raw));
+        measurementService.getPagedMeasurements(pagedRequestParser.parse(raw));
     return ResponseEntity.ok(measurements);
   }
 }

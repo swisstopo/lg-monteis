@@ -30,7 +30,7 @@ public class MeasurementService {
     return query.findChartData(id, from, to);
   }
 
-  public PagedResult<MeasurementResponseDto> getMeasurements(PagedRequest request) {
+  public PagedResult<MeasurementResponseDto> getPagedMeasurements(PagedRequest request) {
     return query.findPaged(request);
   }
 }
