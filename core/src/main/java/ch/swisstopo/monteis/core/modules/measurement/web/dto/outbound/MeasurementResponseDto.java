@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound;
 
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.MeasurementState;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -22,4 +23,5 @@ public record MeasurementResponseDto(
     Double alarmLimitTo,
     Boolean active,
     String comment,
-    List<ChartPointDto> trend) {}
+    List<ChartPointDto> trend,
+    MeasurementState measurementState) {}

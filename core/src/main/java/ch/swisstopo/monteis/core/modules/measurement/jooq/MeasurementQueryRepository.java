@@ -9,6 +9,7 @@ import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.MeasurementState;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
@@ -207,7 +208,8 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                         row.alarmLimitTo(),
                         row.active(),
                         row.comment(),
-                        trendByParamId.getOrDefault(row.sensorParameterId(), List.of())))
+                        trendByParamId.getOrDefault(row.sensorParameterId(), List.of()),
+                        calculateState(row.measureValue(), row.alarmLimitFrom(), row.alarmLimitTo)))
             .toList();
 
     boolean needsReadings =
@@ -280,4 +282,20 @@ public class MeasurementQueryRepository implements MeasurementQuery {
       Double alarmLimitTo,
       Boolean active,
       String comment) {}
+
+  private MeasurementState calculateState(Double value, Double lowerLimit, Double upperLimit) {
+    if (value == null) {
+      return MeasurementState.OK;
+    }
+
+    if (lowerLimit != null && value < lowerLimit) {
+      return MeasurementState.ALARM;
+    }
+
+    if (upperLimit != null && value > upperLimit) {
+      return MeasurementState.ALARM;
+    }
+
+    return MeasurementState.OK;
+  }
 }
