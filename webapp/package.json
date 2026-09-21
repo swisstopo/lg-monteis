@@ -17,7 +17,7 @@
     "e2e:report": "playwright show-report"
   },
   "private": true,
-  "packageManager": "pnpm@12.4.2",
+  "packageManager": "pnpm@12.5.1",
   "dependencies": {
     "@angular/cdk": "^22.1.7",
     "@angular/common": "^22.1.6",
@@ -59,7 +59,7 @@
     "@vitest/browser-playwright": "^5.0.1",
     "angular-eslint": "22.5.0",
     "corepack": "^0.36.0",
-    "eslint": "^10.10.0",
+    "eslint": "^10.11.0",
     "jsdom": "^29.1.1",
     "playwright": "^1.63.0",
     "prettier": "^3.9.8",
