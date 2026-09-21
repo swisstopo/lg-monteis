@@ -111,12 +111,7 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
       headerName: translateService.translate('sensor.comment.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      // Variable/auto row height isn't supported by the infinite row model this table uses (a
-      // long comment would render past the fixed row height and bleed into the row below), so
-      // this stays single-line and truncates with an ellipsis; the full text is available via
-      // the tooltip.
-      tooltipField: 'comment',
-      flex: 0,
+      tooltip: (params) => params.value,
       width: 500,
       suppressAutoSize: true,
     },
@@ -192,8 +187,7 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
       headerName: translateService.translate('sensor.parameter.comment.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      tooltipField: 'parameter.comment',
-      flex: 0,
+      tooltip: (params) => params.value,
       width: 400,
       suppressAutoSize: true,
     },

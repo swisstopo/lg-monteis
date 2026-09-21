@@ -58,7 +58,6 @@ export default class Table<T = any> {
     // Always show the filter input under the header instead of requiring a click to open it.
     floatingFilter: true,
     resizable: true,
-    flex: 1,
     minWidth: 120,
     // Only a single filter condition per column is supported by the paged backend endpoint, so
     // combined ("AND"/"OR") filters are disabled here to keep the filter model ag-grid sends in sync
@@ -83,9 +82,6 @@ export default class Table<T = any> {
     return {
       suppressCellFocus: true,
       domLayout: 'autoHeight',
-      // Lets colDef.tooltipField/tooltipValueGetter show the native browser tooltip, e.g. to
-      // reveal a truncated cell's full text on hover.
-      enableBrowserTooltips: true,
       rowSelection,
       getRowId: (params: GetRowIdParams<T>) => this.getRowId()(params.data),
       ...this.gridOptions(),

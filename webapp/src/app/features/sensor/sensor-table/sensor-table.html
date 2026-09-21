@@ -29,7 +29,10 @@
       [columns]="wrappedCols"
       [rowModelType]="'infinite'"
       [datasource]="datasource"
-      [gridOptions]="{ domLayout: 'normal' }"
+      [gridOptions]="{
+        domLayout: 'normal',
+        autoSizeStrategy: { type: 'fitCellContents' },
+      }"
       [getRowId]="getSensorParameterRowId"
       (rowClicked)="onWrappedRow($event)"
       (selectionChanged)="onSelectionChanged($event)"

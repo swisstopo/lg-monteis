@@ -11,15 +11,25 @@
 
   --ag-border-color: var(--mat-sys-outline-variant);
   --ag-row-border-color: var(--mat-sys-outline-variant);
-  --ag-header-column-separator-color: var(--mat-sys-outline-variant);
 
   --ag-header-background-color: var(--mat-sys-surface-container-low);
-  --ag-header-foreground-color: var(--mat-sys-on-surface);
+  --ag-header-text-color: var(--mat-sys-on-surface);
 
   --ag-row-hover-color: var(--mat-sys-surface-container-highest);
 
   --ag-selected-row-background-color: var(--mat-sys-primary-container);
 
-  --ag-active-color: var(--mat-sys-primary);
   --ag-checkbox-checked-color: var(--mat-sys-primary);
+
+  --ag-tooltip-background-color: var(--mat-sys-inverse-surface);
+  --ag-tooltip-text-color: var(--mat-sys-inverse-on-surface);
+  --ag-tooltip-border: none;
+
+  // this is needed since ag-grid does not expose a style token for their built in tool tip
+  ::ng-deep .ag-tooltip {
+    max-width: 260px;
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
 }
