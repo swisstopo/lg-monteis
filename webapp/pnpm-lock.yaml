@@ -296,7 +296,7 @@ importers:
         specifier: ^1.63.0
         version: 1.63.0
       prettier:
-        specifier: ^3.9.7
+        specifier: ^3.9.8
         version: 3.9.8
       prettier-plugin-organize-imports:
         specifier: ^4.3.0
