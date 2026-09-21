@@ -5,7 +5,7 @@ import { Giro3d } from '../../../ui/giro3d/giro3d';
 import { TilesFetch } from '../../../ui/giro3d/tiles-fetch-plugin';
 import { MeasurementsTiles, TILESET_URL_PREFIX } from '../services/measurements-tiles';
 
-import { SensorControllerService, SensorResponseDto } from '../../../core/generated';
+import { SensorControllerService, SensorParameterRowResponseDto } from '../../../core/generated';
 import { InlineError } from '../../../ui/inline-error/inline-error';
 
 @Component({
@@ -24,7 +24,7 @@ export default class MeasurementsVisualization {
   private readonly sensorControllerService = inject(SensorControllerService);
 
   protected readonly error = signal(false);
-  protected sensors = signal<SensorResponseDto[]>([]);
+  protected sensors = signal<SensorParameterRowResponseDto[]>([]);
 
   constructor() {
     effect(() => {
