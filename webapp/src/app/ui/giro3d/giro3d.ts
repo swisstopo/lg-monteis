@@ -26,13 +26,78 @@ import {
   Object3D,
   SphereGeometry,
   Vector3,
+  Vector3Like,
 } from 'three';
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
-import { SensorResponseDto } from '../../core/generated';
+import { SensorParameterRowResponseDto } from '../../core/generated';
 import { InlineError } from '../inline-error/inline-error';
 import { TilesFetch, TilesFetchPlugin } from './tiles-fetch-plugin';
 
 const HIGHLIGHT_COLOR = new Color(0xa5f9a0);
+
+// these are mock positions until we get the real positions from the api
+const SENSOR_POSITIONS_MOCK: Record<string, Vector3Like> = {
+  '01a0b4b0-cbb2-764c-b059-a6330f4506e1': {
+    x: -55.3,
+    y: -103.5,
+    z: -4.7,
+  },
+  '01a0b4b0-cbb2-777a-86bf-09c5abc3e1a3': {
+    x: -55.0,
+    y: -101.5,
+    z: -6.8,
+  },
+  '01a0b4b0-cbb2-76c7-a4e2-df705260e0f0': {
+    x: -57.0,
+    y: -99.6,
+    z: -4.6,
+  },
+  '01a0b4b0-cbb2-76e8-ad0d-9ec45c776243': {
+    x: -57.7,
+    y: -97.0,
+    z: 0.3,
+  },
+  '01a0b4b0-cbb2-76fe-8e92-e556aaf681a6': {
+    x: -36.3,
+    y: -99.7,
+    z: -19.4,
+  },
+  '01a0b4b0-cbb2-7713-a3e1-bcbcc5182e72': {
+    x: -63.1,
+    y: -101.3,
+    z: -4.2,
+  },
+  '01a0b4b0-cbb2-7728-9906-df1fc6a29bc9': {
+    x: -63.0,
+    y: -101.4,
+    z: -4.7,
+  },
+  '01a0b4b0-cbb2-773d-8049-0b84c9282143': {
+    x: -63.3,
+    y: -101.5,
+    z: -6.2,
+  },
+  '01a0b4b0-cbb2-7751-ab49-9598378cf675': {
+    x: -57.9,
+    y: -97.1,
+    z: -9.2,
+  },
+  '01a0b4b0-cbb2-7765-b415-3f4dcdb50521': {
+    x: -59.5,
+    y: -97.2,
+    z: -8.8,
+  },
+  '00000000-0000-7000-8000-000000000201': {
+    x: -59.5,
+    y: -96.2,
+    z: -8.8,
+  },
+  '00000000-0000-7000-8000-000000000202': {
+    x: -37.2,
+    y: -97.5,
+    z: -18.5,
+  },
+};
 
 @Component({
   imports: [TranslatePipe, MatProgressSpinner, InlineError],
@@ -42,7 +107,7 @@ const HIGHLIGHT_COLOR = new Color(0xa5f9a0);
 })
 export class Giro3d implements AfterViewInit {
   readonly tilesetUrl = input.required<string | URL>();
-  readonly sensors = input.required<SensorResponseDto[]>();
+  readonly sensors = input.required<SensorParameterRowResponseDto[]>();
 
   /**
    * Performs the tileset and tile requests, see {@link TilesFetchPlugin}.
@@ -269,18 +334,24 @@ export class Giro3d implements AfterViewInit {
     }
   }
 
-  private createSensorObject3D(sensor: SensorResponseDto): Object3D | void {
+  private createSensorObject3D(sensor: SensorParameterRowResponseDto): Object3D | void {
     // create the geom
     let geom = new SphereGeometry(0.3, 32, 16);
     let sensor3D = new Mesh(geom, new MeshLambertMaterial({ color: 0x02cb02 }));
-    if (sensor.coordinates == null) {
+    let sensorCoordinates;
+    if (sensor.sensorId && sensor.sensorId in SENSOR_POSITIONS_MOCK) {
+      sensorCoordinates = SENSOR_POSITIONS_MOCK[sensor.sensorId];
+    } else if (sensor.coordinates != null) {
+      sensorCoordinates = sensor.coordinates;
+    } else {
       return;
     }
-    sensor3D.position.copy(sensor.coordinates);
+    sensor3D.position.copy(sensorCoordinates);
     sensor3D.updateMatrixWorld();
 
     // set metadata
     sensor3D.userData = {
+      id: sensor.sensorId,
       name: sensor.name,
       comment: sensor.comment,
     };
