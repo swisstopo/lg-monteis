@@ -12,7 +12,7 @@ import { MeasurementsTiles, TILESET_URL_PREFIX } from '../services/measurements-
  * The scene shows every sensor at once, but `getSensors` is paged and returns one row per sensor
  * parameter - so ask for a page large enough to hold them all.
  */
-const SENSOR_ROW_LIMIT = 1000;
+const SENSOR_ROW_LIMIT = 500;
 
 @Component({
   imports: [Giro3d, InlineError, TranslatePipe],
