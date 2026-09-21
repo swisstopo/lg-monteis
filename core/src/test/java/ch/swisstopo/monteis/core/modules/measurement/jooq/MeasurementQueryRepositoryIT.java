@@ -353,9 +353,11 @@ class MeasurementQueryRepositoryIT {
           assertNotNull(row.measureValue());
           assertEquals("KELVIN", row.unit());
           assertEquals("Temperature", row.sensorType());
-          assertEquals(100.0, row.x());
-          assertEquals(200.0, row.y());
-          assertEquals(300.0, row.z());
+          // the seed places TEMP-1 at (-64.2, -94.0, 0.1), but x/y/z are INTEGER columns,
+          // so the fractions are rounded away on insert
+          assertEquals(-64.0, row.x());
+          assertEquals(-94.0, row.y());
+          assertEquals(0.0, row.z());
           assertEquals(-50.0, row.alarmLimitFrom());
           assertEquals(100.0, row.alarmLimitTo());
           assertEquals(true, row.active());
