@@ -39,42 +39,36 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
         },
         blankOptionLabel: translateService.translate('sensor.mainExperiment.none')(),
       },
-      flex: 1.5,
     },
     {
       field: 'dasKey',
       headerName: translateService.translate('measurements-table.column.dasKey')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      flex: 1.5,
     },
     {
       field: 'sensorName',
       headerName: translateService.translate('measurements-table.column.sensorName')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      flex: 1.5,
     },
     {
       field: 'sensorParameterName',
       headerName: translateService.translate('measurements-table.column.sensorParameterName')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      flex: 1.5,
     },
     {
       field: 'sensorType',
       headerName: translateService.translate('measurements-table.column.sensorType')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      flex: 1,
     },
     {
       field: 'newestMeasurement',
       headerName: translateService.translate('measurements-table.column.newestMeasurement')(),
       sortable: true,
       filter: 'agDateColumnFilter',
-      flex: 1.5,
       valueFormatter: (params) =>
         params.value ? (datePipe.transform(params.value, 'medium') ?? '') : '-',
     },
@@ -83,7 +77,6 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       headerName: translateService.translate('measurements-table.column.measureValue')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-      flex: 1,
       valueFormatter: (params) => (params.value != null ? Number(params.value).toFixed(2) : '-'),
     },
     {
@@ -101,14 +94,12 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
           ),
       },
       valueFormatter: (params) => unitMetadata[params.value as Unit]?.symbol() ?? params.value,
-      flex: 1,
     },
     {
       field: 'trend',
       headerName: translateService.translate('measurements-table.column.trend')(),
       sortable: false,
       filter: false,
-      flex: 1.5,
       cellRenderer: TrendCellRenderer,
     },
     {
@@ -116,14 +107,12 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       headerName: translateService.translate('sensor.alarmLimit.from.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-      flex: 1,
     },
     {
       field: 'alarmLimitTo',
       headerName: translateService.translate('sensor.alarmLimit.to.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-      flex: 1,
     },
     {
       field: 'active',
@@ -138,35 +127,33 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
         params.value
           ? translateService.translate('sensor.active.column.yes')()
           : translateService.translate('sensor.active.column.no')(),
-      flex: 0.5,
     },
     {
       field: 'x',
       headerName: translateService.translate('sensor.coordinate.xLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-      flex: 1,
     },
     {
       field: 'y',
       headerName: translateService.translate('sensor.coordinate.yLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-      flex: 1,
     },
     {
       field: 'z',
       headerName: translateService.translate('sensor.coordinate.zLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-      flex: 1,
     },
     {
       field: 'comment',
       headerName: translateService.translate('measurements-table.column.comment')(),
       sortable: true,
       filter: 'agTextColumnFilter',
-      flex: 2,
+      tooltip: (params) => params.value,
+      width: 400,
+      suppressAutoSize: true,
     },
   ];
 }

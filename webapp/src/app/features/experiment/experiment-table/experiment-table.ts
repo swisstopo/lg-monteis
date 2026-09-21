@@ -16,7 +16,7 @@ import { CsvDownloadService } from '@ui/table/csv-download.service';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
-import { GridApi } from 'ag-grid-community';
+import { GridApi, GridOptions } from 'ag-grid-community';
 import { createColumns } from './columns';
 
 @Component({
@@ -42,6 +42,19 @@ export default class ExperimentTable {
   protected loadError = signal(false);
   protected downloading = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
+
+  protected gridOptions: GridOptions<ExperimentResponseDto> = {
+    domLayout: 'normal',
+    autoSizeStrategy: {
+      type: 'fitCellContents',
+      scaleUpToFitGridWidth: true,
+      // Without this, the scale-up only runs once on first render, so toggling the sidenav
+      // (which resizes the grid's container) leaves the columns sized for the old width.
+      // This is needed because the experiment has too little columns once they get more we can transform this
+      // to the same logic as the other tables in this application.
+      continuous: true,
+    },
+  };
 
   protected datasource = createPagedDatasource(
     (params) => this.experimentService.getExperiments(params),

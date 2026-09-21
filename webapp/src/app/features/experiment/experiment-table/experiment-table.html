@@ -29,7 +29,7 @@
       [columns]="wrappedCols"
       [rowModelType]="'infinite'"
       [datasource]="datasource"
-      [gridOptions]="{ domLayout: 'normal' }"
+      [gridOptions]="gridOptions"
       [getRowId]="getExperimentRowId"
       (rowClicked)="onWrappedRow($event)"
       (selectionChanged)="onSelectionChanged($event)"
