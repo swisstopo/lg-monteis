@@ -5,6 +5,7 @@ import {
   effect,
   ElementRef,
   input,
+  OnDestroy,
   signal,
   untracked,
   viewChild,
@@ -34,13 +35,39 @@ import { TilesFetch, TilesFetchPlugin } from './tiles-fetch-plugin';
 
 const HIGHLIGHT_COLOR = new Color(0xa5f9a0);
 
+/**
+ * Every sensor is the same sphere, so build the geometry once and share it - never dispose it
+ * along with a mesh. The materials stay per mesh, picking recolors them one at a time.
+ */
+const SENSOR_GEOMETRY = new SphereGeometry(0.3, 32, 16);
+
+type SensorMesh = Mesh<SphereGeometry, MeshLambertMaterial>;
+
+/** Builds the sphere standing for `sensor`, or nothing when it has no coordinates to stand at. */
+function createSensorMesh(sensor: SensorResponseDto): SensorMesh | null {
+  if (sensor.coordinates == null) {
+    console.warn(`Sensor ${sensor.name} has no coordinates, skipping.`);
+    return null;
+  }
+
+  const mesh = new Mesh(SENSOR_GEOMETRY, new MeshLambertMaterial({ color: 0x02cb02 }));
+  mesh.position.copy(sensor.coordinates);
+  mesh.updateMatrixWorld();
+
+  mesh.userData = {
+    name: sensor.name,
+    comment: sensor.comment,
+  };
+  return mesh;
+}
+
 @Component({
   imports: [TranslatePipe, MatProgressSpinner, InlineError],
   selector: 'app-giro3d',
   styleUrl: './giro3d.scss',
   templateUrl: './giro3d.html',
 })
-export class Giro3d implements AfterViewInit {
+export class Giro3d implements AfterViewInit, OnDestroy {
   readonly tilesetUrl = input.required<string | URL>();
   readonly sensors = input.required<SensorResponseDto[]>();
 
@@ -70,10 +97,10 @@ export class Giro3d implements AfterViewInit {
   });
   private readonly controls = signal<MapControls | null>(null);
 
-  private sensorGroup: Group | null = null;
-  private readonly sensorsObj = computed(() => this.sensors().map(this.createSensorObject3D));
-
-  private _mouseMoveEventListener: ((evt: MouseEvent) => void) | null = null;
+  private readonly sensorGroup = signal<Group | null>(null);
+  private readonly sensorsObj = computed(() =>
+    this.sensors().flatMap((sensor) => createSensorMesh(sensor) ?? []),
+  );
 
   constructor() {
     effect((onCleanup) => {
@@ -124,19 +151,26 @@ export class Giro3d implements AfterViewInit {
     effect((onCleanup) => {
       // initialize / cleanup sensors whenever the list changes
       const instance = this.instance();
+      const sensorGroup = this.sensorGroup();
       const sensorsObj = this.sensorsObj();
-      if (!instance || !this.sensorGroup || !sensorsObj) return;
+      if (!instance || !sensorGroup) return;
 
-      // cleanup sensors, because the list could have completely changed
-      // this.cleanupSensors();
-      for (let sensorObj of sensorsObj) {
-        if (sensorObj) {
-          this.sensorGroup.add(sensorObj);
-        }
+      for (const sensorObj of sensorsObj) {
+        sensorGroup.add(sensorObj);
       }
-      instance.notifyChange(this.sensorGroup);
+      instance.notifyChange(sensorGroup);
 
-      onCleanup(() => this.cleanupSensors);
+      // the list could have completely changed, so drop the meshes before adding the next ones
+      onCleanup(() => this.cleanupSensors());
+    });
+
+    effect((onCleanup) => {
+      // set up listeners/picking/hovering for as long as there is a scene to pick in
+      const instance = this.instance();
+      const sensorGroup = this.sensorGroup();
+      if (!instance || !sensorGroup) return;
+
+      onCleanup(this.setupPicking(instance, sensorGroup));
     });
   }
 
@@ -149,26 +183,24 @@ export class Giro3d implements AfterViewInit {
   }
 
   ngOnDestroy(): void {
-    const instance = this.instance();
-    if (instance) {
-      instance.dispose();
-      this.removeEventListeners(instance);
-    }
-    const controls = this.controls();
-    if (controls) controls.dispose();
+    this.instance()?.dispose();
+    this.controls()?.dispose();
   }
 
   private cleanupSensors() {
     const instance = this.instance();
-    if (instance && this.sensorGroup) {
-      this.sensorGroup.traverse((o: Object3D) => {
-        o.removeFromParent();
-        if (o instanceof Mesh) {
-          o.geometry.dispose();
-          o.material.dispose();
+    const sensorGroup = this.sensorGroup();
+    if (instance && sensorGroup) {
+      // iterate over a copy: `removeFromParent` splices the very array we are walking, and
+      // `traverse` would hand us the group itself, detaching it from the scene for good
+      for (const sensor of [...sensorGroup.children]) {
+        sensor.removeFromParent();
+        // the geometry is shared by every sensor, so only the material is ours to dispose
+        if (sensor instanceof Mesh) {
+          sensor.material.dispose();
         }
-      });
-      instance.notifyChange(this.sensorGroup);
+      }
+      instance.notifyChange(sensorGroup);
     }
   }
 
@@ -197,18 +229,19 @@ export class Giro3d implements AfterViewInit {
     this.controls.set(controls);
   }
 
-  private setupPicking(instance: Instance, sensorGroup: Group) {
-    let highlightedElem: Mesh<SphereGeometry, MeshLambertMaterial> | null = null;
+  /** Sets the hover highlighting up, and returns the teardown for the listener it installs. */
+  private setupPicking(instance: Instance, sensorGroup: Group): () => void {
+    let highlightedElem: SensorMesh | null = null;
 
-    function highlightElem(elem: Mesh<SphereGeometry, MeshLambertMaterial>) {
+    const highlightElem = (elem: SensorMesh) => {
       highlightedElem = elem;
       elem.userData['originalColor'] = elem.material.color;
       elem.material.color = HIGHLIGHT_COLOR;
       elem.material.needsUpdate = true;
       instance.notifyChange(elem);
-    }
+    };
 
-    function resetHighlightedObject() {
+    const resetHighlightedObject = () => {
       if (
         highlightedElem &&
         highlightedElem.material != null &&
@@ -219,26 +252,26 @@ export class Giro3d implements AfterViewInit {
         instance.notifyChange(highlightedElem);
         highlightedElem = null;
       }
-    }
-
-    this._mouseMoveEventListener = (event) => {
-      const picked = instance.pickObjectsAt(event, { sortByDistance: true });
-      resetHighlightedObject();
-      if (picked.length > 0) {
-        // let's consider the first one in the picking order
-        // we *don't* iterate, as we don't want to highlight a sensor that would be behind another object
-        const object = picked[0].object;
-        if (object === highlightedElem) {
-          // nothing to do
-          return;
-        }
-        if (object.parent === sensorGroup && object instanceof Mesh) {
-          // highlight object
-          highlightElem(object);
-        }
-      }
     };
-    instance.domElement.addEventListener('mousemove', this._mouseMoveEventListener);
+
+    const onMouseMove = (event: MouseEvent) => {
+      // let's consider the first one in the picking order
+      // we *don't* iterate, as we don't want to highlight a sensor that would be behind another object
+      const [picked] = instance.pickObjectsAt(event, { sortByDistance: true });
+      const hovered =
+        picked?.object.parent === sensorGroup && picked.object instanceof Mesh
+          ? (picked.object as SensorMesh)
+          : null;
+
+      // nothing to do as long as the cursor stays on the same sensor
+      if (hovered === highlightedElem) return;
+
+      resetHighlightedObject();
+      if (hovered) highlightElem(hovered);
+    };
+
+    instance.domElement.addEventListener('mousemove', onMouseMove);
+    return () => instance.domElement.removeEventListener('mousemove', onMouseMove);
   }
 
   private initInstance() {
@@ -248,6 +281,7 @@ export class Giro3d implements AfterViewInit {
       backgroundColor: 0xcccccc,
     });
 
+    instance.view.minNearPlane = 0.5;
     this.setupLights(instance);
     this.setupControls(instance);
 
@@ -257,34 +291,7 @@ export class Giro3d implements AfterViewInit {
     const sensorGroup = new Group();
     sensorGroup.name = 'sensorGroup';
     instance.add(sensorGroup);
-    this.sensorGroup = sensorGroup;
-
-    // set up listeners/picking/hovering etc.
-    this.setupPicking(instance, sensorGroup);
-  }
-
-  private removeEventListeners(instance: Instance) {
-    if (this._mouseMoveEventListener != null) {
-      instance.domElement.removeEventListener('mousemove', this._mouseMoveEventListener);
-    }
-  }
-
-  private createSensorObject3D(sensor: SensorResponseDto): Object3D | void {
-    // create the geom
-    let geom = new SphereGeometry(0.3, 32, 16);
-    let sensor3D = new Mesh(geom, new MeshLambertMaterial({ color: 0x02cb02 }));
-    if (sensor.coordinates == null) {
-      return;
-    }
-    sensor3D.position.copy(sensor.coordinates);
-    sensor3D.updateMatrixWorld();
-
-    // set metadata
-    sensor3D.userData = {
-      name: sensor.name,
-      comment: sensor.comment,
-    };
-    return sensor3D;
+    this.sensorGroup.set(sensorGroup);
   }
 
   private initCamera(
