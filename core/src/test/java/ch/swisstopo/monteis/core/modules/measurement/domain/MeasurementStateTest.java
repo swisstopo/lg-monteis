@@ -1,8 +1,7 @@
-package ch.swisstopo.monteis.core.modules.overview.web.dto;
+package ch.swisstopo.monteis.core.modules.measurement.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import ch.swisstopo.monteis.core.modules.measurement.web.dto.MeasurementState;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;

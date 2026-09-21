@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound;
 
-import ch.swisstopo.monteis.core.modules.measurement.web.dto.MeasurementState;
+import ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementState;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;

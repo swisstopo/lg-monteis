@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.measurement.web.dto;
+package ch.swisstopo.monteis.core.modules.measurement.domain;
 
 /**
  * How a single reading's normalised value relates to its sensor parameter's configured limits.
@@ -17,7 +17,7 @@ public enum MeasurementState {
   private static final String RANGE_STATUS_CORRECT = "correct";
 
   /**
-   * @param normValue the reading's normalised value, null when the pipeline could not compute one
+   * @param normValue the reading's normalized value, null when the pipeline could not compute one
    * @param lowerAlarmLimit sensor parameter's lower alarm limit
    * @param upperAlarmLimit sensor parameter's upper alarm limit
    * @param rangeStatus the reading's range_category, as stored in TimescaleDB
@@ -28,10 +28,10 @@ public enum MeasurementState {
         && lowerAlarmLimit != null
         && upperAlarmLimit != null
         && (normValue < lowerAlarmLimit || normValue > upperAlarmLimit)) {
-      return ALARM;
+      return EXCEEDS_RANGE;
     }
     if (rangeStatus != null && !RANGE_STATUS_CORRECT.equals(rangeStatus)) {
-      return EXCEEDS_RANGE;
+      return ALARM;
     }
     return OK;
   }
