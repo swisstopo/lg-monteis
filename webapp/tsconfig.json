@@ -14,6 +14,7 @@
     "importHelpers": true,
     "target": "ES2022",
     "module": "preserve",
+    "types": ["node"],
     "paths": {
       "@public/*": ["./public/*"],
       "@*": ["./src/app/*"]
@@ -32,6 +33,9 @@
     },
     {
       "path": "./tsconfig.spec.json"
+    },
+    {
+      "path": "./tsconfig.e2e.json"
     }
   ]
 }

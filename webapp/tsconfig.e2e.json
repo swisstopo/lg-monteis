@@ -1,0 +1,12 @@
+/* Type-checking config for the Playwright suite. Playwright transpiles these files itself and
+   never reads a tsconfig, so without this the e2e sources and playwright.config.ts belong to no
+   project at all and Node globals like `process` come out unresolved in the IDE. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/e2e",
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["e2e/**/*.ts", "playwright.config.ts"]
+}

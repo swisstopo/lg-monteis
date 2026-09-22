@@ -1,5 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.FORMULAS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_PARAMETER;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
@@ -17,7 +19,10 @@ import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidati
 import ch.swisstopo.monteis.core.infrastructure.query.*;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
@@ -528,6 +533,139 @@ class JooqSensorRepositoryIT {
         });
   }
 
+  @Test
+  @Transactional
+  void should_link_sensor_to_its_main_experiment_on_create() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Experiment experiment = insertExperiment("MEMBERSHIP-CREATE-EXP");
+          Sensor sensor = createDummySensor("MEMBERSHIP-001", "Membership Sensor", "x");
+          sensor.setMainExperiment(experiment);
+
+          // Act
+          Sensor savedSensor = repository.create(sensor);
+
+          // Assert: the join table row is what RLS (can_access_sensor) and the experiment grid's
+          // sensor count read, so a created sensor is unreachable without it.
+          assertEquals(Set.of(experiment.getId()), experimentIdsOf(savedSensor.getId()));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_move_membership_when_main_experiment_changes() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Experiment oldExperiment = insertExperiment("MEMBERSHIP-OLD-EXP");
+          Experiment newExperiment = insertExperiment("MEMBERSHIP-NEW-EXP");
+          Sensor sensor = createDummySensor("MEMBERSHIP-002", "Moving Sensor", "x");
+          sensor.setMainExperiment(oldExperiment);
+          Sensor savedSensor = repository.create(sensor);
+
+          // Act
+          savedSensor.setMainExperiment(newExperiment);
+          repository.update(savedSensor);
+
+          // Assert
+          assertEquals(Set.of(newExperiment.getId()), experimentIdsOf(savedSensor.getId()));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_drop_only_the_previous_membership_when_main_experiment_is_cleared() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Experiment experiment = insertExperiment("MEMBERSHIP-CLEARED-EXP");
+          Sensor sensor = createDummySensor("MEMBERSHIP-003", "Detached Sensor", "x");
+          sensor.setMainExperiment(experiment);
+          Sensor savedSensor = repository.create(sensor);
+
+          // Act
+          savedSensor.setMainExperiment(null);
+          repository.update(savedSensor);
+
+          // Assert
+          assertTrue(experimentIdsOf(savedSensor.getId()).isEmpty());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_not_touch_memberships_of_a_sensor_without_a_main_experiment() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange: a sensor with no main experiment, linked to an experiment by hand - the shape
+          // seeded data and any future many-to-many write path produce.
+          Experiment experiment = insertExperiment("MEMBERSHIP-UNSET-EXP");
+          Sensor savedSensor =
+              repository.create(createDummySensor("MEMBERSHIP-005", "Unset Sensor", "x"));
+          dsl.insertInto(EXPERIMENT_SENSOR)
+              .set(EXPERIMENT_SENSOR.EXPERIMENT_ID, experiment.getId())
+              .set(EXPERIMENT_SENSOR.SENSOR_ID, savedSensor.getId())
+              .execute();
+
+          // Act
+          savedSensor.setName("Renamed Unset Sensor");
+          repository.update(savedSensor);
+
+          // Assert
+          assertEquals(Set.of(experiment.getId()), experimentIdsOf(savedSensor.getId()));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_keep_membership_when_sensor_is_updated_without_experiment_change() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Experiment experiment = insertExperiment("MEMBERSHIP-STABLE-EXP");
+          Sensor sensor = createDummySensor("MEMBERSHIP-004", "Stable Sensor", "x");
+          sensor.setMainExperiment(experiment);
+          Sensor savedSensor = repository.create(sensor);
+
+          // Act
+          savedSensor.setName("Renamed Sensor");
+          repository.update(savedSensor);
+
+          // Assert
+          assertEquals(Set.of(experiment.getId()), experimentIdsOf(savedSensor.getId()));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_leave_other_memberships_alone_when_main_experiment_changes() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange: besides its main experiment the sensor is linked to a second one by hand -
+          // the join table is many-to-many and such a row must survive a main-experiment change.
+          Experiment oldExperiment = insertExperiment("MEMBERSHIP-OTHER-OLD-EXP");
+          Experiment newExperiment = insertExperiment("MEMBERSHIP-OTHER-NEW-EXP");
+          Experiment otherExperiment = insertExperiment("MEMBERSHIP-OTHER-EXP");
+          Sensor sensor = createDummySensor("MEMBERSHIP-006", "Shared Sensor", "x");
+          sensor.setMainExperiment(oldExperiment);
+          Sensor savedSensor = repository.create(sensor);
+          dsl.insertInto(EXPERIMENT_SENSOR)
+              .set(EXPERIMENT_SENSOR.EXPERIMENT_ID, otherExperiment.getId())
+              .set(EXPERIMENT_SENSOR.SENSOR_ID, savedSensor.getId())
+              .execute();
+
+          // Act
+          savedSensor.setMainExperiment(newExperiment);
+          repository.update(savedSensor);
+
+          // Assert
+          assertEquals(
+              Set.of(newExperiment.getId(), otherExperiment.getId()),
+              experimentIdsOf(savedSensor.getId()));
+        });
+  }
+
   // --- Helper Methods ---
 
   /**
@@ -558,6 +696,34 @@ class JooqSensorRepositoryIT {
     Sensor sensor = new Sensor(name, dasKey, Das.SOL_EXPERTS, null, null, coordinates, true, null);
     sensor.setParameters(new ArrayList<>(List.of(parameter)));
     return sensor;
+  }
+
+  private Experiment insertExperiment(String name) {
+    UUID id =
+        dsl.insertInto(EXPERIMENTS)
+            .set(EXPERIMENTS.NAME, name)
+            .set(EXPERIMENTS.OWNER, "Test Owner")
+            .set(EXPERIMENTS.START, LocalDate.now().minusDays(1))
+            .set(EXPERIMENTS.END, LocalDate.now().plusDays(1))
+            .returningResult(EXPERIMENTS.ID)
+            .fetchOne()
+            .value1();
+
+    Experiment experiment =
+        new Experiment(
+            name,
+            "Test Owner",
+            new Period(LocalDate.now().minusDays(1), LocalDate.now().plusDays(1)),
+            null);
+    experiment.setId(id);
+    return experiment;
+  }
+
+  private Set<UUID> experimentIdsOf(UUID sensorId) {
+    return dsl.select(EXPERIMENT_SENSOR.EXPERIMENT_ID)
+        .from(EXPERIMENT_SENSOR)
+        .where(EXPERIMENT_SENSOR.SENSOR_ID.eq(sensorId))
+        .fetchSet(EXPERIMENT_SENSOR.EXPERIMENT_ID);
   }
 
   private int indexOfDasKey(List<Sensor> rows, String dasKey) {

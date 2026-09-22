@@ -100,6 +100,8 @@ public class JooqSensorRepository implements SensorRepository {
       throw dasSensorAliasConflict(sensor);
     }
 
+    syncExperimentSensorTable(createdSensor.getId(), null, mainExperimentId(sensor));
+
     Sensor savedSensor = mapper.toDomain(createdSensor);
     savedSensor.setMainExperiment(hydrateMainExperiment(sensor.getMainExperiment()));
     List<SensorParameter> savedParams = new ArrayList<>();
@@ -158,16 +160,21 @@ public class JooqSensorRepository implements SensorRepository {
     if (updatedRecord == null) {
       throw new ObjectBusinessValidationException("object.deleted", Map.of());
     }
+    // Read before the mapper overwrites it: the join table's row for the old main experiment can
+    // only be found by the id the sensor is being moved away from.
+    UUID previousMainExperimentId = updatedRecord.getMainExperiment();
+
     // map new properties to existing
     mapper.updateRecordFromDomain(sensor, updatedRecord);
-    updatedRecord.setMainExperiment(
-        sensor.getMainExperiment() != null ? sensor.getMainExperiment().getId() : null);
+    updatedRecord.setMainExperiment(mainExperimentId(sensor));
 
     try {
       updatedRecord.update();
     } catch (DuplicateKeyException _) {
       throw dasSensorAliasConflict(sensor);
     }
+
+    syncExperimentSensorTable(sensor.getId(), previousMainExperimentId, mainExperimentId(sensor));
 
     Sensor savedSensor = mapper.toDomain(updatedRecord);
     savedSensor.setMainExperiment(hydrateMainExperiment(sensor.getMainExperiment()));
@@ -239,6 +246,45 @@ public class JooqSensorRepository implements SensorRepository {
                     .getOrDefault(sensor.getId(), new ArrayList<>())));
 
     return sensorOpt;
+  }
+
+  /**
+   * Mirrors {@code sensors.main_experiment} into the {@code experiment_sensor} join table, which is
+   * what {@code can_access_sensor()} (row-level security) and the experiments grid's sensor count
+   * read. Without this a sensor written through the API has no membership row at all: invisible to
+   * every user without {@code api:read-all}, and never counted on its experiment.
+   *
+   * <p>Only the sensor's own main-experiment row is touched: the previous one is deleted and the
+   * new one inserted. Rows for any other experiment stay - the join table is many-to-many, and a
+   * membership this write knows nothing about must not be revoked by it.
+   *
+   * @param previousExperimentId the main experiment the sensor had before this write, {@code null}
+   *     on create or when it had none
+   * @param mainExperimentId the main experiment the sensor has after this write, {@code null} when
+   *     it was removed
+   */
+  private void syncExperimentSensorTable(
+      UUID sensorId, UUID previousExperimentId, UUID mainExperimentId) {
+    if (previousExperimentId != null && !previousExperimentId.equals(mainExperimentId)) {
+      dsl.deleteFrom(EXPERIMENT_SENSOR)
+          .where(EXPERIMENT_SENSOR.SENSOR_ID.eq(sensorId))
+          .and(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(previousExperimentId))
+          .execute();
+    }
+
+    if (mainExperimentId != null) {
+      // onConflictDoNothing: the row can already be there when an unchanged main experiment is
+      // saved again, or when the sensor was linked to it by other means.
+      dsl.insertInto(EXPERIMENT_SENSOR)
+          .set(EXPERIMENT_SENSOR.EXPERIMENT_ID, mainExperimentId)
+          .set(EXPERIMENT_SENSOR.SENSOR_ID, sensorId)
+          .onConflictDoNothing()
+          .execute();
+    }
+  }
+
+  private static UUID mainExperimentId(Sensor sensor) {
+    return sensor.getMainExperiment() != null ? sensor.getMainExperiment().getId() : null;
   }
 
   private FormulasRecord findOrCreateFormulaByExpression(String expression) {
