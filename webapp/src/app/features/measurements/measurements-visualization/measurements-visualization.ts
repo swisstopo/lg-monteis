@@ -29,6 +29,7 @@ export default class MeasurementsVisualization {
   protected readonly tilesetUrl = `${TILESET_URL_PREFIX}/monteis-octree-poc/tileset.json`;
   protected readonly fetchTiles: TilesFetch = (url, options) => this.tiles.fetch(url, options);
 
+  // This gets refactored in the follow-up story of MON-195 so once can fetch specifically all sensors with all the required metadata
   private readonly sensorRows = rxResource({
     stream: () => this.api.getSensors(0, SENSOR_ROW_LIMIT),
   });
