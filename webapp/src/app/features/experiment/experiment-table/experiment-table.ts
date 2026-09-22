@@ -5,6 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { ExperimentResponseDto } from '@core/generated';
+import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import ExperimentEdit from '@features/experiment/experiment-edit/experiment-edit';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
@@ -104,6 +105,31 @@ export default class ExperimentTable {
       autoFocus: true,
       bindings: [inputBinding('experimentId', () => experimentId)],
     });
+  }
+
+  async onDelete(): Promise<void> {
+    const id = this.selectedExperimentId();
+    if (!id) return;
+
+    if (!confirm(this.translateService.translate('experiment.delete.confirm')())) {
+      return;
+    }
+
+    try {
+      await this.experimentService.deleteExperiment(id);
+      this.toastService.success(this.translateService.translate('experiment.delete.success')());
+      this.selectedExperimentId.set(undefined);
+    } catch (err) {
+      const errors = toErrorDtos(err);
+      errors.forEach((e) =>
+        this.toastService.error(
+          this.translateService.translate(
+            e?.messageKey ?? 'experiment.error.unspecified.message',
+          )(),
+          this.translateService.translate('experiment.error.unspecified.title')(),
+        ),
+      );
+    }
   }
 
   async onDownload(): Promise<void> {

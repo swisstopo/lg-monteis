@@ -38,4 +38,8 @@ public class ExperimentService {
   public List<Experiment> findAllExperiments() {
     return repository.findAll();
   }
+
+  public void deleteExperiment(UUID experimentId) {
+    repository.delete(experimentId);
+  }
 }

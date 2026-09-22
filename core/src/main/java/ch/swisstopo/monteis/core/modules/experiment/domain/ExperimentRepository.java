@@ -63,4 +63,11 @@ public interface ExperimentRepository {
    * @return all experiments visible to the current user
    */
   List<Experiment> findAll();
+
+  /**
+   * Deletes an existing {@link Experiment} entity by its ID.
+   *
+   * @param id the ID of the experiment to delete
+   */
+  void delete(UUID id);
 }

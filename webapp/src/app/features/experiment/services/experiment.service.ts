@@ -61,6 +61,18 @@ export class ExperimentService {
     }
   }
 
+  async deleteExperiment(id: string) {
+    try {
+      const result = await firstValueFrom(this.api.deleteExperiment(id));
+      this.experimentsChanged.set(true);
+      this.allExperiments.reload();
+      return result;
+    } catch (err) {
+      this.error.set(toErrorDtos(err));
+      throw err;
+    }
+  }
+
   getExperiments(params: IGetRowsParams) {
     const { startRow, endRow, sortModel, filterModel } = toPagedRequestParams(params);
     return firstValueFrom(this.api.getExperiments(startRow, endRow, sortModel, filterModel));

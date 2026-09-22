@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
@@ -241,5 +240,24 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
               return mapper.toDomain(experimentsRecord);
             });
+  }
+
+  @Override
+  @Transactional
+  public void delete(UUID id) {
+    // Remove join table
+    dsl.deleteFrom(EXPERIMENT_SENSOR).where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(id)).execute();
+
+    // Remove link to main experiment
+    dsl.update(SENSORS)
+        .setNull(SENSORS.MAIN_EXPERIMENT)
+        .where(SENSORS.MAIN_EXPERIMENT.eq(id))
+        .execute();
+
+    int deletedCount = dsl.deleteFrom(EXPERIMENTS).where(EXPERIMENTS.ID.eq(id)).execute();
+
+    if (deletedCount == 0) {
+      throw new ObjectBusinessValidationException("object.deleted", Map.of());
+    }
   }
 }
