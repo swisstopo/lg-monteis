@@ -380,4 +380,18 @@ class ExperimentControllerTest {
     then(mapper).shouldHaveNoInteractions();
     then(service).shouldHaveNoInteractions();
   }
+
+  @Test
+  void should_route_delete_experiment_and_return_no_content() throws Exception {
+    // when / then
+    mockMvc
+        .perform(
+            delete("/api/experiments/{id}", EXPERIMENT_ID)
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY))))
+        .andExpect(status().isNoContent());
+
+    // Verify interaction sequence
+    then(service).should().deleteExperiment(EXPERIMENT_ID);
+    then(service).shouldHaveNoMoreInteractions();
+  }
 }

@@ -489,6 +489,20 @@ class SensorControllerTest {
     then(service).should().findAllTypes();
   }
 
+  @Test
+  void should_route_delete_sensor_and_return_no_content() throws Exception {
+    // when / then
+    mockMvc
+        .perform(
+            delete("/api/sensors/{id}", SENSOR_ID)
+                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY))))
+        .andExpect(status().isNoContent());
+
+    // Verify interaction sequence
+    then(service).should().deleteSensor(SENSOR_ID);
+    then(service).shouldHaveNoMoreInteractions();
+  }
+
   private WriteSensorParameterDto defaultWriteParameterDto(UUID id, Integer version) {
     return new WriteSensorParameterDto(
         id,

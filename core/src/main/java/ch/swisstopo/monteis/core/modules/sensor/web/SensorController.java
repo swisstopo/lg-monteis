@@ -199,13 +199,10 @@ public class SensorController {
       summary = "Delete a sensor",
       description =
           "Deletes a sensor by its unique ID, removing its parameters and experiment links.")
-  @ApiResponses(
-      value = {
-        @ApiResponse(responseCode = "204", description = "Sensor successfully deleted"),
-      })
+  @ApiResponse(responseCode = "204", description = "Sensor successfully deleted")
   @DeleteMapping(path = "{id}")
-  public ResponseEntity<Void> deleteSensor(@PathVariable UUID id) {
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteSensor(@PathVariable UUID id) {
     service.deleteSensor(id);
-    return ResponseEntity.noContent().build();
   }
 }

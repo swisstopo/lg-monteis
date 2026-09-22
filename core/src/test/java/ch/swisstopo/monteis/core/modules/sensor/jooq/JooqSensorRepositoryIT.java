@@ -2,6 +2,8 @@ package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.FORMULAS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_PARAMETER;
+import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentSensor.EXPERIMENT_SENSOR;
+import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,6 +20,8 @@ import ch.swisstopo.monteis.core.infrastructure.query.*;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
+import java.time.LocalDate;
+import java.time.Month;
 import java.util.*;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
@@ -525,6 +529,64 @@ class JooqSensorRepositoryIT {
 
             assertFalse(containsOurSensor, "Stream should NOT contain the audited sensor");
           }
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_delete_sensor_and_clean_up_relations() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Sensor sensor = repository.create(createDummySensor("DEL-SENS-1", "Delete Me", "x"));
+          UUID sensorId = sensor.getId();
+          UUID paramId = sensor.getParameters().getFirst().getId();
+
+          // Create an Experiment
+          UUID validExperimentId =
+              java.util.Objects.requireNonNull(
+                      dsl.insertInto(EXPERIMENTS)
+                          .set(EXPERIMENTS.NAME, "Exp 1")
+                          .set(EXPERIMENTS.OWNER, "Admin")
+                          .set(EXPERIMENTS.START, LocalDate.of(2024, Month.JANUARY, 1))
+                          .set(EXPERIMENTS.END, LocalDate.of(2024, Month.DECEMBER, 31))
+                          .returning(EXPERIMENTS.ID)
+                          .fetchOne())
+                  .getId();
+
+          // Create experiment_sensor record
+          dsl.insertInto(EXPERIMENT_SENSOR)
+              .set(EXPERIMENT_SENSOR.EXPERIMENT_ID, validExperimentId)
+              .set(EXPERIMENT_SENSOR.SENSOR_ID, sensorId)
+              .execute();
+
+          // Act
+          repository.delete(sensorId);
+
+          // Assert
+          assertTrue(repository.findById(sensorId).isEmpty(), "Sensor should be deleted");
+
+          int paramsRemaining = dsl.fetchCount(SENSOR_PARAMETER, SENSOR_PARAMETER.ID.eq(paramId));
+          assertEquals(0, paramsRemaining, "Child parameters should be deleted");
+
+          int m2mLinks =
+              dsl.fetchCount(EXPERIMENT_SENSOR, EXPERIMENT_SENSOR.SENSOR_ID.eq(sensorId));
+          assertEquals(0, m2mLinks, "Many-to-many experiment_sensor links should be removed");
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_throw_on_delete_non_existent_sensor() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Act & Assert
+          ObjectBusinessValidationException exception =
+              assertThrows(
+                  ObjectBusinessValidationException.class,
+                  () -> repository.delete(UUID.randomUUID()));
+
+          assertEquals("object.deleted", exception.getMessageKey());
         });
   }
 

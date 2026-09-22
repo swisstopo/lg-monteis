@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentSensor.EXPERIMENT_SENSOR;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
+import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
 import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swisstopo.monteis.contracts.Das;
@@ -383,6 +384,67 @@ class JooqExperimentRepositoryIT {
           int indexOfA = indexOfExperimentName(rows, "AAA_SORT_TEST");
           assertTrue(
               indexOfZ < indexOfA, "ZZZ_SORT_TEST should sort before AAA_SORT_TEST in DESC order");
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_delete_experiment_and_clean_up_relations() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          UUID experimentId =
+              createExperimentWithDsl(
+                  "Experiment To Delete",
+                  "Will be deleted",
+                  LocalDate.of(2024, Month.JANUARY, 1),
+                  LocalDate.of(2024, Month.DECEMBER, 31));
+
+          // Create a sensor
+          Sensor m2mSensor = createDummySensor("SENS-DEL-M2M", "M2M Sensor", "x");
+          linkSensorToExperiment(experimentId, m2mSensor.getId());
+
+          //  Create a sensor linked via the main_experiment
+          Sensor mainExpSensor = createDummySensor("SENS-DEL-MAIN", "Main Exp Sensor", "x");
+          dsl.update(SENSORS)
+              .set(SENSORS.MAIN_EXPERIMENT, experimentId)
+              .where(SENSORS.ID.eq(mainExpSensor.getId()))
+              .execute();
+
+          // Act
+          repository.delete(experimentId);
+
+          // Assert
+          assertNull(
+              repository.getById(experimentId), "Experiment should be deleted and resolve to null");
+
+          int m2mLinks =
+              dsl.fetchCount(EXPERIMENT_SENSOR, EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(experimentId));
+          assertEquals(0, m2mLinks, "Many-to-many experiment_sensor links should be removed");
+
+          UUID currentMainExp =
+              dsl.select(SENSORS.MAIN_EXPERIMENT)
+                  .from(SENSORS)
+                  .where(SENSORS.ID.eq(mainExpSensor.getId()))
+                  .fetchOneInto(UUID.class);
+          assertNull(
+              currentMainExp,
+              "Main experiment reference on associated sensors should be nullified");
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_throw_on_delete_non_existent_experiment() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Act & Assert
+          ObjectBusinessValidationException exception =
+              assertThrows(
+                  ObjectBusinessValidationException.class,
+                  () -> repository.delete(UUID.randomUUID()));
+
+          assertEquals("object.deleted", exception.getMessageKey());
         });
   }
 

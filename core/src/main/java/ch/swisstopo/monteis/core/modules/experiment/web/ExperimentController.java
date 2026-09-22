@@ -175,13 +175,10 @@ public class ExperimentController {
   @Operation(
       summary = "Delete an experiment",
       description = "Deletes an experiment by its unique ID.")
-  @ApiResponses(
-      value = {
-        @ApiResponse(responseCode = "204", description = "Experiment successfully deleted"),
-      })
+  @ApiResponse(responseCode = "204", description = "Experiment successfully deleted")
   @DeleteMapping(path = "{id}")
-  public ResponseEntity<Void> deleteExperiment(@PathVariable UUID id) {
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteExperiment(@PathVariable UUID id) {
     service.deleteExperiment(id);
-    return ResponseEntity.noContent().build();
   }
 }

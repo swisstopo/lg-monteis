@@ -265,8 +265,18 @@ test('should delete sensor', async ({ page }) => {
   await dialog.getByLabel('Y (Local)').fill('20');
   await dialog.getByLabel('Z (Local)').fill('30');
 
-  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await dialog.getByRole('combobox', { name: 'DAS', exact: true }).click();
+  await page.getByRole('option').first().click({ force: true });
 
+  await dialog.getByLabel('Parameter Name').fill('Main Parameter');
+
+  await dialog.getByLabel('Sensor Type').fill('Temperature');
+  await page.getByRole('option', { name: 'Temperature' }).first().click({ force: true });
+
+  await dialog.getByLabel('Alarm Limit From').fill('0');
+  await dialog.getByLabel('Alarm Limit To').fill('100');
+
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText('Sensor saved successfully.')).toBeVisible();
 
   const targetRow = page.locator('.ag-row', { hasText: sensorName }).first();
