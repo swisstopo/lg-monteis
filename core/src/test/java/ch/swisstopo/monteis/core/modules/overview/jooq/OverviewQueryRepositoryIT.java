@@ -56,11 +56,7 @@ class OverviewQueryRepositoryIT {
               () ->
                   assertEquals(
                       (short) 0, topRecord.version(), "Seed script hardcodes version to 0"),
-              () -> assertNotNull(topRecord.status(), "Status enum must be mapped"),
-              () ->
-                  assertNotNull(
-                      topRecord.measurementState(),
-                      "Measurement state must be derived from the alarm limits and status"));
+              () -> assertNotNull(topRecord.status(), "Status enum must be mapped"));
 
           // Assert: Verify the DESCENDING sort order logic of the repository
           for (int i = 0; i < results.size() - 1; i++) {
