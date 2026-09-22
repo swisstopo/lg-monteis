@@ -23,17 +23,10 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       { displayName: translateService.translate('sensor.active.column.no')(), value: 'false' },
     ]);
 
-  /**
-   * MON-71: the normalised value is colored by how the reading relates to its sensor parameter's
-   * limits. The backend derives the state (see MeasurementState), so the thresholds live in one
-   * place; the classes themselves are global, in styles.scss, because ag-grid renders cells
-   * outside any component template.
-   */
-  const MEASUREMENT_STATE_CLASS: Record<MeasurementResponseDto.MeasurementStateEnum, string> = {
-    [MeasurementResponseDto.MeasurementStateEnum.Alarm]: 'measurement-state-alarm',
-    [MeasurementResponseDto.MeasurementStateEnum.ExceedsRange]: 'measurement-state-exceeds-range',
-    // Within both limits - left in the table's default foreground color.
-    [MeasurementResponseDto.MeasurementStateEnum.Ok]: '',
+  const MEASUREMENT_STATE_CLASS: Record<string, string> = {
+    correct: '',
+    too_low: 'measurement-state-alarm',
+    too_high: 'measurement-state-alarm',
   };
 
   return [
@@ -92,7 +85,9 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       filter: 'agNumberColumnFilter',
       valueFormatter: (params) => (params.value != null ? Number(params.value).toFixed(2) : '-'),
       cellClass: (params) =>
-        params.data?.measurementState ? MEASUREMENT_STATE_CLASS[params.data.measurementState] : '',
+        params.data?.measurementState
+          ? MEASUREMENT_STATE_CLASS[params.data.measurementState.toLowerCase()]
+          : '',
     },
     {
       field: 'unit',
