@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.modules.overview.web.dto;
 
-import ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementState;
+import ch.swisstopo.monteis.core.modules.overview.domain.MeasurementState;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 

@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.measurement.domain;
+package ch.swisstopo.monteis.core.modules.overview.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

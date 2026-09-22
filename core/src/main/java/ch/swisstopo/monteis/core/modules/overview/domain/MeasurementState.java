@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.measurement.domain;
+package ch.swisstopo.monteis.core.modules.overview.domain;
 
 /**
  * How a single reading's normalised value relates to its sensor parameter's configured limits.
@@ -28,10 +28,10 @@ public enum MeasurementState {
         && lowerAlarmLimit != null
         && upperAlarmLimit != null
         && (normValue < lowerAlarmLimit || normValue > upperAlarmLimit)) {
-      return EXCEEDS_RANGE;
+      return ALARM;
     }
     if (rangeStatus != null && !RANGE_STATUS_CORRECT.equals(rangeStatus)) {
-      return ALARM;
+      return EXCEEDS_RANGE;
     }
     return OK;
   }
