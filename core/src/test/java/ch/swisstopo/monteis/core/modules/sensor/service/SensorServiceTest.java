@@ -185,4 +185,16 @@ class SensorServiceTest {
     // then
     assertEquals(expectedTypes, actualTypes);
   }
+
+  @Test
+  void should_delegate_delete_sensor_to_repository() {
+    // given
+    UUID sensorId = UUID.randomUUID();
+
+    // when
+    service.deleteSensor(sensorId);
+
+    // then
+    then(repository).should().delete(sensorId);
+  }
 }

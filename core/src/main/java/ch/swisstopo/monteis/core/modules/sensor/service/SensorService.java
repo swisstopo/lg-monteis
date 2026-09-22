@@ -82,4 +82,8 @@ public class SensorService {
           sensor -> sensor.getParameters().forEach(p -> configPublisher.publish(sensor, p)));
     }
   }
+
+  public void deleteSensor(UUID id) {
+    repository.delete(id);
+  }
 }

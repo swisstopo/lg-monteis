@@ -171,4 +171,14 @@ public class ExperimentController {
     csvExportQueryRepository.streamCsv(exportRequest, writer);
     writer.flush();
   }
+
+  @Operation(
+      summary = "Delete an experiment",
+      description = "Deletes an experiment by its unique ID.")
+  @ApiResponse(responseCode = "204", description = "Experiment successfully deleted")
+  @DeleteMapping(path = "{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteExperiment(@PathVariable UUID id) {
+    service.deleteExperiment(id);
+  }
 }

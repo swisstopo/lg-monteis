@@ -99,4 +99,16 @@ class ExperimentServiceTest {
     then(repository).should().findAll();
     assertEquals(expectedExperiments, actualExperiments);
   }
+
+  @Test
+  void should_delegate_delete_experiment_to_repository() {
+    // given
+    UUID experimentId = UUID.randomUUID();
+
+    // when
+    service.deleteExperiment(experimentId);
+
+    // then
+    then(repository).should().delete(experimentId);
+  }
 }

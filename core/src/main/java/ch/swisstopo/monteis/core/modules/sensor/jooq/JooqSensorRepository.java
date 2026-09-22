@@ -225,6 +225,22 @@ public class JooqSensorRepository implements SensorRepository {
   }
 
   @Override
+  @Transactional
+  public void delete(UUID id) {
+    // Remove join table
+    dsl.deleteFrom(EXPERIMENT_SENSOR).where(EXPERIMENT_SENSOR.SENSOR_ID.eq(id)).execute();
+
+    // Delete all parameters associated with this sensor
+    dsl.deleteFrom(SENSOR_PARAMETER).where(SENSOR_PARAMETER.SENSOR_ID.eq(id)).execute();
+
+    int deletedCount = dsl.deleteFrom(SENSORS).where(SENSORS.ID.eq(id)).execute();
+
+    if (deletedCount == 0) {
+      throw new ObjectBusinessValidationException("object.deleted", Map.of());
+    }
+  }
+
+  @Override
   @Transactional(readOnly = true)
   public Optional<Sensor> findById(UUID id) {
     Optional<Sensor> sensorOpt =

@@ -120,3 +120,32 @@ test('should close dialog on cancel', async ({ page }) => {
     page.getByRole('heading', { name: 'Setup new Experiment', level: 2 }),
   ).not.toBeVisible();
 });
+
+test('should delete experiment', async ({ page }) => {
+  await page.getByRole('button', { name: 'Create Experiment' }).click();
+  const dialog = page.getByRole('dialog');
+  const uniqueId = crypto.randomUUID().substring(0, 8);
+
+  const experimentName = `A_DELETE_TEST_${uniqueId}`;
+
+  await dialog.getByLabel('Experiment Name').fill(experimentName);
+  await dialog.getByLabel('Start Date').fill('01/01/2030');
+  await dialog.getByLabel('End Date').fill('05/05/2030');
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+
+  await expect(page.getByText('Experiment saved successfully.')).toBeVisible();
+
+  const targetRow = page.locator('.ag-row', { hasText: experimentName }).first();
+  await expect(targetRow.locator('[col-id="name"]')).not.toBeEmpty();
+  await targetRow.click();
+
+  page.once('dialog', async (confirmDialog) => {
+    expect(confirmDialog.message()).toContain('Are you sure you want to delete');
+    await confirmDialog.accept();
+  });
+
+  await page.getByRole('button', { name: 'Delete Experiment' }).click();
+
+  await expect(page.getByText('Experiment deleted successfully.')).toBeVisible();
+  await expect(targetRow).not.toBeVisible();
+});
