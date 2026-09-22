@@ -75,4 +75,12 @@ public interface SensorRepository {
    * @return a stream of all sensors
    */
   Stream<Sensor> streamAllSensors();
+
+  /**
+   * Deletes an existing {@link Sensor} entity by its ID, including its parameters
+   * and experiment associations.
+   *
+   * @param id the ID of the sensor to delete
+   */
+  void delete(UUID id);
 }

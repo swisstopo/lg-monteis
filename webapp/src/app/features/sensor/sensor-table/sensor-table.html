@@ -9,6 +9,17 @@
       {{ 'sensor.tableHeader.download' | translate }}
     </button>
 
+    <button
+      write-action
+      matButton="tonal"
+      color="warn"
+      [disabled]="!selectedSensorId()"
+      (click)="onDelete()"
+    >
+      <mat-icon fontIcon="delete"></mat-icon>
+      {{ 'sensor.tableHeader.delete' | translate }}
+    </button>
+
     <button write-action matButton="tonal" (click)="onCreate()">
       <mat-icon fontIcon="add"></mat-icon>
       {{ 'sensor.tableHeader.create' | translate }}

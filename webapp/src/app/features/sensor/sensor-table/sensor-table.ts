@@ -4,6 +4,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { SensorParameterRowResponseDto } from '@core/generated';
+import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
 import { SensorService } from '@features/sensor/services/sensor.service';
@@ -88,6 +89,29 @@ export default class SensorTable {
       autoFocus: true,
       bindings: [inputBinding('sensorId', () => sensorId)],
     });
+  }
+
+  async onDelete(): Promise<void> {
+    const id = this.selectedSensorId();
+    if (!id) return;
+
+    if (!confirm(this.translateService.translate('sensor.delete.confirm')())) {
+      return;
+    }
+
+    try {
+      await this.sensorService.deleteSensor(id);
+      this.toastService.success(this.translateService.translate('sensor.delete.success')());
+      this.selectedSensorId.set(undefined);
+    } catch (err) {
+      const errors = toErrorDtos(err);
+      errors.forEach((e) =>
+        this.toastService.error(
+          this.translateService.translate(e?.messageKey ?? 'sensor.error.unspecified.message')(),
+          this.translateService.translate('sensor.error.unspecified.title')(),
+        ),
+      );
+    }
   }
 
   async onDownload(): Promise<void> {

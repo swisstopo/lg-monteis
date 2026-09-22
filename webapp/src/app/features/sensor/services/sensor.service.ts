@@ -63,6 +63,17 @@ export class SensorService {
     }
   }
 
+  async deleteSensor(id: string) {
+    try {
+      const result = await firstValueFrom(this.api.deleteSensor(id));
+      this.sensorsChanged.set(true);
+      return result;
+    } catch (err) {
+      this.error.set(toErrorDtos(err));
+      throw err;
+    }
+  }
+
   getSensors(params: IGetRowsParams) {
     const { startRow, endRow, sortModel, filterModel } = toPagedRequestParams(params);
     return firstValueFrom(this.api.getSensors(startRow, endRow, sortModel, filterModel));

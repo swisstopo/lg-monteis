@@ -178,7 +178,6 @@ public class ExperimentController {
   @ApiResponses(
       value = {
         @ApiResponse(responseCode = "204", description = "Experiment successfully deleted"),
-        @ApiResponse(responseCode = "404", description = "Experiment not found")
       })
   @DeleteMapping(path = "{id}")
   public ResponseEntity<Void> deleteExperiment(@PathVariable UUID id) {
