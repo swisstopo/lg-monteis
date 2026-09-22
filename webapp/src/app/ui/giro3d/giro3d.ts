@@ -5,28 +5,137 @@ import {
   effect,
   ElementRef,
   input,
+  OnDestroy,
   signal,
   untracked,
   viewChild,
 } from '@angular/core';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { SensorParameterRowResponseDto } from '@core/generated';
 import Instance from '@giro3d/giro3d/core/Instance.js';
 import { CoordinateSystem } from '@giro3d/giro3d/core/geographic/CoordinateSystem.js';
 import Tiles3D from '@giro3d/giro3d/entities/Tiles3D.js';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AmbientLight, DirectionalLight, GridHelper, MathUtils, Object3D, Vector3 } from 'three';
+import {
+  AmbientLight,
+  Color,
+  DirectionalLight,
+  GridHelper,
+  Group,
+  MathUtils,
+  Mesh,
+  MeshLambertMaterial,
+  Object3D,
+  SphereGeometry,
+  Vector3,
+  Vector3Like,
+} from 'three';
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
 import { InlineError } from '../inline-error/inline-error';
 import { TilesFetch, TilesFetchPlugin } from './tiles-fetch-plugin';
 
+const BLACK = new Color('#000');
+
+// these are mock positions until we get the real positions from the api. the keys are the dev and
+// local seed ids, anywhere else nothing matches and every sphere ends up wherever the api
+// coordinates say, today `0/0/0` for all of them.
+// MON-203: this table and the branch reading it in `createSensorObject3D` have to go together.
+// that branch is checked before `sensor.coordinates`, so as long as it exists the mock wins over
+// whatever the api sends
+const SENSOR_POSITIONS_MOCK: Record<string, Vector3Like> = {
+  // dev sensors
+  // Demo 1
+  '01a066a9-9775-79b0-98dd-dc4bac1c6269': {
+    x: -55.3,
+    y: -103.5,
+    z: -4.7,
+  },
+  // Demo 3
+  '01a066a9-9775-79b8-ba51-fc1d72220b92': {
+    x: -55.0,
+    y: -101.5,
+    z: -6.8,
+  },
+  // Demo 4
+  '01a066a9-9775-79bf-bf9c-c567ecf1c848': {
+    x: -57.0,
+    y: -99.6,
+    z: -4.6,
+  },
+  // Demo Sensor
+  '01a066a9-9775-79a4-a762-ee0a6eda9f65': {
+    x: -57.7,
+    y: -97.0,
+    z: 0.3,
+  },
+  // Test Sensor 01
+  '01a066a9-9775-78be-b6a1-efbd8a6c2900': {
+    x: -63.1,
+    y: -101.3,
+    z: -4.2,
+  },
+  // Local sensors
+  // Air temperature sensor near ventilation intake
+  '00000000-0000-7000-8000-000000000201': {
+    x: -64,
+    y: -94,
+    z: 0,
+  },
+  // Radial stress/pressure sensor
+  '00000000-0000-7000-8000-000000000202': {
+    x: -58,
+    y: -95,
+    z: -5,
+  },
+  // Displacement monitoring sensor
+  '00000000-0000-7000-8000-000000000203': {
+    x: -56,
+    y: -95,
+    z: -9,
+  },
+  // Flow/volume monitoring sensor
+  '00000000-0000-7000-8000-000000000204': {
+    x: -42,
+    y: -100,
+    z: -18,
+  },
+  // Admin-only flow sensor
+  '00000000-0000-7000-8000-000000000205': {
+    x: -36,
+    y: -100,
+    z: -19,
+  },
+};
+
+// MON-203: this builds the popup as a string that `setInfo` writes with `innerHTML`, so a sensor
+// name or comment coming from the api is interpreted as markup. should be a real angular template,
+// or at minimum `textContent`
+function getMeshInfo(obj: Mesh) {
+  const data = obj.userData;
+  if (data['type'] === 'sensor') {
+    return `type: sensor\nname: ${data['name']}\ncomment: ${data['comment']}`;
+  } else {
+    return `class: ${data['class']}\nname: ${data['name']}`;
+  }
+}
+
+function createInfoDiv() {
+  const domElem = document.createElement('div');
+  domElem.className = 'giro3d-popup';
+  return domElem;
+}
+
 @Component({
-  imports: [TranslatePipe, MatProgressSpinner, InlineError],
+  imports: [TranslatePipe, MatProgressSpinner, MatTooltipModule, InlineError],
   selector: 'app-giro3d',
   styleUrl: './giro3d.scss',
   templateUrl: './giro3d.html',
 })
-export class Giro3d implements AfterViewInit {
+export class Giro3d implements AfterViewInit, OnDestroy {
   readonly tilesetUrl = input.required<string | URL>();
+  readonly sensors = input.required<SensorParameterRowResponseDto[]>();
 
   /**
    * Performs the tileset and tile requests, see {@link TilesFetchPlugin}.
@@ -37,6 +146,7 @@ export class Giro3d implements AfterViewInit {
 
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
+
   private readonly instance = signal<Instance | null>(null);
   private readonly tileset = computed(() => {
     const tileset = new Tiles3D({
@@ -53,15 +163,25 @@ export class Giro3d implements AfterViewInit {
   });
   private readonly controls = signal<MapControls | null>(null);
 
+  // MON-203: `sensorGroup` is a plain field while everything around it is a signal, and
+  // `createSensorObject3D` is handed to `map` unbound, it only survives because it never touches
+  // `this` and ignores the index/array `map` passes it
+  private sensorGroup: Group | null = null;
+  private readonly sensorsObj = computed(() => this.sensors().map(this.createSensorObject3D));
+
+  private _mouseMoveEventListener: ((evt: MouseEvent) => void) | null = null;
+  private _mouseDownEventListener: ((evt: MouseEvent) => void) | null = null;
+  private _mouseUpEventListener: ((evt: MouseEvent) => void) | null = null;
+
   constructor() {
-    // Initialize/cleanup tileset whenever the tilesetUrl changes
     effect((onCleanup) => {
-      this.loading.set(true);
+      // Initialize/cleanup data whenever they change tilesetUrl changes
+      const tileset = this.tileset();
       const instance = this.instance();
       const controls = this.controls();
+      this.loading.set(true);
       if (!instance || !controls) return;
 
-      const tileset = this.tileset();
       let cancelled = false;
       let grid: GridHelper | undefined;
 
@@ -98,6 +218,23 @@ export class Giro3d implements AfterViewInit {
         instance.remove(tileset);
       });
     });
+
+    effect((onCleanup) => {
+      // initialize / cleanup sensors whenever the list changes
+      const instance = this.instance();
+      const sensorsObj = this.sensorsObj();
+      if (!instance || !this.sensorGroup || !sensorsObj) return;
+
+      // no explicit cleanup here, the `onCleanup` below already runs before every re-run
+      for (let sensorObj of sensorsObj) {
+        if (sensorObj) {
+          this.sensorGroup.add(sensorObj);
+        }
+      }
+      instance.notifyChange(this.sensorGroup);
+
+      onCleanup(() => this.cleanupSensors());
+    });
   }
 
   ngAfterViewInit(): void {
@@ -108,19 +245,34 @@ export class Giro3d implements AfterViewInit {
     }
   }
 
+  // MON-203: the listeners are removed after `instance.dispose()`, so they are unregistered from
+  // a dom element the instance already tore down
   ngOnDestroy(): void {
-    this.controls()?.dispose();
-    this.instance()?.dispose();
+    const instance = this.instance();
+    if (instance) {
+      instance.dispose();
+      this.removeEventListeners(instance);
+    }
+    const controls = this.controls();
+    if (controls) controls.dispose();
   }
 
-  private initInstance() {
-    const instance = new Instance({
-      target: this.view().nativeElement,
-      crs: CoordinateSystem.epsg3857,
-      backgroundColor: 0xcccccc,
-    });
+  private cleanupSensors() {
+    const instance = this.instance();
+    if (!instance || !this.sensorGroup) return;
+    // not `traverse`: it starts at the group itself, so the group would remove itself from the
+    // scene. and we mutate `children` while iterating it, hence the copy
+    for (const sensorObj of [...this.sensorGroup.children]) {
+      sensorObj.removeFromParent();
+      if (sensorObj instanceof Mesh) {
+        sensorObj.geometry.dispose();
+        sensorObj.material.dispose();
+      }
+    }
+    instance.notifyChange(this.sensorGroup);
+  }
 
-    // Add a sunlight
+  private setupLights(instance: Instance) {
     const sun = new DirectionalLight('#ffffff', 1.4);
     sun.position.set(1, 0, 1).normalize();
     sun.updateMatrixWorld(true);
@@ -135,15 +287,206 @@ export class Giro3d implements AfterViewInit {
     // Add ambient light
     const ambientLight = new AmbientLight(0xffffff, 1);
     instance.scene.add(ambientLight);
-    instance.view.minNearPlane = 0.5;
+  }
 
+  private setupControls(instance: Instance) {
     const controls = new MapControls(instance.view.camera, instance.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
     instance.view.setControls(controls);
+    this.controls.set(controls);
+  }
+
+  /**
+   * MON-203: picking, highlighting, selection and the two popups all live in one function as
+   * closures over mutable locals, which makes every one of them untestable on its own. belongs in
+   * its own directive or service. the two `CSS2DObject` infos are added to the instance and never
+   * removed either, and `canPick` is a drag guard that only reads as one once you know.
+   */
+  private setupPicking(instance: Instance) {
+    let highlightedElem: Mesh | null = null;
+    let highlightedInfo = new CSS2DObject(createInfoDiv());
+    highlightedInfo.center.set(0, 0);
+    instance.add(highlightedInfo);
+
+    let selectedElem: Mesh | null = null;
+    let selectedInfo = new CSS2DObject(createInfoDiv());
+    selectedInfo.center.set(0, 0);
+    instance.add(selectedInfo);
+
+    let canPick = true;
+
+    function darkenObjectColor(elem: Mesh, ratio: number) {
+      if ('color' in elem.material) {
+        if (!('originalColor' in elem.userData)) {
+          const originalColor = elem.material.color as Color;
+          elem.userData['originalColor'] = originalColor.clone();
+        }
+        (elem.material.color as Color).lerp(BLACK, ratio);
+        // there is no cases where the material has a color but no needsUpdate
+        (elem.material as MeshLambertMaterial).needsUpdate = true;
+        instance.notifyChange(elem);
+      }
+    }
+
+    function selectElem(elem: Mesh) {
+      selectedElem = elem;
+      darkenObjectColor(elem, 0.3);
+    }
+
+    function deselectElem() {
+      if (selectedElem != null) {
+        resetObjectColor(selectedElem);
+        instance.notifyChange(selectedElem);
+        selectedElem = null;
+      }
+    }
+
+    function highlightElem(elem: Mesh) {
+      highlightedElem = elem;
+      darkenObjectColor(elem, 0.5);
+    }
+
+    function setInfo(info3DElem: CSS2DObject, elem: Mesh, position: Vector3) {
+      info3DElem.element.innerHTML = getMeshInfo(elem);
+      info3DElem.visible = true;
+      info3DElem.position.copy(position);
+      info3DElem.updateMatrixWorld();
+    }
+
+    function resetInfo(info3DElem: CSS2DObject) {
+      // remove content
+      info3DElem.element.innerHTML = '';
+      info3DElem.visible = false;
+    }
+
+    function resetObjectColor(elem: Mesh) {
+      if (
+        elem &&
+        elem.material != null &&
+        !Array.isArray(elem.material) &&
+        'color' in elem.material
+      ) {
+        elem.material.color = elem.userData['originalColor'].clone();
+        elem.material.needsUpdate = true;
+        instance.notifyChange(elem);
+      }
+    }
+
+    // MON-203: a full `pickObjectsAt` on every single mousemove, no throttle and no early out
+    this._mouseMoveEventListener = (event) => {
+      canPick = false;
+      const picked = instance.pickObjectsAt(event, { sortByDistance: true });
+      if (highlightedElem != null) {
+        resetObjectColor(highlightedElem);
+        resetInfo(highlightedInfo);
+        highlightedElem = null;
+      }
+      if (picked.length > 0) {
+        // let's consider the first one in the picking order
+        // we *don't* iterate, as we don't want to highlight a sensor that would be behind another object
+        const object = picked[0].object;
+        if (object === highlightedElem || object == selectedElem) {
+          // nothing to do
+          return;
+        }
+        if (object instanceof Mesh) {
+          // highlight object
+          highlightElem(object);
+          setInfo(highlightedInfo, object, picked[0].point);
+        }
+      }
+    };
+    this._mouseDownEventListener = () => (canPick = true);
+    this._mouseUpEventListener = (event) => {
+      if (!canPick) {
+        return;
+      }
+      const picked = instance.pickObjectsAt(event, { sortByDistance: true });
+      if (picked.length == 0) {
+        deselectElem();
+        resetInfo(selectedInfo);
+      } else {
+        // let's consider the first one in the picking order
+        // we *don't* iterate, as we don't want to highlight a sensor that would be behind another object
+        const object = picked[0].object;
+        if (selectedElem == object) {
+          // nothing to do
+          return;
+        }
+        deselectElem();
+        resetInfo(selectedInfo);
+        if (object instanceof Mesh) {
+          selectElem(object);
+          setInfo(selectedInfo, object, picked[0].point);
+        }
+      }
+    };
+    instance.domElement.addEventListener('mousemove', this._mouseMoveEventListener);
+    instance.domElement.addEventListener('mousedown', this._mouseDownEventListener);
+    instance.domElement.addEventListener('mouseup', this._mouseUpEventListener);
+  }
+
+  private initInstance() {
+    const instance = new Instance({
+      target: this.view().nativeElement,
+      crs: CoordinateSystem.epsg3857,
+      backgroundColor: 0xf6f4f4,
+    });
+
+    this.setupLights(instance);
+    this.setupControls(instance);
 
     this.instance.set(instance);
-    this.controls.set(controls);
+
+    // set up group for sensors
+    const sensorGroup = new Group();
+    sensorGroup.name = 'sensorGroup';
+    instance.add(sensorGroup);
+    this.sensorGroup = sensorGroup;
+
+    // set up listeners/picking/hovering etc.
+    this.setupPicking(instance);
+  }
+
+  private removeEventListeners(instance: Instance) {
+    if (this._mouseMoveEventListener != null) {
+      instance.domElement.removeEventListener('mousemove', this._mouseMoveEventListener);
+    }
+    if (this._mouseDownEventListener != null) {
+      instance.domElement.removeEventListener('mousedown', this._mouseDownEventListener);
+    }
+    if (this._mouseUpEventListener != null) {
+      instance.domElement.removeEventListener('mouseup', this._mouseUpEventListener);
+    }
+  }
+
+  // MON-203: sphere size, segment counts and color are magic numbers with no theming, `userData`
+  // is an untyped string map shared with the ifc meshes, and returning `void` for a sensor without
+  // coordinates is a silent drop that the caller filters with a truthiness check
+  private createSensorObject3D(sensor: SensorParameterRowResponseDto): Object3D | void {
+    // create the geom
+    let geom = new SphereGeometry(0.3, 32, 16);
+    let sensor3D = new Mesh(geom, new MeshLambertMaterial({ color: 0x02cb02 }));
+    let sensorCoordinates;
+    if (sensor.sensorId && sensor.sensorId in SENSOR_POSITIONS_MOCK) {
+      sensorCoordinates = SENSOR_POSITIONS_MOCK[sensor.sensorId];
+    } else if (sensor.coordinates != null) {
+      sensorCoordinates = sensor.coordinates;
+    } else {
+      return;
+    }
+    sensor3D.position.copy(sensorCoordinates);
+    sensor3D.updateMatrixWorld();
+
+    // set metadata
+    sensor3D.userData = {
+      id: sensor.sensorId,
+      name: sensor.name,
+      comment: sensor.comment,
+      type: 'sensor',
+    };
+    return sensor3D;
   }
 
   private initCamera(
