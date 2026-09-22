@@ -149,7 +149,6 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       headerName: translateService.translate('sensor.coordinate.yLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
-      flex: 1,
     },
     {
       field: 'coordinates.z',
