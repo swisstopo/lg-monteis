@@ -74,7 +74,8 @@ public class SensorService {
     FulcrumSensor fulcrumSensor =
         fulcrumService
             .getSensorById(sensor.getFulcrumId())
-            .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
+            .orElseThrow(
+                () -> new ObjectBusinessValidationException("fulcrum.sensor.not-found", Map.of()));
 
     List<String> missing = new ArrayList<>();
     if (fulcrumSensor.xPointWithOffset() == null) {

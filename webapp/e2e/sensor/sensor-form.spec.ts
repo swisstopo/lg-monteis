@@ -168,10 +168,12 @@ test('should refuse to save a fulcrum id that no fulcrum record matches', async 
 
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 
-  // createSensor answers object.deleted, which carries no field and therefore surfaces as a toast
-  // rather than against the Fulcrum ID input.
+  // createSensor answers fulcrum.sensor.not-found, which carries no field and therefore surfaces
+  // as a toast rather than against the Fulcrum ID input.
   await expect(
-    page.getByText('The record no longer exists. It may have been deleted in the meantime.'),
+    page.getByText(
+      'Fulcrum holds no record with this Fulcrum ID. Check the ID in Fulcrum, or clear it and enter the coordinates manually.',
+    ),
   ).toBeVisible();
   await expect(page.getByText('Sensor saved successfully.')).toHaveCount(0);
 

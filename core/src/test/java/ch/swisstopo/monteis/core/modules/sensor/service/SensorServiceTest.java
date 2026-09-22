@@ -153,7 +153,7 @@ class SensorServiceTest {
             ObjectBusinessValidationException.class, () -> service.createSensor(inputSensor));
 
     // then
-    assertEquals("object.deleted", exception.getMessageKey());
+    assertEquals("fulcrum.sensor.not-found", exception.getMessageKey());
     then(repository).should(never()).create(any());
   }
 
@@ -208,7 +208,7 @@ class SensorServiceTest {
             ObjectBusinessValidationException.class, () -> service.updateSensor(inputSensor));
 
     // then
-    assertEquals("object.deleted", exception.getMessageKey());
+    assertEquals("fulcrum.sensor.not-found", exception.getMessageKey());
     then(repository).should(never()).update(any());
   }
 

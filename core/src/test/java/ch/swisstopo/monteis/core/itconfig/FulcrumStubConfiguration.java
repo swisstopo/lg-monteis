@@ -108,7 +108,7 @@ public class FulcrumStubConfiguration {
     if (!matcher.find()) {
       // Only the unfiltered getSensors() statement legitimately lands here. Anything else means
       // the filter FulcrumService writes and the pattern above have drifted apart, which would
-      // otherwise surface as a puzzling "object.deleted" in the browser.
+      // otherwise surface as a puzzling "fulcrum.sensor.not-found" in the browser.
       log.warn(
           "No record id filter found in Fulcrum statement, answering with no rows: {}", statement);
       return null;
