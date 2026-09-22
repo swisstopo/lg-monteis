@@ -250,3 +250,36 @@ test('should add and remove a parameter', async ({ page }) => {
   await expect(secondBlock).not.toBeVisible();
   await expect(firstBlock.getByLabel('Remove Parameter')).toBeDisabled();
 });
+
+test('should delete sensor', async ({ page }) => {
+  await page.getByRole('button', { name: 'Create Sensor' }).click();
+  const dialog = page.getByRole('dialog');
+  const uniqueId = crypto.randomUUID().substring(0, 8);
+
+  const sensorName = `A_DELETE_TEST_${uniqueId}`;
+  const dasAlias = `DAS_DEL_${uniqueId}`;
+
+  await dialog.getByLabel('Sensor Name').fill(sensorName);
+  await dialog.getByLabel('DAS Sensor Alias').fill(dasAlias);
+  await dialog.getByLabel('X (Local)').fill('10');
+  await dialog.getByLabel('Y (Local)').fill('20');
+  await dialog.getByLabel('Z (Local)').fill('30');
+
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+
+  await expect(page.getByText('Sensor saved successfully.')).toBeVisible();
+
+  const targetRow = page.locator('.ag-row', { hasText: sensorName }).first();
+  await expect(targetRow.locator('[col-id="name"]')).not.toBeEmpty();
+  await targetRow.click();
+
+  page.once('dialog', async (confirmDialog) => {
+    expect(confirmDialog.message()).toContain('Are you sure you want to delete');
+    await confirmDialog.accept();
+  });
+
+  await page.getByRole('button', { name: 'Delete Sensor' }).click();
+
+  await expect(page.getByText('Sensor deleted successfully.')).toBeVisible();
+  await expect(targetRow).not.toBeVisible();
+});
