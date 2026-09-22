@@ -8,7 +8,6 @@ import static org.jooq.impl.DSL.*;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
-import ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementState;
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
@@ -207,11 +206,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                         row.active(),
                         row.comment(),
                         trendByParamId.getOrDefault(row.sensorParameterId(), List.of()),
-                        MeasurementState.of(
-                            row.measureValue(),
-                            row.alarmLimitFrom(),
-                            row.alarmLimitTo(),
-                            row.rangeStatus())))
+                        row.rangeStatus()))
             .toList();
 
     boolean needsReadings =
