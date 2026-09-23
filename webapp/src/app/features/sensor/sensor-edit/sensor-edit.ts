@@ -18,6 +18,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
+import { MatDivider } from '@angular/material/list';
 import { MatSelect } from '@angular/material/select';
 import {
   ExperimentResponseDto,
@@ -164,6 +165,7 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
     MatAutocomplete,
     MatAutocompleteTrigger,
     TranslatePipe,
+    MatDivider,
   ],
   templateUrl: './sensor-edit.html',
   styleUrl: './sensor-edit.scss',

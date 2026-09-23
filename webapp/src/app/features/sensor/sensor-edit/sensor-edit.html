@@ -160,6 +160,7 @@
     </div>
 
     @for (parameter of sensorForm.parameters; track parameterKeys()[i]; let i = $index) {
+      <mat-divider class="full-width" />
       <fieldset class="parameter-block full-width" [attr.data-testid]="'parameter-block-' + i">
         <div class="form-column">
           <mat-form-field appearance="outline">
