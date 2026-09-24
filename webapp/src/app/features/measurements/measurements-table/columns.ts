@@ -11,6 +11,7 @@ import { MultiSelectFilter } from '@ui/filters/multi-select-filter/multi-select-
 import { TableColumn } from '@ui/table/table.types';
 import { firstValueFrom } from 'rxjs';
 import { TrendCellRenderer } from './trend-cell-renderer';
+import MeasurementStatusEnum = MeasurementResponseDto.MeasurementStatusEnum;
 
 export function createColumns(datePipe: DatePipe): TableColumn<MeasurementResponseDto>[] {
   const translateService = inject(TranslateService);
@@ -23,10 +24,10 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       { displayName: translateService.translate('sensor.active.column.no')(), value: 'false' },
     ]);
 
-  const MEASUREMENT_STATE_CLASS: Record<string, string> = {
-    correct: '',
-    too_low: 'measurement-state-alarm',
-    too_high: 'measurement-state-alarm',
+  const MEASUREMENT_STATE_CLASS: Record<MeasurementStatusEnum, string> = {
+    [MeasurementStatusEnum.Correct]: '',
+    [MeasurementStatusEnum.TooLow]: 'measurement-state-alarm',
+    [MeasurementStatusEnum.TooHigh]: 'measurement-state-alarm',
   };
 
   return [
@@ -85,8 +86,8 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       filter: 'agNumberColumnFilter',
       valueFormatter: (params) => (params.value != null ? Number(params.value).toFixed(2) : '-'),
       cellClass: (params) =>
-        params.data?.measurementState
-          ? MEASUREMENT_STATE_CLASS[params.data.measurementState.toLowerCase()]
+        params.data?.measurementStatus
+          ? MEASUREMENT_STATE_CLASS[params.data.measurementStatus]
           : '',
     },
     {

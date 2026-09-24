@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound;
 
+import ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementStatus;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
@@ -22,4 +23,4 @@ public record MeasurementResponseDto(
     Boolean active,
     String comment,
     List<ChartPointDto> trend,
-    String measurementState) {}
+    MeasurementStatus measurementStatus) {}
