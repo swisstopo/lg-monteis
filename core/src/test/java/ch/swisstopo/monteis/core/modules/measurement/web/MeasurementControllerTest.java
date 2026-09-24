@@ -15,6 +15,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementStatus;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
@@ -233,7 +234,7 @@ class MeasurementControllerTest {
             true,
             "Air temperature sensor near ventilation intake",
             List.of(new ChartPointDto(validFrom, 12.5)),
-            "To High");
+            MeasurementStatus.CORRECT);
     PagedRequest parsed = new PagedRequest(0, 20, List.of(), Map.of());
     given(pagedRequestParser.parse(any())).willReturn(parsed);
     given(measurementService.getPagedMeasurements(parsed))

@@ -25,7 +25,7 @@ const mockMeasurements = [
     active: true,
     comment: null,
     trend: [],
-    measurementState: 'too_high',
+    measurementStatus: 'TOO_HIGH',
   },
   {
     sensorParameterId: '00000000-0000-7000-8000-0000000004e2',
@@ -45,7 +45,7 @@ const mockMeasurements = [
     active: true,
     comment: null,
     trend: [],
-    measurementState: 'too_low',
+    measurementStatus: 'TOO_LOW',
   },
   {
     sensorParameterId: '00000000-0000-7000-8000-0000000004e2',
@@ -65,16 +65,12 @@ const mockMeasurements = [
     active: true,
     comment: null,
     trend: [],
-    measurementState: 'correct',
+    measurementStatus: 'CORRECT',
   },
 ];
 
 const MEASUREMENTS = {
-  data: mockMeasurements,
-  content: mockMeasurements,
   rows: mockMeasurements,
-  totalRows: 3,
-  totalElements: 3,
   totalCount: 3,
 };
 
@@ -107,10 +103,8 @@ const alarmTestCases = [
   { expectedColor: ALARM_COLOR, condition: 'ALARM_TOO_LOW' },
 ];
 
-for (const { amount, expectedColor, condition } of alarmTestCases) {
-  test(`should color a value ${condition} the alarm limits correctly (${amount})`, async ({
-    page,
-  }) => {
+for (const { expectedColor, condition } of alarmTestCases) {
+  test(`should color a value ${condition} the alarm limits correctly`, async ({ page }) => {
     const cell = valueCell(page, `E2E__${condition}__value`);
 
     await expect(cell).toHaveCSS('color', expectedColor);

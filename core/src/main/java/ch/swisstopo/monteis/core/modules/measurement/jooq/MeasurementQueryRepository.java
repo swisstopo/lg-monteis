@@ -69,8 +69,12 @@ public class MeasurementQueryRepository implements MeasurementQuery {
           Map.entry("experimentName", EXPERIMENTS.NAME),
           Map.entry("sensorParameterName", SENSOR_PARAMETER.NAME),
           Map.entry("sensorName", SENSORS.NAME),
-          Map.entry("newestMeasurement", LATEST_READINGS.field(SENSOR_READING_SECURED.TIMESTAMP)),
-          Map.entry("measureValue", LATEST_READINGS.field(SENSOR_READING_SECURED.NORM_VALUE)),
+          Map.entry(
+              "newestMeasurement",
+              Objects.requireNonNull(LATEST_READINGS.field(SENSOR_READING_SECURED.TIMESTAMP))),
+          Map.entry(
+              "measureValue",
+              Objects.requireNonNull(LATEST_READINGS.field(SENSOR_READING_SECURED.NORM_VALUE))),
           Map.entry("unit", SENSOR_PARAMETER.UNIT),
           Map.entry("sensorType", SENSOR_TYPES.NAME),
           Map.entry("coordinates.x", SENSORS.X),
@@ -206,7 +210,8 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                         row.active(),
                         row.comment(),
                         trendByParamId.getOrDefault(row.sensorParameterId(), List.of()),
-                        row.rangeStatus()))
+                        ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementStatus
+                            .fromDbValue(row.measurementStatus())))
             .toList();
 
     boolean needsReadings =
@@ -270,7 +275,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
       String sensorParameterName,
       OffsetDateTime newestMeasurement,
       Double measureValue,
-      String rangeStatus,
+      String measurementStatus,
       ch.swisstopo.monteis.core.jooq.generated.enums.Unit unit,
       String sensorType,
       Double x,
