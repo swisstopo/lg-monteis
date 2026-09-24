@@ -16,29 +16,80 @@
         {
           "name": "Experiment Alpha",
           "path": "/Experiments/Experiment Alpha",
-          "attributes": {
-            "experiment_ids": ["00000000-0000-7000-8000-000000000301"],
-            "description": ["Grants read access to experiment 1 (Alpha)."]
-          },
-          "clientRoles": { "monteis-spa": ["monteis-client:read"] }
+          "subGroups": [
+            {
+              "name": "read",
+              "path": "/Experiments/Experiment Alpha/read",
+              "attributes": {
+                "read_experiment_ids": ["00000000-0000-7000-8000-000000000301"],
+                "description": ["Grants read access to experiment 1 (Alpha)."]
+              },
+              "clientRoles": { "monteis-spa": ["monteis-client:experiment:read"] }
+            },
+            {
+              "name": "read + write",
+              "path": "/Experiments/Experiment Alpha/read + write",
+              "attributes": {
+                "write_experiment_ids": ["00000000-0000-7000-8000-000000000301"],
+                "description": ["Grants read + write access to experiment 1 (Alpha)."]
+              },
+              "clientRoles": {
+                "monteis-spa": ["monteis-client:experiment:read", "monteis-client:experiment:write"]
+              }
+            }
+          ]
         },
         {
           "name": "Experiment Beta",
           "path": "/Experiments/Experiment Beta",
-          "attributes": {
-            "experiment_ids": ["00000000-0000-7000-8000-000000000302"],
-            "description": ["Grants read access to experiment 2 (Beta)."]
-          },
-          "clientRoles": { "monteis-spa": ["monteis-client:read"] }
+          "subGroups": [
+            {
+              "name": "read",
+              "path": "/Experiments/Experiment Beta/read",
+              "attributes": {
+                "read_experiment_ids": ["00000000-0000-7000-8000-000000000302"],
+                "description": ["Grants read access to experiment 2 (Beta)."]
+              },
+              "clientRoles": { "monteis-spa": ["monteis-client:experiment:read"] }
+            },
+            {
+              "name": "read + write",
+              "path": "/Experiments/Experiment Beta/read + write",
+              "attributes": {
+                "write_experiment_ids": ["00000000-0000-7000-8000-000000000302"],
+                "description": ["Grants read + write access to experiment 2 (Beta)."]
+              },
+              "clientRoles": {
+                "monteis-spa": ["monteis-client:experiment:read", "monteis-client:experiment:write"]
+              }
+            }
+          ]
         },
         {
           "name": "Experiment Gamma",
           "path": "/Experiments/Experiment Gamma",
-          "attributes": {
-            "experiment_ids": ["00000000-0000-7000-8000-000000000303"],
-            "description": ["Grants read access to experiment 3 (Gamma)."]
-          },
-          "clientRoles": { "monteis-spa": ["monteis-client:read"] }
+          "subGroups": [
+            {
+              "name": "read",
+              "path": "/Experiments/Experiment Gamma/read",
+              "attributes": {
+                "read_experiment_ids": ["00000000-0000-7000-8000-000000000303"],
+                "description": ["Grants read access to experiment 3 (Gamma)."]
+              },
+              "clientRoles": { "monteis-spa": ["monteis-client:experiment:read"] }
+            },
+            {
+              "name": "read + write",
+              "path": "/Experiments/Experiment Gamma/read + write",
+              "attributes": {
+                "write_experiment_ids": ["00000000-0000-7000-8000-000000000303"],
+                "description": ["Grants read + write access to experiment 3 (Gamma)."]
+              },
+              "clientRoles": {
+                "monteis-spa": ["monteis-client:experiment:read", "monteis-client:experiment:write"]
+              }
+            }
+          ]
         }
       ]
     }
@@ -54,7 +105,7 @@
       "lastName": "Example",
       "credentials": [{ "type": "password", "value": "alice", "temporary": false }],
       "realmRoles": ["user"],
-      "groups": ["/Experiments/Experiment Alpha", "/Experiments/Experiment Gamma"]
+      "groups": ["/Experiments/Experiment Alpha/read + write", "/Experiments/Experiment Gamma/read"]
     },
     {
       "id": "b0bb4079-a512-492e-bec7-ede4b410397c",
@@ -66,7 +117,7 @@
       "lastName": "Example",
       "credentials": [{ "type": "password", "value": "bob", "temporary": false }],
       "realmRoles": ["user"],
-      "groups": ["/Experiments/Experiment Beta"]
+      "groups": ["/Experiments/Experiment Beta/read"]
     },
     {
       "id": "4efbee50-d322-44ed-aece-92dbf9b9d969",
@@ -79,18 +130,6 @@
       "credentials": [{ "type": "password", "value": "admin-user", "temporary": false }],
       "realmRoles": ["user", "admin"],
       "groups": ["/Monteis Admin"]
-    },
-    {
-      "id": "5f42597b-c6ea-4569-abe8-f5fd13723b6e",
-      "username": "read-all-user",
-      "enabled": true,
-      "emailVerified": true,
-      "email": "read-all-user@example.test",
-      "firstName": "Read All",
-      "lastName": "User",
-      "credentials": [{ "type": "password", "value": "read-all-user", "temporary": false }],
-      "realmRoles": ["user"],
-      "groups": ["/Monteis Read All"]
     }
   ]
 }
