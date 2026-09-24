@@ -356,7 +356,8 @@ class JooqSensorParameterRowQueryRepositoryIT {
             null);
 
     Sensor sensor =
-        new Sensor(name, code, Das.SOL_EXPERTS, null, null, new Coordinates(0, 0, 0), true, null);
+        new Sensor(
+            name, code, Das.SOL_EXPERTS, null, null, new Coordinates(0d, 0d, 0d), true, null);
     sensor.setParameters(new ArrayList<>(List.of(parameter)));
     return sensor;
   }

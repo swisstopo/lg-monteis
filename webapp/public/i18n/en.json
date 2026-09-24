@@ -33,6 +33,8 @@
     }
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
+  "object.deleted": "The record no longer exists. It may have been deleted in the meantime.",
+  "fulcrum.sensor.not-found": "Fulcrum holds no record with this Fulcrum ID. Check the ID in Fulcrum, or clear it and enter the coordinates manually.",
   "validation": {
     "required": "There is a validation error with this field.",
     "mustBeNull": "",
@@ -72,7 +74,13 @@
     },
     "fulcrumId": {
       "label": "Fulcrum ID",
-      "placeholder": "e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      "placeholder": "e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "validation": {
+        "invalid": "Fulcrum ID must be a UUID"
+      }
+    },
+    "fulcrum": {
+      "coordinatesMissing": "Fulcrum record {{fulcrumId}} has no coordinates ({{missing}} missing). Add them in Fulcrum, or clear the Fulcrum ID and enter the coordinates manually."
     },
     "mainExperiment": {
       "label": "Main Experiment",

@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import {
   applyEach,
+  disabled,
   FieldTree,
   form,
   FormField,
@@ -33,6 +34,11 @@ import { ExperimentService } from '@features/experiment/services/experiment.serv
 import { Das, getDasMetadata, getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
+
+// Canonical 8-4-4-4-12 form, the only shape java.util.UUID round-trips. Deliberately not
+// version-restricted: the backend accepts any UUID here, and Fulcrum owns the ids we store.
+const UUID_PATTERN =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 // TODO: MON-145 refactor sensor parameter into own component
 interface SensorParameterFormData {
@@ -249,8 +255,19 @@ export default class SensorEdit {
     minLength(schema.name, 2, { message: translate('sensor.name.validation.minLength')() });
     maxLength(schema.name, 50, { message: translate('sensor.name.validation.maxLength')() });
     required(schema.das, { message: translate('sensor.das.validation.required')() });
+    validate(schema.fulcrumId, ({ value }) => {
+      const fulcrumId = value().trim();
+      if (!fulcrumId || UUID_PATTERN.test(fulcrumId)) return undefined;
+      return {
+        kind: 'invalidUuid',
+        message: this.translateService.translate('sensor.fulcrumId.validation.invalid')(),
+      };
+    });
     maxLength(schema.comment, 4096, {
       message: translate('sensor.comment.validation.maxLength')(),
+    });
+    disabled(schema.coordinates, {
+      when: ({ valueOf }) => valueOf(schema.fulcrumId).trim().length > 0,
     });
     required(schema.coordinates.x, {
       message: translate('sensor.coordinate.xLocal.validation.required')(),

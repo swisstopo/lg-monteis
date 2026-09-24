@@ -20,6 +20,8 @@ import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDt
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -226,11 +228,8 @@ class MeasurementControllerTest {
             12.5,
             "KELVIN",
             "Temperature",
-            100.0,
-            200.0,
-            300.0,
-            -50.0,
-            100.0,
+            new CoordinatesDto(100.0, 200.0, 300.0),
+            new AlarmLimitsDto(-50.0, 100.0),
             true,
             "Air temperature sensor near ventilation intake",
             List.of(new ChartPointDto(validFrom, 12.5)));
