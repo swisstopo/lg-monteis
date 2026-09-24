@@ -12,7 +12,7 @@ import {
   validate,
 } from '@angular/forms/signals';
 import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
-import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatButton } from '@angular/material/button';
 import { MatOption } from '@angular/material/core';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -156,7 +156,6 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
     MatLabel,
     MatInput,
     MatButton,
-    MatIconButton,
     MatSelect,
     MatOption,
     FormField,
