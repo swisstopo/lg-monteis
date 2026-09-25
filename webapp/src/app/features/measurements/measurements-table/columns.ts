@@ -103,13 +103,13 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       cellRenderer: TrendCellRenderer,
     },
     {
-      field: 'alarmLimitFrom',
+      field: 'alarmLimits.lower',
       headerName: translateService.translate('sensor.alarmLimit.from.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
     },
     {
-      field: 'alarmLimitTo',
+      field: 'alarmLimits.upper',
       headerName: translateService.translate('sensor.alarmLimit.to.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
@@ -129,19 +129,19 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
           : translateService.translate('sensor.active.column.no')(),
     },
     {
-      field: 'x',
+      field: 'coordinates.x',
       headerName: translateService.translate('sensor.coordinate.xLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
     },
     {
-      field: 'y',
+      field: 'coordinates.y',
       headerName: translateService.translate('sensor.coordinate.yLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
     },
     {
-      field: 'z',
+      field: 'coordinates.z',
       headerName: translateService.translate('sensor.coordinate.zLocal.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',

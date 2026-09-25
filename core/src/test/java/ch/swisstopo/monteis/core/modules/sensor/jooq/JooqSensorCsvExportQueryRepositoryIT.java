@@ -70,7 +70,7 @@ class JooqSensorCsvExportQueryRepositoryIT {
               lines
                   .get(1)
                   .startsWith(
-                      "CSV-01,UniqueCsvExportName,SOL_EXPERTS,,,0,0,0,true,,UniqueCsvExportName,"));
+                      "CSV-01,UniqueCsvExportName,SOL_EXPERTS,,,0.0,0.0,0.0,true,,UniqueCsvExportName,"));
         });
   }
 
@@ -144,9 +144,10 @@ class JooqSensorCsvExportQueryRepositoryIT {
                   "SOL_EXPERTS",
                   "", // fulcrumId
                   "", // mainExperiment.name
-                  "0",
-                  "0",
-                  "0",
+                  // x/y/z are DOUBLE PRECISION since V15, so the export carries their decimals
+                  "0.0",
+                  "0.0",
+                  "0.0",
                   "true",
                   "", // comment
                   "", // parameter.name
@@ -310,7 +311,8 @@ class JooqSensorCsvExportQueryRepositoryIT {
 
   private Sensor createDummySensor(String code, String name, String formulaExpression) {
     Sensor sensor =
-        new Sensor(name, code, Das.SOL_EXPERTS, null, null, new Coordinates(0, 0, 0), true, null);
+        new Sensor(
+            name, code, Das.SOL_EXPERTS, null, null, new Coordinates(0d, 0d, 0d), true, null);
     sensor.setParameters(
         new ArrayList<>(List.of(buildParameter(name, formulaExpression, 0.0, 100.0))));
     return sensor;

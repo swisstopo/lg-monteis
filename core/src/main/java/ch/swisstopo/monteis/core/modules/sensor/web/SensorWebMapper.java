@@ -49,6 +49,26 @@ public interface SensorWebMapper {
   // New mapping for the nested parameters
   SensorParameter toDomain(WriteSensorParameterDto dto);
 
+  /**
+   * Turns an omitted formula into the identity formula ("x").
+   *
+   * <p>{@link WriteSensorParameterDto#formula()} is optional and documented as defaulting to "x",
+   * and the webapp sends nothing at all when the field is left empty. MapStruct then writes a null
+   * onto the parameter, and null is not a value the rest of the write path tolerates:
+   * JooqSensorRepository dereferences the formula when persisting it, and
+   * {@link SensorParameter#changeTriggersPublish} compares expressions to decide whether the Kafka
+   * config has to be republished. Defaulting it in the domain constructor would not help - MapStruct
+   * sets the field explicitly after construction - so the default belongs here, at the boundary
+   * where "omitted" is still distinguishable from "cleared".
+   */
+  @AfterMapping
+  default void defaultFormula(
+      WriteSensorParameterDto dto, @MappingTarget SensorParameter parameter) {
+    if (dto.formula() == null) {
+      parameter.setFormula(new Formula());
+    }
+  }
+
   // id/version aren't provided by the write DTO: JooqSensorRepository resolves/creates the
   // SensorType by name (findOrCreateSensorTypeByName), so they're intentionally not mapped here.
   @Mapping(target = "id", ignore = true)

@@ -14,8 +14,17 @@ import org.junit.jupiter.api.Test;
 
 class SensorWebMapperTest {
 
+  private static final String DEFAULT_EXPRESSION = "x";
+
   private final SensorWebMapper mapper = new SensorWebMapperImpl(new ExperimentWebMapperImpl());
 
+  /**
+   * The formula is optional on the write DTO and the form labels it "defaults to 'x'", so the
+   * webapp sends no formula at all when the field is left empty. The default has to be applied
+   * here: {@code JooqSensorRepository} resolves the formula by expression while inserting and
+   * dereferences it unconditionally, so a parameter arriving without one fails the insert with a
+   * NullPointerException rather than a readable error.
+   */
   @Test
   void should_default_formula_to_identity_expression_when_null() {
     // when
