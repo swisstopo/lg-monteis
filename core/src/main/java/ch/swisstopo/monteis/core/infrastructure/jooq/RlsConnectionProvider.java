@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.jooq;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.READ_ALL_AUTHORITY;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_READ_ALL_AUTHORITY;
 
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import java.sql.Connection;
@@ -52,10 +52,10 @@ public class RlsConnectionProvider implements ConnectionProvider {
     if (authentication != null) {
       readAll =
           authentication.getAuthorities().stream()
-              .anyMatch(a -> Objects.equals(a.getAuthority(), READ_ALL_AUTHORITY));
+              .anyMatch(a -> Objects.equals(a.getAuthority(), EXPERIMENT_READ_ALL_AUTHORITY));
       if (!readAll && authentication.getPrincipal() instanceof MonteisPrincipal principal) {
         experimentIdsCsv =
-            principal.getExperimentIds().stream()
+            principal.getReadExperimentIds().stream()
                 .map(String::valueOf)
                 .collect(Collectors.joining(","));
       }
