@@ -9,10 +9,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParam
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.*;
 import java.time.LocalDate;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;
@@ -103,4 +100,11 @@ public interface SensorWebMapper {
   CoordinatesDto toDto(Coordinates domain);
 
   AlarmLimitsDto toDto(AlarmLimits domain);
+
+  @Mapping(target = "das", source = "DAS")
+  SensorDetailResponseDto toDetailDto(SensorDetail domain, @Context LocalDate today);
+
+  SensorDetailParameterResponseDto toDetailDto(SensorDetailParameter domain);
+
+  SensorParameterReadingResponseDto toDto(SensorParameterReading domain);
 }
