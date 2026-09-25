@@ -20,9 +20,8 @@ public final class SystemSecurityContext {
   private static final Authentication SYSTEM =
       new MonteisAuthenticationToken(
           null,
-          new MonteisPrincipal(SYSTEM_SUBJECT, "SYSTEM", List.of()),
-          List.of(
-              new SimpleGrantedAuthority(MonteisJwtAuthenticationConverter.READ_ALL_AUTHORITY)));
+          new MonteisPrincipal(SYSTEM_SUBJECT, "SYSTEM", List.of(), List.of()),
+          List.of(new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_ALL_AUTHORITY)));
 
   private SystemSecurityContext() {}
 
