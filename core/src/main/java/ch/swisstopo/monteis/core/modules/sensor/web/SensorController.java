@@ -13,10 +13,7 @@ import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryReposi
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -193,5 +190,13 @@ public class SensorController {
             new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
     csvExportQueryRepository.streamCsv(exportRequest, writer);
     writer.flush();
+  }
+
+  @Operation(summary = "Get sensor details by id", description = "Retrieves sensor details by id")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
+  @GetMapping(path = "/detail/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<SensorDetailResponseDto> getSensorDetail(@PathVariable UUID id) {
+    LocalDate today = LocalDate.now(clock);
+    return ResponseEntity.ok(mapper.toDetailDto(service.findDetailById(id), today));
   }
 }

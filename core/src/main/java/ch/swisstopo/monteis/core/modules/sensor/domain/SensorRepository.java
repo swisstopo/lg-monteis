@@ -75,4 +75,12 @@ public interface SensorRepository {
    * @return a stream of all sensors
    */
   Stream<Sensor> streamAllSensors();
+
+  /**
+   * Retrieves the domain {@link SensorDetail} for the given id, if it exists.
+   *
+   * @param id the sensor id
+   * @return the sensor and all the data belonging to it, or empty if no sensor with this id exists
+   */
+  Optional<SensorDetail> findDetailById(UUID id);
 }
