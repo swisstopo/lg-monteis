@@ -33,6 +33,7 @@
     }
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
+  "access.denied": "You are not allowed to change this record.",
   "validation": {
     "required": "There is a validation error with this field.",
     "mustBeNull": "",

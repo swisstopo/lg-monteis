@@ -19,6 +19,7 @@ import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSourceResolvable;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -157,6 +158,17 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
   protected ResponseEntity<ErrorDto> handleOptimisticLocking(DataChangedException ex) {
     ErrorDto payload = ErrorDto.form("optimistic.locking", Map.of());
     return ResponseEntity.status(HttpStatus.CONFLICT).body(payload);
+  }
+
+  @ExceptionHandler(PermissionDeniedDataAccessException.class)
+  @ApiResponse(
+      responseCode = "403",
+      description = "Write rejected by row-level security (e.g. experiment not writable).",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  protected ResponseEntity<ErrorDto> handlePermissionDenied(
+      PermissionDeniedDataAccessException ex) {
+    ErrorDto payload = ErrorDto.form("access.denied", Map.of());
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(payload);
   }
 
   @ExceptionHandler(InvalidPagedRequestException.class)
