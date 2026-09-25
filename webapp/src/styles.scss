@@ -109,6 +109,12 @@ body {
       tonal-container-shape: 0px,
     )
   );
+
+  @include mat.divider-overrides(
+    (
+      color: #686868,
+    )
+  );
 }
 
 .navigation-button {
