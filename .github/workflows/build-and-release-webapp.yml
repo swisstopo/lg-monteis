@@ -116,3 +116,29 @@ jobs:
           name: webapp-${{ needs.evaluate-version.outputs.version }}
           path: webapp-${{ needs.evaluate-version.outputs.version }}.zip
           retention-days: 3
+
+  # Automatic DEV deploy: runs immediately after a successful build+publish on main.
+  # Build-once: the artifact uploaded above is downloaded by the reusable deploy workflow.
+  # DEV-only: staging/prod remain manual (deploy-webapp.yml workflow_dispatch).
+  # Newest-wins: cancel-in-progress means a newer merge's deploy supersedes an older
+  # in-flight one; the newest artifact is always the final DEV state.
+  deploy-dev:
+    name: Auto-deploy webapp to dev
+    needs: [build-and-package, evaluate-version]
+    # No independent if: — relies on needs-skip transitivity from build-and-package's
+    # guard (is_tagged==false && changed==true). When build-and-package is skipped,
+    # this job is skipped automatically.
+    permissions:
+      id-token: write # required for: reusable deploy's OIDC assume-role step
+      contents: read  # overrides workflow-level contents:write (build-and-package
+                      # needs write for the tag push; this job needs read only)
+    concurrency:
+      group: webapp-deploy-dev
+      cancel-in-progress: true
+    uses: ./.github/workflows/reusable__deploy-webapp.yml
+    with:
+      # Pass the prefixed tag (webapp-v<ver>) so the resolve step uses git rev-list,
+      # not the raw-SHA fallback. The tag is pushed by build-and-package earlier in
+      # this same run, so it resolves to this commit's SHA at deploy time.
+      version: ${{ needs.evaluate-version.outputs.version_tag }}
+      stage: dev
