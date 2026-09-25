@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.ADMIN_AUTHORITY;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,13 +29,13 @@ public class SecurityConfig {
                     .requestMatchers(PUBLIC_ENDPOINTS)
                     .permitAll()
                     .requestMatchers(HttpMethod.POST)
-                    .hasAuthority(WRITE_AUTHORITY)
+                    .hasAuthority(ADMIN_AUTHORITY)
                     .requestMatchers(HttpMethod.PUT)
-                    .hasAuthority(WRITE_AUTHORITY)
+                    .hasAuthority(ADMIN_AUTHORITY)
                     .requestMatchers(HttpMethod.PATCH)
-                    .hasAuthority(WRITE_AUTHORITY)
+                    .hasAuthority(ADMIN_AUTHORITY)
                     .requestMatchers(HttpMethod.DELETE)
-                    .hasAuthority(WRITE_AUTHORITY)
+                    .hasAuthority(ADMIN_AUTHORITY)
                     .anyRequest()
                     .authenticated())
         .oauth2ResourceServer(

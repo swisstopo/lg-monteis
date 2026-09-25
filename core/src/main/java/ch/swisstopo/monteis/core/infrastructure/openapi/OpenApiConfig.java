@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Registers the "Authorize" bearer-token scheme used by Swagger UI and stamps every documented
  * operation with it, so the spec reflects that the API is not public. The actual per-method
- * authority distinction (reads vs. {@code api:write} for writes) is enforced in {@code
+ * authority distinction (reads vs. {@code api:admin} for writes) is enforced in {@code
  * SecurityConfig}, not modeled here — OpenAPI can't express real scopes on a plain HTTP bearer
  * scheme, and the frontend sends the same JWT to every request regardless.
  */
