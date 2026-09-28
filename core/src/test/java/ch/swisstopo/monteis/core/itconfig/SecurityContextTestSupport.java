@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.core.itconfig;
 
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
-import ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter;
+import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import java.util.List;
 import java.util.UUID;
@@ -21,21 +21,22 @@ public final class SecurityContextTestSupport {
 
   public static void runAsAdmin(Runnable action) {
     runAs(
-        List.of(new SimpleGrantedAuthority(MonteisJwtAuthenticationConverter.READ_ALL_AUTHORITY)),
+        List.of(new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_ALL_AUTHORITY)),
         List.of(),
         action);
   }
 
   public static void runAsUser(List<UUID> experimentIds, Runnable action) {
     runAs(
-        List.of(new SimpleGrantedAuthority(MonteisJwtAuthenticationConverter.READ_AUTHORITY)),
+        List.of(new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_AUTHORITY)),
         experimentIds,
         action);
   }
 
   public static void runAs(
       List<GrantedAuthority> authorities, List<UUID> experimentIds, Runnable action) {
-    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "test", experimentIds);
+    MonteisPrincipal principal =
+        new MonteisPrincipal(UUID.randomUUID(), "test", experimentIds, List.of());
     var authentication = new MonteisAuthenticationToken(null, principal, authorities);
 
     SecurityContext previous = SecurityContextHolder.getContext();

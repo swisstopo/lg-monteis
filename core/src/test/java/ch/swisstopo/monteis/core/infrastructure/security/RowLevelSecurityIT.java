@@ -49,7 +49,10 @@ class RowLevelSecurityIT {
     SecurityContextTestSupport.runAsUser(
         List.of(EXPERIMENT_ALPHA),
         () -> {
-          assertEquals(12, dsl.fetchCount(SENSORS), "Experiment 1 has exactly 2 linked sensors");
+          assertEquals(
+              12,
+              dsl.fetchCount(SENSORS),
+              "Experiment 1 has exactly 12 linked sensors (2 fixed + 10 bulk)");
           assertEquals(
               Set.of("SOL_EXPERTS__TEMP-1__temperature", "SOL_EXPERTS__PRESS-1&2__pressure"),
               fetchVisibleSensorCodes());
