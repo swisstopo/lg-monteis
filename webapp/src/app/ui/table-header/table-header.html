@@ -14,5 +14,8 @@
     @if (permissions.canWrite()) {
       <ng-content select="[write-action]"></ng-content>
     }
+    @if (canWriteConditional()) {
+      <ng-content select="[conditional-write-action]"></ng-content>
+    }
   </div>
 </div>
