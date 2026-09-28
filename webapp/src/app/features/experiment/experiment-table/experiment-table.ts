@@ -1,9 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { Component, effect, inject, inputBinding, signal } from '@angular/core';
+import { Component, computed, effect, inject, inputBinding, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { PermissionsService } from '@core/auth/permissions.service';
 import { ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import ExperimentEdit from '@features/experiment/experiment-edit/experiment-edit';
@@ -33,11 +34,16 @@ export default class ExperimentTable {
   private readonly translateService = inject(TranslateService);
   private readonly csvDownloadService = inject(CsvDownloadService);
   private readonly toastService = inject(ToastService);
+  protected readonly permissions = inject(PermissionsService);
 
   readonly searchTerm = signal<string>('');
 
   protected wrappedCols = createColumns(this.datePipe);
   protected selectedExperimentId = signal<string | undefined>(undefined);
+  protected canEditSelected = computed(() => {
+    const experimentId = this.selectedExperimentId();
+    return experimentId !== undefined && this.permissions.canWriteExperiment(experimentId);
+  });
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
   protected downloading = signal(false);

@@ -2,9 +2,12 @@ package ch.swisstopo.monteis.core.modules.identity.web;
 
 import ch.swisstopo.monteis.core.infrastructure.security.AuthorityChecks;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities;
+import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import ch.swisstopo.monteis.core.modules.identity.web.dto.CurrentUserDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,9 +26,14 @@ public class CurrentUserController {
   @ApiResponse(responseCode = "200", description = "Successfully retrieved current user info")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<CurrentUserDto> getCurrentUser(Authentication authentication) {
-    // TODO: muäs ds so?
     boolean canWrite =
         AuthorityChecks.hasAuthority(authentication, MonteisAuthorities.ADMIN_AUTHORITY);
-    return ResponseEntity.ok(new CurrentUserDto(canWrite));
+    boolean canWriteAllExperiments = AuthorityChecks.canWriteAllExperiments(authentication);
+    List<UUID> writeExperimentIds =
+        authentication.getPrincipal() instanceof MonteisPrincipal principal
+            ? principal.getWriteExperimentIds()
+            : List.of();
+    return ResponseEntity.ok(
+        new CurrentUserDto(canWrite, canWriteAllExperiments, writeExperimentIds));
   }
 }

@@ -14,4 +14,21 @@ export class PermissionsService {
   });
 
   readonly canWrite = computed(() => this.currentUser.value()?.canWrite ?? false);
+
+  private readonly canWriteAllExperiments = computed(
+    () => this.currentUser.value()?.canWriteAllExperiments ?? false,
+  );
+  private readonly writeExperimentIds = computed(
+    () => this.currentUser.value()?.writeExperimentIds ?? [],
+  );
+
+  /** Whether the caller can write at least one experiment - use to decide whether to show a scoped write action at all. */
+  readonly hasAnyExperimentWriteAccess = computed(
+    () => this.canWrite() || this.canWriteAllExperiments() || this.writeExperimentIds().length > 0,
+  );
+
+  /** Mirrors ExperimentWriteAuthorizationManager: admins and write-all callers may write any experiment. */
+  canWriteExperiment(experimentId: string): boolean {
+    return this.canWriteAllExperiments() || this.writeExperimentIds().includes(experimentId);
+  }
 }
