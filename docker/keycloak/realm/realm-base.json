@@ -29,14 +29,8 @@
           "clientRole": true
         },
         {
-          "name": "monteis-client:experiment:read:all",
-          "description": "Read access to all experiments, bypassing per-experiment scoping. Granted via the 'Monteis Admin' group - never assign this directly to a user.",
-          "composite": false,
-          "clientRole": true
-        },
-        {
           "name": "monteis-client:experiment:write:all",
-          "description": "Write access to all experiments, bypassing per-experiment scoping. Granted via the 'Monteis Admin' group - never assign this directly to a user.",
+          "description": "Read + write access to all experiments, bypassing per-experiment scoping (write:all implies all-experiment read). Granted via the 'Monteis Global Editor' group - never assign this directly to a user.",
           "composite": false,
           "clientRole": true
         },
@@ -48,7 +42,7 @@
         },
         {
           "name": "monteis-client:admin",
-          "description": "Admin functions, including sensors. Granted via the 'Monteis Admin' group - never assign this directly to a user.",
+          "description": "Admin functions, including sensors; implies read + write access to all experiments. Granted via the 'Monteis Admin' group - never assign this directly to a user.",
           "composite": false,
           "clientRole": true
         }
@@ -107,7 +101,7 @@
     },
     {
       "name": "monteis-roles",
-      "description": "Adds the users client roles to the JWT issued by Keycloak.",
+      "description": "Adds the user's monteis-spa client roles (and only those - the mapper is filtered to client monteis-spa) to the monteis_access.roles claim of the access token.",
       "protocol": "openid-connect",
       "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
       "protocolMappers": [
@@ -117,6 +111,7 @@
           "protocolMapper": "oidc-usermodel-client-role-mapper",
           "consentRequired": false,
           "config": {
+            "usermodel.clientRoleMapping.clientId": "monteis-spa",
             "claim.name": "monteis_access.roles",
             "jsonType.label": "String",
             "multivalued": "true",
@@ -208,16 +203,23 @@
       "path": "/Monteis Admin",
       "attributes": {
         "description": [
-          "Full administrators: read + write access to every experiment, document access and admin functions."
+          "Full administrators: admin functions (which imply read + write access to every experiment) and document access. Members get monteis-client:admin and monteis-client:documents:read."
         ]
       },
       "clientRoles": {
-        "monteis-spa": [
-          "monteis-client:experiment:read:all",
-          "monteis-client:experiment:write:all",
-          "monteis-client:documents:read",
-          "monteis-client:admin"
+        "monteis-spa": ["monteis-client:admin", "monteis-client:documents:read"]
+      }
+    },
+    {
+      "name": "Monteis Global Editor",
+      "path": "/Monteis Global Editor",
+      "attributes": {
+        "description": [
+          "Global editors: read + write access to every experiment, without document access or admin functions. Members get monteis-client:experiment:write:all only."
         ]
+      },
+      "clientRoles": {
+        "monteis-spa": ["monteis-client:experiment:write:all"]
       }
     },
     {
