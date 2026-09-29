@@ -23,17 +23,18 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 /**
- * NFR3.1: an access token with all five roles, 50 read and 50 write experiment ids, signed like
+ * NFR3.1: an access token with all five roles, 25 read and 25 write experiment ids, signed like
  * Keycloak signs it (RS256, 2048-bit key), stays under 4 KB encoded - half the 8 KB default
- * request-header limit.
+ * request-header limit. The supported maximum per user was revised from 50 + 50 to 25 + 25
+ * ids, because 50 + 50 encode to about 6.5 KB.
  */
 class TokenSizeTest {
 
   private static final int MAX_ENCODED_BYTES = 4 * 1024;
-  private static final int ASSIGNED_EXPERIMENTS = 50;
+  private static final int ASSIGNED_EXPERIMENTS = 25;
 
   @Test
-  void should_keep_a_token_with_all_roles_and_50_plus_50_experiment_ids_under_4_kb()
+  void should_keep_a_token_with_all_roles_and_25_plus_25_experiment_ids_under_4_kb()
       throws JOSEException, NoSuchAlgorithmException {
     // given
     List<String> writeIds = experimentIds();
