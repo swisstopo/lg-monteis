@@ -130,6 +130,30 @@
       "credentials": [{ "type": "password", "value": "admin-user", "temporary": false }],
       "realmRoles": ["user", "admin"],
       "groups": ["/Monteis Admin"]
+    },
+    {
+      "id": "ba51c5e7-3a22-4906-b74e-3688e6d738e8",
+      "username": "basis-user",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "basis-user@example.test",
+      "firstName": "Basis",
+      "lastName": "User",
+      "credentials": [{ "type": "password", "value": "basis-user", "temporary": false }],
+      "realmRoles": ["user"],
+      "groups": []
+    },
+    {
+      "id": "ed170700-d938-4fa1-9293-21256b44cab1",
+      "username": "editor-user",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "editor-user@example.test",
+      "firstName": "Editor",
+      "lastName": "User",
+      "credentials": [{ "type": "password", "value": "editor-user", "temporary": false }],
+      "realmRoles": ["user"],
+      "groups": ["/Monteis Global Editor"]
     }
   ]
 }
