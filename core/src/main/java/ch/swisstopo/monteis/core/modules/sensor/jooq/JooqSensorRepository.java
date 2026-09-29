@@ -252,7 +252,7 @@ public class JooqSensorRepository implements SensorRepository {
    * Mirrors {@code sensors.main_experiment} into the {@code experiment_sensor} join table, which is
    * what {@code can_access_sensor()} (row-level security) and the experiments grid's sensor count
    * read. Without this a sensor written through the API has no membership row at all: invisible to
-   * every user without {@code api:read-all}, and never counted on its experiment.
+   * every user without all-experiment access, and never counted on its experiment.
    *
    * <p>Only the sensor's own main-experiment row is touched: the previous one is deleted and the
    * new one inserted. Rows for any other experiment stay - the join table is many-to-many, and a

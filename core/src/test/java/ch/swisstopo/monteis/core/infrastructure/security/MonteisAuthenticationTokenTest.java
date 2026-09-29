@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.READ_ALL_AUTHORITY;
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.READ_AUTHORITY;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_READ_AUTHORITY;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_WRITE_ALL_AUTHORITY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -20,8 +20,8 @@ class MonteisAuthenticationTokenTest {
     // given
     Jwt jwt = givenJwt();
     MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()));
-    var authorities = List.of(new SimpleGrantedAuthority(READ_AUTHORITY));
+        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
+    var authorities = List.of(new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY));
 
     // when
     var first = new MonteisAuthenticationToken(jwt, principal, authorities);
@@ -36,16 +36,16 @@ class MonteisAuthenticationTokenTest {
   void should_not_be_equal_when_principal_differs() {
     // given
     Jwt jwt = givenJwt();
-    var authorities = List.of(new SimpleGrantedAuthority(READ_AUTHORITY));
+    var authorities = List.of(new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY));
     var first =
         new MonteisAuthenticationToken(
             jwt,
-            new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID())),
+            new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of()),
             authorities);
     var second =
         new MonteisAuthenticationToken(
             jwt,
-            new MonteisPrincipal(UUID.randomUUID(), "bob", List.of(UUID.randomUUID())),
+            new MonteisPrincipal(UUID.randomUUID(), "bob", List.of(UUID.randomUUID()), List.of()),
             authorities);
 
     // then
@@ -56,8 +56,8 @@ class MonteisAuthenticationTokenTest {
   void should_not_be_equal_when_jwt_differs() {
     // given
     MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()));
-    var authorities = List.of(new SimpleGrantedAuthority(READ_AUTHORITY));
+        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
+    var authorities = List.of(new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY));
     var first = new MonteisAuthenticationToken(givenJwt(), principal, authorities);
     var second = new MonteisAuthenticationToken(givenJwt(), principal, authorities);
 
@@ -70,13 +70,13 @@ class MonteisAuthenticationTokenTest {
     // given
     Jwt jwt = givenJwt();
     MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()));
+        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
     var first =
         new MonteisAuthenticationToken(
-            jwt, principal, List.of(new SimpleGrantedAuthority(READ_AUTHORITY)));
+            jwt, principal, List.of(new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY)));
     var second =
         new MonteisAuthenticationToken(
-            jwt, principal, List.of(new SimpleGrantedAuthority(READ_ALL_AUTHORITY)));
+            jwt, principal, List.of(new SimpleGrantedAuthority(EXPERIMENT_WRITE_ALL_AUTHORITY)));
 
     // then
     assertNotEquals(first, second);
@@ -87,8 +87,8 @@ class MonteisAuthenticationTokenTest {
     // given: without our override, AbstractAuthenticationToken#equals would treat this as equal
     Jwt jwt = givenJwt();
     MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()));
-    var authorities = List.of(new SimpleGrantedAuthority(READ_AUTHORITY));
+        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
+    var authorities = List.of(new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY));
     var monteisToken = new MonteisAuthenticationToken(jwt, principal, authorities);
     var otherToken = UsernamePasswordAuthenticationToken.authenticated(principal, jwt, authorities);
 

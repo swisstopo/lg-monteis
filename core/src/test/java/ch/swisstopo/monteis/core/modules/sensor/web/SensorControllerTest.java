@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -8,7 +7,8 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -21,6 +21,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
@@ -50,11 +51,16 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @ControllerTest(SensorController.class)
 class SensorControllerTest {
@@ -68,6 +74,10 @@ class SensorControllerTest {
   private static final UUID FORMULA_ID = UUID.fromString("20000000-0000-0000-0000-000000000201");
   private static final UUID OTHER_FORMULA_ID =
       UUID.fromString("20000000-0000-0000-0000-000000000202");
+
+  private static final String ACCESS_DENIED_BODY =
+      "{\"target\":\"GLOBAL\",\"field\":null,\"actualValue\":null,"
+          + "\"messageKey\":\"access.denied\",\"params\":{}}";
 
   @Autowired private MockMvc mockMvc;
 
@@ -102,7 +112,9 @@ class SensorControllerTest {
     // when / then
     mockMvc
         .perform(
-            get("/api/sensors/{id}", SENSOR_ID).with(jwt()).contentType(MediaType.APPLICATION_JSON))
+            get("/api/sensors/{id}", SENSOR_ID)
+                .with(asAdmin())
+                .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(expectedResponseDto.id().toString()))
         .andExpect(jsonPath("$.dasSensorAlias").value(expectedResponseDto.dasSensorAlias()))
@@ -142,7 +154,7 @@ class SensorControllerTest {
             get("/api/sensors")
                 .queryParam("startRow", "0")
                 .queryParam("endRow", "20")
-                .with(jwt())
+                .with(asAdmin())
                 .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalCount").value(1))
@@ -170,7 +182,7 @@ class SensorControllerTest {
 
     // when / then
     mockMvc
-        .perform(get("/api/sensors/csv").with(jwt()))
+        .perform(get("/api/sensors/csv").with(asAdmin()))
         .andExpect(status().isOk())
         .andExpect(content().contentType("text/csv;charset=UTF-8"))
         .andExpect(header().string("Content-Disposition", "attachment; filename=\"sensors.csv\""))
@@ -193,7 +205,7 @@ class SensorControllerTest {
 
     // when / then
     mockMvc
-        .perform(get("/api/sensors/csv").with(jwt()))
+        .perform(get("/api/sensors/csv").with(asAdmin()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
   }
@@ -216,7 +228,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             post("/api/sensors")
-                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .with(asAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
@@ -313,7 +325,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             post("/api/sensors")
-                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .with(asAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
@@ -349,7 +361,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             put("/api/sensors/{id}", SENSOR_ID)
-                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .with(asAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isOk())
@@ -411,7 +423,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             put("/api/sensors/{id}", SENSOR_ID)
-                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .with(asAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isOk());
@@ -428,7 +440,7 @@ class SensorControllerTest {
     mockMvc
         .perform(
             put("/api/sensors/{id}", SENSOR_ID)
-                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .with(asAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isUnprocessableContent())
@@ -455,7 +467,8 @@ class SensorControllerTest {
 
     // when / then
     mockMvc
-        .perform(get("/api/sensors/formulas").with(jwt()).contentType(MediaType.APPLICATION_JSON))
+        .perform(
+            get("/api/sensors/formulas").with(asAdmin()).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(dto1.id().toString()))
         .andExpect(jsonPath("$[0].expression").value(dto1.expression()))
@@ -479,7 +492,7 @@ class SensorControllerTest {
 
     // when / then
     mockMvc
-        .perform(get("/api/sensors/types").with(jwt()).contentType(MediaType.APPLICATION_JSON))
+        .perform(get("/api/sensors/types").with(asAdmin()).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(dto1.id().toString()))
         .andExpect(jsonPath("$[0].name").value(dto1.name()))
@@ -487,6 +500,59 @@ class SensorControllerTest {
         .andExpect(jsonPath("$[1].name").value(dto2.name()));
 
     then(service).should().findAllTypes();
+  }
+
+  /**
+   * The whole sensor catalogue, reads included, is admin-only (FR2.6); every other privilege level
+   * gets 403 with the access-denied ErrorDto, and no service or query is reached.
+   */
+  @ParameterizedTest
+  @EnumSource(
+      value = PrivilegeLevel.class,
+      names = {"BASISROLLE", "EXPERIMENT_USER", "EXPERIMENT_PI", "GLOBAL_EDITOR"})
+  void should_forbid_every_sensor_endpoint_to_non_admins(PrivilegeLevel level) throws Exception {
+    String body = objectMapper.writeValueAsString(defaultWriteDto(SENSOR_ID, 1, PARAMETER_ID, 1));
+    List<MockHttpServletRequestBuilder> requests =
+        List.of(
+            request(HttpMethod.GET, "/api/sensors/{id}", SENSOR_ID),
+            request(HttpMethod.GET, "/api/sensors")
+                .queryParam("startRow", "0")
+                .queryParam("endRow", "20"),
+            request(HttpMethod.GET, "/api/sensors/csv"),
+            request(HttpMethod.GET, "/api/sensors/formulas"),
+            request(HttpMethod.GET, "/api/sensors/types"),
+            request(HttpMethod.POST, "/api/sensors")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+            request(HttpMethod.PUT, "/api/sensors/{id}", SENSOR_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body),
+            request(HttpMethod.POST, "/api/sensors/republish-config"));
+
+    for (var request : requests) {
+      mockMvc
+          .perform(request.with(csrf()).with(authentication(level.authentication())))
+          .andExpect(status().isForbidden())
+          .andExpect(content().json(ACCESS_DENIED_BODY, JsonCompareMode.STRICT));
+    }
+
+    then(service).shouldHaveNoInteractions();
+    then(parameterRowQueryRepository).shouldHaveNoInteractions();
+    then(csvExportQueryRepository).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_let_an_admin_republish_the_sensor_config() throws Exception {
+    mockMvc
+        .perform(post("/api/sensors/republish-config").with(asAdmin()))
+        .andExpect(status().isAccepted());
+
+    then(service).should().republishAllActiveParameterConfigs();
+  }
+
+  private static RequestPostProcessor asAdmin() {
+    RequestPostProcessor admin = authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication());
+    return request -> admin.postProcessRequest(csrf().postProcessRequest(request));
   }
 
   private WriteSensorParameterDto defaultWriteParameterDto(UUID id, Integer version) {

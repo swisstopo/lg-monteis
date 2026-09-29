@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,9 +49,15 @@ final class KeycloakClaimExtractor {
   }
 
   private Optional<List<?>> clientAccessRoles() {
-    return Optional.ofNullable(jwt.getClaimAsMap(KeycloakClaims.CLIENT_ACCESS))
+    // not getClaimAsMap: it throws for a claim that isn't an object instead of degrading to empty
+    return Optional.ofNullable(jwt.getClaim(KeycloakClaims.CLIENT_ACCESS))
+        .flatMap(this::asMap)
         .map(clientAccess -> clientAccess.get(KeycloakClaims.CLIENT_ACCESS_ROLES))
         .flatMap(this::asList);
+  }
+
+  private Optional<Map<?, ?>> asMap(Object claim) {
+    return claim instanceof Map<?, ?> map ? Optional.of(map) : Optional.empty();
   }
 
   private Optional<List<?>> claimAsList(String claim) {

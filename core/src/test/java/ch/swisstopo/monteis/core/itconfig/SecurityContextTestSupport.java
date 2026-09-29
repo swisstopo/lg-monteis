@@ -19,24 +19,55 @@ public final class SecurityContextTestSupport {
 
   private SecurityContextTestSupport() {}
 
+  /** {@code api:admin}: all experiments, read and write. */
   public static void runAsAdmin(Runnable action) {
     runAs(
-        List.of(new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_ALL_AUTHORITY)),
+        List.of(new SimpleGrantedAuthority(MonteisAuthorities.ADMIN_AUTHORITY)),
+        List.of(),
         List.of(),
         action);
   }
 
-  public static void runAsUser(List<UUID> experimentIds, Runnable action) {
+  /** {@code api:experiment:write-all}: all experiments, read and write, no admin functions. */
+  public static void runAsGlobalEditor(Runnable action) {
+    runAs(
+        List.of(new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_WRITE_ALL_AUTHORITY)),
+        List.of(),
+        List.of(),
+        action);
+  }
+
+  /** {@code api:experiment:read} on {@code readExperimentIds} only. */
+  public static void runAsUser(List<UUID> readExperimentIds, Runnable action) {
     runAs(
         List.of(new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_AUTHORITY)),
-        experimentIds,
+        readExperimentIds,
+        List.of(),
+        action);
+  }
+
+  /**
+   * {@code api:experiment:read} on {@code readExperimentIds} plus {@code api:experiment:write} on
+   * {@code writeExperimentIds}.
+   */
+  public static void runAsUser(
+      List<UUID> readExperimentIds, List<UUID> writeExperimentIds, Runnable action) {
+    runAs(
+        List.of(
+            new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_AUTHORITY),
+            new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_WRITE_AUTHORITY)),
+        readExperimentIds,
+        writeExperimentIds,
         action);
   }
 
   public static void runAs(
-      List<GrantedAuthority> authorities, List<UUID> experimentIds, Runnable action) {
+      List<GrantedAuthority> authorities,
+      List<UUID> readExperimentIds,
+      List<UUID> writeExperimentIds,
+      Runnable action) {
     MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), "test", experimentIds, List.of());
+        new MonteisPrincipal(UUID.randomUUID(), "test", readExperimentIds, writeExperimentIds);
     var authentication = new MonteisAuthenticationToken(null, principal, authorities);
 
     SecurityContext previous = SecurityContextHolder.getContext();

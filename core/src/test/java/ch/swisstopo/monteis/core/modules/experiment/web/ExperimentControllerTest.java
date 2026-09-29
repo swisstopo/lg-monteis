@@ -1,6 +1,8 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
+import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIMENT;
+import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.OTHER_EXPERIMENT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -8,6 +10,8 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -16,10 +20,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
@@ -37,17 +43,25 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 
 @ControllerTest(ExperimentController.class)
 class ExperimentControllerTest {
 
-  private static final UUID EXPERIMENT_ID = UUID.fromString("10000000-0000-0000-0000-000000000001");
-  private static final UUID OTHER_EXPERIMENT_ID =
-      UUID.fromString("10000000-0000-0000-0000-000000000002");
+  // the experiment the ExperimentPI fixture may edit, and one it may only read
+  private static final UUID EXPERIMENT_ID = ASSIGNED_EXPERIMENT;
+  private static final UUID OTHER_EXPERIMENT_ID = OTHER_EXPERIMENT;
+
+  private static final String NOT_FOUND_BODY =
+      "{\"target\":\"GLOBAL\",\"field\":null,\"actualValue\":null,"
+          + "\"messageKey\":\"object.not-found\",\"params\":{}}";
+  private static final String ACCESS_DENIED_BODY =
+      "{\"target\":\"GLOBAL\",\"field\":null,\"actualValue\":null,"
+          + "\"messageKey\":\"access.denied\",\"params\":{}}";
 
   @Autowired private MockMvc mockMvc;
 
@@ -286,7 +300,8 @@ class ExperimentControllerTest {
     mockMvc
         .perform(
             post("/api/experiments")
-                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isCreated())
@@ -338,7 +353,8 @@ class ExperimentControllerTest {
     mockMvc
         .perform(
             put("/api/experiments/{id}", EXPERIMENT_ID)
-                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isOk())
@@ -369,7 +385,8 @@ class ExperimentControllerTest {
     mockMvc
         .perform(
             put("/api/experiments/{id}", EXPERIMENT_ID)
-                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
         .andExpect(status().isUnprocessableContent())
@@ -379,5 +396,179 @@ class ExperimentControllerTest {
     // Verify the mismatch is caught before any domain/service work happens
     then(mapper).shouldHaveNoInteractions();
     then(service).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_return_404_object_not_found_when_the_experiment_is_missing_or_hidden()
+      throws Exception {
+    // given
+    UUID hiddenId = UUID.fromString("00000000-0000-7000-8000-000000000302");
+    UUID randomId = UUID.randomUUID();
+    given(service.getById(any(UUID.class)))
+        .willThrow(new ObjectNotFoundException(Experiment.JAVERS_TYPE));
+
+    // when
+    String hiddenBody =
+        mockMvc
+            .perform(
+                get("/api/experiments/{id}", hiddenId)
+                    .with(csrf())
+                    .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication())))
+            .andExpect(status().isNotFound())
+            .andExpect(content().json(NOT_FOUND_BODY, JsonCompareMode.STRICT))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String randomBody =
+        mockMvc
+            .perform(
+                get("/api/experiments/{id}", randomId)
+                    .with(csrf())
+                    .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication())))
+            .andExpect(status().isNotFound())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    // then: existence does not leak (NFR1.4)
+    assertEquals(randomBody, hiddenBody);
+  }
+
+  @Test
+  void should_forbid_a_read_only_user_to_update_without_touching_the_service() throws Exception {
+    // given: ExperimentUser may read EXPERIMENT_ID but not edit it
+    WriteExperimentDto requestDto = updateDto(EXPERIMENT_ID);
+
+    // when / then
+    mockMvc
+        .perform(
+            put("/api/experiments/{id}", EXPERIMENT_ID)
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestDto)))
+        .andExpect(status().isForbidden())
+        .andExpect(content().json(ACCESS_DENIED_BODY, JsonCompareMode.STRICT));
+
+    // the filter chain denied before any UPDATE could be issued (NFR2.1)
+    then(service).shouldHaveNoInteractions();
+    then(mapper).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_forbid_a_pi_to_update_an_experiment_it_may_only_read() throws Exception {
+    mockMvc
+        .perform(
+            put("/api/experiments/{id}", OTHER_EXPERIMENT_ID)
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateDto(OTHER_EXPERIMENT_ID))))
+        .andExpect(status().isForbidden());
+
+    then(service).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_let_a_global_editor_update_any_experiment() throws Exception {
+    // given
+    Experiment mockDomain = mock(Experiment.class);
+    given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
+    given(service.updateExperiment(mockDomain)).willReturn(mockDomain);
+
+    // when / then
+    mockMvc
+        .perform(
+            put("/api/experiments/{id}", OTHER_EXPERIMENT_ID)
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.GLOBAL_EDITOR.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateDto(OTHER_EXPERIMENT_ID))))
+        .andExpect(status().isOk());
+
+    then(service).should().updateExperiment(mockDomain);
+  }
+
+  @Test
+  void should_forbid_everyone_but_admins_to_create_experiments() throws Exception {
+    // given
+    String body =
+        objectMapper.writeValueAsString(
+            new WriteExperimentDto(
+                null,
+                "EXP-01",
+                "A test experiment",
+                new PeriodDto(
+                    LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
+                null));
+
+    // when / then
+    for (PrivilegeLevel level :
+        List.of(
+            PrivilegeLevel.BASISROLLE,
+            PrivilegeLevel.EXPERIMENT_USER,
+            PrivilegeLevel.EXPERIMENT_PI,
+            PrivilegeLevel.GLOBAL_EDITOR)) {
+      mockMvc
+          .perform(
+              post("/api/experiments")
+                  .with(csrf())
+                  .with(authentication(level.authentication()))
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isForbidden())
+          .andExpect(content().json(ACCESS_DENIED_BODY, JsonCompareMode.STRICT));
+    }
+    then(service).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_return_403_access_denied_when_row_level_security_refuses_the_update()
+      throws Exception {
+    // given: the filter chain allowed it, but the RLS WITH CHECK rejected the row (42501)
+    Experiment mockDomain = mock(Experiment.class);
+    given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
+    given(service.updateExperiment(mockDomain))
+        .willThrow(new PermissionDeniedDataAccessException("42501", null));
+
+    // when / then: the same body as a filter-chain denial (NFR2.4)
+    mockMvc
+        .perform(
+            put("/api/experiments/{id}", EXPERIMENT_ID)
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateDto(EXPERIMENT_ID))))
+        .andExpect(status().isForbidden())
+        .andExpect(content().json(ACCESS_DENIED_BODY, JsonCompareMode.STRICT));
+  }
+
+  @Test
+  void should_return_404_when_the_experiment_to_update_is_missing_or_hidden() throws Exception {
+    // given
+    Experiment mockDomain = mock(Experiment.class);
+    given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
+    given(service.updateExperiment(mockDomain))
+        .willThrow(new ObjectNotFoundException(Experiment.JAVERS_TYPE));
+
+    // when / then: no longer 422 object.deleted (BR4.11)
+    mockMvc
+        .perform(
+            put("/api/experiments/{id}", EXPERIMENT_ID)
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateDto(EXPERIMENT_ID))))
+        .andExpect(status().isNotFound())
+        .andExpect(content().json(NOT_FOUND_BODY, JsonCompareMode.STRICT));
+  }
+
+  private static WriteExperimentDto updateDto(UUID id) {
+    return new WriteExperimentDto(
+        id,
+        "EXP-01-UPDATED",
+        "Updated comment",
+        new PeriodDto(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
+        1);
   }
 }

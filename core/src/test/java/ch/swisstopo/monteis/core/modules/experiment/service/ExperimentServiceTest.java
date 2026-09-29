@@ -1,11 +1,13 @@
 package ch.swisstopo.monteis.core.modules.experiment.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import java.util.List;
@@ -71,18 +73,29 @@ class ExperimentServiceTest {
   }
 
   @Test
-  void should_return_null_and_not_throw_when_experiment_not_found() {
+  void should_propagate_not_found_when_the_experiment_is_missing_or_hidden() {
     // given
     UUID experimentId = UUID.randomUUID();
+    ObjectNotFoundException notFound = new ObjectNotFoundException(Experiment.JAVERS_TYPE);
 
-    given(repository.getById(experimentId)).willReturn(null);
+    given(repository.getById(experimentId)).willThrow(notFound);
 
-    // when
-    Experiment actualExperiment = service.getById(experimentId);
-
-    // then
+    // when / then
+    assertSame(
+        notFound, assertThrows(ObjectNotFoundException.class, () -> service.getById(experimentId)));
     then(repository).should().getById(experimentId);
-    assertNull(actualExperiment, "Should safely return null if the repository returns null");
+  }
+
+  @Test
+  void should_propagate_not_found_when_updating_a_missing_or_hidden_experiment() {
+    // given
+    Experiment inputExperiment = mock(Experiment.class);
+
+    given(repository.update(inputExperiment))
+        .willThrow(new ObjectNotFoundException(Experiment.JAVERS_TYPE));
+
+    // when / then
+    assertThrows(ObjectNotFoundException.class, () -> service.updateExperiment(inputExperiment));
   }
 
   @Test
