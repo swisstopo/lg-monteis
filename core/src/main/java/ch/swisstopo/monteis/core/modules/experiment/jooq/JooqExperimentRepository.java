@@ -4,7 +4,7 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
@@ -92,7 +92,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
             SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))
         .from(EXPERIMENTS)
         .where(EXPERIMENTS.ID.eq(experimentId))
-        .fetchOne(
+        .fetchOptional(
             experiment ->
                 new Experiment(
                     experiment.get(EXPERIMENTS.ID),
@@ -100,7 +100,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
                     new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
                     experiment.get(EXPERIMENTS.COMMENT),
                     experiment.get(EXPERIMENTS.VERSION),
-                    experiment.get(SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))));
+                    experiment.get(SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))))
+        // RLS hides rows the caller may not read, so hidden and missing look the same (BR4.11)
+        .orElseThrow(() -> new ObjectNotFoundException(Experiment.JAVERS_TYPE));
   }
 
   @Override
@@ -197,8 +199,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
     // fetch existing
     ExperimentsRecord updatedRecord =
         dsl.selectFrom(EXPERIMENTS).where(EXPERIMENTS.ID.eq(experiment.getId())).fetchOne();
+    // a row RLS hides from the caller is indistinguishable from a deleted one (BR4.11)
     if (updatedRecord == null) {
-      throw new ObjectBusinessValidationException("object.deleted", Map.of());
+      throw new ObjectNotFoundException(Experiment.JAVERS_TYPE);
     }
 
     // map new properties to existing
