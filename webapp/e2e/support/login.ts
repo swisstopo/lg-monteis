@@ -1,25 +1,32 @@
 import { Page } from '@playwright/test';
 
-// Drives the real Keycloak-hosted login form the app redirects to when unauthenticated. Uses the
-// seeded admin-user (docker/keycloak/realm/patch.local.json) for now.
+// Drives the real Keycloak-hosted login form the app redirects to when unauthenticated. One helper
+// per seeded privilege level (docker/keycloak/realm/patch.local.json); every password equals the
+// username.
+
+// admin-user is in "/Monteis Admin" (MonteisAdmin): every action, including sensor management.
 export async function loginAsAdmin(page: Page): Promise<void> {
   await login(page, 'admin-user', 'admin-user');
 }
 
-// The seeded bob user (docker/keycloak/realm/patch.local.json): only monteis-client:read via an
-// experiment group, no write access used for verifying read-only behavior.
-export async function loginAsReadOnlyUser(page: Page): Promise<void> {
-  await loginAsBob(page);
+// editor-user is in "/Monteis Global Editor": may edit every experiment, but is no admin.
+export async function loginAsGlobalEditor(page: Page): Promise<void> {
+  await login(page, 'editor-user', 'editor-user');
 }
 
-// bob is a member of "Experiment Beta" only.
+// alice (ExperimentPI) is in "Experiment Alpha/read + write" and "Experiment Gamma/read".
+export async function loginAsAlice(page: Page): Promise<void> {
+  await login(page, 'alice', 'alice');
+}
+
+// bob (ExperimentUser) is in "Experiment Beta/read" only: reads Beta, writes nothing.
 export async function loginAsBob(page: Page): Promise<void> {
   await login(page, 'bob', 'bob');
 }
 
-// alice is a member of "Experiment Alpha" and "Experiment Gamma" only.
-export async function loginAsAlice(page: Page): Promise<void> {
-  await login(page, 'alice', 'alice');
+// basis-user (Basisrolle) is in no group: no experiment access and no write access.
+export async function loginAsBasisUser(page: Page): Promise<void> {
+  await login(page, 'basis-user', 'basis-user');
 }
 
 async function login(page: Page, username: string, password: string): Promise<void> {
