@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.qos.logback.classic.Level;
-import ch.swisstopo.monteis.core.infrastructure.observability.LogCapture;
+import ch.swisstopo.monteis.core.itconfig.LogCapture;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import java.io.IOException;
 import java.util.UUID;
