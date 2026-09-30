@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.qos.logback.classic.Level;
-import ch.swisstopo.monteis.core.infrastructure.observability.LogCapture;
+import ch.swisstopo.monteis.core.itconfig.LogCapture;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import java.util.List;
 import java.util.Set;

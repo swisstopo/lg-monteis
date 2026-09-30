@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.infrastructure.observability;
+package ch.swisstopo.monteis.core.itconfig;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -10,6 +10,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Captures log output of a single logger for the duration of a test, restoring the original level
  * on {@link #close()}.
+ *
+ * <p>Shared test support, public so tests in any package can assert what was (and was not) logged,
+ * e.g. that no token content reaches the log.
  */
 public final class LogCapture implements AutoCloseable {
 
