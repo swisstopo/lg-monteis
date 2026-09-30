@@ -11,7 +11,7 @@
 
   <div class="header-actions">
     <ng-content select="[read-action]"></ng-content>
-    @if (permissions.canWrite()) {
+    @if (permissions.isAdmin()) {
       <ng-content select="[write-action]"></ng-content>
     }
     @if (canWriteConditional()) {

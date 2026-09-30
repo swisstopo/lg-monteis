@@ -36,14 +36,16 @@ export const restErrorInterceptor: HttpInterceptorFn = (req, next) => {
   );
 
   function processHttpErrorResponse(error: AppErrorResponse) {
-    // 401/403 are raised by Spring Security's filter chain, before any controller runs, so
-    // they never carry a body matching our ErrorDto contract
+    // 401 is raised by Spring Security's filter chain, before any controller runs, so it never
+    // carries a body matching our ErrorDto contract. 403/404 do when the backend's access policy
+    // decides them (e.g. `access.denied`, `object.not-found`); without such a body they keep a
+    // fixed fallback message.
     if (error.isUnauthorized()) {
       showUnauthorizedToaster();
     } else if (error.isForbidden()) {
-      showErrorForbiddenToaster();
+      showBackendMessagesOrFallback(error, 'error.auth.forbidden');
     } else if (error.isNotFound()) {
-      showGenericErrorToaster();
+      showBackendMessagesOrFallback(error, 'error.system.generic');
     } else {
       const globalErrors = error.dtosTargetGlobalOrUndefined();
       if (globalErrors.length > 0) {
@@ -54,8 +56,15 @@ export const restErrorInterceptor: HttpInterceptorFn = (req, next) => {
     }
   }
 
-  function showErrorForbiddenToaster() {
-    toastService.error(translateService.translate('error.auth.forbidden')());
+  function showBackendMessagesOrFallback(error: AppErrorResponse, fallbackMessageKey: string) {
+    const backendMessages = error
+      .dtosTargetGlobalOrUndefined()
+      .filter((err) => err.target === ErrorDto.TargetEnum.Global && !!err.messageKey);
+    if (backendMessages.length > 0) {
+      showGlobalErrorsToaster(backendMessages);
+    } else {
+      toastService.error(translateService.translate(fallbackMessageKey)());
+    }
   }
 
   function showGlobalErrorsToaster(globalErrors: ErrorDto[]) {
