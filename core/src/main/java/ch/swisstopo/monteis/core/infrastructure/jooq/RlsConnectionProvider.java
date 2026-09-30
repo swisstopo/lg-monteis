@@ -1,34 +1,43 @@
 package ch.swisstopo.monteis.core.infrastructure.jooq;
 
-import ch.swisstopo.monteis.core.infrastructure.security.AuthorityChecks;
-import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
+import ch.swisstopo.monteis.core.infrastructure.security.AccessPolicy;
+import ch.swisstopo.monteis.core.infrastructure.security.Capabilities;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jooq.ConnectionProvider;
 import org.jooq.exception.DataAccessException;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * Writes the current {@link Authentication} onto each jOOQ connection as transaction-local
- * Postgres GUCs ({@code app.read_all}, {@code app.user_experiment_ids}, {@code app.write_all},
- * {@code app.user_write_experiment_ids}), which RLS policies read
- * via {@code current_setting(...)}. Transaction-local, not session-scoped, so values never leak to
- * the next borrower of a pooled connection — callers must run inside a Spring transaction. An
- * unbound or unrecognized {@code Authentication} fails closed (no read-all, no experiment ids)
- * rather than throwing.
+ * Writes the {@link Capabilities} of the caller bound to the current thread onto each jOOQ
+ * connection as three Postgres GUCs, which the row-level security functions read via {@code
+ * current_setting(...)} (V17):
+ *
+ * <ul>
+ *   <li>{@code app.all_experiments}: {@code true} when the caller may read and write every
+ *       experiment ({@link Capabilities#canReadAllExperiments()});
+ *   <li>{@code app.read_experiment_ids}: the readable experiment ids, comma-separated;
+ *   <li>{@code app.write_experiment_ids}: the editable experiment ids, comma-separated, always a
+ *       subset of the readable ones.
+ * </ul>
+ *
+ * <p>The values come from {@link AccessPolicy} only, so the database applies the same rules as the
+ * filter chain. They are transaction-local, not session-scoped, so they never leak to the next
+ * borrower of a pooled connection: callers must run inside a Spring transaction. An unbound or
+ * unrecognised authentication yields {@link Capabilities#NONE} and therefore fails closed (no
+ * flag, empty id lists) rather than throwing.
  */
 public class RlsConnectionProvider implements ConnectionProvider {
 
-  // IMPORTANT: use set_config in order to have config for the current transaction only!
+  // IMPORTANT: set_config(..., true) scopes every value to the current transaction only!
   private static final String SET_RLS_CONTEXT =
-      "SELECT set_config('app.read_all', ?, true), set_config('app.user_experiment_ids', ?, true),"
-          + " set_config('app.write_all', ?, true),"
-          + " set_config('app.user_write_experiment_ids', ?, true)";
+      "SELECT set_config('app.all_experiments', ?, true),"
+          + " set_config('app.read_experiment_ids', ?, true),"
+          + " set_config('app.write_experiment_ids', ?, true)";
 
   private final ConnectionProvider delegate;
 
@@ -49,48 +58,23 @@ public class RlsConnectionProvider implements ConnectionProvider {
   }
 
   private static void applySecurityContext(Connection connection) {
-    RlsContext context = RlsContext.of(SecurityContextHolder.getContext().getAuthentication());
+    Capabilities capabilities =
+        AccessPolicy.capabilitiesOf(SecurityContextHolder.getContext().getAuthentication());
+    boolean allExperiments = capabilities.canReadAllExperiments();
     try (PreparedStatement statement = connection.prepareStatement(SET_RLS_CONTEXT)) {
-      statement.setString(1, String.valueOf(context.readAll()));
-      statement.setString(2, toCsv(context.readExperimentIds()));
-      statement.setString(3, String.valueOf(context.writeAll()));
-      statement.setString(4, toCsv(context.writeExperimentIds()));
+      statement.setString(1, String.valueOf(allExperiments));
+      statement.setString(
+          2, allExperiments ? "" : toSortedCsv(capabilities.readableExperimentIds()));
+      statement.setString(
+          3, allExperiments ? "" : toSortedCsv(capabilities.editableExperimentIds()));
       statement.execute();
     } catch (SQLException e) {
       throw new DataAccessException("Failed to set RLS context", e);
     }
   }
 
-  private static String toCsv(List<UUID> experimentIds) {
-    return experimentIds.stream().map(String::valueOf).collect(Collectors.joining(","));
-  }
-
-  /**
-   * What the RLS policies may see of the caller. An {@code *All} flag makes the matching id list
-   * irrelevant, so it is left empty.
-   */
-  private record RlsContext(
-      boolean readAll,
-      List<UUID> readExperimentIds,
-      boolean writeAll,
-      List<UUID> writeExperimentIds) {
-
-    private static final RlsContext NONE = new RlsContext(false, List.of(), false, List.of());
-
-    static RlsContext of(Authentication authentication) {
-      if (authentication == null) {
-        return NONE;
-      }
-      boolean readAll = AuthorityChecks.canReadAllExperiments(authentication);
-      boolean writeAll = AuthorityChecks.canWriteAllExperiments(authentication);
-      if (!(authentication.getPrincipal() instanceof MonteisPrincipal principal)) {
-        return new RlsContext(readAll, List.of(), writeAll, List.of());
-      }
-      return new RlsContext(
-          readAll,
-          readAll ? List.of() : principal.getReadExperimentIds(),
-          writeAll,
-          writeAll ? List.of() : principal.getWriteExperimentIds());
-    }
+  // sorted so that the same capabilities always produce the same setting value
+  private static String toSortedCsv(Set<UUID> experimentIds) {
+    return experimentIds.stream().sorted().map(UUID::toString).collect(Collectors.joining(","));
   }
 }

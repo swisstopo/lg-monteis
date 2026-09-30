@@ -4,6 +4,7 @@ import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERI
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
@@ -16,8 +17,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -123,7 +126,8 @@ class RowLevelSecurityIT {
     // resolve to "no access" rather than raise a SQL error and take the whole query down with it.
     SecurityContextTestSupport.runAsAdmin(
         () -> {
-          // can_read_all() short-circuits the OR, so a null target id is irrelevant for admins.
+          // can_access_all_experiments() short-circuits the OR, so a null target id is irrelevant
+          // for admins.
           assertEquals(Boolean.TRUE, callCanAccessSensor(null));
           assertEquals(Boolean.TRUE, callCanAccessExperiment(null));
         });
@@ -138,6 +142,102 @@ class RowLevelSecurityIT {
           assertNotEquals(Boolean.TRUE, sensorAccess);
           assertNotEquals(Boolean.TRUE, experimentAccess);
         });
+  }
+
+  @Test
+  @Transactional
+  void global_editor_sees_every_sensor_and_experiment() {
+    SecurityContextTestSupport.runAsGlobalEditor(
+        () -> {
+          assertEquals(15, dsl.fetchCount(SENSORS), "Global editor should see all seeded sensors");
+          assertEquals(
+              8, dsl.fetchCount(EXPERIMENTS), "Global editor should see all seeded experiments");
+        });
+  }
+
+  @Test
+  @Transactional
+  void scoped_editor_may_update_only_the_experiments_it_may_write() {
+    SecurityContextTestSupport.runAsUser(
+        List.of(EXPERIMENT_ALPHA, EXPERIMENT_BETA),
+        List.of(EXPERIMENT_ALPHA),
+        () -> {
+          assertEquals(1, renameExperiment(EXPERIMENT_ALPHA, "Mont Terri Alpha renamed"));
+          assertEquals(
+              "Mont Terri Alpha renamed",
+              dsl.select(EXPERIMENTS.NAME)
+                  .from(EXPERIMENTS)
+                  .where(EXPERIMENTS.ID.eq(EXPERIMENT_ALPHA))
+                  .fetchOne(EXPERIMENTS.NAME));
+
+          // Beta is readable but not writable: the WITH CHECK of experiments_update raises
+          // SQLSTATE 42501 instead of silently updating 0 rows. This aborts the transaction, so it
+          // must be the last statement of the test.
+          assertThrows(
+              PermissionDeniedDataAccessException.class,
+              () -> renameExperiment(EXPERIMENT_BETA, "Mont Terri Beta renamed"));
+        });
+  }
+
+  @Test
+  @Transactional
+  void read_only_user_may_not_update_a_readable_experiment() {
+    SecurityContextTestSupport.runAsUser(
+        List.of(EXPERIMENT_ALPHA),
+        () ->
+            assertThrows(
+                PermissionDeniedDataAccessException.class,
+                () -> renameExperiment(EXPERIMENT_ALPHA, "Mont Terri Alpha renamed")));
+  }
+
+  @Test
+  @Transactional
+  void system_context_sees_every_sensor_and_experiment() {
+    SystemSecurityContext.runAsSystem(
+        () -> {
+          assertEquals(15, dsl.fetchCount(SENSORS), "System context should see all seeded sensors");
+          assertEquals(
+              8, dsl.fetchCount(EXPERIMENTS), "System context should see all seeded experiments");
+        });
+  }
+
+  @Test
+  @Transactional
+  void settings_replaced_by_v17_no_longer_grant_access() {
+    SecurityContextTestSupport.runAsUser(
+        List.of(),
+        () -> {
+          // The provider only overwrites the three current settings on every statement, so the
+          // old ones set here stay in effect for the rest of the transaction.
+          dsl.fetch(
+              "SELECT set_config('app.read_all', 'true', true),"
+                  + " set_config('app.write_all', 'true', true),"
+                  + " set_config('app.user_experiment_ids', ?, true)",
+              EXPERIMENT_ALPHA.toString());
+
+          assertEquals(0, dsl.fetchCount(EXPERIMENTS));
+          assertEquals(0, dsl.fetchCount(SENSORS));
+        });
+  }
+
+  @Test
+  @Transactional
+  void read_all_and_write_all_functions_are_replaced_by_one_all_experiments_function() {
+    assertEquals(0, countFunctions("can_read_all", "can_write_all"));
+    assertEquals(1, countFunctions("can_access_all_experiments"));
+  }
+
+  private int renameExperiment(UUID experimentId, String name) {
+    return dsl.update(EXPERIMENTS)
+        .set(EXPERIMENTS.NAME, name)
+        .where(EXPERIMENTS.ID.eq(experimentId))
+        .execute();
+  }
+
+  private int countFunctions(String... names) {
+    return dsl.fetchCount(
+        DSL.table(DSL.name("pg_catalog", "pg_proc")),
+        DSL.field(DSL.name("proname"), String.class).in(names));
   }
 
   private Boolean callCanAccessSensor(UUID targetSensorId) {

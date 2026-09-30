@@ -19,7 +19,8 @@ import org.springframework.jdbc.support.SQLExceptionTranslator;
 @Configuration
 public class JooqConfig {
 
-  // SQLSTATE raised when a row-level security WITH CHECK rejects a write (e.g. V15).
+  // SQLSTATE raised when a row-level security WITH CHECK rejects a write (e.g. the
+  // experiments_update policy of V16, whose check V17 feeds from app.write_experiment_ids).
   private static final String INSUFFICIENT_PRIVILEGE = "42501";
 
   @Bean
