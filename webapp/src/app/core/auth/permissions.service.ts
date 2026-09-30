@@ -37,15 +37,14 @@ export class PermissionsService {
 
   /** Whether the caller can write at least one experiment - decides whether a scoped write action is shown at all. */
   readonly hasAnyExperimentWriteAccess = computed(
-    () => this.isAdmin() || this.canWriteAllExperiments() || this.writeExperimentIds().length > 0,
+    () => this.canWriteAllExperiments() || this.writeExperimentIds().length > 0,
   );
 
-  /** Mirrors the backend AccessPolicy: admins and write-all callers may write any experiment. */
+  /**
+   * Mirrors the backend AccessPolicy. `canWriteAllExperiments` already covers admins, so the admin
+   * rule lives in the backend only.
+   */
   canWriteExperiment(experimentId: string): boolean {
-    return (
-      this.isAdmin() ||
-      this.canWriteAllExperiments() ||
-      this.writeExperimentIds().includes(experimentId)
-    );
+    return this.canWriteAllExperiments() || this.writeExperimentIds().includes(experimentId);
   }
 }
