@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import java.util.Set;
 import java.util.function.Predicate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +14,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -30,11 +32,17 @@ public class SecurityConfig {
   static final String EXPERIMENTS_PATH = "/api/experiments";
   static final String SENSORS_PATHS = "/api/sensors/**";
 
+  // every method that changes state; all of them are admin-only unless an earlier rule matched
+  private static final Set<String> WRITE_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
+  private static final RequestMatcher WRITE_REQUESTS =
+      request -> WRITE_METHODS.contains(request.getMethod());
+
   @Bean
   public SecurityFilterChain filterChain(
       HttpSecurity http,
       Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter,
       ObjectMapper objectMapper) {
+    MonteisAccessDeniedHandler accessDeniedHandler = new MonteisAccessDeniedHandler(objectMapper);
     http.authorizeHttpRequests(
             request ->
                 request
@@ -51,24 +59,16 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers(SENSORS_PATHS)
                     .access(allowIf(Capabilities::canManageSensors))
-                    .requestMatchers(HttpMethod.POST)
-                    .access(allowIf(Capabilities::isAdmin))
-                    .requestMatchers(HttpMethod.PUT)
-                    .access(allowIf(Capabilities::isAdmin))
-                    .requestMatchers(HttpMethod.PATCH)
-                    .access(allowIf(Capabilities::isAdmin))
-                    .requestMatchers(HttpMethod.DELETE)
+                    .requestMatchers(WRITE_REQUESTS)
                     .access(allowIf(Capabilities::isAdmin))
                     .anyRequest()
                     .authenticated())
-        .exceptionHandling(
-            exceptions ->
-                exceptions.accessDeniedHandler(new MonteisAccessDeniedHandler(objectMapper)))
+        .exceptionHandling(exceptions -> exceptions.accessDeniedHandler(accessDeniedHandler))
         .oauth2ResourceServer(
             oauth2 ->
                 oauth2
                     .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
-                    .accessDeniedHandler(new MonteisAccessDeniedHandler(objectMapper)));
+                    .accessDeniedHandler(accessDeniedHandler));
 
     return http.build();
   }
