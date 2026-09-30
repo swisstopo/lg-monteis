@@ -67,15 +67,7 @@ class AccessPolicyTest {
     // then
     assertEquals(
         new Capabilities(
-            allExperiments,
-            allExperiments,
-            readable,
-            editable,
-            admin,
-            admin,
-            documents,
-            admin,
-            admin),
+            allExperiments, allExperiments, readable, editable, admin, admin, documents, admin),
         capabilities);
   }
 
