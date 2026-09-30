@@ -21,7 +21,7 @@ Converter -> Holder : Authentication ablegen\n(Principal + Authorities, für die
 AuthFilter -> Repo : filterChain.doFilter(...)
 Repo -> ConnProvider : Connection anfordern
 ConnProvider -> Holder : Authentication lesen
-ConnProvider -> ConnProvider : AccessPolicy -> Capabilities
+ConnProvider -> ConnProvider : Capabilities.of(Authentication)
 ConnProvider -> DB : GUCs setzen (transaktionslokal)
 Repo -> DB : jOOQ Query (unverändert)
 DB -> DB : RLS-Policy filtert Zeilen

@@ -48,7 +48,7 @@ public class MonteisJwtAuthenticationConverter
     return new MonteisAuthenticationToken(source, principal, authorities);
   }
 
-  // which experiment id claims to trust is decided while building the token, not by AccessPolicy
+  // which experiment id claims to trust is decided while building the token, not by Capabilities
   private static boolean hasAuthority(
       Collection<? extends GrantedAuthority> authorities, String authority) {
     return authorities.stream().anyMatch(a -> authority.equals(a.getAuthority()));

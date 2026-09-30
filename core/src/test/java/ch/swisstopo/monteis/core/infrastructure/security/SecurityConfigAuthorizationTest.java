@@ -46,7 +46,7 @@ import org.springframework.web.bind.annotation.RestController;
  * End-to-end verification of {@link SecurityConfig}'s request rules (BR4.8) for all five privilege
  * levels (NFR1.2): a real {@code Authorization: Bearer} header, decoded by the (mocked) {@link
  * JwtDecoder}, run through the actually-configured {@link MonteisJwtAuthenticationConverter} bean
- * and {@link AccessPolicy} - not Spring Security Test's {@code jwt()} shortcut, which bypasses that
+ * and {@link Capabilities} - not Spring Security Test's {@code jwt()} shortcut, which bypasses that
  * wiring entirely. The dummy controller mirrors the real paths, so these are the rules as matched.
  */
 @ControllerTest

@@ -37,7 +37,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * The RLS session values follow {@code AccessPolicy}: the read-all and write-all flags and the
+ * The RLS session values follow {@code Capabilities}: the read-all and write-all flags and the
  * readable and writable experiment ids, transaction-local and fail closed (BR3.5-BR3.7).
  */
 @ExtendWith(MockitoExtension.class)

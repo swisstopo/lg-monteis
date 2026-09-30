@@ -2,7 +2,8 @@ package ch.swisstopo.monteis.core.infrastructure.security;
 
 /**
  * The {@code api:*} authorities {@link MonteisJwtAuthenticationConverter} grants, one per {@link
- * KeycloakClientRoles} role. Only {@link AccessPolicy} turns them into decisions.
+ * KeycloakClientRoles} role. {@link Capabilities#of} maps them to {@link Grant}s and turns those into
+ * decisions.
  */
 public final class MonteisAuthorities {
 

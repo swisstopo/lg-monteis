@@ -14,6 +14,7 @@ import static org.mockito.Mockito.times;
 
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -30,10 +31,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * The capability matrix of {@link AccessPolicy} for the five privilege levels, plus the {@code
- * NONE} and {@code SYSTEM} sets and the fail-closed paths (NFR1.2, NFR1.3, NFR2.2, NFR6.2).
+ * The privilege rules of {@link Capabilities}, straight from grants and assigned ids, and what
+ * {@link Capabilities#of} yields end to end for the five privilege levels, the {@code NONE} and
+ * {@code SYSTEM} sets and the fail-closed paths (NFR1.2, NFR1.3, NFR2.2, NFR6.2).
  */
-class AccessPolicyTest {
+class CapabilitiesTest {
 
   @AfterEach
   void clearSecurityContextHolder() {
@@ -62,12 +64,15 @@ class AccessPolicyTest {
       boolean admin,
       boolean documents) {
     // when
-    Capabilities capabilities = AccessPolicy.capabilitiesOf(level.authentication());
+    Capabilities capabilities = Capabilities.of(level.authentication());
 
     // then
-    assertEquals(
-        new Capabilities(allExperiments, allExperiments, readable, writable, documents, admin),
-        capabilities);
+    assertEquals(allExperiments, capabilities.canReadAllExperiments());
+    assertEquals(allExperiments, capabilities.canWriteAllExperiments());
+    assertEquals(readable, capabilities.readableExperimentIds());
+    assertEquals(writable, capabilities.writableExperimentIds());
+    assertEquals(documents, capabilities.canAccessDocuments());
+    assertEquals(admin, capabilities.isAdmin());
     assertEquals(admin, capabilities.canCreateExperiment());
     assertEquals(admin, capabilities.canManageSensors());
   }
@@ -82,7 +87,7 @@ class AccessPolicyTest {
       boolean admin,
       boolean documents) {
     // when
-    Capabilities capabilities = AccessPolicy.capabilitiesOf(level.authentication());
+    Capabilities capabilities = Capabilities.of(level.authentication());
 
     // then
     for (UUID id : List.of(ASSIGNED_EXPERIMENT, OTHER_EXPERIMENT, UNASSIGNED_EXPERIMENT)) {
@@ -95,7 +100,7 @@ class AccessPolicyTest {
 
   @Test
   void should_return_none_without_authentication() {
-    assertSame(Capabilities.NONE, AccessPolicy.capabilitiesOf(null));
+    assertSame(Capabilities.NONE, Capabilities.of(null));
   }
 
   @Test
@@ -106,7 +111,7 @@ class AccessPolicyTest {
             PrivilegeLevel.MONTEIS_ADMIN.authentication().getPrincipal(), null);
 
     // then
-    assertSame(Capabilities.NONE, AccessPolicy.capabilitiesOf(unauthenticated));
+    assertSame(Capabilities.NONE, Capabilities.of(unauthenticated));
   }
 
   @Test
@@ -119,7 +124,7 @@ class AccessPolicyTest {
             List.of(new SimpleGrantedAuthority(MonteisAuthorities.ADMIN_AUTHORITY)));
 
     // then
-    assertSame(Capabilities.NONE, AccessPolicy.capabilitiesOf(foreign));
+    assertSame(Capabilities.NONE, Capabilities.of(foreign));
   }
 
   @Test
@@ -129,7 +134,7 @@ class AccessPolicyTest {
     given(exploding.isAuthenticated()).willThrow(new IllegalStateException("boom"));
 
     // then
-    assertSame(Capabilities.NONE, AccessPolicy.capabilitiesOf(exploding));
+    assertSame(Capabilities.NONE, Capabilities.of(exploding));
   }
 
   @Test
@@ -142,11 +147,31 @@ class AccessPolicyTest {
 
     // then
     assertSame(Capabilities.SYSTEM, during.get());
-    assertSame(Capabilities.SYSTEM, AccessPolicy.systemCapabilities());
     assertTrue(Capabilities.SYSTEM.canReadAllExperiments());
     assertFalse(Capabilities.SYSTEM.canWriteAllExperiments());
     assertFalse(Capabilities.SYSTEM.isAdmin());
     assertSame(Capabilities.NONE, boundCapabilities());
+  }
+
+  @Test
+  void should_map_each_authority_to_its_grant_and_ignore_unknown_ones() {
+    // given
+    var authentication =
+        new MonteisAuthenticationToken(
+            null,
+            new MonteisPrincipal(UUID.randomUUID(), "all", List.of(), List.of()),
+            List.of(
+                new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_AUTHORITY),
+                new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_WRITE_AUTHORITY),
+                new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_WRITE_ALL_AUTHORITY),
+                new SimpleGrantedAuthority(MonteisAuthorities.DOCUMENTS_READ_AUTHORITY),
+                new SimpleGrantedAuthority(MonteisAuthorities.ADMIN_AUTHORITY),
+                new SimpleGrantedAuthority("api:unknown")));
+
+    // then: every grant except SYSTEM_READ_ALL, which no authority maps to
+    assertEquals(
+        EnumSet.complementOf(EnumSet.of(Grant.SYSTEM_READ_ALL)),
+        Capabilities.of(authentication).grants());
   }
 
   @Test
@@ -163,7 +188,7 @@ class AccessPolicyTest {
             List.of());
 
     // then
-    assertEquals(Capabilities.NONE, AccessPolicy.capabilitiesOf(lookAlike));
+    assertEquals(Capabilities.NONE, Capabilities.of(lookAlike));
   }
 
   @Test
@@ -182,7 +207,7 @@ class AccessPolicyTest {
     // then
     assertEquals(
         Set.of(OTHER_EXPERIMENT),
-        AccessPolicy.capabilitiesOf(authentication).writableExperimentIds());
+        Capabilities.of(authentication).writableExperimentIds());
   }
 
   @Test
@@ -196,7 +221,7 @@ class AccessPolicyTest {
             PrivilegeLevel.EXPERIMENT_USER.grantedAuthorities());
 
     // then
-    assertFalse(AccessPolicy.capabilitiesOf(authentication).canWriteExperiment(OTHER_EXPERIMENT));
+    assertFalse(Capabilities.of(authentication).canWriteExperiment(OTHER_EXPERIMENT));
   }
 
   @Test
@@ -213,7 +238,7 @@ class AccessPolicyTest {
 
     // when
     for (int i = 0; i < 3; i++) {
-      results.add(AccessPolicy.capabilitiesOf(authentication));
+      results.add(Capabilities.of(authentication));
     }
 
     // then
@@ -225,6 +250,109 @@ class AccessPolicyTest {
   }
 
   private static Capabilities boundCapabilities() {
-    return AccessPolicy.capabilitiesOf(SecurityContextHolder.getContext().getAuthentication());
+    return Capabilities.of(SecurityContextHolder.getContext().getAuthentication());
+  }
+
+  // --- rules, without Spring Security ---
+
+  private static final UUID EXPERIMENT_A = UUID.fromString("00000000-0000-7000-8000-000000000301");
+  private static final UUID EXPERIMENT_B = UUID.fromString("00000000-0000-7000-8000-000000000302");
+  private static final Set<UUID> BOTH = Set.of(EXPERIMENT_A, EXPERIMENT_B);
+
+  private static Capabilities capabilities(Set<Grant> grants, Set<UUID> readIds, Set<UUID> writeIds) {
+    return new Capabilities(grants, readIds, writeIds);
+  }
+
+  @Test
+  void should_grant_nothing_without_grants() {
+    Capabilities none = Capabilities.NONE;
+
+    assertFalse(none.isAdmin());
+    assertFalse(none.canReadAllExperiments());
+    assertFalse(none.canWriteAllExperiments());
+    assertFalse(none.canCreateExperiment());
+    assertFalse(none.canManageSensors());
+    assertFalse(none.canAccessDocuments());
+    assertFalse(none.canReadExperiment(EXPERIMENT_A));
+    assertFalse(none.canWriteExperiment(EXPERIMENT_A));
+  }
+
+  @Test
+  void should_let_an_admin_do_everything_but_access_documents_on_its_own() {
+    Capabilities admin = capabilities(Set.of(Grant.ADMIN), Set.of(), Set.of());
+
+    assertTrue(admin.isAdmin());
+    assertTrue(admin.canReadAllExperiments());
+    assertTrue(admin.canWriteAllExperiments());
+    assertTrue(admin.canCreateExperiment());
+    assertTrue(admin.canManageSensors());
+    assertFalse(admin.canAccessDocuments());
+    assertTrue(admin.canWriteExperiment(EXPERIMENT_A));
+  }
+
+  @Test
+  void should_let_a_global_editor_read_and_write_every_experiment_without_admin_functions() {
+    Capabilities editor = capabilities(Set.of(Grant.EXPERIMENT_WRITE_ALL), Set.of(), Set.of());
+
+    assertTrue(editor.canReadAllExperiments());
+    assertTrue(editor.canWriteAllExperiments());
+    assertTrue(editor.canWriteExperiment(EXPERIMENT_B));
+    assertFalse(editor.isAdmin());
+    assertFalse(editor.canCreateExperiment());
+    assertFalse(editor.canManageSensors());
+  }
+
+  @Test
+  void should_let_the_system_context_read_every_experiment_but_write_none() {
+    Capabilities system = Capabilities.SYSTEM;
+
+    assertTrue(system.canReadAllExperiments());
+    assertTrue(system.canReadExperiment(EXPERIMENT_A));
+    assertFalse(system.canWriteAllExperiments());
+    assertFalse(system.canWriteExperiment(EXPERIMENT_A));
+    assertEquals(Set.of(), system.writableExperimentIds());
+    assertFalse(system.isAdmin());
+  }
+
+  @Test
+  void should_scope_reads_and_writes_to_the_assigned_experiments() {
+    Capabilities pi =
+        capabilities(Set.of(Grant.EXPERIMENT_READ, Grant.EXPERIMENT_WRITE), BOTH, Set.of(EXPERIMENT_A));
+
+    assertEquals(BOTH, pi.readableExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_A), pi.writableExperimentIds());
+    assertTrue(pi.canWriteExperiment(EXPERIMENT_A));
+    assertFalse(pi.canWriteExperiment(EXPERIMENT_B));
+    assertTrue(pi.canReadExperiment(EXPERIMENT_B));
+  }
+
+  @Test
+  void should_ignore_assigned_write_ids_without_the_write_grant() {
+    Capabilities reader = capabilities(Set.of(Grant.EXPERIMENT_READ), BOTH, Set.of(EXPERIMENT_A));
+
+    assertEquals(Set.of(), reader.writableExperimentIds());
+    assertFalse(reader.canWriteExperiment(EXPERIMENT_A));
+  }
+
+  @Test
+  void should_leave_the_id_sets_empty_when_an_all_experiments_rule_applies() {
+    Capabilities editor =
+        capabilities(Set.of(Grant.EXPERIMENT_WRITE_ALL, Grant.EXPERIMENT_WRITE), BOTH, Set.of(EXPERIMENT_A));
+
+    assertEquals(Set.of(), editor.readableExperimentIds());
+    assertEquals(Set.of(), editor.writableExperimentIds());
+  }
+
+  @Test
+  void should_never_allow_a_null_experiment_id() {
+    Capabilities admin = capabilities(Set.of(Grant.ADMIN), Set.of(), Set.of());
+
+    assertFalse(admin.canReadExperiment(null));
+    assertFalse(admin.canWriteExperiment(null));
+  }
+
+  @Test
+  void should_answer_documents_from_its_own_grant() {
+    assertTrue(capabilities(Set.of(Grant.DOCUMENTS_READ), Set.of(), Set.of()).canAccessDocuments());
   }
 }
