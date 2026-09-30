@@ -24,7 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
  *       experiment ({@link Capabilities#canWriteAllExperiments()}); false for the system context,
  *       which reads everything but writes nothing;
  *   <li>{@code app.read_experiment_ids}: the readable experiment ids, comma-separated;
- *   <li>{@code app.write_experiment_ids}: the editable experiment ids, comma-separated, always a
+ *   <li>{@code app.write_experiment_ids}: the writable experiment ids, comma-separated, always a
  *       subset of the readable ones.
  * </ul>
  *
@@ -69,7 +69,7 @@ public class RlsConnectionProvider implements ConnectionProvider {
       statement.setString(2, String.valueOf(capabilities.canWriteAllExperiments()));
       // Capabilities leaves an id set empty when its all-experiments flag is set
       statement.setString(3, toSortedCsv(capabilities.readableExperimentIds()));
-      statement.setString(4, toSortedCsv(capabilities.editableExperimentIds()));
+      statement.setString(4, toSortedCsv(capabilities.writableExperimentIds()));
       statement.execute();
     } catch (SQLException e) {
       throw new DataAccessException("Failed to set RLS context", e);

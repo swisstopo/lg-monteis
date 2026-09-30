@@ -40,7 +40,7 @@ class AccessPolicyTest {
     SecurityContextHolder.clearContext();
   }
 
-  /** level, readAll, writeAll, readable, editable, admin, documents. */
+  /** level, readAll, writeAll, readable, writable, admin, documents. */
   static Stream<Arguments> matrix() {
     Set<UUID> scoped = Set.of(ASSIGNED_EXPERIMENT, OTHER_EXPERIMENT);
     return Stream.of(
@@ -58,7 +58,7 @@ class AccessPolicyTest {
       PrivilegeLevel level,
       boolean allExperiments,
       Set<UUID> readable,
-      Set<UUID> editable,
+      Set<UUID> writable,
       boolean admin,
       boolean documents) {
     // when
@@ -66,7 +66,7 @@ class AccessPolicyTest {
 
     // then
     assertEquals(
-        new Capabilities(allExperiments, allExperiments, readable, editable, documents, admin),
+        new Capabilities(allExperiments, allExperiments, readable, writable, documents, admin),
         capabilities);
     assertEquals(admin, capabilities.canCreateExperiment());
     assertEquals(admin, capabilities.canManageSensors());
@@ -74,11 +74,11 @@ class AccessPolicyTest {
 
   @ParameterizedTest
   @MethodSource("matrix")
-  void should_answer_per_experiment_read_and_edit_for_each_privilege_level(
+  void should_answer_per_experiment_read_and_write_for_each_privilege_level(
       PrivilegeLevel level,
       boolean allExperiments,
       Set<UUID> readable,
-      Set<UUID> editable,
+      Set<UUID> writable,
       boolean admin,
       boolean documents) {
     // when
@@ -87,10 +87,10 @@ class AccessPolicyTest {
     // then
     for (UUID id : List.of(ASSIGNED_EXPERIMENT, OTHER_EXPERIMENT, UNASSIGNED_EXPERIMENT)) {
       assertEquals(allExperiments || readable.contains(id), capabilities.canReadExperiment(id));
-      assertEquals(allExperiments || editable.contains(id), capabilities.canEditExperiment(id));
+      assertEquals(allExperiments || writable.contains(id), capabilities.canWriteExperiment(id));
     }
     assertFalse(capabilities.canReadExperiment(null));
-    assertFalse(capabilities.canEditExperiment(null));
+    assertFalse(capabilities.canWriteExperiment(null));
   }
 
   @Test
@@ -182,7 +182,7 @@ class AccessPolicyTest {
     // then
     assertEquals(
         Set.of(OTHER_EXPERIMENT),
-        AccessPolicy.capabilitiesOf(authentication).editableExperimentIds());
+        AccessPolicy.capabilitiesOf(authentication).writableExperimentIds());
   }
 
   @Test
@@ -196,7 +196,7 @@ class AccessPolicyTest {
             PrivilegeLevel.EXPERIMENT_USER.grantedAuthorities());
 
     // then
-    assertFalse(AccessPolicy.capabilitiesOf(authentication).canEditExperiment(OTHER_EXPERIMENT));
+    assertFalse(AccessPolicy.capabilitiesOf(authentication).canWriteExperiment(OTHER_EXPERIMENT));
   }
 
   @Test

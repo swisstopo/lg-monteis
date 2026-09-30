@@ -31,7 +31,7 @@ public class CurrentUserController {
             capabilities.isAdmin(),
             capabilities.canWriteAllExperiments(),
             // empty when canWriteAllExperiments (BR4.10); sorted for a stable response
-            capabilities.editableExperimentIds().stream().sorted().toList(),
+            capabilities.writableExperimentIds().stream().sorted().toList(),
             capabilities.canAccessDocuments()));
   }
 }

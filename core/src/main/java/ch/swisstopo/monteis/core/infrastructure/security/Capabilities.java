@@ -13,7 +13,7 @@ import java.util.UUID;
  *     system context
  * @param readableExperimentIds the experiments the caller may read; empty when {@code
  *     canReadAllExperiments}
- * @param editableExperimentIds the experiments whose metadata the caller may edit; a subset of
+ * @param writableExperimentIds the experiments whose metadata the caller may write; a subset of
  *     {@code readableExperimentIds}, empty when {@code canWriteAllExperiments}
  * @param canAccessDocuments {@code api:documents:read}
  * @param isAdmin {@code api:admin}; also answers {@link #canCreateExperiment()} and {@link
@@ -23,7 +23,7 @@ public record Capabilities(
     boolean canReadAllExperiments,
     boolean canWriteAllExperiments,
     Set<UUID> readableExperimentIds,
-    Set<UUID> editableExperimentIds,
+    Set<UUID> writableExperimentIds,
     boolean canAccessDocuments,
     boolean isAdmin) {
 
@@ -40,7 +40,7 @@ public record Capabilities(
 
   public Capabilities {
     readableExperimentIds = Set.copyOf(readableExperimentIds);
-    editableExperimentIds = Set.copyOf(editableExperimentIds);
+    writableExperimentIds = Set.copyOf(writableExperimentIds);
   }
 
   /** Creating an experiment is an admin function. */
@@ -59,9 +59,9 @@ public record Capabilities(
         && (canReadAllExperiments || readableExperimentIds.contains(experimentId));
   }
 
-  /** {@code canWriteAllExperiments || editableExperimentIds.contains(id)}; a null id is never editable. */
-  public boolean canEditExperiment(UUID experimentId) {
+  /** {@code canWriteAllExperiments || writableExperimentIds.contains(id)}; a null id is never writable. */
+  public boolean canWriteExperiment(UUID experimentId) {
     return experimentId != null
-        && (canWriteAllExperiments || editableExperimentIds.contains(experimentId));
+        && (canWriteAllExperiments || writableExperimentIds.contains(experimentId));
   }
 }
