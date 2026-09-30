@@ -14,12 +14,15 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * Writes the {@link Capabilities} of the caller bound to the current thread onto each jOOQ
- * connection as three Postgres GUCs, which the row-level security functions read via {@code
+ * connection as four Postgres GUCs, which the row-level security functions read via {@code
  * current_setting(...)} (V17):
  *
  * <ul>
- *   <li>{@code app.all_experiments}: {@code true} when the caller may read and write every
- *       experiment ({@link Capabilities#canReadAllExperiments()});
+ *   <li>{@code app.read_all_experiments}: {@code true} when the caller may read every experiment
+ *       ({@link Capabilities#canReadAllExperiments()});
+ *   <li>{@code app.write_all_experiments}: {@code true} when the caller may update every
+ *       experiment ({@link Capabilities#canWriteAllExperiments()}); false for the system context,
+ *       which reads everything but writes nothing;
  *   <li>{@code app.read_experiment_ids}: the readable experiment ids, comma-separated;
  *   <li>{@code app.write_experiment_ids}: the editable experiment ids, comma-separated, always a
  *       subset of the readable ones.
@@ -29,13 +32,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * filter chain. They are transaction-local, not session-scoped, so they never leak to the next
  * borrower of a pooled connection: callers must run inside a Spring transaction. An unbound or
  * unrecognised authentication yields {@link Capabilities#NONE} and therefore fails closed (no
- * flag, empty id lists) rather than throwing.
+ * flags, empty id lists) rather than throwing.
  */
 public class RlsConnectionProvider implements ConnectionProvider {
 
   // IMPORTANT: set_config(..., true) scopes every value to the current transaction only!
   private static final String SET_RLS_CONTEXT =
-      "SELECT set_config('app.all_experiments', ?, true),"
+      "SELECT set_config('app.read_all_experiments', ?, true),"
+          + " set_config('app.write_all_experiments', ?, true),"
           + " set_config('app.read_experiment_ids', ?, true),"
           + " set_config('app.write_experiment_ids', ?, true)";
 
@@ -60,13 +64,12 @@ public class RlsConnectionProvider implements ConnectionProvider {
   private static void applySecurityContext(Connection connection) {
     Capabilities capabilities =
         AccessPolicy.capabilitiesOf(SecurityContextHolder.getContext().getAuthentication());
-    boolean allExperiments = capabilities.canReadAllExperiments();
     try (PreparedStatement statement = connection.prepareStatement(SET_RLS_CONTEXT)) {
-      statement.setString(1, String.valueOf(allExperiments));
-      statement.setString(
-          2, allExperiments ? "" : toSortedCsv(capabilities.readableExperimentIds()));
-      statement.setString(
-          3, allExperiments ? "" : toSortedCsv(capabilities.editableExperimentIds()));
+      statement.setString(1, String.valueOf(capabilities.canReadAllExperiments()));
+      statement.setString(2, String.valueOf(capabilities.canWriteAllExperiments()));
+      // Capabilities leaves an id set empty when its all-experiments flag is set
+      statement.setString(3, toSortedCsv(capabilities.readableExperimentIds()));
+      statement.setString(4, toSortedCsv(capabilities.editableExperimentIds()));
       statement.execute();
     } catch (SQLException e) {
       throw new DataAccessException("Failed to set RLS context", e);

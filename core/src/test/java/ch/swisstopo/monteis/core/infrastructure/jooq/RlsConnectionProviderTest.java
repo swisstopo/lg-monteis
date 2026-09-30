@@ -37,8 +37,8 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * The RLS session values follow {@code AccessPolicy}: one all-experiments flag and the readable and
- * editable experiment ids, transaction-local and fail closed (BR3.5-BR3.7).
+ * The RLS session values follow {@code AccessPolicy}: the read-all and write-all flags and the
+ * readable and editable experiment ids, transaction-local and fail closed (BR3.5-BR3.7).
  */
 @ExtendWith(MockitoExtension.class)
 class RlsConnectionProviderTest {
@@ -65,17 +65,17 @@ class RlsConnectionProviderTest {
   }
 
   @Test
-  void should_set_the_all_experiments_flag_and_no_ids_for_an_admin() throws SQLException {
+  void should_set_both_all_experiments_flags_and_no_ids_for_an_admin() throws SQLException {
     RlsSettings settings = acquireWithin(SecurityContextTestSupport::runAsAdmin);
 
-    assertEquals(new RlsSettings("true", "", ""), settings);
+    assertEquals(new RlsSettings("true", "true", "", ""), settings);
   }
 
   @Test
-  void should_set_the_all_experiments_flag_and_no_ids_for_a_global_editor() throws SQLException {
+  void should_set_both_all_experiments_flags_and_no_ids_for_a_global_editor() throws SQLException {
     RlsSettings settings = acquireWithin(SecurityContextTestSupport::runAsGlobalEditor);
 
-    assertEquals(new RlsSettings("true", "", ""), settings);
+    assertEquals(new RlsSettings("true", "true", "", ""), settings);
   }
 
   @Test
@@ -87,7 +87,8 @@ class RlsConnectionProviderTest {
                     List.of(EXPERIMENT_B, EXPERIMENT_A), List.of(EXPERIMENT_A), action));
 
     assertEquals(
-        new RlsSettings("false", EXPERIMENT_A + "," + EXPERIMENT_B, EXPERIMENT_A.toString()),
+        new RlsSettings(
+            "false", "false", EXPERIMENT_A + "," + EXPERIMENT_B, EXPERIMENT_A.toString()),
         settings);
   }
 
@@ -100,7 +101,8 @@ class RlsConnectionProviderTest {
                     List.of(EXPERIMENT_A), List.of(EXPERIMENT_A, EXPERIMENT_C), action));
 
     assertEquals(
-        new RlsSettings("false", EXPERIMENT_A.toString(), EXPERIMENT_A.toString()), settings);
+        new RlsSettings("false", "false", EXPERIMENT_A.toString(), EXPERIMENT_A.toString()),
+        settings);
   }
 
   @Test
@@ -115,14 +117,14 @@ class RlsConnectionProviderTest {
                     List.of(EXPERIMENT_A),
                     action));
 
-    assertEquals(new RlsSettings("false", EXPERIMENT_A.toString(), ""), settings);
+    assertEquals(new RlsSettings("false", "false", EXPERIMENT_A.toString(), ""), settings);
   }
 
   @Test
-  void should_set_the_all_experiments_flag_for_the_system_context() throws SQLException {
+  void should_set_only_the_read_all_flag_for_the_system_context() throws SQLException {
     RlsSettings settings = acquireWithin(SystemSecurityContext::runAsSystem);
 
-    assertEquals(new RlsSettings("true", "", ""), settings);
+    assertEquals(new RlsSettings("true", "false", "", ""), settings);
   }
 
   @Test
@@ -141,8 +143,8 @@ class RlsConnectionProviderTest {
               action.run();
             });
 
-    assertEquals(new RlsSettings("false", "", ""), unbound);
-    assertEquals(new RlsSettings("false", "", ""), foreign);
+    assertEquals(new RlsSettings("false", "false", "", ""), unbound);
+    assertEquals(new RlsSettings("false", "false", "", ""), foreign);
   }
 
   @Test
@@ -160,7 +162,7 @@ class RlsConnectionProviderTest {
   }
 
   /**
-   * Acquires a connection while {@code binder} has bound an authentication and returns the three
+   * Acquires a connection while {@code binder} has bound an authentication and returns the four
    * values written onto it.
    */
   private RlsSettings acquireWithin(Consumer<Runnable> binder) throws SQLException {
@@ -173,14 +175,15 @@ class RlsConnectionProviderTest {
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
     verify(connection).prepareStatement(sql.capture());
     assertEquals(
-        "SELECT set_config('app.all_experiments', ?, true),"
+        "SELECT set_config('app.read_all_experiments', ?, true),"
+            + " set_config('app.write_all_experiments', ?, true),"
             + " set_config('app.read_experiment_ids', ?, true),"
             + " set_config('app.write_experiment_ids', ?, true)",
         sql.getValue());
 
     ArgumentCaptor<Integer> index = ArgumentCaptor.forClass(Integer.class);
     ArgumentCaptor<String> value = ArgumentCaptor.forClass(String.class);
-    verify(statement, times(3)).setString(index.capture(), value.capture());
+    verify(statement, times(4)).setString(index.capture(), value.capture());
     verify(statement).execute();
     verify(statement).close();
 
@@ -189,8 +192,10 @@ class RlsConnectionProviderTest {
       parameters.put(index.getAllValues().get(i), value.getAllValues().get(i));
     }
     clearInvocations(connection, statement);
-    return new RlsSettings(parameters.get(1), parameters.get(2), parameters.get(3));
+    return new RlsSettings(
+        parameters.get(1), parameters.get(2), parameters.get(3), parameters.get(4));
   }
 
-  private record RlsSettings(String allExperiments, String readIds, String writeIds) {}
+  private record RlsSettings(
+      String readAllExperiments, String writeAllExperiments, String readIds, String writeIds) {}
 }
