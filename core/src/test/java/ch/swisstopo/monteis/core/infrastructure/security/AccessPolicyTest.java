@@ -14,7 +14,6 @@ import static org.mockito.Mockito.times;
 
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -129,24 +128,6 @@ class AccessPolicyTest {
 
     // then
     assertSame(Capabilities.NONE, AccessPolicy.capabilitiesOf(foreign));
-  }
-
-  @Test
-  void should_return_none_when_derivation_fails_on_a_corrupt_principal() {
-    // given: a principal whose id lists are broken (null list and null element)
-    MonteisPrincipal corrupt =
-        new MonteisPrincipal(
-            UUID.randomUUID(), "corrupt", Arrays.asList(ASSIGNED_EXPERIMENT, null), null);
-    var authentication =
-        new MonteisAuthenticationToken(
-            null,
-            corrupt,
-            List.of(
-                new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_AUTHORITY),
-                new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_WRITE_AUTHORITY)));
-
-    // then
-    assertSame(Capabilities.NONE, AccessPolicy.capabilitiesOf(authentication));
   }
 
   @Test

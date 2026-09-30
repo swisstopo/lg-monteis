@@ -33,11 +33,10 @@ public class MonteisJwtAuthenticationConverter
         AccessPolicy.grantsScopedExperimentRead(authorities)
             ? claims.readExperimentIds()
             : List.of();
-    // Keycloak maps write_experiment_ids into read_experiment_ids too, so write ids outside the
-    // read ids mean a tampered or misconfigured token - drop them rather than trust them.
+    // MonteisPrincipal drops write ids outside the read ids
     List<UUID> writeExperimentIds =
         AccessPolicy.grantsScopedExperimentWrite(authorities)
-            ? claims.writeExperimentIds().stream().filter(readExperimentIds::contains).toList()
+            ? claims.writeExperimentIds()
             : List.of();
 
     MonteisPrincipal principal =
