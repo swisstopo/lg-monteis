@@ -15,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * The single source of privilege rules in {@code core} (ADR-001, contract C2). The filter chain,
@@ -31,11 +30,6 @@ public final class AccessPolicy {
   private static final Logger log = LoggerFactory.getLogger(AccessPolicy.class);
 
   private AccessPolicy() {}
-
-  /** The capabilities of the caller bound to the current thread; {@code NONE} when unbound. */
-  public static Capabilities currentCapabilities() {
-    return capabilitiesOf(SecurityContextHolder.getContext().getAuthentication());
-  }
 
   /** The capabilities of background jobs: all-experiment read, no admin functions. */
   public static Capabilities systemCapabilities() {
