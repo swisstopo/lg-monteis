@@ -29,6 +29,8 @@ public interface SensorRepository {
    *
    * @param sensor the sensor to update
    * @return the updated sensor instance including DB managed state such as version
+   * @throws ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException if the
+   *     sensor does not exist or is hidden from the caller
    */
   Sensor update(Sensor sensor);
 

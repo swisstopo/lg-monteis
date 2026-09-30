@@ -3,7 +3,7 @@ package ch.swisstopo.monteis.core.modules.sensor.jooq;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
@@ -157,8 +157,9 @@ public class JooqSensorRepository implements SensorRepository {
     // fetch existing
     SensorsRecord updatedRecord =
         dsl.selectFrom(SENSORS).where(SENSORS.ID.eq(sensor.getId())).fetchOne();
+    // same answer as for experiments: missing and RLS-hidden are indistinguishable (BR4.11)
     if (updatedRecord == null) {
-      throw new ObjectBusinessValidationException("object.deleted", Map.of());
+      throw new ObjectNotFoundException(Sensor.class);
     }
     // Read before the mapper overwrites it: the join table's row for the old main experiment can
     // only be found by the id the sensor is being moved away from.
