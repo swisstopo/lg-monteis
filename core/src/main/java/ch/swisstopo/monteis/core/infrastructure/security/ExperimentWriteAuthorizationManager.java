@@ -9,7 +9,7 @@ import org.springframework.security.web.access.intercept.RequestAuthorizationCon
 
 /**
  * Filter-chain adapter for {@code PUT} on {@link #PATH}: allows the request when {@link
- * AccessPolicy} says the caller may edit the experiment named by the {@code id} path variable. A
+ * AccessPolicy} says the caller may write the experiment named by the {@code id} path variable. A
  * path id that is not a UUID identifies no experiment and is denied. The {@code experiments_update}
  * RLS policy enforces the same rule in the database (defence in depth, ADR-003).
  */
@@ -23,10 +23,10 @@ class ExperimentWriteAuthorizationManager
   public AuthorizationResult authorize(
       Supplier<? extends Authentication> authentication, RequestAuthorizationContext context) {
     Capabilities capabilities = AccessPolicy.capabilitiesOf(authentication.get());
-    boolean canEdit =
+    boolean canWrite =
         Uuids.tryParse(context.getVariables().get(EXPERIMENT_ID_VARIABLE))
-            .map(capabilities::canEditExperiment)
+            .map(capabilities::canWriteExperiment)
             .orElse(false);
-    return new AuthorizationDecision(canEdit);
+    return new AuthorizationDecision(canWrite);
   }
 }

@@ -8,9 +8,9 @@ public final class MonteisAuthorities {
 
   // Read on the experiments in MonteisPrincipal#readExperimentIds only.
   public static final String EXPERIMENT_READ_AUTHORITY = "api:experiment:read";
-  // Edit on the experiments in MonteisPrincipal#writeExperimentIds only.
+  // Write on the experiments in MonteisPrincipal#writeExperimentIds only.
   public static final String EXPERIMENT_WRITE_AUTHORITY = "api:experiment:write";
-  // Read and edit on every experiment (global editor).
+  // Read and write on every experiment (global editor).
   public static final String EXPERIMENT_WRITE_ALL_AUTHORITY = "api:experiment:write-all";
   public static final String DOCUMENTS_READ_AUTHORITY = "api:documents:read";
   // Every experiment plus the admin-only functions: create experiment, sensor writes, and

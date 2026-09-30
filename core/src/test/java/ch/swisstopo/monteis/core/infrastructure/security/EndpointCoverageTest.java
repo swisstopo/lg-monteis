@@ -48,7 +48,7 @@ class EndpointCoverageTest {
 
   /** The BR4.8 rule groups, with the privilege levels each lets through. */
   enum Rule {
-    EDIT_EXPERIMENT(
+    WRITE_EXPERIMENT(
         EnumSet.of(
             PrivilegeLevel.EXPERIMENT_PI,
             PrivilegeLevel.GLOBAL_EDITOR,
@@ -71,7 +71,7 @@ class EndpointCoverageTest {
           Map.entry("GET /api/experiments/all", Rule.AUTHENTICATED),
           Map.entry("GET /api/experiments/csv", Rule.AUTHENTICATED),
           Map.entry("GET /api/experiments/{id}", Rule.AUTHENTICATED),
-          Map.entry("PUT /api/experiments/{id}", Rule.EDIT_EXPERIMENT),
+          Map.entry("PUT /api/experiments/{id}", Rule.WRITE_EXPERIMENT),
           Map.entry("POST /api/experiments", Rule.CREATE_EXPERIMENT),
           Map.entry("GET /api/sensors", Rule.AUTHENTICATED),
           Map.entry("GET /api/sensors/{id}", Rule.AUTHENTICATED),
@@ -149,7 +149,7 @@ class EndpointCoverageTest {
         .getResponse();
   }
 
-  // path variables: the experiment the ExperimentPI fixture may edit, any id elsewhere
+  // path variables: the experiment the ExperimentPI fixture may write, any id elsewhere
   private static String concrete(String pattern) {
     String id =
         pattern.startsWith("/api/experiments")

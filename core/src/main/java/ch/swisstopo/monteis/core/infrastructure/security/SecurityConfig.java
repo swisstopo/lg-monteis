@@ -48,7 +48,7 @@ public class SecurityConfig {
                 request
                     .requestMatchers(PUBLIC_ENDPOINTS)
                     .permitAll()
-                    // Per-experiment edit check; the experiments_update RLS policy enforces the
+                    // Per-experiment write check; the experiments_update RLS policy enforces the
                     // same rule in the database. Must precede the admin-only write rules below.
                     .requestMatchers(HttpMethod.PUT, ExperimentWriteAuthorizationManager.PATH)
                     .access(new ExperimentWriteAuthorizationManager())
