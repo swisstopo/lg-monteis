@@ -57,7 +57,6 @@ describe('PermissionsService', () => {
   it('fails closed when the call errors', async () => {
     const service = setup(() => throwError(() => new Error('rejected')));
 
-    await expect(service.resolveIsAdmin()).resolves.toBe(false);
     await settled(service);
 
     expect(service.isAdmin()).toBe(false);
@@ -74,7 +73,6 @@ describe('PermissionsService', () => {
     await vi.waitFor(() => expect(service.isAdmin()).toBe(true));
     expect(service.hasAnyExperimentWriteAccess()).toBe(true);
     expect(service.canWriteExperiment(OTHER_EXPERIMENT_ID)).toBe(true);
-    await expect(service.resolveIsAdmin()).resolves.toBe(true);
   });
 
   it('lets a global editor write every experiment without being an admin', async () => {
@@ -84,7 +82,6 @@ describe('PermissionsService', () => {
     expect(service.isAdmin()).toBe(false);
     expect(service.hasAnyExperimentWriteAccess()).toBe(true);
     expect(service.canWriteExperiment(OTHER_EXPERIMENT_ID)).toBe(true);
-    await expect(service.resolveIsAdmin()).resolves.toBe(false);
   });
 
   it('gives an experiment PI scoped write access through writeExperimentIds', async () => {

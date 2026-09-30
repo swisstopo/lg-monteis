@@ -110,7 +110,7 @@ Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Re
 
 * Lesen erzwingt die Datenbank: RLS filtert Zeilen anhand des transaktionslokalen Sitzungskontexts.
 * Schreiben erzwingt zuerst die Filterchain (`SecurityConfig`, via `AccessPolicy`) und für Experiment-Updates zusätzlich RLS `WITH CHECK`.
-* Admin-only-Endpunkte (Experiment anlegen, der ganze Sensorkatalog, übrige Schreibzugriffe) erzwingt die Filterchain.
+* Admin-only-Endpunkte (Experiment anlegen, Sensoren schreiben, übrige Schreibzugriffe) erzwingt die Filterchain. Sensoren lesen darf jeder angemeldete Benutzer; welche Sensoren er sieht, filtert RLS.
 
 Ein ausgeblendetes oder fehlendes Experiment ergibt 404 `object.not-found`, eine Ablehnung in der Filterchain oder per RLS 403 `access.denied`, beide als `ErrorDto` mit `target: GLOBAL`.
 
@@ -118,7 +118,7 @@ Ein ausgeblendetes oder fehlendes Experiment ergibt 404 `object.not-found`, eine
 | Ein Fehler in einer Schicht legt keine Daten offen, und die Datenbank schützt auch Zugriffe ausserhalb von HTTP. Eine zentrale Policy ist die einzige Stelle, an der Regeln geändert und getestet werden, sodass Filterchain, `/api/me` und Sitzungskontext nicht mehr auseinanderlaufen können. Die Filterchain lehnt unberechtigte Schreibzugriffe ab, bevor die Datenbank überhaupt angefragt wird.
 
 | Konsequenzen
-| Positiv: eine Stelle für Regeln und Tests; neue Regeln (z. B. Dokumentzugriff) haben einen klaren Platz; ein Test stellt sicher, dass jedes Endpunkt-Mapping einer Regel zugeordnet ist. Negativ: die Experiment-Bearbeitungsregel ist an zwei Stellen ausgedrückt (`AccessPolicy` und die SQL-Funktionen) und muss übereinstimmen; das sichern Integrationstests unter der Rolle `core_app`. Die Datenbank behält getrennte Flags für Lesen und Schreiben aller Experimente (`app.read_all_experiments`, `app.write_all_experiments`, Migration V17); `RlsConnectionProvider` setzt beide direkt aus `AccessPolicy`. Für Benutzerrollen sind sie immer gleich, der Systemkontext (Hintergrundjobs) liest aber alles und darf nichts schreiben. Er läuft ohne Filterchain, deshalb ist RLS für ihn die einzige Schreibsperre. Der Sensorkatalog ist auch lesend nur für Admins zugänglich; die 3D-Ansicht braucht für Nicht-Admins einen eigenen Endpunkt (MON-195).
+| Positiv: eine Stelle für Regeln und Tests; neue Regeln (z. B. Dokumentzugriff) haben einen klaren Platz; ein Test stellt sicher, dass jedes Endpunkt-Mapping einer Regel zugeordnet ist. Negativ: die Experiment-Bearbeitungsregel ist an zwei Stellen ausgedrückt (`AccessPolicy` und die SQL-Funktionen) und muss übereinstimmen; das sichern Integrationstests unter der Rolle `core_app`. Die Datenbank behält getrennte Flags für Lesen und Schreiben aller Experimente (`app.read_all_experiments`, `app.write_all_experiments`, Migration V17); `RlsConnectionProvider` setzt beide direkt aus `AccessPolicy`. Für Benutzerrollen sind sie immer gleich, der Systemkontext (Hintergrundjobs) liest aber alles und darf nichts schreiben. Er läuft ohne Filterchain, deshalb ist RLS für ihn die einzige Schreibsperre.
 
 | Verworfene Alternativen
 | *Nur RLS:* Ablehnungen würden erst spät als 42501 sichtbar, und Admin-Endpunkte liessen sich nicht sperren. +

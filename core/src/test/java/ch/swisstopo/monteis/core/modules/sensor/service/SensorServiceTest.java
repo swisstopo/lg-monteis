@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
@@ -273,12 +274,8 @@ class SensorServiceTest {
 
     given(repository.findById(id)).willReturn(Optional.empty());
 
-    // when
-    ObjectBusinessValidationException exception =
-        assertThrows(ObjectBusinessValidationException.class, () -> service.getSensor(id));
-
-    // then
-    assertEquals("object.deleted", exception.getMessageKey());
+    // when / then
+    assertThrows(ObjectNotFoundException.class, () -> service.getSensor(id));
   }
 
   @Test

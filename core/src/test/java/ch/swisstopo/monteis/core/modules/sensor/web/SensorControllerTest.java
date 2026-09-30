@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -503,24 +504,43 @@ class SensorControllerTest {
   }
 
   /**
-   * The whole sensor catalogue, reads included, is admin-only (FR2.6); every other privilege level
-   * gets 403 with the access-denied ErrorDto, and no service or query is reached.
+   * Sensor reads are open to every authenticated caller: row-level security filters the rows by
+   * experiment, so the filter chain has nothing to add.
+   */
+  @ParameterizedTest
+  @EnumSource(PrivilegeLevel.class)
+  void should_let_every_privilege_level_read_sensors(PrivilegeLevel level) throws Exception {
+    List<String> paths =
+        List.of(
+            "/api/sensors/" + SENSOR_ID,
+            "/api/sensors?startRow=0&endRow=20",
+            "/api/sensors/csv",
+            "/api/sensors/formulas",
+            "/api/sensors/types");
+
+    for (String path : paths) {
+      int status =
+          mockMvc
+              .perform(get(path).with(authentication(level.authentication())))
+              .andReturn()
+              .getResponse()
+              .getStatus();
+      assertNotEquals(403, status, path + " as " + level);
+    }
+  }
+
+  /**
+   * Sensor writes are admin-only; every other privilege level gets 403 with the access-denied
+   * ErrorDto, and no service is reached.
    */
   @ParameterizedTest
   @EnumSource(
       value = PrivilegeLevel.class,
       names = {"BASISROLLE", "EXPERIMENT_USER", "EXPERIMENT_PI", "GLOBAL_EDITOR"})
-  void should_forbid_every_sensor_endpoint_to_non_admins(PrivilegeLevel level) throws Exception {
+  void should_forbid_sensor_writes_to_non_admins(PrivilegeLevel level) throws Exception {
     String body = objectMapper.writeValueAsString(defaultWriteDto(SENSOR_ID, 1, PARAMETER_ID, 1));
     List<MockHttpServletRequestBuilder> requests =
         List.of(
-            request(HttpMethod.GET, "/api/sensors/{id}", SENSOR_ID),
-            request(HttpMethod.GET, "/api/sensors")
-                .queryParam("startRow", "0")
-                .queryParam("endRow", "20"),
-            request(HttpMethod.GET, "/api/sensors/csv"),
-            request(HttpMethod.GET, "/api/sensors/formulas"),
-            request(HttpMethod.GET, "/api/sensors/types"),
             request(HttpMethod.POST, "/api/sensors")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body),
@@ -537,8 +557,6 @@ class SensorControllerTest {
     }
 
     then(service).shouldHaveNoInteractions();
-    then(parameterRowQueryRepository).shouldHaveNoInteractions();
-    then(csvExportQueryRepository).shouldHaveNoInteractions();
   }
 
   @Test
