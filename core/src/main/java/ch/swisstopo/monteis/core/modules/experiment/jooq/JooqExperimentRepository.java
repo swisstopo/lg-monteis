@@ -102,7 +102,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
                     experiment.get(EXPERIMENTS.VERSION),
                     experiment.get(SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))))
         // RLS hides rows the caller may not read, so hidden and missing look the same (BR4.11)
-        .orElseThrow(() -> new ObjectNotFoundException(Experiment.JAVERS_TYPE));
+        .orElseThrow(() -> new ObjectNotFoundException(Experiment.class));
   }
 
   @Override
@@ -201,7 +201,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
         dsl.selectFrom(EXPERIMENTS).where(EXPERIMENTS.ID.eq(experiment.getId())).fetchOne();
     // a row RLS hides from the caller is indistinguishable from a deleted one (BR4.11)
     if (updatedRecord == null) {
-      throw new ObjectNotFoundException(Experiment.JAVERS_TYPE);
+      throw new ObjectNotFoundException(Experiment.class);
     }
 
     // map new properties to existing

@@ -365,7 +365,7 @@ class GlobalErrorControllerAdviceTest {
 
     @GetMapping("/dummy/not-found-error")
     public void throwNotFoundError() {
-      throw new ObjectNotFoundException("Experiment");
+      throw new ObjectNotFoundException(Object.class);
     }
 
     @GetMapping("/dummy/rls-denied-error")
