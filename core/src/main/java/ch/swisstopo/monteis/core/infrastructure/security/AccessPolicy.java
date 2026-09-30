@@ -82,7 +82,6 @@ public final class AccessPolicy {
         admin,
         admin,
         authorities.contains(DOCUMENTS_READ_AUTHORITY),
-        admin,
         admin);
   }
 

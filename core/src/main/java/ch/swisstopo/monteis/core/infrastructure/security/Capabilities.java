@@ -16,7 +16,6 @@ import java.util.UUID;
  * @param canCreateExperiment {@code api:admin}
  * @param canManageSensors {@code api:admin}
  * @param canAccessDocuments {@code api:documents:read}
- * @param canUseAdminFunctions {@code api:admin}
  * @param isAdmin {@code api:admin}
  */
 public record Capabilities(
@@ -27,19 +26,18 @@ public record Capabilities(
     boolean canCreateExperiment,
     boolean canManageSensors,
     boolean canAccessDocuments,
-    boolean canUseAdminFunctions,
     boolean isAdmin) {
 
   /** Unauthenticated or unrecognised caller: nothing at all (fail closed). */
   public static final Capabilities NONE =
-      new Capabilities(false, false, Set.of(), Set.of(), false, false, false, false, false);
+      new Capabilities(false, false, Set.of(), Set.of(), false, false, false, false);
 
   /**
    * Background jobs bound by {@link SystemSecurityContext#runAsSystem}: all-experiment read and
    * nothing else, like the system pseudo-user before MON-196.
    */
   public static final Capabilities SYSTEM =
-      new Capabilities(true, false, Set.of(), Set.of(), false, false, false, false, false);
+      new Capabilities(true, false, Set.of(), Set.of(), false, false, false, false);
 
   public Capabilities {
     readableExperimentIds = Set.copyOf(readableExperimentIds);
