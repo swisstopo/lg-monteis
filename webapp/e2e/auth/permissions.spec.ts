@@ -12,7 +12,8 @@ import { createMonteisApi, findExperimentIdByName } from '../support/monteis-api
 /**
  * The SPA's cosmetic gating per privilege level (seed users of docker/keycloak/realm/patch.local.json).
  * The backend enforces every rule; these tests only prove the UI follows `/api/me`:
- * - the Sensor menu entry and the sensor table are admin-only;
+ * - every level sees the Sensor menu entry and the sensor table (row-level security filters the
+ *   sensors); only admins see the sensor write actions;
  * - Create Experiment is admin-only;
  * - Edit Experiment is shown to callers with any experiment write access and enabled only on rows
  *   they may write.
@@ -56,23 +57,14 @@ test.describe('admin (admin-user)', () => {
 
 for (const { level, loginAs } of NON_ADMINS) {
   test.describe(level, () => {
-    test('does not see the Sensor menu entry', async ({ page }) => {
+    test('sees the sensor table without the sensor write actions', async ({ page }) => {
       await openAppAs(page, loginAs);
 
-      // The Experiment entry of the same menu proves the menu rendered.
-      await expect(page.getByRole('link', { name: 'Experiment' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Sensor' })).toHaveCount(0);
-    });
-
-    test('is redirected away from a direct /sensor-table visit', async ({ page }) => {
-      await openAppAs(page, loginAs);
-
-      await page.goto(`${APP_URL}sensor-table`);
-
-      await expect(page).toHaveURL(/\/measurements-overview/);
-      await expect(
-        page.getByRole('textbox', { name: 'DAS Sensor Alias Filter Input' }),
-      ).not.toBeVisible();
+      await page.getByRole('link', { name: 'Sensor' }).click();
+      // Download is always rendered, so the table header is there.
+      await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Create Sensor' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Edit Sensor' })).toHaveCount(0);
     });
 
     test('does not see Create Experiment', async ({ page }) => {

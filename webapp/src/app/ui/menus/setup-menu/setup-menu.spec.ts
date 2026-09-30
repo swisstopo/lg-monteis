@@ -1,6 +1,5 @@
-import { Component, input, signal } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { PermissionsService } from '@core/auth/permissions.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { RouteButton } from '@ui/buttons/route-button/route-button';
 import { describe, expect, it } from 'vitest';
@@ -17,13 +16,10 @@ class RouteButtonStub {
   label = input.required<string>();
 }
 
-async function render(isAdmin: boolean): Promise<HTMLElement> {
+async function render(): Promise<HTMLElement> {
   TestBed.configureTestingModule({
     imports: [SetupMenu],
-    providers: [
-      provideTranslateService(),
-      { provide: PermissionsService, useValue: { isAdmin: signal(isAdmin) } },
-    ],
+    providers: [provideTranslateService()],
   });
   TestBed.overrideComponent(SetupMenu, {
     remove: { imports: [RouteButton] },
@@ -35,24 +31,18 @@ async function render(isAdmin: boolean): Promise<HTMLElement> {
   return fixture.nativeElement as HTMLElement;
 }
 
+// Sensor reads are open to every user (row-level security filters them), so both entries are
+// always shown; the sensor write actions are gated inside the table instead.
 describe('SetupMenu', () => {
-  it('shows the Sensor entry to an admin', async () => {
-    const element = await render(true);
+  it('shows the Sensor entry', async () => {
+    const element = await render();
 
     const sensorEntry = element.querySelector('[data-testid="setup-menu-sensor-entry"]');
-    expect(sensorEntry).not.toBeNull();
     expect(sensorEntry?.textContent).toContain('/sensor-table');
   });
 
-  it('hides the Sensor entry from a non-admin', async () => {
-    const element = await render(false);
-
-    expect(element.querySelector('[data-testid="setup-menu-sensor-entry"]')).toBeNull();
-    expect(element.textContent).not.toContain('/sensor-table');
-  });
-
-  it.each([true, false])('always shows the Experiment entry (isAdmin: %s)', async (isAdmin) => {
-    const element = await render(isAdmin);
+  it('shows the Experiment entry', async () => {
+    const element = await render();
 
     const experimentEntry = element.querySelector('[data-testid="setup-menu-experiment-entry"]');
     expect(experimentEntry?.textContent).toContain('/experiment-table');

@@ -46,7 +46,9 @@ public class SecurityConfig {
                     .access(new ExperimentWriteAuthorizationManager())
                     .requestMatchers(HttpMethod.POST, EXPERIMENTS_PATH)
                     .access(allowIf(Capabilities::canCreateExperiment))
-                    // the whole sensor catalogue, reads included, is admin-only (FR2.6)
+                    // sensor reads need no rule of their own: RLS filters the rows by experiment
+                    .requestMatchers(HttpMethod.GET, SENSORS_PATHS)
+                    .authenticated()
                     .requestMatchers(SENSORS_PATHS)
                     .access(allowIf(Capabilities::canManageSensors))
                     .requestMatchers(HttpMethod.POST)
