@@ -26,7 +26,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -106,36 +110,43 @@ class EndpointCoverageTest {
     assertEquals(new TreeMap<>(EXPECTED).keySet(), applicationMappings().keySet());
   }
 
-  @Test
-  void should_enforce_each_mappings_rule_for_every_privilege_level() throws Exception {
-    for (String mapping : applicationMappings().keySet()) {
-      Rule rule = EXPECTED.get(mapping);
-      assertTrue(rule != null, "no rule for " + mapping);
-      for (PrivilegeLevel level : PrivilegeLevel.values()) {
-        int status = perform(mapping, level).getStatus();
-        String context = mapping + " as " + level;
-        if (rule.allowed.contains(level)) {
-          assertNotEquals(403, status, context);
-          assertNotEquals(401, status, context);
-        } else {
-          assertEquals(403, status, context);
-        }
-      }
+  /** Every expected mapping with every privilege level; the test above ties them to reality. */
+  static Stream<Arguments> mappingsAndLevels() {
+    return EXPECTED.keySet().stream()
+        .sorted()
+        .flatMap(mapping -> Stream.of(PrivilegeLevel.values()).map(l -> Arguments.of(mapping, l)));
+  }
+
+  static Stream<String> mappings() {
+    return EXPECTED.keySet().stream().sorted();
+  }
+
+  @ParameterizedTest(name = "{0} as {1}")
+  @MethodSource("mappingsAndLevels")
+  void should_enforce_the_mappings_rule_for_the_privilege_level(
+      String mapping, PrivilegeLevel level) throws Exception {
+    int status = perform(mapping, level).getStatus();
+
+    if (EXPECTED.get(mapping).allowed.contains(level)) {
+      assertNotEquals(403, status);
+      assertNotEquals(401, status);
+    } else {
+      assertEquals(403, status);
     }
   }
 
-  @Test
-  void should_reject_anonymous_callers_on_every_mapping() throws Exception {
-    for (String mapping : applicationMappings().keySet()) {
-      String[] parts = mapping.split(" ", 2);
-      int status =
-          mockMvc
-              .perform(request(HttpMethod.valueOf(parts[0]), concrete(parts[1])).with(csrf()))
-              .andReturn()
-              .getResponse()
-              .getStatus();
-      assertTrue(status == 401 || status == 403, mapping + " answered " + status);
-    }
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("mappings")
+  void should_reject_anonymous_callers(String mapping) throws Exception {
+    String[] parts = mapping.split(" ", 2);
+    int status =
+        mockMvc
+            .perform(request(HttpMethod.valueOf(parts[0]), concrete(parts[1])).with(csrf()))
+            .andReturn()
+            .getResponse()
+            .getStatus();
+
+    assertTrue(status == 401 || status == 403, "answered " + status);
   }
 
   private MockHttpServletResponse perform(String mapping, PrivilegeLevel level) throws Exception {
