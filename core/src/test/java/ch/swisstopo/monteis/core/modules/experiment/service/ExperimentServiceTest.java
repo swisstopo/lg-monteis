@@ -76,7 +76,7 @@ class ExperimentServiceTest {
   void should_propagate_not_found_when_the_experiment_is_missing_or_hidden() {
     // given
     UUID experimentId = UUID.randomUUID();
-    ObjectNotFoundException notFound = new ObjectNotFoundException(Experiment.JAVERS_TYPE);
+    ObjectNotFoundException notFound = new ObjectNotFoundException(Experiment.class);
 
     given(repository.getById(experimentId)).willThrow(notFound);
 
@@ -92,7 +92,7 @@ class ExperimentServiceTest {
     Experiment inputExperiment = mock(Experiment.class);
 
     given(repository.update(inputExperiment))
-        .willThrow(new ObjectNotFoundException(Experiment.JAVERS_TYPE));
+        .willThrow(new ObjectNotFoundException(Experiment.class));
 
     // when / then
     assertThrows(ObjectNotFoundException.class, () -> service.updateExperiment(inputExperiment));

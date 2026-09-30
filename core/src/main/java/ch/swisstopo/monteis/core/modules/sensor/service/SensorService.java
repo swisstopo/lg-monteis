@@ -108,7 +108,7 @@ public class SensorService {
     return repository
         .findById(id)
         // RLS hides sensors outside the caller's experiments, so hidden and missing look the same
-        .orElseThrow(() -> new ObjectNotFoundException(Sensor.JAVERS_TYPE));
+        .orElseThrow(() -> new ObjectNotFoundException(Sensor.class));
   }
 
   public List<Formula> findAllFormulas() {

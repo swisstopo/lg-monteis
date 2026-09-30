@@ -11,10 +11,10 @@ public class ObjectNotFoundException extends RuntimeException {
   public static final String MESSAGE_KEY = "object.not-found";
 
   /**
-   * @param objectType the kind of object that was looked up, for logs only; never sent to the
-   *     client
+   * @param objectType the kind of object that was looked up; its simple name goes into the message,
+   *     for logs only, and is never sent to the client
    */
-  public ObjectNotFoundException(String objectType) {
-    super(objectType + " not found or not visible");
+  public ObjectNotFoundException(Class<?> objectType) {
+    super(objectType.getSimpleName() + " not found or not visible");
   }
 }

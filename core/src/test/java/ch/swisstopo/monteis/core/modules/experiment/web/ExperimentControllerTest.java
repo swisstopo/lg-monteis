@@ -405,7 +405,7 @@ class ExperimentControllerTest {
     UUID hiddenId = UUID.fromString("00000000-0000-7000-8000-000000000302");
     UUID randomId = UUID.randomUUID();
     given(service.getById(any(UUID.class)))
-        .willThrow(new ObjectNotFoundException(Experiment.JAVERS_TYPE));
+        .willThrow(new ObjectNotFoundException(Experiment.class));
 
     // when
     String hiddenBody =
@@ -549,7 +549,7 @@ class ExperimentControllerTest {
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(service.updateExperiment(mockDomain))
-        .willThrow(new ObjectNotFoundException(Experiment.JAVERS_TYPE));
+        .willThrow(new ObjectNotFoundException(Experiment.class));
 
     // when / then: no longer 422 object.deleted (BR4.11)
     mockMvc
