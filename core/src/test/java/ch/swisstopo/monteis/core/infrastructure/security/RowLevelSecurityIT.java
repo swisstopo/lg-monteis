@@ -126,7 +126,7 @@ class RowLevelSecurityIT {
     // resolve to "no access" rather than raise a SQL error and take the whole query down with it.
     SecurityContextTestSupport.runAsAdmin(
         () -> {
-          // can_access_all_experiments() short-circuits the OR, so a null target id is irrelevant
+          // can_read_all_experiments() short-circuits the OR, so a null target id is irrelevant
           // for admins.
           assertEquals(Boolean.TRUE, callCanAccessSensor(null));
           assertEquals(Boolean.TRUE, callCanAccessExperiment(null));
@@ -203,11 +203,22 @@ class RowLevelSecurityIT {
 
   @Test
   @Transactional
+  void system_context_may_not_update_an_experiment() {
+    // background jobs run without a filter chain, so RLS is the only guard against their writes
+    SystemSecurityContext.runAsSystem(
+        () ->
+            assertThrows(
+                PermissionDeniedDataAccessException.class,
+                () -> renameExperiment(EXPERIMENT_ALPHA, "Mont Terri Alpha renamed")));
+  }
+
+  @Test
+  @Transactional
   void settings_replaced_by_v17_no_longer_grant_access() {
     SecurityContextTestSupport.runAsUser(
         List.of(),
         () -> {
-          // The provider only overwrites the three current settings on every statement, so the
+          // The provider only overwrites the four current settings on every statement, so the
           // old ones set here stay in effect for the rest of the transaction.
           dsl.fetch(
               "SELECT set_config('app.read_all', 'true', true),"
@@ -222,9 +233,9 @@ class RowLevelSecurityIT {
 
   @Test
   @Transactional
-  void read_all_and_write_all_functions_are_replaced_by_one_all_experiments_function() {
+  void read_all_and_write_all_functions_are_replaced_by_their_all_experiments_variants() {
     assertEquals(0, countFunctions("can_read_all", "can_write_all"));
-    assertEquals(1, countFunctions("can_access_all_experiments"));
+    assertEquals(2, countFunctions("can_read_all_experiments", "can_write_all_experiments"));
   }
 
   private int renameExperiment(UUID experimentId, String name) {
