@@ -103,7 +103,6 @@ class AccessPolicyTest {
   @Test
   void should_return_none_without_authentication() {
     assertSame(Capabilities.NONE, AccessPolicy.capabilitiesOf(null));
-    assertSame(Capabilities.NONE, AccessPolicy.currentCapabilities());
   }
 
   @Test
@@ -146,7 +145,7 @@ class AccessPolicyTest {
     AtomicReference<Capabilities> during = new AtomicReference<>();
 
     // when
-    SystemSecurityContext.runAsSystem(() -> during.set(AccessPolicy.currentCapabilities()));
+    SystemSecurityContext.runAsSystem(() -> during.set(boundCapabilities()));
 
     // then
     assertSame(Capabilities.SYSTEM, during.get());
@@ -154,7 +153,7 @@ class AccessPolicyTest {
     assertTrue(Capabilities.SYSTEM.canReadAllExperiments());
     assertFalse(Capabilities.SYSTEM.canWriteAllExperiments());
     assertFalse(Capabilities.SYSTEM.isAdmin());
-    assertSame(Capabilities.NONE, AccessPolicy.currentCapabilities());
+    assertSame(Capabilities.NONE, boundCapabilities());
   }
 
   @Test
@@ -172,17 +171,6 @@ class AccessPolicyTest {
 
     // then
     assertEquals(Capabilities.NONE, AccessPolicy.capabilitiesOf(lookAlike));
-  }
-
-  @Test
-  void should_derive_the_current_callers_capabilities_from_the_security_context() {
-    // given
-    SecurityContextHolder.getContext()
-        .setAuthentication(PrivilegeLevel.EXPERIMENT_PI.authentication());
-
-    // then
-    assertTrue(AccessPolicy.currentCapabilities().canEditExperiment(ASSIGNED_EXPERIMENT));
-    assertFalse(AccessPolicy.currentCapabilities().canEditExperiment(OTHER_EXPERIMENT));
   }
 
   @Test
@@ -241,5 +229,9 @@ class AccessPolicyTest {
     then(authentication).should(times(3)).getPrincipal();
     then(authentication).should(times(3)).getAuthorities();
     then(authentication).shouldHaveNoMoreInteractions();
+  }
+
+  private static Capabilities boundCapabilities() {
+    return AccessPolicy.capabilitiesOf(SecurityContextHolder.getContext().getAuthentication());
   }
 }
