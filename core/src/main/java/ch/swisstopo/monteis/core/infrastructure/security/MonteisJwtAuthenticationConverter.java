@@ -1,5 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_READ_AUTHORITY;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_WRITE_AUTHORITY;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -30,12 +33,12 @@ public class MonteisJwtAuthenticationConverter
     // Fail closed: a caller without the matching authority must never leak a populated
     // experiment id claim through as if it were a legitimately scoped user.
     List<UUID> readExperimentIds =
-        AccessPolicy.grantsScopedExperimentRead(authorities)
+        hasAuthority(authorities, EXPERIMENT_READ_AUTHORITY)
             ? claims.readExperimentIds()
             : List.of();
     // MonteisPrincipal drops write ids outside the read ids
     List<UUID> writeExperimentIds =
-        AccessPolicy.grantsScopedExperimentWrite(authorities)
+        hasAuthority(authorities, EXPERIMENT_WRITE_AUTHORITY)
             ? claims.writeExperimentIds()
             : List.of();
 
@@ -43,5 +46,11 @@ public class MonteisJwtAuthenticationConverter
         new MonteisPrincipal(subject, claims.username(), readExperimentIds, writeExperimentIds);
 
     return new MonteisAuthenticationToken(source, principal, authorities);
+  }
+
+  // which experiment id claims to trust is decided while building the token, not by AccessPolicy
+  private static boolean hasAuthority(
+      Collection<? extends GrantedAuthority> authorities, String authority) {
+    return authorities.stream().anyMatch(a -> authority.equals(a.getAuthority()));
   }
 }
