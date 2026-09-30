@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities;
+import ch.swisstopo.monteis.core.infrastructure.security.Grant;
 import ch.swisstopo.monteis.core.infrastructure.security.SystemSecurityContext;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import java.sql.Connection;
@@ -32,7 +32,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -111,8 +110,7 @@ class RlsConnectionProviderTest {
         acquireWithin(
             action ->
                 SecurityContextTestSupport.runAs(
-                    List.of(
-                        new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_AUTHORITY)),
+                    List.of(Grant.EXPERIMENT_READ),
                     List.of(EXPERIMENT_A),
                     List.of(EXPERIMENT_A),
                     action));
@@ -136,9 +134,7 @@ class RlsConnectionProviderTest {
               SecurityContext context = SecurityContextHolder.createEmptyContext();
               context.setAuthentication(
                   UsernamePasswordAuthenticationToken.authenticated(
-                      "x",
-                      null,
-                      List.of(new SimpleGrantedAuthority(MonteisAuthorities.ADMIN_AUTHORITY))));
+                      "x", null, List.of(Grant.ADMIN)));
               SecurityContextHolder.setContext(context);
               action.run();
             });

@@ -1,7 +1,5 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_READ_AUTHORITY;
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_WRITE_ALL_AUTHORITY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -10,7 +8,6 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 class MonteisAuthenticationTokenTest {
@@ -21,7 +18,7 @@ class MonteisAuthenticationTokenTest {
     Jwt jwt = givenJwt();
     MonteisPrincipal principal =
         new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
-    var authorities = List.of(new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY));
+    var authorities = List.of(Grant.EXPERIMENT_READ);
 
     // when
     var first = new MonteisAuthenticationToken(jwt, principal, authorities);
@@ -36,7 +33,7 @@ class MonteisAuthenticationTokenTest {
   void should_not_be_equal_when_principal_differs() {
     // given
     Jwt jwt = givenJwt();
-    var authorities = List.of(new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY));
+    var authorities = List.of(Grant.EXPERIMENT_READ);
     var first =
         new MonteisAuthenticationToken(
             jwt,
@@ -57,7 +54,7 @@ class MonteisAuthenticationTokenTest {
     // given
     MonteisPrincipal principal =
         new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
-    var authorities = List.of(new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY));
+    var authorities = List.of(Grant.EXPERIMENT_READ);
     var first = new MonteisAuthenticationToken(givenJwt(), principal, authorities);
     var second = new MonteisAuthenticationToken(givenJwt(), principal, authorities);
 
@@ -71,12 +68,9 @@ class MonteisAuthenticationTokenTest {
     Jwt jwt = givenJwt();
     MonteisPrincipal principal =
         new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
-    var first =
-        new MonteisAuthenticationToken(
-            jwt, principal, List.of(new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY)));
+    var first = new MonteisAuthenticationToken(jwt, principal, List.of(Grant.EXPERIMENT_READ));
     var second =
-        new MonteisAuthenticationToken(
-            jwt, principal, List.of(new SimpleGrantedAuthority(EXPERIMENT_WRITE_ALL_AUTHORITY)));
+        new MonteisAuthenticationToken(jwt, principal, List.of(Grant.EXPERIMENT_WRITE_ALL));
 
     // then
     assertNotEquals(first, second);
@@ -88,7 +82,7 @@ class MonteisAuthenticationTokenTest {
     Jwt jwt = givenJwt();
     MonteisPrincipal principal =
         new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
-    var authorities = List.of(new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY));
+    var authorities = List.of(Grant.EXPERIMENT_READ);
     var monteisToken = new MonteisAuthenticationToken(jwt, principal, authorities);
     var otherToken = UsernamePasswordAuthenticationToken.authenticated(principal, jwt, authorities);
 

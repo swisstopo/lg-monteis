@@ -1,9 +1,5 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.ADMIN_AUTHORITY;
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_READ_AUTHORITY;
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_WRITE_ALL_AUTHORITY;
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_WRITE_AUTHORITY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -22,7 +18,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -103,10 +98,7 @@ class MonteisJwtAuthenticationConverterTest {
             subject, "alice", List.of(EXPERIMENT_1, EXPERIMENT_2), List.of(EXPERIMENT_1)),
         authentication.getPrincipal());
     assertEquals(
-        Set.of(
-            new SimpleGrantedAuthority(EXPERIMENT_READ_AUTHORITY),
-            new SimpleGrantedAuthority(EXPERIMENT_WRITE_AUTHORITY)),
-        authoritiesOf(authentication));
+        Set.of(Grant.EXPERIMENT_READ, Grant.EXPERIMENT_WRITE), authoritiesOf(authentication));
   }
 
   @Test
@@ -124,9 +116,7 @@ class MonteisJwtAuthenticationConverterTest {
     assertEquals(
         new MonteisPrincipal(subject, "editor", List.of(), List.of()),
         authentication.getPrincipal());
-    assertEquals(
-        Set.of(new SimpleGrantedAuthority(EXPERIMENT_WRITE_ALL_AUTHORITY)),
-        authoritiesOf(authentication));
+    assertEquals(Set.of(Grant.EXPERIMENT_WRITE_ALL), authoritiesOf(authentication));
   }
 
   @Test
@@ -229,8 +219,7 @@ class MonteisJwtAuthenticationConverterTest {
   void should_grant_admin_without_needing_experiment_ids() {
     Jwt jwt = givenJwt(UUID.randomUUID(), "root", List.of(ADMIN), null, null);
 
-    assertEquals(
-        Set.of(new SimpleGrantedAuthority(ADMIN_AUTHORITY)), authoritiesOf(converter.convert(jwt)));
+    assertEquals(Set.of(Grant.ADMIN), authoritiesOf(converter.convert(jwt)));
   }
 
   private static Set<GrantedAuthority> authoritiesOf(AbstractAuthenticationToken authentication) {

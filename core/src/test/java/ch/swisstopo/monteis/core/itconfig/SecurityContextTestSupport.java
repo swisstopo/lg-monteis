@@ -1,12 +1,11 @@
 package ch.swisstopo.monteis.core.itconfig;
 
+import ch.swisstopo.monteis.core.infrastructure.security.Grant;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
-import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -21,29 +20,17 @@ public final class SecurityContextTestSupport {
 
   /** {@code api:admin}: all experiments, read and write. */
   public static void runAsAdmin(Runnable action) {
-    runAs(
-        List.of(new SimpleGrantedAuthority(MonteisAuthorities.ADMIN_AUTHORITY)),
-        List.of(),
-        List.of(),
-        action);
+    runAs(List.of(Grant.ADMIN), List.of(), List.of(), action);
   }
 
   /** {@code api:experiment:write-all}: all experiments, read and write, no admin functions. */
   public static void runAsGlobalEditor(Runnable action) {
-    runAs(
-        List.of(new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_WRITE_ALL_AUTHORITY)),
-        List.of(),
-        List.of(),
-        action);
+    runAs(List.of(Grant.EXPERIMENT_WRITE_ALL), List.of(), List.of(), action);
   }
 
   /** {@code api:experiment:read} on {@code readExperimentIds} only. */
   public static void runAsUser(List<UUID> readExperimentIds, Runnable action) {
-    runAs(
-        List.of(new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_AUTHORITY)),
-        readExperimentIds,
-        List.of(),
-        action);
+    runAs(List.of(Grant.EXPERIMENT_READ), readExperimentIds, List.of(), action);
   }
 
   /**
@@ -53,9 +40,7 @@ public final class SecurityContextTestSupport {
   public static void runAsUser(
       List<UUID> readExperimentIds, List<UUID> writeExperimentIds, Runnable action) {
     runAs(
-        List.of(
-            new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_AUTHORITY),
-            new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_WRITE_AUTHORITY)),
+        List.of(Grant.EXPERIMENT_READ, Grant.EXPERIMENT_WRITE),
         readExperimentIds,
         writeExperimentIds,
         action);

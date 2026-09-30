@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities;
+import ch.swisstopo.monteis.core.infrastructure.security.Grant;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import java.util.stream.Stream;
@@ -17,7 +17,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -60,12 +59,7 @@ class CurrentUserControllerTest {
   void should_report_nothing_for_a_token_that_did_not_pass_our_converter() throws Exception {
     // e.g. Spring Security Test's jwt() shortcut: authenticated, but not a MonteisPrincipal
     mockMvc
-        .perform(
-            get("/api/me")
-                .with(
-                    jwt()
-                        .authorities(
-                            new SimpleGrantedAuthority(MonteisAuthorities.ADMIN_AUTHORITY))))
+        .perform(get("/api/me").with(jwt().authorities(Grant.ADMIN)))
         .andExpect(status().isOk())
         .andExpect(content().json(body(false, false, "", false), JsonCompareMode.STRICT));
   }
