@@ -7,7 +7,6 @@ import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthoriti
 import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_WRITE_AUTHORITY;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -89,7 +88,8 @@ public final class AccessPolicy {
     Set<UUID> editable =
         allExperiments || !authorities.contains(EXPERIMENT_WRITE_AUTHORITY)
             ? Set.of()
-            : intersection(principal.getWriteExperimentIds(), readable);
+            // MonteisPrincipal keeps its write ids a subset of its read ids
+            : Set.copyOf(principal.getWriteExperimentIds());
 
     return new Capabilities(
         allExperiments,
@@ -108,13 +108,6 @@ public final class AccessPolicy {
         .map(GrantedAuthority::getAuthority)
         .filter(Objects::nonNull)
         .collect(Collectors.toSet());
-  }
-
-  // write ids outside the read ids would break the subset invariant of Capabilities
-  private static Set<UUID> intersection(Collection<UUID> writeIds, Set<UUID> readable) {
-    Set<UUID> editable = new HashSet<>(writeIds);
-    editable.retainAll(readable);
-    return editable;
   }
 
   private static boolean hasAuthority(
