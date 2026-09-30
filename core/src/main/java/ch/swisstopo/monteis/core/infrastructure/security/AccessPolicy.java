@@ -74,15 +74,9 @@ public final class AccessPolicy {
             // MonteisPrincipal keeps its write ids a subset of its read ids
             : Set.copyOf(principal.getWriteExperimentIds());
 
-    return new Capabilities(
-        allExperiments,
-        allExperiments,
-        readable,
-        editable,
-        admin,
-        admin,
-        authorities.contains(DOCUMENTS_READ_AUTHORITY),
-        admin);
+    boolean documents = authorities.contains(DOCUMENTS_READ_AUTHORITY);
+
+    return new Capabilities(allExperiments, allExperiments, readable, editable, documents, admin);
   }
 
   private static Set<String> authorityNames(Collection<? extends GrantedAuthority> authorities) {

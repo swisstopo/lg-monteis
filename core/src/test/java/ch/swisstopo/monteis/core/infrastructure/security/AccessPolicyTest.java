@@ -66,9 +66,10 @@ class AccessPolicyTest {
 
     // then
     assertEquals(
-        new Capabilities(
-            allExperiments, allExperiments, readable, editable, admin, admin, documents, admin),
+        new Capabilities(allExperiments, allExperiments, readable, editable, documents, admin),
         capabilities);
+    assertEquals(admin, capabilities.canCreateExperiment());
+    assertEquals(admin, capabilities.canManageSensors());
   }
 
   @ParameterizedTest
