@@ -74,7 +74,6 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
   private static final Set<String> INTERNAL_ANNOTATION_KEYS =
       Set.of("message", "groups", "payload");
   public static final String ERROR_ID = "errorId";
-  static final String ACCESS_DENIED = "access.denied";
 
   @ExceptionHandler(ObjectBusinessValidationException.class)
   @ApiResponse(
@@ -179,8 +178,7 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
       content = @Content(schema = @Schema(implementation = ErrorDto.class)))
   protected ResponseEntity<ErrorDto> handlePermissionDenied(
       PermissionDeniedDataAccessException ex) {
-    ErrorDto payload = ErrorDto.global(ACCESS_DENIED, Map.of());
-    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(payload);
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorDto.accessDenied());
   }
 
   /**
