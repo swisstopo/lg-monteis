@@ -32,7 +32,7 @@ class SystemSecurityContextTest {
         () -> captured.set(SecurityContextHolder.getContext().getAuthentication()));
 
     // then: all-experiment read and nothing else, without any authority of its own
-    assertSame(Capabilities.SYSTEM, AccessPolicy.capabilitiesOf(captured.get()));
+    assertSame(Capabilities.SYSTEM, Capabilities.of(captured.get()));
     assertTrue(captured.get().getAuthorities().isEmpty());
     assertTrue(SystemSecurityContext.isSystemAuthentication(captured.get()));
   }

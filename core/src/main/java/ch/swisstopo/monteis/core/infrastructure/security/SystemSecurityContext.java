@@ -11,7 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * backfill) that still need all-experiment read access. An unbound {@link SecurityContextHolder}
  * must never implicitly resolve to elevated access — callers bind this deliberately.
  *
- * <p>The bound authentication carries no authority. {@link AccessPolicy} recognises it by identity
+ * <p>The bound authentication carries no authority. {@link Capabilities#of} recognises it by identity
  * and answers {@link Capabilities#SYSTEM}, so no request token can ever produce it (BR4.7).
  */
 public final class SystemSecurityContext {

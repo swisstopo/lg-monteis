@@ -41,7 +41,7 @@ export class PermissionsService {
   );
 
   /**
-   * Mirrors the backend AccessPolicy. `canWriteAllExperiments` already covers admins, so the admin
+   * Mirrors the backend Capabilities. `canWriteAllExperiments` already covers admins, so the admin
    * rule lives in the backend only.
    */
   canWriteExperiment(experimentId: string): boolean {

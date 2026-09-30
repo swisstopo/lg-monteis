@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.core.infrastructure.jooq;
 
-import ch.swisstopo.monteis.core.infrastructure.security.AccessPolicy;
 import ch.swisstopo.monteis.core.infrastructure.security.Capabilities;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -28,7 +27,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
  *       subset of the readable ones.
  * </ul>
  *
- * <p>The values come from {@link AccessPolicy} only, so the database applies the same rules as the
+ * <p>The values come from {@link Capabilities} only, so the database applies the same rules as the
  * filter chain. They are transaction-local, not session-scoped, so they never leak to the next
  * borrower of a pooled connection: callers must run inside a Spring transaction. An unbound or
  * unrecognised authentication yields {@link Capabilities#NONE} and therefore fails closed (no
@@ -63,7 +62,7 @@ public class RlsConnectionProvider implements ConnectionProvider {
 
   private static void applySecurityContext(Connection connection) {
     Capabilities capabilities =
-        AccessPolicy.capabilitiesOf(SecurityContextHolder.getContext().getAuthentication());
+        Capabilities.of(SecurityContextHolder.getContext().getAuthentication());
     try (PreparedStatement statement = connection.prepareStatement(SET_RLS_CONTEXT)) {
       statement.setString(1, String.valueOf(capabilities.canReadAllExperiments()));
       statement.setString(2, String.valueOf(capabilities.canWriteAllExperiments()));

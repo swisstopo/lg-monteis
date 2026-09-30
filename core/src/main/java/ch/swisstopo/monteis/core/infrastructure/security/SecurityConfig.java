@@ -19,7 +19,7 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * The HTTP request rules (BR4.8), evaluated in order, first match wins. Every non-public decision
- * asks {@link AccessPolicy}; reads are only authenticated here, because row-level security filters
+ * asks {@link Capabilities}; reads are only authenticated here, because row-level security filters
  * the rows (hybrid filter-chain-plus-RLS model, ADR-003).
  */
 @Configuration
@@ -81,7 +81,6 @@ public class SecurityConfig {
   private static AuthorizationManager<RequestAuthorizationContext> allowIf(
       Predicate<Capabilities> capability) {
     return (authentication, context) ->
-        new AuthorizationDecision(
-            capability.test(AccessPolicy.capabilitiesOf(authentication.get())));
+        new AuthorizationDecision(capability.test(Capabilities.of(authentication.get())));
   }
 }
