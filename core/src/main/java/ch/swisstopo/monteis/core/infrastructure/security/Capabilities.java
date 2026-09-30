@@ -1,14 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.ADMIN_AUTHORITY;
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.DOCUMENTS_READ_AUTHORITY;
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_READ_AUTHORITY;
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_WRITE_ALL_AUTHORITY;
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthorities.EXPERIMENT_WRITE_AUTHORITY;
-
 import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -48,15 +40,6 @@ public record Capabilities(
 
   private static final Logger log = LoggerFactory.getLogger(Capabilities.class);
 
-  // SYSTEM_READ_ALL is deliberately absent: no authority, and so no request token, can grant it
-  private static final Map<String, Grant> GRANT_BY_AUTHORITY =
-      Map.of(
-          EXPERIMENT_READ_AUTHORITY, Grant.EXPERIMENT_READ,
-          EXPERIMENT_WRITE_AUTHORITY, Grant.EXPERIMENT_WRITE,
-          EXPERIMENT_WRITE_ALL_AUTHORITY, Grant.EXPERIMENT_WRITE_ALL,
-          DOCUMENTS_READ_AUTHORITY, Grant.DOCUMENTS_READ,
-          ADMIN_AUTHORITY, Grant.ADMIN);
-
   public Capabilities {
     grants = Set.copyOf(grants);
     assignedReadExperimentIds = Set.copyOf(assignedReadExperimentIds);
@@ -64,7 +47,7 @@ public record Capabilities(
   }
 
   /**
-   * The capabilities of {@code authentication}: its {@code api:*} authorities become {@link
+   * The capabilities of {@code authentication}: its authorities, looked up by name, become {@link
    * Grant}s, its principal's experiment ids are passed on. Returns {@link #SYSTEM} for the
    * authentication {@link SystemSecurityContext#runAsSystem} binds, and {@link #NONE} for {@code
    * null}, an unauthenticated token, a principal that is not a {@link MonteisPrincipal}, or when
@@ -101,13 +84,11 @@ public record Capabilities(
         Set.copyOf(principal.getWriteExperimentIds()));
   }
 
-  // authorities unknown to this app map to no grant
+  // by name, so a foreign authority object with an api:* name counts too; unknown names don't
   private static Set<Grant> grantsOf(Collection<? extends GrantedAuthority> authorities) {
     return authorities.stream()
         .map(GrantedAuthority::getAuthority)
-        .filter(Objects::nonNull)
-        .map(GRANT_BY_AUTHORITY::get)
-        .filter(Objects::nonNull)
+        .flatMap(authority -> Grant.fromAuthority(authority).stream())
         .collect(Collectors.toUnmodifiableSet());
   }
 

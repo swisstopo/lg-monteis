@@ -118,10 +118,7 @@ class CapabilitiesTest {
   void should_return_none_for_a_foreign_principal_even_with_the_admin_authority() {
     // given: e.g. Spring Security Test's jwt() shortcut, which bypasses our converter
     Authentication foreign =
-        UsernamePasswordAuthenticationToken.authenticated(
-            "someone",
-            null,
-            List.of(new SimpleGrantedAuthority(MonteisAuthorities.ADMIN_AUTHORITY)));
+        UsernamePasswordAuthenticationToken.authenticated("someone", null, List.of(Grant.ADMIN));
 
     // then
     assertSame(Capabilities.NONE, Capabilities.of(foreign));
@@ -154,18 +151,18 @@ class CapabilitiesTest {
   }
 
   @Test
-  void should_map_each_authority_to_its_grant_and_ignore_unknown_ones() {
-    // given
+  void should_map_each_authority_name_to_its_grant_and_ignore_unknown_ones() {
+    // given: plain authorities with the api:* names, not the Grant constants themselves
     var authentication =
         new MonteisAuthenticationToken(
             null,
             new MonteisPrincipal(UUID.randomUUID(), "all", List.of(), List.of()),
             List.of(
-                new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_READ_AUTHORITY),
-                new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_WRITE_AUTHORITY),
-                new SimpleGrantedAuthority(MonteisAuthorities.EXPERIMENT_WRITE_ALL_AUTHORITY),
-                new SimpleGrantedAuthority(MonteisAuthorities.DOCUMENTS_READ_AUTHORITY),
-                new SimpleGrantedAuthority(MonteisAuthorities.ADMIN_AUTHORITY),
+                new SimpleGrantedAuthority("api:experiment:read"),
+                new SimpleGrantedAuthority("api:experiment:write"),
+                new SimpleGrantedAuthority("api:experiment:write-all"),
+                new SimpleGrantedAuthority("api:documents:read"),
+                new SimpleGrantedAuthority("api:admin"),
                 new SimpleGrantedAuthority("api:unknown")));
 
     // then: every grant except SYSTEM_READ_ALL, which no authority maps to
@@ -205,9 +202,7 @@ class CapabilitiesTest {
             PrivilegeLevel.EXPERIMENT_PI.grantedAuthorities());
 
     // then
-    assertEquals(
-        Set.of(OTHER_EXPERIMENT),
-        Capabilities.of(authentication).writableExperimentIds());
+    assertEquals(Set.of(OTHER_EXPERIMENT), Capabilities.of(authentication).writableExperimentIds());
   }
 
   @Test
@@ -259,7 +254,8 @@ class CapabilitiesTest {
   private static final UUID EXPERIMENT_B = UUID.fromString("00000000-0000-7000-8000-000000000302");
   private static final Set<UUID> BOTH = Set.of(EXPERIMENT_A, EXPERIMENT_B);
 
-  private static Capabilities capabilities(Set<Grant> grants, Set<UUID> readIds, Set<UUID> writeIds) {
+  private static Capabilities capabilities(
+      Set<Grant> grants, Set<UUID> readIds, Set<UUID> writeIds) {
     return new Capabilities(grants, readIds, writeIds);
   }
 
@@ -317,7 +313,8 @@ class CapabilitiesTest {
   @Test
   void should_scope_reads_and_writes_to_the_assigned_experiments() {
     Capabilities pi =
-        capabilities(Set.of(Grant.EXPERIMENT_READ, Grant.EXPERIMENT_WRITE), BOTH, Set.of(EXPERIMENT_A));
+        capabilities(
+            Set.of(Grant.EXPERIMENT_READ, Grant.EXPERIMENT_WRITE), BOTH, Set.of(EXPERIMENT_A));
 
     assertEquals(BOTH, pi.readableExperimentIds());
     assertEquals(Set.of(EXPERIMENT_A), pi.writableExperimentIds());
@@ -337,7 +334,8 @@ class CapabilitiesTest {
   @Test
   void should_leave_the_id_sets_empty_when_an_all_experiments_rule_applies() {
     Capabilities editor =
-        capabilities(Set.of(Grant.EXPERIMENT_WRITE_ALL, Grant.EXPERIMENT_WRITE), BOTH, Set.of(EXPERIMENT_A));
+        capabilities(
+            Set.of(Grant.EXPERIMENT_WRITE_ALL, Grant.EXPERIMENT_WRITE), BOTH, Set.of(EXPERIMENT_A));
 
     assertEquals(Set.of(), editor.readableExperimentIds());
     assertEquals(Set.of(), editor.writableExperimentIds());
