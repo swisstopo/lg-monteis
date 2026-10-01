@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 
-// TODO: placeholder target for the admin menu entry; the organisation table itself is a follow-up story.
+// TODO: placeholder so the admin menu entry has a target, the organisation table follows in its own story
 @Component({
   selector: 'app-organisation-table',
   imports: [TranslatePipe],

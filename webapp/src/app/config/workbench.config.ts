@@ -29,7 +29,6 @@ const adminLayout = (factory: WorkbenchLayoutFactory) =>
     )
     .navigatePart('admin-menu', ['admin-menu']);
 
-// Runs when the workbench starts, after provideAuth has loaded /api/me.
 const isAdmin = () =>
   firstValueFrom(inject(PermissionsService).currentUser$.pipe(map((user) => user.isAdmin)));
 
@@ -39,10 +38,10 @@ export const workbenchConfig = provideWorkbench({
   textProvider: (key, params) => translate(key, params),
   // Resolves custom application icons, in addition to Material ligatures.
   iconProvider: appIconProvider,
-  // One perspective per role, with opposite checks, so exactly one is registered per user. The
-  // workbench persists a layout per perspective and never restores an unregistered one, so a
-  // layout stored during an admin session cannot reach a non-admin on the same browser.
-  // `default` is SCION's id for a plain layout, so layouts stored before MON-199 still apply.
+  // one perspective per role with opposite checks, so only one gets registered. scion stores the
+  // layout per perspective and never restores an unregistered one, an admin layout can't leak to a
+  // non-admin on the same browser. `default` is the id scion uses for a plain layout, keeps the
+  // layouts stored before MON-199 working
   layout: {
     perspectives: [
       { id: 'default', layout: baseLayout, canActivate: async () => !(await isAdmin()) },
