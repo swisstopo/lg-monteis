@@ -5,7 +5,6 @@ import {
   loginAsAlice,
   loginAsBasisUser,
   loginAsBob,
-  loginAsGlobalEditor,
   openAppAs,
 } from '../support/login';
 
@@ -34,7 +33,6 @@ const WITHOUT_WRITE_ACCESS: { level: string; loginAs: LoginAs }[] = [
 ];
 
 const NON_ADMINS: { level: string; loginAs: LoginAs }[] = [
-  { level: 'global editor (editor-user)', loginAs: loginAsGlobalEditor },
   { level: 'ExperimentPI (alice)', loginAs: loginAsAlice },
   ...WITHOUT_WRITE_ACCESS,
 ];
@@ -76,15 +74,6 @@ for (const { level, loginAs } of NON_ADMINS) {
     });
   });
 }
-
-test('global editor may edit any experiment row', async ({ page }) => {
-  await openAppAs(page, loginAsGlobalEditor);
-  await page.getByRole('link', { name: 'Experiment' }).click();
-
-  await selectExperimentRow(page, ALPHA_EXPERIMENT);
-
-  await expect(editExperimentButton(page)).toBeEnabled();
-});
 
 test('ExperimentPI may edit only the experiments with write access', async ({ page }) => {
   // A Keycloak admin session, an experiment and its access groups, then a full login.

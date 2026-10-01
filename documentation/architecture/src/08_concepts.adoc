@@ -62,13 +62,13 @@ include::../images/security-context-flow.puml[]
 | Client-Rolle | `Grant` (Authority) | Bedeutung
 | `monteis-client:experiment:read` | `EXPERIMENT_READ` (`api:experiment:read`) | Lesen der Experimente in `read_experiment_ids`
 | `monteis-client:experiment:write` | `EXPERIMENT_WRITE` (`api:experiment:write`) | Bearbeiten der Experimente in `write_experiment_ids` (nur zusammen mit `experiment:read` gültig)
-| `monteis-client:experiment:write:all` | `EXPERIMENT_WRITE_ALL` (`api:experiment:write-all`) | Globaler Editor: Lesen und Bearbeiten aller Experimente
+| `monteis-client:experiment:write:all` | `EXPERIMENT_WRITE_ALL` (`api:experiment:write-all`) | Globaler Editor: Lesen und Bearbeiten aller Experimente. Keine Gruppe vergibt die Rolle standardmässig; sie wird bei Bedarf einer eigenen Gruppe zugewiesen
 | `monteis-client:documents:read` | `DOCUMENTS_READ` (`api:documents:read`) | Zugriff auf Dokumente (Regel vorbereitet, noch kein Endpunkt)
 | `monteis-client:admin` | `ADMIN` (`api:admin`) | Alle Experimente sowie alle Admin-Funktionen (Experiment anlegen, Sensoren schreiben, übrige Schreibzugriffe)
 | _(keine)_ | `SYSTEM_READ_ALL` (kein Name) | Nur der Systemkontext der Hintergrundjobs: alle Experimente lesen, nichts schreiben
 |===
 +
-Daraus ergeben sich die Berechtigungsstufen Basisrolle (keine Rolle), ExperimentUser, ExperimentPI, globaler Editor und MonteisAdmin.
+Daraus ergeben sich die Berechtigungsstufen Basisrolle (keine Rolle), ExperimentUser, ExperimentPI und MonteisAdmin. Der globale Editor (`experiment:write:all`) wird vom Backend weiterhin unterstützt, ist aber keiner Gruppe zugeordnet.
 
 - **Zentrale Berechtigungslogik (`Capabilities`):** `Capabilities.of(authentication)` übersetzt die `Authentication` in normalisierte Fakten: ihre Authorities werden über den `api:*`-Namen zu `Grant`s, dazu kommen die dem Aufrufer zugewiesenen Experiment-IDs aus dem `MonteisPrincipal`. Alle Berechtigungsregeln liegen im selben unveränderlichen `Capabilities`-Objekt, das jede Antwort bei jedem Aufruf aus diesen Fakten berechnet (`canReadAllExperiments`, `canWriteAllExperiments`, `readableExperimentIds`, `writableExperimentIds`, `canCreateExperiment`, `canManageSensors`, `canAccessDocuments`, `isAdmin` sowie `canReadExperiment(id)`/`canWriteExperiment(id)`); kein Regelergebnis wird doppelt gespeichert. "Alle Experimente" gibt es nur für `api:admin` und `api:experiment:write-all`; der Systemkontext trägt den Grant `SYSTEM_READ_ALL`, den keine Authority liefert, und darf damit alles lesen, aber nichts schreiben. Ohne Authentication, bei einem fremden Principal oder bei einem Fehler in der Übersetzung liefert `Capabilities.of` den Satz `Capabilities.NONE` (*fail closed*). Die Übersetzung liest nur die `Authentication`, macht keine I/O und hält keinen Zustand, jede Instanz entscheidet also gleich. Filterchain, `GET /api/me` und der RLS-Sitzungskontext (`RlsConnectionProvider`) fragen ausschliesslich `Capabilities`.
 

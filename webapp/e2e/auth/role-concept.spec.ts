@@ -5,7 +5,6 @@ import {
   loginAsAlice,
   loginAsBasisUser,
   loginAsBob,
-  loginAsGlobalEditor,
   openAppAs,
 } from '../support/login';
 import { createMonteisApi } from '../support/monteis-api';
@@ -16,8 +15,8 @@ import { createMonteisApi } from '../support/monteis-api';
  * open the 3D view, and that an ExperimentPI can save an edit on its own experiment.
  *
  * Seed data (db/meta/seed, docker/keycloak/realm/patch.local.json): alice holds "read + write" on
- * Mont Terri Alpha, bob holds "read" on Mont Terri Beta, basis-user holds nothing; the global
- * editor and the admin see every experiment.
+ * Mont Terri Alpha, bob holds "read" on Mont Terri Beta, basis-user holds nothing; the admin sees
+ * every experiment.
  */
 
 // experiment-access.spec.ts takes Alpha, permissions.spec.ts Beta.
@@ -30,7 +29,6 @@ type LoginAs = (page: Page) => Promise<void>;
 
 const VISIBILITY: { level: string; loginAs: LoginAs; alpha: boolean; beta: boolean }[] = [
   { level: 'MonteisAdmin (admin-user)', loginAs: loginAsAdmin, alpha: true, beta: true },
-  { level: 'global editor (editor-user)', loginAs: loginAsGlobalEditor, alpha: true, beta: true },
   { level: 'ExperimentPI (alice)', loginAs: loginAsAlice, alpha: true, beta: false },
   { level: 'ExperimentUser (bob)', loginAs: loginAsBob, alpha: false, beta: true },
   { level: 'Basisrolle (basis-user)', loginAs: loginAsBasisUser, alpha: false, beta: false },

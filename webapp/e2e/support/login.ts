@@ -11,11 +11,6 @@ export async function loginAsAdmin(page: Page): Promise<void> {
   await login(page, 'admin-user', 'admin-user');
 }
 
-// editor-user is in "/Monteis Global Editor": may edit every experiment, but is no admin.
-export async function loginAsGlobalEditor(page: Page): Promise<void> {
-  await login(page, 'editor-user', 'editor-user');
-}
-
 // alice (ExperimentPI) is in "Experiment Alpha/read + write" and "Experiment Gamma/read".
 export async function loginAsAlice(page: Page): Promise<void> {
   await login(page, 'alice', 'alice');
