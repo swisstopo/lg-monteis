@@ -14,14 +14,12 @@ import { provideAuth } from './core/auth/provide-auth';
 import { provideAppDateConfig } from './core/date/date.provider';
 import { BASE_PATH } from './core/generated';
 import { restErrorInterceptor } from './core/http/rest-error.interceptors';
-import { provideAdminMenuPart } from './core/workbench/admin-menu-part';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideBrowserGlobalErrorListeners(),
     workbenchConfig,
-    provideAdminMenuPart(),
     provideTranslateService(),
     provideRouter(APP_ROUTES, withComponentInputBinding()),
     provideAnimations(), // temporary: required until SCION Workbench drops the deprecated Angular animations dependency.
