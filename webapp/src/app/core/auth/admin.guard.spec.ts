@@ -7,7 +7,7 @@ import { PermissionsService } from './permissions.service';
 
 function runGuard(isAdmin: boolean): unknown {
   TestBed.configureTestingModule({
-    providers: [{ provide: PermissionsService, useValue: { loadIsAdmin: async () => isAdmin } }],
+    providers: [{ provide: PermissionsService, useValue: { isAdmin: () => isAdmin } }],
   });
   return runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
     adminGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
@@ -15,11 +15,11 @@ function runGuard(isAdmin: boolean): unknown {
 }
 
 describe('adminGuard', () => {
-  it('lets an admin through', async () => {
-    await expect(runGuard(true)).resolves.toBe(true);
+  it('lets an admin through', () => {
+    expect(runGuard(true)).toBe(true);
   });
 
-  it('blocks a non-admin', async () => {
-    await expect(runGuard(false)).resolves.toBe(false);
+  it('blocks a non-admin', () => {
+    expect(runGuard(false)).toBe(false);
   });
 });
