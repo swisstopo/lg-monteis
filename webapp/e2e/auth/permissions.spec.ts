@@ -1,12 +1,13 @@
-import { expect, Page, test } from '@playwright/test';
-import { createExperimentWithAccess } from '../support/experiment-access';
 import {
-  loginAsAdmin,
-  loginAsAlice,
-  loginAsBasisUser,
-  loginAsBob,
-  openAppAs,
-} from '../support/login';
+  editExperimentButton,
+  openExperimentTable,
+  selectExperiment,
+} from '../support/experiment-table';
+import { createExperiment, SEEDED_EXPERIMENTS, uniqueExperimentName } from '../support/experiments';
+import { expect, test } from '../support/fixtures';
+import { addUserToGroup, createExperimentAccessGroups } from '../support/keycloak';
+import { label, openAppAs, SEED_USERS, SeedUser } from '../support/login';
+import { expectTableToolbar } from '../support/table';
 
 /**
  * The SPA's cosmetic gating per privilege level (seed users of docker/keycloak/realm/patch.local.json).
@@ -18,97 +19,72 @@ import {
  *   they may write.
  */
 
-// Seeded experiment 00000000-0000-7000-8000-000000000301; alice holds "read + write" on it.
-const ALPHA_EXPERIMENT = 'Mont Terri Alpha';
-// Every run that needs its own experiment names it after its Greek letter plus a random suffix;
-// experiment-access.spec.ts takes Alpha, this file the next letter.
-const GREEK_LETTER = 'Beta';
+const WITHOUT_WRITE_ACCESS: SeedUser[] = [SEED_USERS.bob, SEED_USERS.basisUser];
+const NON_ADMINS: SeedUser[] = [SEED_USERS.alice, ...WITHOUT_WRITE_ACCESS];
 
-type LoginAs = (page: Page) => Promise<void>;
-
-// Levels without any experiment write access.
-const WITHOUT_WRITE_ACCESS: { level: string; loginAs: LoginAs }[] = [
-  { level: 'ExperimentUser (bob)', loginAs: loginAsBob },
-  { level: 'Basisrolle (basis-user)', loginAs: loginAsBasisUser },
-];
-
-const NON_ADMINS: { level: string; loginAs: LoginAs }[] = [
-  { level: 'ExperimentPI (alice)', loginAs: loginAsAlice },
-  ...WITHOUT_WRITE_ACCESS,
-];
-
-test.describe('admin (admin-user)', () => {
+test.describe(label(SEED_USERS.admin), () => {
   test('sees the Sensor menu, the sensor write actions and Create Experiment', async ({ page }) => {
-    await openAppAs(page, loginAsAdmin);
+    await openAppAs(page, SEED_USERS.admin);
 
     await page.getByRole('link', { name: 'Sensor' }).click();
     await expect(page.getByRole('button', { name: 'Create Sensor' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Edit Sensor' })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Experiment' }).click();
+    await openExperimentTable(page);
     await expect(page.getByRole('button', { name: 'Create Experiment' })).toBeVisible();
-    await selectExperimentRow(page, ALPHA_EXPERIMENT);
+    await selectExperiment(page, SEEDED_EXPERIMENTS.alpha);
     await expect(editExperimentButton(page)).toBeEnabled();
   });
 });
 
-for (const { level, loginAs } of NON_ADMINS) {
-  test.describe(level, () => {
+for (const user of NON_ADMINS) {
+  test.describe(label(user), () => {
     test('sees the sensor table without the sensor write actions', async ({ page }) => {
-      await openAppAs(page, loginAs);
+      await openAppAs(page, user);
 
       await page.getByRole('link', { name: 'Sensor' }).click();
-      // Download is always rendered, so the table header is there.
-      await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
+      await expectTableToolbar(page);
       await expect(page.getByRole('button', { name: 'Create Sensor' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Edit Sensor' })).toHaveCount(0);
     });
 
     test('does not see Create Experiment', async ({ page }) => {
-      await openAppAs(page, loginAs);
-      await page.getByRole('link', { name: 'Experiment' }).click();
+      await openAppAs(page, user);
+      await openExperimentTable(page);
 
-      // Download is always rendered, so the table header is there.
-      await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
+      await expectTableToolbar(page);
       await expect(page.getByRole('button', { name: 'Create Experiment' })).toHaveCount(0);
     });
   });
 }
 
-test('ExperimentPI may edit only the experiments with write access', async ({ page }) => {
+test(`${label(SEED_USERS.alice)} may edit only the experiments with write access`, async ({
+  page,
+  adminApi,
+  keycloakApi,
+}) => {
   // A Keycloak admin session, an experiment and its access groups, then a full login.
   test.slow();
-  const readOnlyExperiment = (await createExperimentWithAccess(GREEK_LETTER, 'alice', 'read')).name;
+  const readOnlyExperiment = await createExperiment(adminApi, uniqueExperimentName());
+  const accessGroups = await createExperimentAccessGroups(keycloakApi, readOnlyExperiment);
+  await addUserToGroup(keycloakApi, SEED_USERS.alice, accessGroups.read);
 
-  await openAppAs(page, loginAsAlice);
-  await page.getByRole('link', { name: 'Experiment' }).click();
+  await openAppAs(page, SEED_USERS.alice);
+  await openExperimentTable(page);
 
-  await selectExperimentRow(page, ALPHA_EXPERIMENT);
+  await selectExperiment(page, SEEDED_EXPERIMENTS.alpha);
   await expect(editExperimentButton(page)).toBeEnabled();
 
-  await selectExperimentRow(page, readOnlyExperiment);
+  await selectExperiment(page, readOnlyExperiment.name);
   await expect(editExperimentButton(page)).toBeDisabled();
 });
 
-for (const { level, loginAs } of WITHOUT_WRITE_ACCESS) {
-  test(`${level} gets no Edit Experiment button`, async ({ page }) => {
-    await openAppAs(page, loginAs);
-    await page.getByRole('link', { name: 'Experiment' }).click();
+for (const user of WITHOUT_WRITE_ACCESS) {
+  test(`${label(user)} gets no Edit Experiment button`, async ({ page }) => {
+    await openAppAs(page, user);
+    await openExperimentTable(page);
 
-    await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
+    await expectTableToolbar(page);
     await expect(editExperimentButton(page)).toHaveCount(0);
   });
-}
-
-function editExperimentButton(page: Page) {
-  return page.getByRole('button', { name: 'Edit Experiment' });
-}
-
-/** Narrows the experiment grid to `experimentName` with the name filter and selects that row. */
-async function selectExperimentRow(page: Page, experimentName: string): Promise<void> {
-  await page.getByRole('textbox', { name: 'Experiment Name Filter Input' }).fill(experimentName);
-  // Exact: the floating-filter cell holds the same text and would match a substring.
-  const nameCell = page.getByRole('gridcell', { name: experimentName, exact: true });
-  await expect(nameCell).toBeVisible();
-  await nameCell.click();
 }
