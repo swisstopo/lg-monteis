@@ -142,18 +142,6 @@
       "credentials": [{ "type": "password", "value": "basis-user", "temporary": false }],
       "realmRoles": ["user"],
       "groups": []
-    },
-    {
-      "id": "ed170700-d938-4fa1-9293-21256b44cab1",
-      "username": "editor-user",
-      "enabled": true,
-      "emailVerified": true,
-      "email": "editor-user@example.test",
-      "firstName": "Editor",
-      "lastName": "User",
-      "credentials": [{ "type": "password", "value": "editor-user", "temporary": false }],
-      "realmRoles": ["user"],
-      "groups": ["/Monteis Global Editor"]
     }
   ]
 }

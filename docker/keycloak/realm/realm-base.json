@@ -30,7 +30,7 @@
         },
         {
           "name": "monteis-client:experiment:write:all",
-          "description": "Read + write access to all experiments, bypassing per-experiment scoping (write:all implies all-experiment read). Granted via the 'Monteis Global Editor' group - never assign this directly to a user.",
+          "description": "Read + write access to all experiments, bypassing per-experiment scoping (write:all implies all-experiment read). No group grants it by default; add it to a dedicated group when a non-admin needs access to every experiment - never assign it directly to a user.",
           "composite": false,
           "clientRole": true
         },
@@ -208,18 +208,6 @@
       },
       "clientRoles": {
         "monteis-spa": ["monteis-client:admin", "monteis-client:documents:read"]
-      }
-    },
-    {
-      "name": "Monteis Global Editor",
-      "path": "/Monteis Global Editor",
-      "attributes": {
-        "description": [
-          "Global editors: read + write access to every experiment, without document access or admin functions. Members get monteis-client:experiment:write:all only."
-        ]
-      },
-      "clientRoles": {
-        "monteis-spa": ["monteis-client:experiment:write:all"]
       }
     },
     {
