@@ -1,10 +1,8 @@
 import {
-  EnvironmentInjector,
   EnvironmentProviders,
   inject,
   makeEnvironmentProviders,
   provideAppInitializer,
-  runInInjectionContext,
 } from '@angular/core';
 import { OAuthService, provideOAuthClient } from 'angular-oauth2-oidc';
 import { authConfig } from './auth.config';
@@ -16,7 +14,7 @@ export function provideAuth(): EnvironmentProviders {
     provideOAuthClient(),
     provideAppInitializer(async () => {
       const oauthService = inject(OAuthService);
-      const injector = inject(EnvironmentInjector);
+      const permissions = inject(PermissionsService);
       const env = await loadRuntimeEnv();
       oauthService.configure({
         ...authConfig,
@@ -26,7 +24,7 @@ export function provideAuth(): EnvironmentProviders {
       await oauthService.loadDiscoveryDocumentAndTryLogin();
       oauthService.setupAutomaticSilentRefresh();
       if (oauthService.hasValidAccessToken()) {
-        runInInjectionContext(injector, () => inject(PermissionsService));
+        await permissions.load();
       }
     }),
   ]);

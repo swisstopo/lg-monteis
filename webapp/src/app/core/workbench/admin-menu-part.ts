@@ -7,30 +7,25 @@ import {
   WorkbenchStartup,
   WorkbenchStartupPhase,
 } from '@scion/workbench';
-import { OAuthService } from 'angular-oauth2-oidc';
 
 export const ADMIN_MENU_PART = 'admin-menu';
 
 /**
  * Adds the admin menu to the side bar for a Monteis admin and removes it for everyone else.
  *
- * The part cannot live in the static layout of `workbenchConfig`: the role is only known after
- * `/api/me`, and the workbench persists the layout per browser, so a layout stored during an admin
- * session must lose the part when a non-admin logs in.
+ * The part cannot live in the static layout of `workbenchConfig`: the workbench persists the
+ * layout per browser, so a layout stored during an admin session must lose the part when a
+ * non-admin logs in.
  */
 export function provideAdminMenuPart() {
   return provideWorkbenchInitializer(
     () => {
-      if (!inject(OAuthService).hasValidAccessToken()) {
-        return;
-      }
-      const permissions = inject(PermissionsService);
+      const isAdmin = inject(PermissionsService).isAdmin();
       const router = inject(WorkbenchRouter);
-      const startup = inject(WorkbenchStartup);
       // Not awaited: the layout only exists once the startup, which waits for this initializer, is done.
-      void startup.whenDone
-        .then(() => permissions.loadIsAdmin())
-        .then((isAdmin) => router.navigate((layout) => syncAdminMenuPart(layout, isAdmin)));
+      void inject(WorkbenchStartup).whenDone.then(() =>
+        router.navigate((layout) => syncAdminMenuPart(layout, isAdmin)),
+      );
     },
     { phase: WorkbenchStartupPhase.PostStartup },
   );
