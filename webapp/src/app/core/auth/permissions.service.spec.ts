@@ -118,4 +118,18 @@ describe('PermissionsService', () => {
     expect(withDocuments.isAdmin()).toBe(false);
     expect(withDocuments.hasAnyExperimentWriteAccess()).toBe(false);
   });
+
+  it('loadIsAdmin waits for the call instead of answering from the loading state', async () => {
+    const service = setup(() => of(ADMIN));
+
+    await expect(service.loadIsAdmin()).resolves.toBe(true);
+  });
+
+  it('loadIsAdmin fails closed for a non-admin and when the call errors', async () => {
+    await expect(setup(() => of(GLOBAL_EDITOR)).loadIsAdmin()).resolves.toBe(false);
+    TestBed.resetTestingModule();
+    await expect(setup(() => throwError(() => new Error('rejected'))).loadIsAdmin()).resolves.toBe(
+      false,
+    );
+  });
 });

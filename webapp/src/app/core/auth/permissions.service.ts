@@ -16,12 +16,18 @@ export class PermissionsService {
    * A failed `/api/me` call resolves to `undefined`, so every permission stays closed; the HTTP
    * error itself is already surfaced to the user by the restErrorInterceptor.
    */
-  private readonly currentUser = resource({
-    loader: () =>
-      firstValueFrom(this.api.getCurrentUser()).catch((): CurrentUserDto | undefined => undefined),
-  });
+  private readonly currentUserRequest = firstValueFrom(this.api.getCurrentUser()).catch(
+    (): CurrentUserDto | undefined => undefined,
+  );
+
+  private readonly currentUser = resource({ loader: () => this.currentUserRequest });
 
   readonly isAdmin = computed(() => this.currentUser.value()?.isAdmin ?? false);
+
+  /** Like {@link isAdmin}, but waits for `/api/me` - for guards, which must not decide on the loading state. */
+  async loadIsAdmin(): Promise<boolean> {
+    return (await this.currentUserRequest)?.isAdmin ?? false;
+  }
 
   readonly canWriteAllExperiments = computed(
     () => this.currentUser.value()?.canWriteAllExperiments ?? false,
