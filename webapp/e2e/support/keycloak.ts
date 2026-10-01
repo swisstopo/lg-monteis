@@ -1,4 +1,7 @@
 import { APIRequestContext, request } from '@playwright/test';
+import { SeedUser } from './login';
+import { Experiment } from './monteis-api';
+import { readJson } from './responses';
 
 // The e2e Keycloak is the Testcontainer started by the backend's e2e-test profile on the fixed
 // port 18081 (KeycloakTestcontainersConfiguration), with the same admin credentials as the
@@ -19,6 +22,9 @@ const EXPERIMENT_WRITE_ROLE = 'monteis-client:experiment:write';
 
 /** The two access levels every experiment group offers, as subgroups (contract C1). */
 export type ExperimentAccess = 'read' | 'read + write';
+
+/** The Keycloak group id of each access subgroup of one experiment. */
+export type ExperimentAccessGroups = Record<ExperimentAccess, string>;
 
 // Per access subgroup: the group attribute the monteis-experiment-access protocol mapper
 // aggregates into the matching access-token claim (read_experiment_ids / write_experiment_ids),
@@ -51,7 +57,7 @@ export async function createKeycloakAdminApi(): Promise<APIRequestContext> {
       },
     },
   );
-  const body = await readJson(response, 'Keycloak admin login');
+  const body = await readJson<{ access_token: string }>(response, 'Keycloak admin login');
   await tokenContext.dispose();
 
   return request.newContext({
@@ -60,49 +66,74 @@ export async function createKeycloakAdminApi(): Promise<APIRequestContext> {
 }
 
 /**
- * Creates `/Experiments/Experiment <experimentName>` with its two access subgroups `read` and
- * `read + write`, both scoped to `experimentId`, then makes `username` a member of the subgroup
- * for the requested `access`.
+ * Creates `/Experiments/Experiment <name>` with its two access subgroups `read` and
+ * `read + write`, both scoped to the experiment's id, and returns the subgroup ids. Nobody is a
+ * member yet; see {@link addUserToGroup}.
  *
  * Mirrors by hand what an admin does in the Keycloak console when a new experiment needs its own
  * access groups; there is no MONTEIS API for it.
  */
-export async function grantExperimentAccess(
+export async function createExperimentAccessGroups(
   api: APIRequestContext,
-  params: {
-    experimentName: string;
-    experimentId: string;
-    username: string;
-    access: ExperimentAccess;
-  },
-): Promise<void> {
+  experiment: Experiment,
+): Promise<ExperimentAccessGroups> {
   const experimentsGroupId = await findTopLevelGroupId(api, EXPERIMENTS_GROUP);
   const experimentGroupId = await createChildGroup(
     api,
     experimentsGroupId,
-    `Experiment ${params.experimentName}`,
+    `Experiment ${experiment.name}`,
     {},
   );
-  const spaClientUuid = await findClientUuid(api, SPA_CLIENT_ID);
+  const clientUuid = await findClientUuid(api, SPA_CLIENT_ID);
+  const subgroup = { experimentGroupId, clientUuid, experimentId: experiment.id };
+  return {
+    read: await createAccessSubgroup(api, { ...subgroup, access: 'read' }),
+    'read + write': await createAccessSubgroup(api, { ...subgroup, access: 'read + write' }),
+  };
+}
 
-  const subgroupIds = {} as Record<ExperimentAccess, string>;
-  for (const access of Object.keys(ACCESS_SUBGROUPS) as ExperimentAccess[]) {
-    const { attribute, roles } = ACCESS_SUBGROUPS[access];
-    subgroupIds[access] = await createChildGroup(api, experimentGroupId, access, {
-      [attribute]: [params.experimentId],
-    });
-    await assignClientRoles(api, subgroupIds[access], spaClientUuid, roles);
+/** Makes `user` a member of the group `groupId`. It takes effect with the user's next login. */
+export async function addUserToGroup(
+  api: APIRequestContext,
+  user: SeedUser,
+  groupId: string,
+): Promise<void> {
+  const userId = await findUserId(api, user.username);
+  const response = await api.put(`${ADMIN_API}/users/${userId}/groups/${groupId}`);
+  if (!response.ok()) {
+    throw new Error(
+      `Adding "${user.username}" to the group failed: ${response.status()} ${await response.text()}`,
+    );
   }
+}
 
-  await addUserToGroup(api, params.username, subgroupIds[params.access]);
+/**
+ * Creates the `access` subgroup of an experiment group: scoped to `experimentId` through the
+ * access's group attribute and granting the access's client roles. Returns the subgroup id.
+ */
+async function createAccessSubgroup(
+  api: APIRequestContext,
+  subgroup: {
+    experimentGroupId: string;
+    clientUuid: string;
+    experimentId: string;
+    access: ExperimentAccess;
+  },
+): Promise<string> {
+  const { attribute, roles } = ACCESS_SUBGROUPS[subgroup.access];
+  const groupId = await createChildGroup(api, subgroup.experimentGroupId, subgroup.access, {
+    [attribute]: [subgroup.experimentId],
+  });
+  await assignClientRoles(api, groupId, subgroup.clientUuid, roles);
+  return groupId;
 }
 
 async function findTopLevelGroupId(api: APIRequestContext, name: string): Promise<string> {
-  const groups = await readJson(
+  const groups = await readJson<{ id: string; name: string }[]>(
     await api.get(`${ADMIN_API}/groups`, { params: { search: name } }),
     `lookup of group "${name}"`,
   );
-  const group = groups.find((candidate: { name: string }) => candidate.name === name);
+  const group = groups.find((candidate) => candidate.name === name);
   if (!group) {
     throw new Error(`Keycloak group "${name}" not found in realm ${REALM}`);
   }
@@ -123,16 +154,20 @@ async function createChildGroup(
       `Creating group "${name}" failed: ${response.status()} ${await response.text()}`,
     );
   }
-  // Keycloak answers 201 with the new group's URL; its last segment is the group id.
   const location = response.headers()['location'];
   if (!location) {
     throw new Error(`Creating group "${name}" returned no Location header`);
   }
+  return idFromLocation(location);
+}
+
+/** Keycloak answers a create with the new resource's URL; its last segment is the id. */
+function idFromLocation(location: string): string {
   return location.substring(location.lastIndexOf('/') + 1);
 }
 
 async function findClientUuid(api: APIRequestContext, clientId: string): Promise<string> {
-  const clients = await readJson(
+  const clients = await readJson<{ id: string }[]>(
     await api.get(`${ADMIN_API}/clients`, { params: { clientId } }),
     `lookup of client "${clientId}"`,
   );
@@ -148,16 +183,9 @@ async function assignClientRoles(
   clientUuid: string,
   roleNames: string[],
 ): Promise<void> {
-  const roles = [];
-  for (const roleName of roleNames) {
-    roles.push(
-      await readJson(
-        await api.get(`${ADMIN_API}/clients/${clientUuid}/roles/${encodeURIComponent(roleName)}`),
-        `lookup of client role "${roleName}"`,
-      ),
-    );
-  }
-
+  const roles = await Promise.all(
+    roleNames.map((roleName) => findClientRole(api, clientUuid, roleName)),
+  );
   const response = await api.post(
     `${ADMIN_API}/groups/${groupId}/role-mappings/clients/${clientUuid}`,
     { data: roles },
@@ -169,34 +197,25 @@ async function assignClientRoles(
   }
 }
 
-async function addUserToGroup(
+/** Returns the role representation Keycloak expects back when the role is assigned. */
+async function findClientRole(
   api: APIRequestContext,
-  username: string,
-  groupId: string,
-): Promise<void> {
-  const users = await readJson(
+  clientUuid: string,
+  roleName: string,
+): Promise<unknown> {
+  return readJson(
+    await api.get(`${ADMIN_API}/clients/${clientUuid}/roles/${encodeURIComponent(roleName)}`),
+    `lookup of client role "${roleName}"`,
+  );
+}
+
+async function findUserId(api: APIRequestContext, username: string): Promise<string> {
+  const users = await readJson<{ id: string }[]>(
     await api.get(`${ADMIN_API}/users`, { params: { username, exact: true } }),
     `lookup of user "${username}"`,
   );
   if (users.length === 0) {
     throw new Error(`Keycloak user "${username}" not found in realm ${REALM}`);
   }
-
-  const response = await api.put(`${ADMIN_API}/users/${users[0].id}/groups/${groupId}`);
-  if (!response.ok()) {
-    throw new Error(
-      `Adding "${username}" to the group failed: ${response.status()} ${await response.text()}`,
-    );
-  }
-}
-
-async function readJson(
-  response: Awaited<ReturnType<APIRequestContext['get']>>,
-  what: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<any> {
-  if (!response.ok()) {
-    throw new Error(`${what} failed: ${response.status()} ${await response.text()}`);
-  }
-  return response.json();
+  return users[0].id;
 }

@@ -1,13 +1,22 @@
-import { expect, Page, test } from '@playwright/test';
-import { createExperimentWithAccess } from '../support/experiment-access';
 import {
-  loginAsAdmin,
-  loginAsAlice,
-  loginAsBasisUser,
-  loginAsBob,
-  openAppAs,
-} from '../support/login';
-import { createMonteisApi } from '../support/monteis-api';
+  editExperimentButton,
+  experimentNameCell,
+  filterExperimentsByName,
+  openExperimentTable,
+  selectExperiment,
+} from '../support/experiment-table';
+import {
+  createExperiment,
+  findExperiment,
+  randomSuffix,
+  SEEDED_EXPERIMENTS,
+  uniqueExperimentName,
+} from '../support/experiments';
+import { expect, test } from '../support/fixtures';
+import { addUserToGroup, createExperimentAccessGroups } from '../support/keycloak';
+import { label, openAppAs, SEED_USERS, SeedUser } from '../support/login';
+import { hasPath } from '../support/responses';
+import { dataRows } from '../support/table';
 
 /**
  * What each privilege level of the MON-196 role concept really gets from the backend, seen
@@ -19,48 +28,44 @@ import { createMonteisApi } from '../support/monteis-api';
  * every experiment.
  */
 
-// experiment-access.spec.ts takes Alpha, permissions.spec.ts Beta.
-const GREEK_LETTER = 'Gamma';
+const { alpha: ALPHA, beta: BETA } = SEEDED_EXPERIMENTS;
 
-const ALPHA = 'Mont Terri Alpha';
-const BETA = 'Mont Terri Beta';
-
-type LoginAs = (page: Page) => Promise<void>;
-
-const VISIBILITY: { level: string; loginAs: LoginAs; alpha: boolean; beta: boolean }[] = [
-  { level: 'MonteisAdmin (admin-user)', loginAs: loginAsAdmin, alpha: true, beta: true },
-  { level: 'ExperimentPI (alice)', loginAs: loginAsAlice, alpha: true, beta: false },
-  { level: 'ExperimentUser (bob)', loginAs: loginAsBob, alpha: false, beta: true },
-  { level: 'Basisrolle (basis-user)', loginAs: loginAsBasisUser, alpha: false, beta: false },
+const VISIBILITY: { user: SeedUser; visible: string[] }[] = [
+  { user: SEED_USERS.admin, visible: [ALPHA, BETA] },
+  { user: SEED_USERS.alice, visible: [ALPHA] },
+  { user: SEED_USERS.bob, visible: [BETA] },
+  { user: SEED_USERS.basisUser, visible: [] },
 ];
 
-for (const { level, loginAs, alpha, beta } of VISIBILITY) {
-  test(`${level} sees ${describe(alpha, beta)} of the seeded experiments`, async ({ page }) => {
-    await openAppAs(page, loginAs);
+for (const { user, visible } of VISIBILITY) {
+  test(`${label(user)} sees ${listOrNone(visible)} of the seeded experiments`, async ({ page }) => {
+    await openAppAs(page, user);
     await openExperimentTable(page);
 
-    await expectListed(page, ALPHA, alpha);
-    await expectListed(page, BETA, beta);
+    for (const experiment of [ALPHA, BETA]) {
+      await filterExperimentsByName(page, experiment);
+      await expect(experimentNameCell(page, experiment)).toHaveCount(
+        visible.includes(experiment) ? 1 : 0,
+      );
+    }
   });
 }
 
-test('Basisrolle (basis-user) sees no experiment at all', async ({ page }) => {
-  await openAppAs(page, loginAsBasisUser);
+test(`${label(SEED_USERS.basisUser)} sees no experiment at all`, async ({ page }) => {
+  await openAppAs(page, SEED_USERS.basisUser);
 
   await openExperimentTable(page);
 
-  await expect(page.locator('.ag-center-cols-container .ag-row')).toHaveCount(0);
+  await expect(dataRows(page)).toHaveCount(0);
 });
 
-test('Basisrolle (basis-user) can open the 3D view', async ({ page }) => {
-  await openAppAs(page, loginAsBasisUser);
+test(`${label(SEED_USERS.basisUser)} can open the 3D view`, async ({ page }) => {
+  await openAppAs(page, SEED_USERS.basisUser);
   await page.getByTitle('Measurements').click();
 
   // The view loads the sensors it places in the scene; row-level security leaves a basic user
   // none, but the call must succeed - a 403 here used to replace the whole view with an error.
-  const sensors = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === '/api/sensors',
-  );
+  const sensors = page.waitForResponse((response) => hasPath(response, '/api/sensors'));
   await page.getByRole('link', { name: '3D View' }).click();
 
   expect((await sensors).status()).toBe(200);
@@ -68,84 +73,31 @@ test('Basisrolle (basis-user) can open the 3D view', async ({ page }) => {
   await expect(page.locator('app-giro3d')).toBeAttached();
 });
 
-test('ExperimentPI (alice) can save an edit on an experiment it may write', async ({ page }) => {
+test(`${label(SEED_USERS.alice)} can save an edit on an experiment with write access`, async ({
+  page,
+  adminApi,
+  keycloakApi,
+}) => {
   // A Keycloak admin session, an experiment and its access groups, then a full login.
   test.slow();
-  const experiment = await createExperimentWithAccess(GREEK_LETTER, 'alice', 'read + write');
-  const comment = `Edited by alice ${crypto.randomUUID().substring(0, 8)}`;
+  const experiment = await createExperiment(adminApi, uniqueExperimentName());
+  const accessGroups = await createExperimentAccessGroups(keycloakApi, experiment);
+  await addUserToGroup(keycloakApi, SEED_USERS.alice, accessGroups['read + write']);
+  const comment = `Edited by alice ${randomSuffix()}`;
 
-  await openAppAs(page, loginAsAlice);
+  await openAppAs(page, SEED_USERS.alice);
   await openExperimentTable(page);
-  await selectRow(page, experiment.name);
-  await page.getByRole('button', { name: 'Edit Experiment' }).click();
+  await selectExperiment(page, experiment.name);
+  await editExperimentButton(page).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Comment').fill(comment);
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 
   // the update passes the filter chain and the experiments_update row-level security check
   await expect(page.getByText('Experiment saved successfully.')).toBeVisible();
-  expect(await commentOf(experiment.id)).toBe(comment);
+  expect((await findExperiment(adminApi, experiment.id)).comment).toBe(comment);
 });
 
-function describe(alpha: boolean, beta: boolean): string {
-  if (alpha && beta) return 'both';
-  if (!alpha && !beta) return 'neither';
-  return alpha ? 'only Alpha' : 'only Beta';
-}
-
-/** Opens the experiment table and waits until the backend answered its first page. */
-async function openExperimentTable(page: Page): Promise<void> {
-  const firstPage = waitForExperimentPage(page, () => true);
-  await page.getByRole('link', { name: 'Experiment' }).click();
-  await firstPage;
-}
-
-/**
- * Filters the table to `name` and checks whether it is listed. Waits for the filtered response
- * first, so an absent row cannot pass on a request that never came back. A row the caller may not
- * read never shows up at all, so its absence cannot be a stale render either.
- */
-async function expectListed(page: Page, name: string, listed: boolean): Promise<void> {
-  const filtered = waitForExperimentPage(page, (filterModel) => filterModel.includes(name));
-  await page.getByRole('textbox', { name: 'Experiment Name Filter Input' }).fill(name);
-  await filtered;
-
-  // Exact: the floating-filter cell holds the same text and would match a substring.
-  const nameCell = page.getByRole('gridcell', { name, exact: true });
-  if (listed) {
-    await expect(nameCell).toBeVisible();
-  } else {
-    await expect(nameCell).toHaveCount(0);
-  }
-}
-
-async function selectRow(page: Page, name: string): Promise<void> {
-  await expectListed(page, name, true);
-  await page.getByRole('gridcell', { name, exact: true }).click();
-}
-
-// Only the status: Chromium may already have discarded the body of these grid requests.
-async function waitForExperimentPage(
-  page: Page,
-  matchesFilter: (filterModel: string) => boolean,
-): Promise<void> {
-  const response = await page.waitForResponse((candidate) => {
-    const url = new URL(candidate.url());
-    return (
-      url.pathname === '/api/experiments' &&
-      matchesFilter(url.searchParams.get('filterModel') ?? '')
-    );
-  });
-  expect(response.ok()).toBe(true);
-}
-
-async function commentOf(experimentId: string): Promise<string | undefined> {
-  const adminApi = await createMonteisApi('admin-user', 'admin-user');
-  try {
-    const response = await adminApi.get(`/api/experiments/${experimentId}`);
-    expect(response.ok()).toBe(true);
-    return (await response.json()).comment;
-  } finally {
-    await adminApi.dispose();
-  }
+function listOrNone(names: string[]): string {
+  return names.length > 0 ? names.join(' and ') : 'none';
 }

@@ -9,6 +9,7 @@ const SPA_CLIENT_ID = 'monteis-spa';
 export interface Experiment {
   id: string;
   name: string;
+  comment?: string;
 }
 
 /**
