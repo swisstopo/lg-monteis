@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { CurrentUserControllerService, CurrentUserDto } from '@core/generated';
-import { Observable, of, throwError } from 'rxjs';
-import { describe, expect, it } from 'vitest';
+import { OAuthService } from 'angular-oauth2-oidc';
+import { firstValueFrom, NEVER, Observable, of, throwError } from 'rxjs';
+import { describe, expect, it, vi } from 'vitest';
 import { PermissionsService } from './permissions.service';
 
 // DTOs per privilege level, mirroring the U2 seed users (docker/keycloak/realm/patch.local.json).
@@ -24,19 +25,20 @@ const GLOBAL_EDITOR: CurrentUserDto = { ...NO_PRIVILEGES, canWriteAllExperiments
 const EXPERIMENT_PI: CurrentUserDto = { ...NO_PRIVILEGES, writeExperimentIds: [PI_EXPERIMENT_ID] };
 const EXPERIMENT_USER: CurrentUserDto = NO_PRIVILEGES;
 
-function setup(getCurrentUser: () => Observable<CurrentUserDto>) {
+function setup(getCurrentUser: () => Observable<CurrentUserDto>, hasValidAccessToken = true) {
   TestBed.configureTestingModule({
     providers: [
       PermissionsService,
       { provide: CurrentUserControllerService, useValue: { getCurrentUser } },
+      { provide: OAuthService, useValue: { hasValidAccessToken: () => hasValidAccessToken } },
     ],
   });
   return TestBed.inject(PermissionsService);
 }
 
 describe('PermissionsService', () => {
-  it('fails closed before load', () => {
-    const service = setup(() => of(ADMIN));
+  it('fails closed before the call answers', () => {
+    const service = setup(() => NEVER);
 
     expect(service.isAdmin()).toBe(false);
     expect(service.canWriteAllExperiments()).toBe(false);
@@ -46,11 +48,9 @@ describe('PermissionsService', () => {
     expect(service.canWriteExperiment(PI_EXPERIMENT_ID)).toBe(false);
   });
 
-  it('fails closed when the call errors', async () => {
+  it('fails closed when the call errors', () => {
     const service = setup(() => throwError(() => new Error('rejected')));
 
-    await service.load();
-
     expect(service.isAdmin()).toBe(false);
     expect(service.canWriteAllExperiments()).toBe(false);
     expect(service.writeExperimentIds()).toEqual([]);
@@ -59,39 +59,34 @@ describe('PermissionsService', () => {
     expect(service.canWriteExperiment(PI_EXPERIMENT_ID)).toBe(false);
   });
 
-  it('grants an admin every action', async () => {
+  it('grants an admin every action', () => {
     const service = setup(() => of(ADMIN));
 
-    await service.load();
     expect(service.isAdmin()).toBe(true);
     expect(service.hasAnyExperimentWriteAccess()).toBe(true);
     expect(service.canWriteExperiment(OTHER_EXPERIMENT_ID)).toBe(true);
   });
 
-  it('lets a global editor write every experiment without being an admin', async () => {
+  it('lets a global editor write every experiment without being an admin', () => {
     const service = setup(() => of(GLOBAL_EDITOR));
 
-    await service.load();
     expect(service.canWriteAllExperiments()).toBe(true);
     expect(service.isAdmin()).toBe(false);
     expect(service.hasAnyExperimentWriteAccess()).toBe(true);
     expect(service.canWriteExperiment(OTHER_EXPERIMENT_ID)).toBe(true);
   });
 
-  it('gives an experiment PI scoped write access through writeExperimentIds', async () => {
+  it('gives an experiment PI scoped write access through writeExperimentIds', () => {
     const service = setup(() => of(EXPERIMENT_PI));
 
-    await service.load();
     expect(service.writeExperimentIds()).toEqual([PI_EXPERIMENT_ID]);
     expect(service.isAdmin()).toBe(false);
     expect(service.canWriteAllExperiments()).toBe(false);
     expect(service.hasAnyExperimentWriteAccess()).toBe(true);
   });
 
-  it('gives an ExperimentUser no write access at all', async () => {
+  it('gives an ExperimentUser no write access at all', () => {
     const service = setup(() => of(EXPERIMENT_USER));
-
-    await service.load();
 
     expect(service.isAdmin()).toBe(false);
     expect(service.canWriteAllExperiments()).toBe(false);
@@ -100,20 +95,42 @@ describe('PermissionsService', () => {
     expect(service.canWriteExperiment(PI_EXPERIMENT_ID)).toBe(false);
   });
 
-  it('canWriteExperiment is true inside the id list and false outside it', async () => {
+  it('canWriteExperiment is true inside the id list and false outside it', () => {
     const service = setup(() => of(EXPERIMENT_PI));
 
-    await service.load();
     expect(service.canWriteExperiment(PI_EXPERIMENT_ID)).toBe(true);
     expect(service.canWriteExperiment(OTHER_EXPERIMENT_ID)).toBe(false);
   });
 
-  it('reports canAccessDocuments from the backend flag', async () => {
+  it('reports canAccessDocuments from the backend flag', () => {
     const withDocuments = setup(() => of({ ...NO_PRIVILEGES, canAccessDocuments: true }));
 
-    await withDocuments.load();
     expect(withDocuments.canAccessDocuments()).toBe(true);
     expect(withDocuments.isAdmin()).toBe(false);
     expect(withDocuments.hasAnyExperimentWriteAccess()).toBe(false);
+  });
+
+  it('does not call /api/me without a token', async () => {
+    const getCurrentUser = vi.fn(() => of(ADMIN));
+    const service = setup(getCurrentUser, false);
+
+    await expect(firstValueFrom(service.currentUser$)).resolves.toEqual(NO_PRIVILEGES);
+    expect(getCurrentUser).not.toHaveBeenCalled();
+    expect(service.isAdmin()).toBe(false);
+  });
+
+  it('calls /api/me once and replays the answer to every subscriber', async () => {
+    const getCurrentUser = vi.fn(() => of(ADMIN));
+    const service = setup(getCurrentUser);
+
+    await expect(firstValueFrom(service.currentUser$)).resolves.toEqual(ADMIN);
+    await expect(firstValueFrom(service.currentUser$)).resolves.toEqual(ADMIN);
+    expect(getCurrentUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('currentUser$ answers with no permissions when the call errors', async () => {
+    const service = setup(() => throwError(() => new Error('rejected')));
+
+    await expect(firstValueFrom(service.currentUser$)).resolves.toEqual(NO_PRIVILEGES);
   });
 });

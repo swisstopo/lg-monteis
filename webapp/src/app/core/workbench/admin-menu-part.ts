@@ -7,6 +7,7 @@ import {
   WorkbenchStartup,
   WorkbenchStartupPhase,
 } from '@scion/workbench';
+import { firstValueFrom } from 'rxjs';
 
 export const ADMIN_MENU_PART = 'admin-menu';
 
@@ -20,10 +21,10 @@ export const ADMIN_MENU_PART = 'admin-menu';
 export function provideAdminMenuPart() {
   return provideWorkbenchInitializer(
     () => {
-      const isAdmin = inject(PermissionsService).isAdmin();
       const router = inject(WorkbenchRouter);
+      const currentUser = firstValueFrom(inject(PermissionsService).currentUser$);
       // Not awaited: the layout only exists once the startup, which waits for this initializer, is done.
-      void inject(WorkbenchStartup).whenDone.then(() =>
+      void Promise.all([currentUser, inject(WorkbenchStartup).whenDone]).then(([{ isAdmin }]) =>
         router.navigate((layout) => syncAdminMenuPart(layout, isAdmin)),
       );
     },
