@@ -30,7 +30,7 @@
         },
         {
           "name": "monteis-client:experiment:write:all",
-          "description": "Read + write access to all experiments, bypassing per-experiment scoping (write:all implies all-experiment read). No group grants it by default; add it to a dedicated group when a non-admin needs access to every experiment - never assign it directly to a user.",
+          "description": "Read + write access to all experiments, bypassing per-experiment scoping (write:all implies all-experiment read). Not granted by default; add it to a dedicated group for non-admins, never assign it directly to a user.",
           "composite": false,
           "clientRole": true
         },
