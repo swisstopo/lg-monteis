@@ -24,15 +24,15 @@ import { dataRows } from '../support/table';
  * open the 3D view, and that an ExperimentPI can save an edit on its own experiment.
  *
  * Seed data (db/meta/seed, docker/keycloak/realm/patch.local.json): alice holds "read + write" on
- * Mont Terri Alpha, bob holds "read" on Mont Terri Beta, basis-user holds nothing; the admin sees
- * every experiment.
+ * Mont Terri Alpha and "read" on Mont Terri Gamma, bob holds "read" on Mont Terri Beta, basis-user
+ * holds nothing; the admin sees every experiment.
  */
 
-const { alpha: ALPHA, beta: BETA } = SEEDED_EXPERIMENTS;
+const { alpha: ALPHA, beta: BETA, gamma: GAMMA } = SEEDED_EXPERIMENTS;
 
 const VISIBILITY: { user: SeedUser; visible: string[] }[] = [
-  { user: SEED_USERS.admin, visible: [ALPHA, BETA] },
-  { user: SEED_USERS.alice, visible: [ALPHA] },
+  { user: SEED_USERS.admin, visible: [ALPHA, BETA, GAMMA] },
+  { user: SEED_USERS.alice, visible: [ALPHA, GAMMA] },
   { user: SEED_USERS.bob, visible: [BETA] },
   { user: SEED_USERS.basisUser, visible: [] },
 ];
@@ -42,7 +42,7 @@ for (const { user, visible } of VISIBILITY) {
     await openAppAs(page, user);
     await openExperimentTable(page);
 
-    for (const experiment of [ALPHA, BETA]) {
+    for (const experiment of Object.values(SEEDED_EXPERIMENTS)) {
       await filterExperimentsByName(page, experiment);
       await expect(experimentNameCell(page, experiment)).toHaveCount(
         visible.includes(experiment) ? 1 : 0,

@@ -39,7 +39,10 @@ VALUES
     ('00000000-0000-7000-8000-000000000301', 'Mont Terri Alpha', 'Initial temperature and pressure survey', 1, 'User1',
      DATE '2024-01-15', DATE '2024-06-30'),
     ('00000000-0000-7000-8000-000000000302', 'Mont Terri Beta', 'Deep borehole displacement and pressure monitoring', 1, 'User2',
-     DATE '2024-07-01', DATE '2025-03-31');
+     DATE '2024-07-01', DATE '2025-03-31'),
+    -- No sensors: alice reads it through "Experiment Gamma/read" in docker/keycloak/realm/patch.local.json.
+    ('00000000-0000-7000-8000-000000000303', 'Mont Terri Gamma', 'Planned rock creep observation', 1, 'User3',
+     DATE '2025-04-01', DATE '2025-12-31');
 
 
 -- 4. Insert corresponding sample sensors
