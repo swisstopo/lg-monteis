@@ -47,6 +47,11 @@
     "positive": "",
     "unique": "An entity with the same code already exists"
   },
+  "admin": {
+    "organisation": {
+      "placeholder": "Organisation management follows in a later release."
+    }
+  },
   "sensor": {
     "edit": {
       "title": {
@@ -399,7 +404,9 @@
     "setup": "Setup",
     "measurements-table": "Table",
     "measurements-visualization": "3D View",
-    "experiment": "Experiment"
+    "experiment": "Experiment",
+    "admin": "Admin",
+    "organisation": "Organisations"
   },
   "chart": {
     "error": {
