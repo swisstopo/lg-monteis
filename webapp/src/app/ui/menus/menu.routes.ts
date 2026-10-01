@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { adminGuard } from '@core/auth/admin.guard';
+import { ADMIN, authorizationGuard } from '@core/auth/authorization.guard';
 
 export const MENU_ROUTES: Routes = [
   {
@@ -8,7 +8,7 @@ export const MENU_ROUTES: Routes = [
   },
   {
     path: 'admin-menu',
-    canActivate: [adminGuard],
+    canActivate: [authorizationGuard(ADMIN)],
     loadComponent: () => import('./admin-menu/admin-menu'),
   },
 ];
