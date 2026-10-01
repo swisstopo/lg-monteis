@@ -35,6 +35,7 @@ test('shows a new sensor only to members of its experiment group', async ({ page
       experimentName,
       experimentId: await findExperimentIdByName(adminApi, experimentName),
       username: 'bob',
+      access: 'read',
     });
 
     // bob is now a member of "Experiment <name>", alice is not.
