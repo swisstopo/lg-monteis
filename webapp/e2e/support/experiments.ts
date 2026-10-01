@@ -4,11 +4,12 @@ import { readJson } from './responses';
 
 /**
  * Experiments of db/meta/seed/R__seed_dev_data.sql. alice holds "read + write" on Alpha
- * (…0301), bob holds "read" on Beta (…0302).
+ * (…0301) and "read" on Gamma (…0303), bob holds "read" on Beta (…0302).
  */
 export const SEEDED_EXPERIMENTS = {
   alpha: 'Mont Terri Alpha',
   beta: 'Mont Terri Beta',
+  gamma: 'Mont Terri Gamma',
 };
 
 const E2E_EXPERIMENT_PERIOD = { start: '2030-01-01', end: '2030-05-05' };

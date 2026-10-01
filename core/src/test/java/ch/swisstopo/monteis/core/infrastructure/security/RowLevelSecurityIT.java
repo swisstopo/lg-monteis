@@ -96,7 +96,7 @@ class RowLevelSecurityIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           assertEquals(15, dsl.fetchCount(SENSORS), "Admin should see all seeded sensors");
-          assertEquals(8, dsl.fetchCount(EXPERIMENTS), "Admin should see all seeded experiments");
+          assertEquals(9, dsl.fetchCount(EXPERIMENTS), "Admin should see all seeded experiments");
           assertEquals(
               Set.of(
                   "SOL_EXPERTS__TEMP-1__temperature",
@@ -151,7 +151,7 @@ class RowLevelSecurityIT {
         () -> {
           assertEquals(15, dsl.fetchCount(SENSORS), "Global editor should see all seeded sensors");
           assertEquals(
-              8, dsl.fetchCount(EXPERIMENTS), "Global editor should see all seeded experiments");
+              9, dsl.fetchCount(EXPERIMENTS), "Global editor should see all seeded experiments");
         });
   }
 
@@ -197,7 +197,7 @@ class RowLevelSecurityIT {
         () -> {
           assertEquals(15, dsl.fetchCount(SENSORS), "System context should see all seeded sensors");
           assertEquals(
-              8, dsl.fetchCount(EXPERIMENTS), "System context should see all seeded experiments");
+              9, dsl.fetchCount(EXPERIMENTS), "System context should see all seeded experiments");
         });
   }
 
