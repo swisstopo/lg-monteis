@@ -7,7 +7,7 @@ import {
   WorkbenchStartup,
   WorkbenchStartupPhase,
 } from '@scion/workbench';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 
 export const ADMIN_MENU_PART = 'admin-menu';
 
@@ -21,10 +21,12 @@ export const ADMIN_MENU_PART = 'admin-menu';
 export function provideAdminMenuPart() {
   return provideWorkbenchInitializer(
     () => {
+      const isAdmin$ = inject(PermissionsService).currentUser$.pipe(map((user) => user.isAdmin));
+      const started = inject(WorkbenchStartup).whenDone;
       const router = inject(WorkbenchRouter);
-      const currentUser = firstValueFrom(inject(PermissionsService).currentUser$);
       // Not awaited: the layout only exists once the startup, which waits for this initializer, is done.
-      void Promise.all([currentUser, inject(WorkbenchStartup).whenDone]).then(([{ isAdmin }]) =>
+      // A navigation is SCION's only API to change the layout; nothing opens in the main area.
+      void Promise.all([firstValueFrom(isAdmin$), started]).then(([isAdmin]) =>
         router.navigate((layout) => syncAdminMenuPart(layout, isAdmin)),
       );
     },
@@ -40,9 +42,10 @@ export function syncAdminMenuPart(
   if (layout.hasPart(ADMIN_MENU_PART) === isAdmin) {
     return null;
   }
-  if (!isAdmin) {
-    return layout.removePart(ADMIN_MENU_PART);
-  }
+  return isAdmin ? addAdminMenuPart(layout) : layout.removePart(ADMIN_MENU_PART);
+}
+
+function addAdminMenuPart(layout: WorkbenchLayout): WorkbenchLayout {
   return layout
     .addPart(
       ADMIN_MENU_PART,
