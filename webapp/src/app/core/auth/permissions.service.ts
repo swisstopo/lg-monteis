@@ -4,7 +4,6 @@ import { CurrentUserControllerService, CurrentUserDto } from '@core/generated';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { Observable, catchError, defer, of, shareReplay } from 'rxjs';
 
-/** What a caller gets while `/api/me` has not answered, without a token and after a failed call. */
 const NO_PERMISSIONS: CurrentUserDto = {
   isAdmin: false,
   canWriteAllExperiments: false,
@@ -24,13 +23,9 @@ export class PermissionsService {
   private readonly oauthService = inject(OAuthService);
 
   /**
-   * `/api/me`, requested once and replayed to every subscriber. One-time decisions (a guard, the
-   * workbench layout) pipe this instead of reading a signal, so they wait for the answer rather
-   * than deciding on the closed initial state.
-   *
-   * Without a token there is no call: it would only fail with 401 and show the session-expired
-   * toast while the login redirect is under way. A failed call falls back to
-   * {@link NO_PERMISSIONS}; the HTTP error itself is surfaced by the restErrorInterceptor.
+   * no call without a token, it would only 401 and show the session expired toast while the login
+   * redirect is running. a failed call falls back to {@link NO_PERMISSIONS}, the http error itself
+   * is already shown by the restErrorInterceptor
    */
   readonly currentUser$: Observable<CurrentUserDto> = defer(() =>
     this.oauthService.hasValidAccessToken() ? this.api.getCurrentUser() : of(NO_PERMISSIONS),

@@ -27,9 +27,9 @@ export function provideAuth(): EnvironmentProviders {
       await oauthService.loadDiscoveryDocumentAndTryLogin();
       oauthService.setupAutomaticSilentRefresh();
       if (oauthService.hasValidAccessToken()) {
-        // Created only after the login: the service checks the token when it requests /api/me.
+        // created only after the login, the service checks the token when it requests /api/me.
+        // awaited so the first render already shows the right menus and buttons
         const permissions = runInInjectionContext(injector, () => inject(PermissionsService));
-        // Awaited so the first render already shows the menus and buttons the user is allowed.
         await firstValueFrom(permissions.currentUser$);
       }
     }),
