@@ -1,10 +1,13 @@
 import {
+  EnvironmentInjector,
   EnvironmentProviders,
   inject,
   makeEnvironmentProviders,
   provideAppInitializer,
+  runInInjectionContext,
 } from '@angular/core';
 import { OAuthService, provideOAuthClient } from 'angular-oauth2-oidc';
+import { firstValueFrom } from 'rxjs';
 import { authConfig } from './auth.config';
 import { PermissionsService } from './permissions.service';
 import { loadRuntimeEnv } from './runtime-env';
@@ -14,7 +17,7 @@ export function provideAuth(): EnvironmentProviders {
     provideOAuthClient(),
     provideAppInitializer(async () => {
       const oauthService = inject(OAuthService);
-      const permissions = inject(PermissionsService);
+      const injector = inject(EnvironmentInjector);
       const env = await loadRuntimeEnv();
       oauthService.configure({
         ...authConfig,
@@ -24,7 +27,10 @@ export function provideAuth(): EnvironmentProviders {
       await oauthService.loadDiscoveryDocumentAndTryLogin();
       oauthService.setupAutomaticSilentRefresh();
       if (oauthService.hasValidAccessToken()) {
-        await permissions.load();
+        // Created only after the login: the service checks the token when it requests /api/me.
+        const permissions = runInInjectionContext(injector, () => inject(PermissionsService));
+        // Awaited so the first render already shows the menus and buttons the user is allowed.
+        await firstValueFrom(permissions.currentUser$);
       }
     }),
   ]);
