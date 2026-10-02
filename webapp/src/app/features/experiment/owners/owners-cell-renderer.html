@@ -1,0 +1,13 @@
+@for (owner of owners(); track owner.id; let last = $last) {
+  <a
+    class="owners-cell-renderer_owner"
+    data-testid="experiment-owner"
+    [href]="owner.email ? 'mailto:' + owner.email : null"
+    [matTooltip]="contactOf(owner)"
+    matTooltipClass="owners-cell-renderer_tooltip"
+    >{{ displayName(owner) }}</a
+  >
+  @if (!last) {
+    <span>, </span>
+  }
+}

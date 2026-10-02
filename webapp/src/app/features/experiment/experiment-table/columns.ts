@@ -1,6 +1,9 @@
 import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
-import { ExperimentResponseDto } from '@core/generated';
+import { ExperimentOwnerDto, ExperimentResponseDto } from '@core/generated';
+import { ownerDisplayName } from '@features/experiment/owners/owner-name';
+import { OwnersCellRenderer } from '@features/experiment/owners/owners-cell-renderer';
+import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslateService } from '@ngx-translate/core';
 import { MultiSelectFilter } from '@ui/filters/multi-select-filter/multi-select-filter';
 import { CopyCellRenderer } from '@ui/table/copy-cell-renderer/copy-cell-renderer';
@@ -9,6 +12,7 @@ import StatusEnum = ExperimentResponseDto.StatusEnum;
 
 export function createColumns(datePipe: DatePipe): TableColumn<ExperimentResponseDto>[] {
   const translateService = inject(TranslateService);
+  const experimentService = inject(ExperimentService);
 
   return [
     {
@@ -71,6 +75,25 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
       headerName: translateService.translate('experiment.sensorCount.label')(),
       sortable: true,
       filter: 'agNumberColumnFilter',
+    },
+    {
+      // names live in Keycloak, the backend can filter by owner id but not sort by name
+      field: 'owners',
+      headerName: translateService.translate('experiment.owners.label')(),
+      sortable: false,
+      filter: MultiSelectFilter,
+      filterParams: {
+        valuesProvider: async () => {
+          const owners = await experimentService.getAssignedOwners();
+          return owners
+            .filter((owner): owner is ExperimentOwnerDto & { id: string } => !!owner.id)
+            .map((owner) => ({ displayName: ownerDisplayName(owner), value: owner.id }));
+        },
+        blankOptionLabel: translateService.translate('experiment.owners.none')(),
+      },
+      valueFormatter: (params) =>
+        (params.value as ExperimentOwnerDto[] | undefined)?.map(ownerDisplayName).join(', ') ?? '',
+      cellRenderer: OwnersCellRenderer,
     },
     {
       field: 'comment',

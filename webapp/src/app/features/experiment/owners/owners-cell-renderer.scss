@@ -1,0 +1,14 @@
+:host {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owners-cell-renderer_owner {
+  color: inherit;
+}
+
+::ng-deep .owners-cell-renderer_tooltip {
+  white-space: pre-line;
+}
