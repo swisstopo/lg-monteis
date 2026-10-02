@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /**
  * @param bucket blank where the environment has no bucket yet; uploads and downloads then fail,
  *     the rest of the application still starts
- * @param endpoint only set to talk to an S3 compatible store other than AWS (e.g. MinIO locally)
+ * @param endpoint only set to talk to an S3 compatible store other than AWS (e.g. the S3Mock of docker/compose.yml); it then uses dummy credentials
  */
 @ConfigurationProperties("monteis.documents.s3")
 public record DocumentStorageProperties(
