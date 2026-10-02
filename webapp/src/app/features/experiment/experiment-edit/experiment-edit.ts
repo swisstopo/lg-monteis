@@ -23,6 +23,7 @@ import { ExperimentResponseDto, WriteExperimentDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
+import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { formatDate } from 'date-fns';
@@ -65,6 +66,7 @@ function domainModelToFormModel(domainModel: ExperimentResponseDto): ExperimentF
     MatDatepickerInput,
     MatDatepickerToggle,
     MatDatepicker,
+    ExperimentDocuments,
   ],
   templateUrl: './experiment-edit.html',
   styleUrl: './experiment-edit.scss',

@@ -62,6 +62,10 @@
     </div>
   </form>
 
+  @if (experimentId(); as id) {
+    <app-experiment-documents [experimentId]="id" />
+  }
+
   <mat-dialog-actions align="end">
     <button matButton mat-dialog-close>
       <mat-icon fontIcon="cancel"></mat-icon>

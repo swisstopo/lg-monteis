@@ -342,6 +342,17 @@
       "cancel": "Cancel",
       "saveAndCreate": "Save and create new",
       "save": "Save"
+    },
+    "documents": {
+      "title": "Documents",
+      "add": "Add Document",
+      "view": "View document",
+      "empty": "No documents yet.",
+      "error": {
+        "upload": "The document could not be uploaded.",
+        "download": "The document could not be downloaded.",
+        "load": "The documents could not be loaded."
+      }
     }
   },
   "measurements-table": {
@@ -429,5 +440,12 @@
   },
   "tableHeader": {
     "search": "Search"
+  },
+  "document": {
+    "validation": {
+      "empty": "The file is empty.",
+      "fileName": "The file name must be between 1 and {{max}} characters long.",
+      "tooLarge": "The file is larger than the allowed 50 MB."
+    }
   }
 }
