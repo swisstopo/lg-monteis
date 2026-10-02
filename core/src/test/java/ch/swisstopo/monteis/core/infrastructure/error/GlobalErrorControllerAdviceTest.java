@@ -51,6 +51,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @ControllerTest
 @ContextConfiguration(
@@ -62,6 +63,20 @@ import org.springframework.web.client.RestClientResponseException;
 class GlobalErrorControllerAdviceTest {
 
   @Autowired private MockMvc mockMvc;
+
+  @Test
+  void should_translate_max_upload_size_exceeded_exception_return_413() throws Exception {
+    // given a request whose multipart body exceeds spring.servlet.multipart.max-file-size
+
+    // when
+    var response = mockMvc.perform(get("/dummy/upload-too-large-error").with(jwt()));
+
+    // then
+    response
+        .andExpect(status().isContentTooLarge())
+        .andExpect(jsonPath("$.target").value("FORM"))
+        .andExpect(jsonPath("$.messageKey").value("document.validation.tooLarge"));
+  }
 
   @Test
   void should_translate_object_business_validation_exception_return_422() throws Exception {
@@ -357,6 +372,11 @@ class GlobalErrorControllerAdviceTest {
    */
   @RestController
   static class DummyController {
+
+    @GetMapping("/dummy/upload-too-large-error")
+    public void throwUploadTooLargeError() {
+      throw new MaxUploadSizeExceededException(50L * 1024 * 1024);
+    }
 
     @GetMapping("/dummy/object-error")
     public void throwObjectError() {
