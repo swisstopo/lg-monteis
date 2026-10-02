@@ -30,6 +30,9 @@
       "sessionExpired": "Your session has expired.",
       "logInAgain": "Log in again",
       "forbidden": "You don't have permission for this action."
+    },
+    "user-directory": {
+      "unavailable": "User data could not be loaded from Keycloak. Please try again later."
     }
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
@@ -318,6 +321,14 @@
     "sensorCount": {
       "label": "Amount of sensors"
     },
+    "owners": {
+      "label": "Experiment Owners",
+      "none": "No owner",
+      "placeholder": "Search by name or email",
+      "hint": "Only PIs of this experiment can be owners.",
+      "noCandidates": "This experiment has no PIs in Keycloak yet.",
+      "remove": "Remove owner"
+    },
     "success": "Experiment saved successfully.",
     "error": {
       "unspecified": {
@@ -335,6 +346,9 @@
     "button": {
       "saveAndCreate": "Save and create new",
       "save": "Save"
+    },
+    "owner": {
+      "not-eligible": "At least one selected owner is no longer a PI of this experiment."
     },
     "documents": {
       "title": "Documents",

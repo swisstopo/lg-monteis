@@ -4,6 +4,13 @@ import {
   ExperimentResponseDto,
   WriteExperimentDto,
 } from '@core/generated';
+import {
+  ErrorDto,
+  ExperimentControllerService,
+  ExperimentOwnerControllerService,
+  WriteExperimentDto,
+} from '@core/generated';
+import { toErrorDtos } from '@core/http/api-error.model';
 import { skipGlobalErrorToast } from '@core/http/http-context';
 import { toPagedRequestParams } from '@ui/table/paged-request.mapper';
 import { IGetRowsParams } from 'ag-grid-community';
@@ -12,6 +19,7 @@ import { firstValueFrom } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class ExperimentService {
   private readonly api = inject(ExperimentControllerService);
+  private readonly ownerApi = inject(ExperimentOwnerControllerService);
   private readonly saveCount = signal(0);
   /**
    * Grows with every saved experiment. The experiment table refreshes its rows on each change, its
@@ -38,6 +46,28 @@ export class ExperimentService {
     this.saveCount.update((count) => count + 1);
     this.allExperiments.reload();
     return saved;
+  }
+
+  async replaceOwners(id: string, ownerIds: string[]) {
+    try {
+      const result = await firstValueFrom(this.ownerApi.replaceOwners(id, { ownerIds }));
+      this.experimentsChanged.set(true);
+      return result;
+    } catch (err) {
+      this.error.set(toErrorDtos(err));
+      throw err;
+    }
+  }
+
+  getOwnerCandidates(id: string) {
+    // the owner picker shows the failure itself
+    return firstValueFrom(
+      this.ownerApi.getOwnerCandidates(id, 'body', false, { context: skipGlobalErrorToast() }),
+    );
+  }
+
+  getAssignedOwners() {
+    return firstValueFrom(this.ownerApi.getAssignedOwners());
   }
 
   getExperiments(params: IGetRowsParams) {
