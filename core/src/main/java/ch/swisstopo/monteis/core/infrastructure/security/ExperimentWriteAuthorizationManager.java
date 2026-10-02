@@ -8,16 +8,18 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 
 /**
- * Filter-chain adapter for {@code PUT} on {@link #PATH}: allows the request when {@link
- * Capabilities} say the caller may write the experiment named by the {@code id} path variable. A
- * path id that is not a UUID identifies no experiment and is denied. The {@code experiments_update}
- * RLS policy enforces the same rule in the database (defence in depth, ADR-003).
+ * Filter-chain adapter for {@code PUT} on {@link #PATH} and {@code POST} on {@link
+ * #DOCUMENTS_PATH}: allows the request when {@link Capabilities} say the caller may write the
+ * experiment named by the {@code id} path variable. A path id that is not a UUID identifies no
+ * experiment and is denied. The {@code experiments_update} and {@code experiment_documents_insert}
+ * RLS policies enforce the same rule in the database (defence in depth, ADR-003).
  */
 class ExperimentWriteAuthorizationManager
     implements AuthorizationManager<RequestAuthorizationContext> {
 
   private static final String EXPERIMENT_ID_VARIABLE = "id";
   static final String PATH = "/api/experiments/{" + EXPERIMENT_ID_VARIABLE + "}";
+  static final String DOCUMENTS_PATH = PATH + "/documents";
 
   @Override
   public AuthorizationResult authorize(
