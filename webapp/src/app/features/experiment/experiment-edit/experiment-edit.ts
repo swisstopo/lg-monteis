@@ -19,10 +19,12 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
+import { PermissionsService } from '@core/auth/permissions.service';
 import { ExperimentResponseDto, WriteExperimentDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
+import { ExperimentOwnerPicker } from '@features/experiment/owners/experiment-owner-picker';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { formatDate } from 'date-fns';
@@ -65,6 +67,7 @@ function domainModelToFormModel(domainModel: ExperimentResponseDto): ExperimentF
     MatDatepickerInput,
     MatDatepickerToggle,
     MatDatepicker,
+    ExperimentOwnerPicker,
   ],
   templateUrl: './experiment-edit.html',
   styleUrl: './experiment-edit.scss',
@@ -74,6 +77,7 @@ export default class ExperimentEdit {
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
   private readonly formErrorService = inject(FormErrorService);
+  private readonly permissions = inject(PermissionsService);
   readonly dialogRef = inject<MatDialogRef<ExperimentEdit>>(MatDialogRef, {
     optional: true,
   });
@@ -110,6 +114,15 @@ export default class ExperimentEdit {
   });
 
   readonly domainModel = signal<ExperimentResponseDto>({});
+
+  // a new experiment has no PI group in Keycloak yet, so owners are only assigned when editing
+  protected readonly canManageOwners = computed(
+    () => this.permissions.isAdmin() && this.experimentId() !== undefined,
+  );
+  private readonly storedOwnerIds = computed(() =>
+    (this.domainModel().owners ?? []).map((owner) => owner.id!),
+  );
+  protected readonly ownerIds = linkedSignal(() => this.storedOwnerIds());
   private readonly formModel = linkedSignal({
     source: this.domainModel,
     computation: (domainModel) =>
@@ -181,7 +194,9 @@ export default class ExperimentEdit {
       const experiment = this.buildPayload(this.formModel());
 
       try {
-        await this.saveExperiment(experiment);
+        // keep the new version, so retrying after a failed owner save does not conflict
+        this.experiment.set(await this.saveExperiment(experiment));
+        await this.saveOwners(experiment.id);
 
         this.toastService.success(this.translateService.translate('experiment.success')());
 
@@ -220,6 +235,17 @@ export default class ExperimentEdit {
       },
       version: this.experiment()?.version ?? undefined,
     };
+  }
+
+  private async saveOwners(experimentId: string | undefined) {
+    if (!experimentId || !this.canManageOwners() || !this.ownersChanged()) return;
+    await this.experimentService.replaceOwners(experimentId, this.ownerIds());
+  }
+
+  private ownersChanged(): boolean {
+    const stored = new Set(this.storedOwnerIds());
+    const current = this.ownerIds();
+    return stored.size !== current.length || current.some((id) => !stored.has(id));
   }
 
   private async saveExperiment(experiment: WriteExperimentDto) {

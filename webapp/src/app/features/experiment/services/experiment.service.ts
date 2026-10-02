@@ -1,5 +1,10 @@
 import { Injectable, inject, resource, signal } from '@angular/core';
-import { ErrorDto, ExperimentControllerService, WriteExperimentDto } from '@core/generated';
+import {
+  ErrorDto,
+  ExperimentControllerService,
+  ExperimentOwnerControllerService,
+  WriteExperimentDto,
+} from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { skipGlobalErrorToast } from '@core/http/http-context';
 import { translate } from '@ngx-translate/core';
@@ -10,6 +15,7 @@ import { firstValueFrom } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class ExperimentService {
   private readonly api = inject(ExperimentControllerService);
+  private readonly ownerApi = inject(ExperimentOwnerControllerService);
   private readonly experimentRequest = signal<{ id: string | undefined }>({ id: undefined });
   readonly error = signal<ErrorDto[] | undefined>(undefined);
   // Bumped whenever an experiment is created/updated, so the experiment table can refresh its
@@ -59,6 +65,28 @@ export class ExperimentService {
       this.error.set(toErrorDtos(err));
       throw err;
     }
+  }
+
+  async replaceOwners(id: string, ownerIds: string[]) {
+    try {
+      const result = await firstValueFrom(this.ownerApi.replaceOwners(id, { ownerIds }));
+      this.experimentsChanged.set(true);
+      return result;
+    } catch (err) {
+      this.error.set(toErrorDtos(err));
+      throw err;
+    }
+  }
+
+  getOwnerCandidates(id: string) {
+    // the owner picker shows the failure itself
+    return firstValueFrom(
+      this.ownerApi.getOwnerCandidates(id, 'body', false, { context: skipGlobalErrorToast() }),
+    );
+  }
+
+  getAssignedOwners() {
+    return firstValueFrom(this.ownerApi.getAssignedOwners());
   }
 
   getExperiments(params: IGetRowsParams) {

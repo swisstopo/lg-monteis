@@ -60,6 +60,16 @@
         <textarea matInput [formField]="experimentForm.comment" rows="3"></textarea>
       </mat-form-field>
     </div>
+
+    @if (canManageOwners()) {
+      <div class="form-row">
+        <app-experiment-owner-picker
+          class="full-width"
+          [experimentId]="experimentId()!"
+          [(selectedOwnerIds)]="ownerIds"
+        ></app-experiment-owner-picker>
+      </div>
+    }
   </form>
 
   <mat-dialog-actions align="end">
