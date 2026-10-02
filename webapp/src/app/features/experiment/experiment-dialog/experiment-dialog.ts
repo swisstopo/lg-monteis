@@ -130,8 +130,11 @@ export class ExperimentDialog {
     return undefined;
   }
 
+  // the form model is set as well, in create mode experiment already is undefined and would not
+  // recompute it
   private startNextExperiment(): void {
     this.experiment.set(undefined);
+    this.formModel.set(toFormModel(undefined));
     this.experimentForm().reset();
   }
 }
