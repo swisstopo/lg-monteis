@@ -9,9 +9,9 @@ import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
-import { CsvDownloadService } from '@ui/table/csv-download.service';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
@@ -28,7 +28,7 @@ export default class SensorTable {
   private readonly dialog = inject(MatDialog);
   protected sensorService = inject(SensorService);
   private readonly translateService = inject(TranslateService);
-  private readonly csvDownloadService = inject(CsvDownloadService);
+  private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
 
   readonly searchTerm = signal<string>('');
@@ -98,7 +98,7 @@ export default class SensorTable {
     try {
       const { sortModel, filterModel } = toGridFilterSortParams(api);
       const blob = await this.sensorService.getSensorsCsv(sortModel, filterModel);
-      this.csvDownloadService.download(blob, 'sensors.csv');
+      this.fileDownloadService.download(blob, 'sensors.csv');
     } catch {
       this.toastService.error(this.translateService.translate('sensor.error.downloadFailed')());
     } finally {

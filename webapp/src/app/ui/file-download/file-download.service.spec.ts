@@ -1,15 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CsvDownloadService } from './csv-download.service';
+import { FileDownloadService } from './file-download.service';
 
-describe('CsvDownloadService', () => {
-  let service: CsvDownloadService;
+describe('FileDownloadService', () => {
+  let service: FileDownloadService;
   let clickedAnchors: HTMLAnchorElement[];
   const realCreateElement = document.createElement.bind(document);
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(CsvDownloadService);
+    service = TestBed.inject(FileDownloadService);
 
     clickedAnchors = [];
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
@@ -52,5 +52,42 @@ describe('CsvDownloadService', () => {
 
     expect(() => service.download(new Blob(), 'sensors.csv')).toThrow('boom');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+  });
+
+  describe('openInNewTab', () => {
+    let tab: { location: { href: string }; close: ReturnType<typeof vi.fn> };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      tab = { location: { href: '' }, close: vi.fn() };
+      vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('opens the tab before loading and points it at the blob', async () => {
+      const load = vi.fn(() => {
+        expect(window.open).toHaveBeenCalledWith('', '_blank');
+        return Promise.resolve(new Blob(['%PDF']));
+      });
+
+      await service.openInNewTab(load);
+
+      expect(tab.location.href).toBe('blob:mock-url');
+      expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+      vi.runAllTimers();
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+    });
+
+    it('closes the tab and rethrows when loading fails', async () => {
+      await expect(service.openInNewTab(() => Promise.reject(new Error('boom')))).rejects.toThrow(
+        'boom',
+      );
+
+      expect(tab.close).toHaveBeenCalled();
+      expect(URL.createObjectURL).not.toHaveBeenCalled();
+    });
   });
 });
