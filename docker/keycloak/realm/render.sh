@@ -9,6 +9,7 @@ yq -o=json eval-all '
   select(fi==0) as $base | select(fi==1) as $p
   | $base
   | .clients |= map(select(.clientId=="monteis-spa") .redirectUris = $p.spa.redirectUris | .webOrigins = $p.spa.webOrigins)
+  | .clients |= map(select(.clientId=="monteis-core") .secret = $p.core.secret)
   | .groups |= map(
       . as $bg
       | (($p.groups // []) | map(select(.name == $bg.name)))[0] as $match
