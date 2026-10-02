@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOwner.EXPERIMENT_OWNER;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -268,5 +269,52 @@ class RowLevelSecurityIT {
   private Set<String> fetchVisibleSensorCodes() {
     List<ReadSimpleMetricDto> readings = overviewQueryRepository.fetchRecentMetrics(1000);
     return readings.stream().map(ReadSimpleMetricDto::dasKey).collect(Collectors.toSet());
+  }
+
+  // seed: alice is the only owner, of Alpha
+  private static final UUID ALICE = UUID.fromString("a11ce43c-8733-4a5e-a389-4760cbc21984");
+
+  @Test
+  @Transactional
+  void owners_are_visible_only_to_readers_of_their_experiment() {
+    SecurityContextTestSupport.runAsUser(
+        List.of(EXPERIMENT_ALPHA), () -> assertEquals(1, dsl.fetchCount(EXPERIMENT_OWNER)));
+    SecurityContextTestSupport.runAsUser(
+        List.of(EXPERIMENT_BETA), () -> assertEquals(0, dsl.fetchCount(EXPERIMENT_OWNER)));
+  }
+
+  @Test
+  @Transactional
+  void read_only_user_may_not_assign_an_owner() {
+    SecurityContextTestSupport.runAsUser(
+        List.of(EXPERIMENT_BETA),
+        () ->
+            assertThrows(
+                PermissionDeniedDataAccessException.class,
+                () ->
+                    dsl.insertInto(EXPERIMENT_OWNER)
+                        .set(EXPERIMENT_OWNER.EXPERIMENT_ID, EXPERIMENT_BETA)
+                        .set(EXPERIMENT_OWNER.USER_ID, ALICE)
+                        .execute()));
+  }
+
+  @Test
+  @Transactional
+  void read_only_user_may_not_remove_an_owner() {
+    SecurityContextTestSupport.runAsUser(
+        List.of(EXPERIMENT_ALPHA),
+        () ->
+            assertEquals(
+                0,
+                dsl.deleteFrom(EXPERIMENT_OWNER)
+                    .where(EXPERIMENT_OWNER.EXPERIMENT_ID.eq(EXPERIMENT_ALPHA))
+                    .execute(),
+                "the delete policy filters the rows instead of raising"));
+    SecurityContextTestSupport.runAsAdmin(
+        () ->
+            assertEquals(
+                1,
+                dsl.fetchCount(
+                    EXPERIMENT_OWNER, EXPERIMENT_OWNER.EXPERIMENT_ID.eq(EXPERIMENT_ALPHA))));
   }
 }

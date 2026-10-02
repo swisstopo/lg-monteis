@@ -3,9 +3,12 @@ package ch.swisstopo.monteis.core.modules.experiment.domain;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -19,16 +22,14 @@ class ExperimentTest {
   void should_initialize_new_experiment_without_id_and_version() {
     // given
     String name = "Test Experiment";
-    String owner = "John Doe";
     String description = "This is a new experiment";
 
     // when
-    Experiment experiment = new Experiment(name, owner, standardPeriod, description);
+    Experiment experiment = new Experiment(name, standardPeriod, description);
 
     // then
     assertAll(
         () -> assertEquals(name, experiment.getName(), "Name should be mapped correctly"),
-        () -> assertEquals(owner, experiment.getOwner(), "Owner should be mapped correctly"),
         () ->
             assertEquals(
                 standardPeriod, experiment.getPeriod(), "Dates should be mapped correctly"),
@@ -44,7 +45,8 @@ class ExperimentTest {
         () ->
             assertNull(
                 experiment.getSensorCount(),
-                "SensorCount should be null for a newly created experiment"));
+                "SensorCount should be null for a newly created experiment"),
+        () -> assertEquals(Set.of(), experiment.getOwnerIds(), "A new experiment has no owners"));
   }
 
   @Test
@@ -55,10 +57,11 @@ class ExperimentTest {
     String description = "This is a rebuilt experiment";
     Integer version = 1;
     Integer sensorCount = 5;
+    Set<UUID> ownerIds = Set.of(UUID.randomUUID());
 
     // when
     Experiment experiment =
-        new Experiment(id, name, standardPeriod, description, version, sensorCount);
+        new Experiment(id, name, standardPeriod, description, version, sensorCount, ownerIds);
 
     // then
     assertAll(
@@ -76,15 +79,13 @@ class ExperimentTest {
         () ->
             assertEquals(
                 sensorCount, experiment.getSensorCount(), "SensorCount should be mapped correctly"),
-        () ->
-            assertNull(
-                experiment.getOwner(), "Owner should be null as it's not in this constructor"));
+        () -> assertEquals(ownerIds, experiment.getOwnerIds(), "Owners should be mapped"));
   }
 
   @Test
   void should_update_fields_using_setters() {
     // given
-    Experiment experiment = new Experiment("Initial", "Owner", standardPeriod, "Desc");
+    Experiment experiment = new Experiment("Initial", standardPeriod, "Desc");
     Period newPeriod =
         new Period(LocalDate.of(2025, Month.JANUARY, 1), LocalDate.of(2025, Month.DECEMBER, 31));
 
@@ -92,7 +93,8 @@ class ExperimentTest {
     UUID updatedId = UUID.randomUUID();
     experiment.setId(updatedId);
     experiment.setName("Updated Name");
-    experiment.setOwner("Updated Owner");
+    UUID ownerId = UUID.randomUUID();
+    experiment.setOwnerIds(Set.of(ownerId));
     experiment.getStatus(referenceToday);
     experiment.setPeriod(newPeriod);
     experiment.setComment("Updated Comment");
@@ -103,7 +105,7 @@ class ExperimentTest {
     assertAll(
         () -> assertEquals(updatedId, experiment.getId()),
         () -> assertEquals("Updated Name", experiment.getName()),
-        () -> assertEquals("Updated Owner", experiment.getOwner()),
+        () -> assertEquals(Set.of(ownerId), experiment.getOwnerIds()),
         () -> assertEquals(Status.UPCOMING, experiment.getStatus(referenceToday)),
         () -> assertEquals(newPeriod, experiment.getPeriod()),
         () -> assertEquals("Updated Comment", experiment.getComment()),
@@ -117,12 +119,37 @@ class ExperimentTest {
     // confirms Experiment.getStatus delegates to it rather than computing status itself.
     Period historicPeriod =
         new Period(LocalDate.of(2022, Month.JANUARY, 1), LocalDate.of(2023, Month.JANUARY, 1));
-    Experiment experiment = new Experiment("Name", "Owner", historicPeriod, "Desc");
+    Experiment experiment = new Experiment("Name", historicPeriod, "Desc");
 
     // when
     Status status = experiment.getStatus(referenceToday);
 
     // then
     assertEquals(historicPeriod.getStatus(referenceToday), status);
+  }
+
+  @Test
+  void should_treat_null_owner_ids_as_no_owners() {
+    Experiment experiment = new Experiment("Name", standardPeriod, "Desc");
+
+    experiment.setOwnerIds(null);
+
+    assertEquals(Set.of(), experiment.getOwnerIds());
+  }
+
+  @Test
+  void should_not_share_the_owner_id_set_with_the_caller() {
+    Set<UUID> ownerIds = new HashSet<>(Set.of(UUID.randomUUID()));
+    Experiment experiment = new Experiment("Name", standardPeriod, "Desc");
+    experiment.setOwnerIds(ownerIds);
+
+    ownerIds.add(UUID.randomUUID());
+
+    assertAll(
+        () -> assertEquals(1, experiment.getOwnerIds().size()),
+        () ->
+            assertThrows(
+                UnsupportedOperationException.class,
+                () -> experiment.getOwnerIds().add(UUID.randomUUID())));
   }
 }
