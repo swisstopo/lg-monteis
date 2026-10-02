@@ -62,15 +62,12 @@
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
       <exclusions>
+        <!-- only the async S3 client uses netty, we use the sync one (apache5-client) -->
         <exclusion>
           <groupId>software.amazon.awssdk</groupId>
           <artifactId>netty-nio-client</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>apache-client</artifactId>
     </dependency>
     <dependency>
       <groupId>software.amazon.msk</groupId>

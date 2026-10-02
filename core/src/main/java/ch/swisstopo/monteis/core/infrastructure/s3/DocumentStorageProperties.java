@@ -1,17 +1,13 @@
 package ch.swisstopo.monteis.core.infrastructure.s3;
 
-import java.net.URI;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.validation.annotation.Validated;
 
-/**
- * @param bucket blank where the environment has no bucket yet; uploads and downloads then fail,
- *     the rest of the application still starts
- * @param endpoint only set to talk to an S3 compatible store other than AWS (e.g. the S3Mock of docker/compose.yml); it then uses dummy credentials
- */
+@Validated
 @ConfigurationProperties("monteis.documents.s3")
 public record DocumentStorageProperties(
-    @DefaultValue("") String bucket,
+    @NotBlank String bucket,
     @DefaultValue("eu-central-1") String region,
-    @DefaultValue("experiment-documents/") String keyPrefix,
-    URI endpoint) {}
+    @DefaultValue("experiment-documents/") String keyPrefix) {}
