@@ -1,0 +1,47 @@
+<section class="documents">
+  <header class="documents-header">
+    <h3>{{ 'experiment.documents.title' | translate }}</h3>
+    @if (!readOnly()) {
+      <input #fileInput type="file" multiple hidden (change)="upload(fileInput)" />
+      <button matButton="filled" type="button" [disabled]="uploading()" (click)="fileInput.click()">
+        @if (uploading()) {
+          <mat-spinner diameter="16" />
+        } @else {
+          <mat-icon fontIcon="upload" />
+        }
+        {{ 'experiment.documents.add' | translate }}
+      </button>
+    }
+  </header>
+
+  @if (documents.isLoading() && !documents.hasValue()) {
+    <mat-spinner diameter="24" />
+  } @else if (documents.error()) {
+    <p class="hint">{{ 'experiment.documents.error.load' | translate }}</p>
+  } @else {
+    <ul class="document-list">
+      @for (document of documents.value(); track document.id) {
+        <li class="document">
+          <div class="document-name">
+            <button
+              matIconButton
+              type="button"
+              [attr.aria-label]="'experiment.documents.view' | translate"
+              (click)="view(document)"
+            >
+              <mat-icon fontIcon="visibility" />
+            </button>
+            <a href="" (click)="$event.preventDefault(); download(document)">{{
+              document.fileName
+            }}</a>
+          </div>
+          <span class="document-meta">
+            {{ document.uploadedAt | date: 'dd.MM.yyyy; HH:mm:ss' }}, {{ document.uploadedBy }}
+          </span>
+        </li>
+      } @empty {
+        <li class="hint">{{ 'experiment.documents.empty' | translate }}</li>
+      }
+    </ul>
+  }
+</section>

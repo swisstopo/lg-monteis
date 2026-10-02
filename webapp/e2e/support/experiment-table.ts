@@ -37,6 +37,10 @@ export function editExperimentButton(page: Page): Locator {
   return page.getByRole('button', { name: 'Edit Experiment' });
 }
 
+export function viewExperimentButton(page: Page): Locator {
+  return page.getByRole('button', { name: 'View', exact: true });
+}
+
 /**
  * Waits for a page of the experiment table, filtered to `nameFilter` if given, and checks only
  * its status: Chromium may already have dropped the body of these grid requests.

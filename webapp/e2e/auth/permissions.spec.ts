@@ -2,6 +2,7 @@ import {
   editExperimentButton,
   openExperimentTable,
   selectExperiment,
+  viewExperimentButton,
 } from '../support/experiment-table';
 import { createExperiment, SEEDED_EXPERIMENTS, uniqueExperimentName } from '../support/experiments';
 import { expect, test } from '../support/fixtures';
@@ -16,7 +17,7 @@ import { expectTableToolbar } from '../support/table';
  *   sensors); only admins see the sensor write actions;
  * - Create Experiment is admin-only;
  * - Edit Experiment is shown to callers with any experiment write access and enabled only on rows
- *   they may write.
+ *   they may write; View takes its place on the rows they may only read.
  */
 
 const WITHOUT_WRITE_ACCESS: SeedUser[] = [SEED_USERS.bob, SEED_USERS.basisUser];
@@ -74,9 +75,11 @@ test(`${label(SEED_USERS.alice)} may edit only the experiments with write access
 
   await selectExperiment(page, SEEDED_EXPERIMENTS.alpha);
   await expect(editExperimentButton(page)).toBeEnabled();
+  await expect(viewExperimentButton(page)).toHaveCount(0);
 
   await selectExperiment(page, readOnlyExperiment.name);
   await expect(editExperimentButton(page)).toBeDisabled();
+  await expect(viewExperimentButton(page)).toBeEnabled();
 });
 
 for (const user of WITHOUT_WRITE_ACCESS) {
@@ -88,3 +91,24 @@ for (const user of WITHOUT_WRITE_ACCESS) {
     await expect(editExperimentButton(page)).toHaveCount(0);
   });
 }
+
+test(`${label(SEED_USERS.bob)} views a readable experiment read-only`, async ({ page }) => {
+  await openAppAs(page, SEED_USERS.bob);
+  await openExperimentTable(page);
+
+  await expect(viewExperimentButton(page)).toBeDisabled();
+  await selectExperiment(page, SEEDED_EXPERIMENTS.beta);
+  await viewExperimentButton(page).click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'View Experiment', level: 2 })).toBeVisible();
+  await expect(dialog.getByLabel('Experiment Name')).toHaveValue(SEEDED_EXPERIMENTS.beta);
+  await expect(dialog.getByLabel('Experiment Name')).toBeDisabled();
+  await expect(dialog.getByLabel('Comment')).toBeDisabled();
+  await expect(dialog.getByLabel('Start Date')).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Add Document' })).toHaveCount(0);
+
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toHaveCount(0);
+});

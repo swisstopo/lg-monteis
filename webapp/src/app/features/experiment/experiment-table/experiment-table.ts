@@ -1,5 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, inputBinding, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
@@ -7,13 +14,13 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
-import ExperimentEdit from '@features/experiment/experiment-edit/experiment-edit';
+import { openExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
-import { CsvDownloadService } from '@ui/table/csv-download.service';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
@@ -26,13 +33,14 @@ import { createColumns } from './columns';
   providers: [DatePipe],
   templateUrl: './experiment-table.html',
   styleUrl: './experiment-table.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ExperimentTable {
   private readonly datePipe = inject(DatePipe);
   private readonly dialog = inject(MatDialog);
   protected experimentService = inject(ExperimentService);
   private readonly translateService = inject(TranslateService);
-  private readonly csvDownloadService = inject(CsvDownloadService);
+  private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   protected readonly permissions = inject(PermissionsService);
 
@@ -88,28 +96,19 @@ export default class ExperimentTable {
     this.gridApi.set(api);
   }
 
-  onWrappedRow(row: ExperimentResponseDto) {
-    console.log(row);
-  }
-
   onSelectionChanged(rows: ExperimentResponseDto[]): void {
     this.selectedExperimentId.set(rows[0]?.id);
   }
 
   onCreate(): void {
-    this.dialog.open(ExperimentEdit, { width: '60vw', maxWidth: '1200px', autoFocus: true });
+    openExperimentDialog(this.dialog);
   }
 
-  onEdit(): void {
+  onOpenSelected(): void {
     const experimentId = this.selectedExperimentId();
-    if (experimentId === undefined) return;
-
-    this.dialog.open(ExperimentEdit, {
-      width: '60vw',
-      maxWidth: '1200px',
-      autoFocus: true,
-      bindings: [inputBinding('experimentId', () => experimentId)],
-    });
+    if (experimentId !== undefined) {
+      openExperimentDialog(this.dialog, experimentId);
+    }
   }
 
   async onDownload(): Promise<void> {
@@ -120,7 +119,7 @@ export default class ExperimentTable {
     try {
       const { sortModel, filterModel } = toGridFilterSortParams(api);
       const blob = await this.experimentService.getExperimentsCsv(sortModel, filterModel);
-      this.csvDownloadService.download(blob, 'experiments.csv');
+      this.fileDownloadService.download(blob, 'experiments.csv');
     } catch {
       this.toastService.error(this.translateService.translate('experiment.error.downloadFailed')());
     } finally {

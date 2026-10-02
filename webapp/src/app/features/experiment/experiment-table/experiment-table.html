@@ -12,6 +12,18 @@
       {{ 'experiment.tableHeader.download' | translate }}
     </button>
 
+    @if (!canEditSelected()) {
+      <button
+        read-action
+        matButton="filled"
+        [disabled]="selectedExperimentId() === undefined"
+        (click)="onOpenSelected()"
+      >
+        <mat-icon fontIcon="visibility"></mat-icon>
+        {{ 'experiment.tableHeader.view' | translate }}
+      </button>
+    }
+
     <button write-action matButton="tonal" (click)="onCreate()">
       <mat-icon fontIcon="add"></mat-icon>
       {{ 'experiment.tableHeader.create' | translate }}
@@ -21,7 +33,7 @@
       conditional-write-action
       matButton="filled"
       [disabled]="!canEditSelected()"
-      (click)="onEdit()"
+      (click)="onOpenSelected()"
     >
       <mat-icon fontIcon="edit"></mat-icon>
       {{ 'experiment.tableHeader.edit' | translate }}
@@ -39,7 +51,6 @@
       [datasource]="datasource"
       [gridOptions]="gridOptions"
       [getRowId]="getExperimentRowId"
-      (rowClicked)="onWrappedRow($event)"
       (selectionChanged)="onSelectionChanged($event)"
       (gridReady)="onGridReady($event)"
     >
