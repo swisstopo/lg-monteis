@@ -1,13 +1,13 @@
 <section class="documents">
   <header class="documents-header">
     <h3>{{ 'experiment.documents.title' | translate }}</h3>
-    @if (canUpload()) {
-      <input #fileInput type="file" multiple hidden (change)="onFilesSelected(fileInput)" />
+    @if (!readOnly()) {
+      <input #fileInput type="file" multiple hidden (change)="upload(fileInput)" />
       <button matButton="filled" type="button" [disabled]="uploading()" (click)="fileInput.click()">
         @if (uploading()) {
-          <mat-spinner diameter="16"></mat-spinner>
+          <mat-spinner diameter="16" />
         } @else {
-          <mat-icon fontIcon="upload"></mat-icon>
+          <mat-icon fontIcon="upload" />
         }
         {{ 'experiment.documents.add' | translate }}
       </button>
@@ -15,7 +15,7 @@
   </header>
 
   @if (documents.isLoading() && !documents.hasValue()) {
-    <mat-spinner diameter="24"></mat-spinner>
+    <mat-spinner diameter="24" />
   } @else if (documents.error()) {
     <p class="hint">{{ 'experiment.documents.error.load' | translate }}</p>
   } @else {
@@ -27,11 +27,11 @@
               matIconButton
               type="button"
               [attr.aria-label]="'experiment.documents.view' | translate"
-              (click)="onView(document)"
+              (click)="view(document)"
             >
-              <mat-icon fontIcon="visibility"></mat-icon>
+              <mat-icon fontIcon="visibility" />
             </button>
-            <a href="" (click)="$event.preventDefault(); onDownload(document)">{{
+            <a href="" (click)="$event.preventDefault(); download(document)">{{
               document.fileName
             }}</a>
           </div>

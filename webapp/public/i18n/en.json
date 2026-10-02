@@ -261,7 +261,7 @@
     }
   },
   "experiment": {
-    "edit": {
+    "dialog": {
       "title": {
         "create": "Setup new Experiment",
         "edit": "Edit Experiment",
