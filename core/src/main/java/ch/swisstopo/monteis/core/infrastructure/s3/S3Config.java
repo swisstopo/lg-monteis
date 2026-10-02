@@ -15,15 +15,15 @@ public class S3Config {
 
   // credentials come from the default chain, EKS pod identity in the cluster
   @Bean(destroyMethod = "close")
-  @Profile("!dev")
+  @Profile("!dev & !e2e-test")
   S3Client s3Client(DocumentStorageProperties properties) {
     return S3Client.builder().region(Region.of(properties.region())).build();
   }
 
-  // the S3Mock of docker/compose.yml checks no signatures, so dummy credentials spare the
-  // developer an AWS login
+  // dev and the e2e tests run against an S3Mock (docker/compose.yml, a testcontainer), it checks
+  // no signatures, so dummy credentials spare an AWS login
   @Bean(destroyMethod = "close")
-  @Profile("dev")
+  @Profile({"dev", "e2e-test"})
   S3Client localS3Client(
       DocumentStorageProperties properties,
       @Value("${monteis.documents.s3.local-endpoint}") URI localEndpoint) {
