@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapper;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
@@ -43,6 +44,9 @@ class EndpointCoverageTest {
           "GET /api/experiments/csv",
           "GET /api/experiments/{id}",
           "PUT /api/experiments/{id}",
+          "GET /api/experiments/owners",
+          "GET /api/experiments/{id}/owner-candidates",
+          "PUT /api/experiments/{id}/owners",
           "POST /api/experiments",
           "GET /api/sensors",
           "GET /api/sensors/{id}",
@@ -60,6 +64,7 @@ class EndpointCoverageTest {
   @Autowired private RequestMappingHandlerMapping handlerMapping;
 
   @MockitoBean private ExperimentService experimentService;
+  @MockitoBean private ExperimentOwnerService experimentOwnerService;
   @MockitoBean private ExperimentWebMapper experimentWebMapper;
   @MockitoBean private ExperimentCsvExportQueryRepository experimentCsvExportQueryRepository;
   @MockitoBean private SensorService sensorService;

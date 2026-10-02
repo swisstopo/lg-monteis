@@ -82,6 +82,13 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.PUT, "/api/experiments/" + UNASSIGNED_EXPERIMENT, allExperiments),
         Arguments.of(HttpMethod.PUT, "/api/experiments/not-a-uuid", new PrivilegeLevel[] {}),
         Arguments.of(HttpMethod.POST, "/api/experiments", adminOnly),
+        Arguments.of(HttpMethod.GET, "/api/experiments/owners", everyone),
+        Arguments.of(
+            HttpMethod.GET,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/owner-candidates",
+            adminOnly),
+        Arguments.of(
+            HttpMethod.PUT, "/api/experiments/" + ASSIGNED_EXPERIMENT + "/owners", adminOnly),
         Arguments.of(HttpMethod.GET, "/api/sensors", everyone),
         Arguments.of(HttpMethod.GET, sensor, everyone),
         Arguments.of(HttpMethod.POST, "/api/sensors", adminOnly),
@@ -191,13 +198,29 @@ class SecurityConfigAuthorizationTest {
   @RestController
   static class DummyController {
 
-    @GetMapping({"/api/experiments", "/api/measurements", "/api/me", "/api/sensors"})
+    @GetMapping({
+      "/api/experiments",
+      "/api/experiments/owners",
+      "/api/measurements",
+      "/api/me",
+      "/api/sensors"
+    })
     public String read() {
       return "ok";
     }
 
     @GetMapping({"/api/experiments/{id}", "/api/sensors/{id}"})
     public String readOne(@PathVariable String id) {
+      return "ok";
+    }
+
+    @GetMapping("/api/experiments/{id}/owner-candidates")
+    public String ownerCandidates(@PathVariable String id) {
+      return "ok";
+    }
+
+    @PutMapping("/api/experiments/{id}/owners")
+    public String replaceOwners(@PathVariable String id) {
       return "ok";
     }
 
