@@ -33,6 +33,9 @@ final class RealmRenderer {
           ((ObjectNode) client).set("redirectUris", spaPatch.path("redirectUris"));
           ((ObjectNode) client).set("webOrigins", spaPatch.path("webOrigins"));
         }
+        if ("monteis-core".equals(client.path("clientId").asText())) {
+          ((ObjectNode) client).set("secret", patch.path("core").path("secret"));
+        }
       }
 
       ArrayNode groups = base.withArray("groups");

@@ -195,6 +195,19 @@
       "publicClient": false,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "monteis-core",
+      "name": "MONTEIS Core user directory (service account)",
+      "description": "core reads experiment PIs and their contact data through the admin API. The secret comes from the environment patch, never from this file.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false
     }
   ],
   "groups": [
@@ -221,7 +234,14 @@
       "clientRoles": { "monteis-spa": ["monteis-client:documents:read"] }
     }
   ],
-  "users": [],
+  "users": [
+    {
+      "username": "service-account-monteis-core",
+      "enabled": true,
+      "serviceAccountClientId": "monteis-core",
+      "clientRoles": { "realm-management": ["view-users", "query-users", "query-groups"] }
+    }
+  ],
   "components": {
     "org.keycloak.userprofile.UserProfileProvider": [
       {
