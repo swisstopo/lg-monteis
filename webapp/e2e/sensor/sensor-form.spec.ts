@@ -106,22 +106,22 @@ test('should create sensor with a fulcrum id and take its coordinates from fulcr
   await firstParameter.getByLabel('Alarm Limit To').fill('100');
 
   // The response of the create call is what proves the backend really went to Fulcrum: createSensor
-  // overwrites the coordinates from the form with the ones the record carries. Armed before the
-  // click, so the response cannot be missed.
-  const created = page.waitForResponse(
-    (response) => response.request().method() === 'POST' && response.url().endsWith('/api/sensors'),
-  );
+  // overwrites the coordinates from the form with the ones the record carries. The route reads it
+  // on the Playwright side, Chromium drops the body of a browser response once the grid reloads.
+  let createdSensor: { fulcrumId?: string; coordinates?: unknown } | undefined;
+  await page.route('**/api/sensors', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    const response = await route.fetch();
+    createdSensor = await response.json();
+    await route.fulfill({ response });
+  });
 
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 
-  // Read the body before asserting on the toast: saving closes the dialog and reloads the grid,
-  // and Chromium discards a response body once the page has navigated away from it.
-  const createdSensor = await (await created).json();
-
   await expect(page.getByText('Sensor saved successfully.')).toBeVisible();
 
-  expect(createdSensor.fulcrumId).toBe(uniqueId);
-  expect(createdSensor.coordinates).toEqual(STUB_FULCRUM_COORDINATES);
+  expect(createdSensor?.fulcrumId).toBe(uniqueId);
+  expect(createdSensor?.coordinates).toEqual(STUB_FULCRUM_COORDINATES);
 });
 
 test('should reject a fulcrum id that is not a uuid', async ({ page }) => {
