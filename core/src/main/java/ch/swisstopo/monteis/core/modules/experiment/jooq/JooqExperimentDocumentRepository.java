@@ -1,0 +1,70 @@
+package ch.swisstopo.monteis.core.modules.experiment.jooq;
+
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_DOCUMENTS;
+
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
+import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
+import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentDocumentsRecord;
+import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentUpload;
+import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
+import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentRepository;
+import java.util.List;
+import java.util.UUID;
+import org.jooq.DSLContext;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+@Repository
+public class JooqExperimentDocumentRepository implements ExperimentDocumentRepository {
+
+  private final DSLContext dsl;
+  private final CurrentUserProvider currentUserProvider;
+
+  public JooqExperimentDocumentRepository(DSLContext dsl, CurrentUserProvider currentUserProvider) {
+    this.dsl = dsl;
+    this.currentUserProvider = currentUserProvider;
+  }
+
+  @Override
+  @Transactional
+  public ExperimentDocument create(UUID experimentId, DocumentUpload upload) {
+    return dsl.insertInto(EXPERIMENT_DOCUMENTS)
+        .set(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID, experimentId)
+        .set(EXPERIMENT_DOCUMENTS.FILE_NAME, upload.fileName())
+        .set(EXPERIMENT_DOCUMENTS.CONTENT_TYPE, upload.contentType())
+        .set(EXPERIMENT_DOCUMENTS.SIZE_BYTES, upload.sizeBytes())
+        .set(EXPERIMENT_DOCUMENTS.UPLOADED_BY, currentUserProvider.getCurrentUsername())
+        .returning()
+        .fetchSingle(JooqExperimentDocumentRepository::toDomain);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<ExperimentDocument> findByExperimentId(UUID experimentId) {
+    return dsl.selectFrom(EXPERIMENT_DOCUMENTS)
+        .where(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID.eq(experimentId))
+        .orderBy(EXPERIMENT_DOCUMENTS.UPLOADED_AT.desc(), EXPERIMENT_DOCUMENTS.ID.desc())
+        .fetch(JooqExperimentDocumentRepository::toDomain);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public ExperimentDocument getById(UUID experimentId, UUID documentId) {
+    return dsl.selectFrom(EXPERIMENT_DOCUMENTS)
+        .where(EXPERIMENT_DOCUMENTS.ID.eq(documentId))
+        .and(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID.eq(experimentId))
+        .fetchOptional(JooqExperimentDocumentRepository::toDomain)
+        .orElseThrow(() -> new ObjectNotFoundException(ExperimentDocument.class));
+  }
+
+  private static ExperimentDocument toDomain(ExperimentDocumentsRecord documentRecord) {
+    return new ExperimentDocument(
+        documentRecord.getId(),
+        documentRecord.getExperimentId(),
+        documentRecord.getFileName(),
+        documentRecord.getContentType(),
+        documentRecord.getSizeBytes(),
+        documentRecord.getUploadedAt(),
+        documentRecord.getUploadedBy());
+  }
+}
