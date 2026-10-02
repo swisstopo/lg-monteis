@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
+import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
@@ -9,8 +10,11 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.*;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.jooq.ExperimentJooqMapper;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
@@ -248,21 +252,152 @@ public class JooqSensorRepository implements SensorRepository {
     return sensorOpt;
   }
 
-  /**
-   * Mirrors {@code sensors.main_experiment} into the {@code experiment_sensor} join table, which is
-   * what {@code can_access_sensor()} (row-level security) and the experiments grid's sensor count
-   * read. Without this a sensor written through the API has no membership row at all: invisible to
-   * every user without {@code api:read-all}, and never counted on its experiment.
-   *
-   * <p>Only the sensor's own main-experiment row is touched: the previous one is deleted and the
-   * new one inserted. Rows for any other experiment stay - the join table is many-to-many, and a
-   * membership this write knows nothing about must not be revoked by it.
-   *
-   * @param previousExperimentId the main experiment the sensor had before this write, {@code null}
-   *     on create or when it had none
-   * @param mainExperimentId the main experiment the sensor has after this write, {@code null} when
-   *     it was removed
-   */
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<SensorDetail> findDetailById(UUID id) {
+    return dsl.select(SENSORS.fields())
+        .select(EXPERIMENTS.fields())
+        .from(SENSORS)
+        .leftJoin(EXPERIMENTS)
+        .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+        .where(SENSORS.ID.eq(id))
+        .fetchOptional()
+        .map(this::mapToSensorDetail)
+        .map(
+            sensor -> {
+              sensor.getParameters().addAll(fetchDetailParameters(id));
+              return sensor;
+            });
+  }
+
+  // --- Private Helpers ---
+
+  private SensorDetail mapToSensorDetail(Record record) {
+    return new SensorDetail(
+        record.get(SENSORS.ID),
+        record.get(SENSORS.NAME),
+        record.get(SENSORS.DAS_SENSOR_ALIAS),
+        null,
+        null,
+        extractExperiment(record),
+        extractCoordinates(record),
+        record.get(SENSORS.ACTIVE),
+        record.get(SENSORS.COMMENT),
+        record.get(SENSORS.VERSION),
+        new ArrayList<>());
+  }
+
+  private List<SensorDetailParameter> fetchDetailParameters(UUID sensorId) {
+    var latestReading =
+        DSL.lateral(
+                DSL.select(
+                        SENSOR_READING_SECURED.TIMESTAMP,
+                        SENSOR_READING_SECURED.NORM_VALUE,
+                        SENSOR_READING_SECURED.RAW_VALUE,
+                        SENSOR_READING_SECURED.STATUS)
+                    .from(SENSOR_READING_SECURED)
+                    .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(SENSOR_PARAMETER.ID))
+                    .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
+                    .limit(1))
+            .as("latest_reading");
+
+    return dsl.select(SENSOR_PARAMETER.fields())
+        .select(FORMULAS.fields())
+        .select(SENSOR_TYPES.fields())
+        .select(latestReading.fields())
+        .from(SENSOR_PARAMETER)
+        .leftJoin(FORMULAS)
+        .on(SENSOR_PARAMETER.FORMULA_ID.eq(FORMULAS.ID))
+        .leftJoin(SENSOR_TYPES)
+        .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID))
+        .leftJoin(latestReading)
+        .on(DSL.trueCondition())
+        .where(SENSOR_PARAMETER.SENSOR_ID.eq(sensorId))
+        .fetch(record -> mapToDetailParameter(record, latestReading));
+  }
+
+  private SensorDetailParameter mapToDetailParameter(Record r, org.jooq.Table<?> latestReading) {
+    String unitStr = r.get(SENSOR_PARAMETER.UNIT, String.class);
+
+    return new SensorDetailParameter(
+        r.get(SENSOR_PARAMETER.ID),
+        r.get(SENSOR_PARAMETER.NAME),
+        r.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
+        extractSensorType(r),
+        unitStr != null ? Unit.valueOf(unitStr) : null,
+        extractFormula(r),
+        extractAlarmLimits(r),
+        r.get(SENSOR_PARAMETER.ACTIVE),
+        r.get(SENSOR_PARAMETER.COMMENT),
+        extractReading(r, latestReading),
+        r.get(SENSOR_PARAMETER.VERSION));
+  }
+
+  // --- Extraction Helpers ---
+
+  private Coordinates extractCoordinates(Record r) {
+    Double x = r.get(SENSORS.X);
+    Double y = r.get(SENSORS.Y);
+    Double z = r.get(SENSORS.Z);
+
+    if (x == null || y == null || z == null) return null;
+    return new Coordinates(x, y, z);
+  }
+
+  private Experiment extractExperiment(Record r) {
+    UUID expId = r.get(EXPERIMENTS.ID);
+    if (expId == null) return null;
+
+    LocalDate start = r.get(EXPERIMENTS.START, LocalDate.class);
+    LocalDate end = r.get(EXPERIMENTS.END, LocalDate.class);
+    Period period = (start != null && end != null) ? new Period(start, end) : null;
+
+    Experiment experiment =
+        new Experiment(
+            expId,
+            r.get(EXPERIMENTS.NAME),
+            period,
+            r.get(EXPERIMENTS.COMMENT),
+            r.get(EXPERIMENTS.VERSION),
+            null);
+    experiment.setOwner(r.get(EXPERIMENTS.OWNER));
+    return experiment;
+  }
+
+  private AlarmLimits extractAlarmLimits(Record r) {
+    Double lower = r.get(SENSOR_PARAMETER.LOWER_ALARM_LIMIT);
+    Double upper = r.get(SENSOR_PARAMETER.UPPER_ALARM_LIMIT);
+
+    if (lower == null || upper == null) return null;
+    return new AlarmLimits(lower, upper);
+  }
+
+  private SensorType extractSensorType(Record r) {
+    UUID typeId = r.get(SENSOR_TYPES.ID);
+    if (typeId == null) return null;
+    return new SensorType(typeId, r.get(SENSOR_TYPES.NAME), r.get(SENSOR_TYPES.VERSION));
+  }
+
+  private Formula extractFormula(Record r) {
+    UUID formulaId = r.get(FORMULAS.ID);
+    if (formulaId == null) return new Formula();
+    return new Formula(formulaId, r.get(FORMULAS.EXPRESSION), r.get(FORMULAS.VERSION));
+  }
+
+  private SensorParameterReading extractReading(Record r, org.jooq.Table<?> latestReading) {
+    OffsetDateTime dbTimestamp =
+        r.get(latestReading.field(SENSOR_READING_SECURED.TIMESTAMP), OffsetDateTime.class);
+    if (dbTimestamp == null) return null;
+
+    return new SensorParameterReading(
+        r.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
+        r.get(latestReading.field(SENSOR_READING_SECURED.NORM_VALUE)),
+        r.get(latestReading.field(SENSOR_READING_SECURED.RAW_VALUE)),
+        null,
+        r.get(latestReading.field(SENSOR_READING_SECURED.STATUS), String.class),
+        dbTimestamp.toInstant());
+  }
+
   private void syncExperimentSensorTable(
       UUID sensorId, UUID previousExperimentId, UUID mainExperimentId) {
     if (previousExperimentId != null && !previousExperimentId.equals(mainExperimentId)) {
