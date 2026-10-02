@@ -6,6 +6,7 @@ import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestExc
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAuthenticationException;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -193,6 +194,18 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
   public ResponseEntity<ErrorDto> handleObjectNotFound(ObjectNotFoundException e) {
     ErrorDto payload = ErrorDto.global(ObjectNotFoundException.MESSAGE_KEY, Map.of());
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(payload);
+  }
+
+  @ExceptionHandler(UserDirectoryUnavailableException.class)
+  @ApiResponse(
+      responseCode = "503",
+      description = "Keycloak could not be asked for users.",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  public ResponseEntity<ErrorDto> handleUserDirectoryUnavailable(
+      UserDirectoryUnavailableException e) {
+    log.error("User directory unavailable", e);
+    ErrorDto payload = ErrorDto.global(UserDirectoryUnavailableException.MESSAGE_KEY, Map.of());
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(payload);
   }
 
   @ExceptionHandler(InvalidPagedRequestException.class)
