@@ -100,7 +100,7 @@ export default class ExperimentTable {
     this.dialog.open(ExperimentEdit, { width: '60vw', maxWidth: '1200px', autoFocus: true });
   }
 
-  onEdit(): void {
+  onOpenSelected(): void {
     const experimentId = this.selectedExperimentId();
     if (experimentId === undefined) return;
 

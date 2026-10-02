@@ -264,7 +264,8 @@
     "edit": {
       "title": {
         "create": "Setup new Experiment",
-        "edit": "Edit Experiment"
+        "edit": "Edit Experiment",
+        "view": "View Experiment"
       }
     },
     "id": {
@@ -329,7 +330,8 @@
     "tableHeader": {
       "download": "Download",
       "create": "Create Experiment",
-      "edit": "Edit Experiment"
+      "edit": "Edit Experiment",
+      "view": "View"
     },
     "experimentDate": {
       "to": {
@@ -345,6 +347,7 @@
     },
     "button": {
       "cancel": "Cancel",
+      "close": "Close",
       "saveAndCreate": "Save and create new",
       "save": "Save"
     },
