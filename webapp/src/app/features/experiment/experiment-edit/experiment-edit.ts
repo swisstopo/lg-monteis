@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import {
+  disabled,
   form,
   FormField,
   maxLength,
@@ -19,6 +20,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
+import { PermissionsService } from '@core/auth/permissions.service';
 import { ExperimentResponseDto, WriteExperimentDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
@@ -76,6 +78,7 @@ export default class ExperimentEdit {
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
   private readonly formErrorService = inject(FormErrorService);
+  private readonly permissions = inject(PermissionsService);
   readonly dialogRef = inject<MatDialogRef<ExperimentEdit>>(MatDialogRef, {
     optional: true,
   });
@@ -83,11 +86,16 @@ export default class ExperimentEdit {
 
   readonly saveError = this.experimentService.error;
   experiment = signal<ExperimentResponseDto | undefined>(undefined);
-  title = computed(() =>
-    this.experimentId()
+  readonly readOnly = computed(() => {
+    const experimentId = this.experimentId();
+    return experimentId !== undefined && !this.permissions.canWriteExperiment(experimentId);
+  });
+  title = computed(() => {
+    if (this.readOnly()) return this.translateService.translate('experiment.edit.title.view')();
+    return this.experimentId()
       ? this.translateService.translate('experiment.edit.title.edit')()
-      : this.translateService.translate('experiment.edit.title.create')(),
-  );
+      : this.translateService.translate('experiment.edit.title.create')();
+  });
 
   private readonly syncSelectedExperiment = effect(() => {
     this.experimentService.getExperiment(this.experimentId());
@@ -130,6 +138,7 @@ export default class ExperimentEdit {
   }
 
   readonly experimentForm = form(this.formModel, (schema) => {
+    disabled(schema, { when: () => this.readOnly() });
     required(schema.name, { message: translate('experiment.name.validation.required')() });
     minLength(schema.name, 2, { message: translate('experiment.name.validation.minLength')() });
     maxLength(schema.name, 50, { message: translate('experiment.name.validation.maxLength')() });
