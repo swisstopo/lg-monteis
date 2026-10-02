@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentDocumentService;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
+import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentDocumentWebMapper;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapper;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.overview.service.OverviewService;
@@ -44,6 +46,9 @@ class EndpointCoverageTest {
           "GET /api/experiments/{id}",
           "PUT /api/experiments/{id}",
           "POST /api/experiments",
+          "GET /api/experiments/{id}/documents",
+          "POST /api/experiments/{id}/documents",
+          "GET /api/experiments/{id}/documents/{documentId}/content",
           "GET /api/sensors",
           "GET /api/sensors/{id}",
           "GET /api/sensors/csv",
@@ -62,6 +67,8 @@ class EndpointCoverageTest {
   @MockitoBean private ExperimentService experimentService;
   @MockitoBean private ExperimentWebMapper experimentWebMapper;
   @MockitoBean private ExperimentCsvExportQueryRepository experimentCsvExportQueryRepository;
+  @MockitoBean private ExperimentDocumentService experimentDocumentService;
+  @MockitoBean private ExperimentDocumentWebMapper experimentDocumentWebMapper;
   @MockitoBean private SensorService sensorService;
   @MockitoBean private SensorWebMapper sensorWebMapper;
   @MockitoBean private SensorCsvExportQueryRepository sensorCsvExportQueryRepository;

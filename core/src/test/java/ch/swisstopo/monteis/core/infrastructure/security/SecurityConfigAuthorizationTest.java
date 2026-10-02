@@ -66,22 +66,28 @@ class SecurityConfigAuthorizationTest {
     PrivilegeLevel[] adminOnly = {PrivilegeLevel.MONTEIS_ADMIN};
     PrivilegeLevel[] everyone = PrivilegeLevel.values();
     PrivilegeLevel[] allExperiments = {PrivilegeLevel.GLOBAL_EDITOR, PrivilegeLevel.MONTEIS_ADMIN};
+    PrivilegeLevel[] assignedExperiment = {
+      PrivilegeLevel.EXPERIMENT_PI, PrivilegeLevel.GLOBAL_EDITOR, PrivilegeLevel.MONTEIS_ADMIN
+    };
     String sensor = "/api/sensors/" + UUID.randomUUID();
     return Stream.of(
         Arguments.of(HttpMethod.GET, "/api/experiments", everyone),
         Arguments.of(HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT, everyone),
-        Arguments.of(
-            HttpMethod.PUT,
-            "/api/experiments/" + ASSIGNED_EXPERIMENT,
-            new PrivilegeLevel[] {
-              PrivilegeLevel.EXPERIMENT_PI,
-              PrivilegeLevel.GLOBAL_EDITOR,
-              PrivilegeLevel.MONTEIS_ADMIN
-            }),
+        Arguments.of(HttpMethod.PUT, "/api/experiments/" + ASSIGNED_EXPERIMENT, assignedExperiment),
         Arguments.of(HttpMethod.PUT, "/api/experiments/" + OTHER_EXPERIMENT, allExperiments),
         Arguments.of(HttpMethod.PUT, "/api/experiments/" + UNASSIGNED_EXPERIMENT, allExperiments),
         Arguments.of(HttpMethod.PUT, "/api/experiments/not-a-uuid", new PrivilegeLevel[] {}),
         Arguments.of(HttpMethod.POST, "/api/experiments", adminOnly),
+        Arguments.of(
+            HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT + "/documents", everyone),
+        Arguments.of(
+            HttpMethod.POST,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/documents",
+            assignedExperiment),
+        Arguments.of(
+            HttpMethod.POST, "/api/experiments/" + OTHER_EXPERIMENT + "/documents", allExperiments),
+        Arguments.of(
+            HttpMethod.POST, "/api/experiments/not-a-uuid/documents", new PrivilegeLevel[] {}),
         Arguments.of(HttpMethod.GET, "/api/sensors", everyone),
         Arguments.of(HttpMethod.GET, sensor, everyone),
         Arguments.of(HttpMethod.POST, "/api/sensors", adminOnly),
@@ -196,7 +202,7 @@ class SecurityConfigAuthorizationTest {
       return "ok";
     }
 
-    @GetMapping({"/api/experiments/{id}", "/api/sensors/{id}"})
+    @GetMapping({"/api/experiments/{id}", "/api/experiments/{id}/documents", "/api/sensors/{id}"})
     public String readOne(@PathVariable String id) {
       return "ok";
     }
@@ -208,6 +214,11 @@ class SecurityConfigAuthorizationTest {
 
     @PostMapping({"/api/experiments", "/api/sensors", "/api/other"})
     public String create() {
+      return "ok";
+    }
+
+    @PostMapping("/api/experiments/{id}/documents")
+    public String uploadDocument(@PathVariable String id) {
       return "ok";
     }
 
