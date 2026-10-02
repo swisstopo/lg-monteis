@@ -33,6 +33,20 @@ export async function selectExperiment(page: Page, name: string): Promise<void> 
   await experimentNameCell(page, name).click();
 }
 
+/**
+ * Creates experiment `name` through the Create Experiment dialog, which needs an admin. Tests
+ * that change an experiment change their own: a seeded one is shared with every other test.
+ */
+export async function createExperimentInDialog(page: Page, name: string): Promise<void> {
+  await page.getByRole('button', { name: 'Create Experiment' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Experiment Name').fill(name);
+  await dialog.getByLabel('Start Date').fill('01/01/2030');
+  await dialog.getByLabel('End Date').fill('05/05/2030');
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
 export function editExperimentButton(page: Page): Locator {
   return page.getByRole('button', { name: 'Edit Experiment' });
 }
