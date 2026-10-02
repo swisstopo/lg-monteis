@@ -226,3 +226,35 @@ Ein ausgeblendetes oder fehlendes Experiment ergibt 404 `object.not-found`, eine
 | Konsequenzen
 | Wenn der Sync-Check failed, ist ein manueller Schritt auf dem Renovate-Branch nötig (Skript ausführen, Ergebnis committen); bis dahin bleibt der PR blockiert, was gewollt ist, da genau dann die generierten Klassen ihre Grundlage wechseln. Der Renovate-`customManager` muss auf `contracts/pom.xml` zeigen, sonst wird der Digest-Bump nicht mehr erzeugt und der Pin altert stillschweigend. Das `download-maven-plugin` bleibt in `contracts` nur verwaltet (`pluginManagement`), ohne Phasenbindung, damit kein Build versehentlich doch ins Netz geht. Da die Spec als Ressource auch im `contracts`-Jar landet, kann `FulcrumSpecTest` in `core` genau das Dokument prüfen, aus dem generiert wurde: Der Test sichert die Stellen ab, die der Client hart kodiert (den `X-ApiToken`-Header, die Basis-URL und die Response-Formen von `/v2/query`) und die kein generiertes Modell abdeckt. Er ist die Bedingung dafür, dass die Digest-Bumps automatisch mergen dürfen.
 |===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: Benutzerdaten nur in Keycloak, in der DB nur die User-ID
+
+| Datum
+| 02.10.2026
+
+| Status
+| entschieden (MON-177)
+
+| Kontext & Problem
+| Experimente bekommen einen oder mehrere Owner, deren Kontaktdaten (Name, E-Mail) jeder Leser des Experiments sieht. Die Benutzer leben in Keycloak. Die Frage ist, ob wir Kontaktdaten zusätzlich in unserer DB halten, die Story und der Kommentar im Ticket wollen sensible Daten und doppelte Datenhaltung vermeiden.
+
+| Entscheidung
+| In der DB steht nur `experiment_owner(experiment_id, user_id)`. `core` liest Kandidaten und Kontaktdaten über die Keycloak Admin API mit einem eigenen Service Account (`monteis-core`) und cacht sie kurz im Speicher. Owner können nur PIs des Experiments sein, wer nicht mehr PI ist, wird beim Lesen ausgeblendet. Details in Kap. 8, <<Experiment-Owner und Benutzerdaten aus Keycloak (MON-177)>>.
+
+| Begründung
+| Keine Personendaten in unserer DB, also auch keine Synchronisation und keine veralteten Namen oder E-Mails. Die Wählbarkeit hängt direkt am bestehenden Rollenkonzept (PI = Gruppe `read + write`), es braucht keine zusätzliche Gruppe und keine eigene Rechteverwaltung.
+
+| Konsequenzen
+| Positiv: Änderungen in Keycloak (Name, Austritt aus der Gruppe, Löschung) sind nach spätestens der Cache-TTL überall sichtbar. Negativ: jede Anzeige braucht Keycloak, darum gibt es den Cache und das Fallback ohne Owner. Nach Ownernamen sortieren geht nicht, nur filtern. Der Cloud-Realm in `lg-monteis-infra` und das Secret in `lg-monteis-k8s` (`KC_CORE_CLIENT_SECRET`, `KC_TOKEN_URI`, `KC_ADMIN_API_URI`) müssen den Client `monteis-core` noch nachziehen.
+
+| Verworfene Alternativen
+| *Kontaktdaten in der DB kopieren:* schnelle Anzeige und Sortierung, aber genau die doppelte Haltung von Personendaten, die wir vermeiden wollen, und sie veralten ohne Sync. +
+*Nur den Anzeigenamen als Cache in der DB:* würde Sortieren erlauben, ist aber auch eine Kopie personenbezogener Daten. +
+*Admin API mit dem Token des aufrufenden Admins:* braucht `realm-management`-Rollen für Admins, und Leser ohne diese Rollen könnten die Kontaktdaten nicht sehen. +
+*Eigene Gruppe "Experiment Owners":* unabhängig von den Rechten, aber eine zweite Pflegestelle neben den PI-Gruppen.
+|===
