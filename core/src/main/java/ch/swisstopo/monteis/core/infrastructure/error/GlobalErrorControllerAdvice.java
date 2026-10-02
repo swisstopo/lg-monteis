@@ -37,6 +37,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
@@ -211,6 +212,20 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
         e.getMessage());
     ErrorDto payload = ErrorDto.global("error.paging.invalid", Map.of(ERROR_ID, ctx.errorId()));
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(payload);
+  }
+
+  @ApiResponse(
+      responseCode = "413",
+      description = "Uploaded file exceeds the configured maximum size.",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  @Override
+  protected ResponseEntity<@NonNull Object> handleMaxUploadSizeExceededException(
+      MaxUploadSizeExceededException ex,
+      @NonNull HttpHeaders headers,
+      @NonNull HttpStatusCode status,
+      @NonNull WebRequest request) {
+    ErrorDto payload = ErrorDto.form("document.validation.tooLarge", Map.of());
+    return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(payload);
   }
 
   @Override
