@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.web;
 
+import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
@@ -40,7 +41,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/sensors")
+@RequestMapping(ApiPaths.SENSORS)
 public class SensorController {
   private final SensorService service;
   private final SensorWebMapper mapper;
