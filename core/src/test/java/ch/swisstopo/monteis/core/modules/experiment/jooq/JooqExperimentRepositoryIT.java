@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
+import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOwner.EXPERIMENT_OWNER;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentSensor.EXPERIMENT_SENSOR;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,9 +17,12 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
@@ -211,7 +215,7 @@ class JooqExperimentRepositoryIT {
         () -> {
           // Arrange
           int initialExperimentCount = dsl.fetchCount(EXPERIMENTS);
-          Experiment newExperiment = buildDummyDomainExperiment("EXP-CREATE-001", "Admin");
+          Experiment newExperiment = buildDummyDomainExperiment("EXP-CREATE-001");
 
           // Act
           Experiment savedExperiment = repository.create(newExperiment);
@@ -245,9 +249,8 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          Experiment uniqueExperiment = buildDummyDomainExperiment("Unique_Experiment", "Owner_1");
-          Experiment nonUniqueExperiment =
-              buildDummyDomainExperiment("Unique_Experiment", "Owner_1");
+          Experiment uniqueExperiment = buildDummyDomainExperiment("Unique_Experiment");
+          Experiment nonUniqueExperiment = buildDummyDomainExperiment("Unique_Experiment");
           repository.create(uniqueExperiment);
 
           // Act & Assert
@@ -267,8 +270,7 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          Experiment savedExperiment =
-              repository.create(buildDummyDomainExperiment("OLD-NAME", "Old Owner"));
+          Experiment savedExperiment = repository.create(buildDummyDomainExperiment("OLD-NAME"));
 
           // Mutate domain object
           savedExperiment.setName("NEW-NAME");
@@ -289,10 +291,8 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          Experiment uniqueExperiment1 =
-              buildDummyDomainExperiment("Unique_Experiment1", "Owner_1");
-          Experiment uniqueExperiment2 =
-              buildDummyDomainExperiment("Unique_Experiment2", "Owner_1");
+          Experiment uniqueExperiment1 = buildDummyDomainExperiment("Unique_Experiment1");
+          Experiment uniqueExperiment2 = buildDummyDomainExperiment("Unique_Experiment2");
           uniqueExperiment1 = repository.create(uniqueExperiment1);
           uniqueExperiment2 = repository.create(uniqueExperiment2);
 
@@ -316,7 +316,7 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          Experiment ghostExperiment = buildDummyDomainExperiment("GHOST-EXP", "Ghost Owner");
+          Experiment ghostExperiment = buildDummyDomainExperiment("GHOST-EXP");
           ghostExperiment.setId(UUID.randomUUID()); // non-existent ID
 
           // Act & Assert
@@ -330,7 +330,7 @@ class JooqExperimentRepositoryIT {
     // Arrange
     Experiment[] hidden = new Experiment[1];
     SecurityContextTestSupport.runAsAdmin(
-        () -> hidden[0] = repository.create(buildDummyDomainExperiment("HIDDEN-EXP", "Owner")));
+        () -> hidden[0] = repository.create(buildDummyDomainExperiment("HIDDEN-EXP")));
     hidden[0].setComment("Should never be written");
 
     SecurityContextTestSupport.runAsUser(
@@ -344,7 +344,7 @@ class JooqExperimentRepositoryIT {
     // Arrange
     Experiment[] assigned = new Experiment[1];
     SecurityContextTestSupport.runAsAdmin(
-        () -> assigned[0] = repository.create(buildDummyDomainExperiment("PI-EXP", "Owner")));
+        () -> assigned[0] = repository.create(buildDummyDomainExperiment("PI-EXP")));
     UUID id = assigned[0].getId();
     assigned[0].setComment("Edited by its PI");
 
@@ -361,7 +361,7 @@ class JooqExperimentRepositoryIT {
     // Arrange
     Experiment[] any = new Experiment[1];
     SecurityContextTestSupport.runAsAdmin(
-        () -> any[0] = repository.create(buildDummyDomainExperiment("ANY-EXP", "Owner")));
+        () -> any[0] = repository.create(buildDummyDomainExperiment("ANY-EXP")));
     any[0].setComment("Edited by the global editor");
 
     SecurityContextTestSupport.runAsGlobalEditor(
@@ -377,7 +377,7 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          repository.create(buildDummyDomainExperiment("UNAUDITED-EXP-1", "Test Owner"));
+          repository.create(buildDummyDomainExperiment("UNAUDITED-EXP-1"));
 
           // Act
           try (Stream<Experiment> stream = repository.streamUnauditedExperiments()) {
@@ -402,8 +402,7 @@ class JooqExperimentRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          Experiment experiment =
-              repository.create(buildDummyDomainExperiment("AUDITED-EXP-1", "Test Owner"));
+          Experiment experiment = repository.create(buildDummyDomainExperiment("AUDITED-EXP-1"));
 
           // Commit to Javers to simulate auditing
           javers.commit("TEST_AUTHOR", experiment);
@@ -502,14 +501,141 @@ class JooqExperimentRepositoryIT {
     throw new AssertionError("Expected to find experiment with name " + name);
   }
 
+  // --- Owners (MON-177) ---
+
+  private static final UUID ALICE = UUID.fromString("a11ce43c-8733-4a5e-a389-4760cbc21984");
+  private static final UUID BOB = UUID.fromString("b0bb4079-a512-492e-bec7-ede4b410397c");
+
+  @Test
+  @Transactional
+  void should_replace_owners_adding_new_and_removing_missing_ones() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID experimentId = createDefaultExperiment("OWNER-REPLACE");
+          repository.replaceOwners(experimentId, Set.of(ALICE));
+
+          Experiment replaced = repository.replaceOwners(experimentId, Set.of(BOB));
+
+          assertEquals(Set.of(BOB), replaced.getOwnerIds());
+          assertEquals(Set.of(BOB), repository.getById(experimentId).getOwnerIds());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_remove_all_owners_when_replacing_with_an_empty_set() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID experimentId = createDefaultExperiment("OWNER-CLEAR");
+          repository.replaceOwners(experimentId, Set.of(ALICE, BOB));
+
+          Experiment cleared = repository.replaceOwners(experimentId, Set.of());
+
+          assertEquals(Set.of(), cleared.getOwnerIds());
+          assertEquals(
+              0, dsl.fetchCount(EXPERIMENT_OWNER, EXPERIMENT_OWNER.EXPERIMENT_ID.eq(experimentId)));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_not_replace_owners_of_a_hidden_experiment() {
+    UUID[] hiddenId = new UUID[1];
+    SecurityContextTestSupport.runAsAdmin(
+        () -> hiddenId[0] = createDefaultExperiment("OWNER-HIDDEN"));
+
+    SecurityContextTestSupport.runAsUser(
+        List.of(),
+        () ->
+            assertThrows(
+                ObjectNotFoundException.class,
+                () -> repository.replaceOwners(hiddenId[0], Set.of(ALICE))));
+    assertEquals(
+        0, dsl.fetchCount(EXPERIMENT_OWNER, EXPERIMENT_OWNER.EXPERIMENT_ID.eq(hiddenId[0])));
+  }
+
+  @Test
+  @Transactional
+  void should_keep_owners_when_updating_the_master_data() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          Experiment created = repository.create(buildDummyDomainExperiment("OWNER-KEEP"));
+          repository.replaceOwners(created.getId(), Set.of(ALICE));
+
+          created.setComment("changed");
+          Experiment updated = repository.update(created);
+
+          assertEquals(Set.of(ALICE), updated.getOwnerIds());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_filter_experiments_by_owner_including_experiments_without_owner() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID ofAlice = createDefaultExperiment("OWNER-FILTER-ALICE");
+          UUID ofBob = createDefaultExperiment("OWNER-FILTER-BOB");
+          UUID withoutOwner = createDefaultExperiment("OWNER-FILTER-NONE");
+          repository.replaceOwners(ofAlice, Set.of(ALICE));
+          repository.replaceOwners(ofBob, Set.of(BOB));
+
+          Set<UUID> byAlice = idsMatchingOwnerFilter(ALICE.toString());
+          Set<UUID> byAliceOrNone = idsMatchingOwnerFilter(ALICE.toString(), null);
+
+          assertTrue(byAlice.contains(ofAlice));
+          assertFalse(byAlice.contains(ofBob));
+          assertFalse(byAlice.contains(withoutOwner));
+          assertTrue(byAliceOrNone.containsAll(List.of(ofAlice, withoutOwner)));
+          assertFalse(byAliceOrNone.contains(ofBob));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_reject_an_owner_filter_value_that_is_not_a_user_id() {
+    SecurityContextTestSupport.runAsAdmin(
+        () ->
+            assertThrows(
+                InvalidPagedRequestException.class, () -> idsMatchingOwnerFilter("not-a-uuid")));
+  }
+
+  @Test
+  @Transactional
+  void should_reject_sorting_by_owner() {
+    PagedRequest request =
+        new PagedRequest(0, 10, List.of(new SortModelItem("owners", SortDirection.ASC)), Map.of());
+    SecurityContextTestSupport.runAsAdmin(
+        () ->
+            assertThrows(
+                InvalidPagedRequestException.class, () -> repository.getExperiments(request)));
+  }
+
+  private Set<UUID> idsMatchingOwnerFilter(String... ownerIds) {
+    PagedRequest request =
+        new PagedRequest(
+            0,
+            1000,
+            List.of(),
+            Map.of("owners", new SetFilterModel("set", new HashSet<>(Arrays.asList(ownerIds)))));
+    Set<UUID> ids = new HashSet<>();
+    repository.getExperiments(request).rows().forEach(e -> ids.add(e.getId()));
+    return ids;
+  }
+
+  private UUID createDefaultExperiment(String name) {
+    return createExperimentWithDsl(
+        name, null, LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31));
+  }
+
   /**
    * Helper to quickly build a valid domain Experiment for repository testing.
    */
-  private Experiment buildDummyDomainExperiment(String name, String owner) {
+  private Experiment buildDummyDomainExperiment(String name) {
     Period dates =
         new Period(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31));
 
-    return new Experiment(name, owner, dates, "Dummy comment");
+    return new Experiment(name, dates, "Dummy comment");
   }
 
   /**
@@ -523,7 +649,6 @@ class JooqExperimentRepositoryIT {
                 .set(EXPERIMENTS.COMMENT, comment)
                 .set(EXPERIMENTS.START, start)
                 .set(EXPERIMENTS.END, end)
-                .set(EXPERIMENTS.OWNER, "owner")
                 .returning(EXPERIMENTS.ID)
                 .fetchOne())
         .getId();
