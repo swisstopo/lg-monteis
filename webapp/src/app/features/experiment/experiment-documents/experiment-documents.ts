@@ -1,9 +1,8 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, input, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, resource, signal } from '@angular/core';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
-import { PermissionsService } from '@core/auth/permissions.service';
 import { ErrorDto, ExperimentDocumentResponseDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
@@ -16,35 +15,34 @@ import { FileDownloadService } from '@ui/file-download/file-download.service';
   imports: [DatePipe, MatButton, MatIconButton, MatIcon, MatProgressSpinner, TranslatePipe],
   templateUrl: './experiment-documents.html',
   styleUrl: './experiment-documents.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ExperimentDocuments {
   private readonly documentService = inject(ExperimentDocumentService);
-  private readonly permissions = inject(PermissionsService);
+  private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
-  private readonly downloadService = inject(FileDownloadService);
 
   readonly experimentId = input.required<string>();
+  readonly readOnly = input(false);
 
-  protected readonly canUpload = computed(() =>
-    this.permissions.canWriteExperiment(this.experimentId()),
-  );
   protected readonly uploading = signal(false);
 
   protected readonly documents = resource({
-    params: () => ({ id: this.experimentId() }),
-    loader: ({ params }) => this.documentService.getDocuments(params.id),
+    params: () => this.experimentId(),
+    loader: ({ params: experimentId }) => this.documentService.getDocuments(experimentId),
   });
 
-  async onFilesSelected(input: HTMLInputElement) {
-    const files = Array.from(input.files ?? []);
-    input.value = '';
+  // one after the other, so each failed file gets its own toast
+  protected async upload(fileInput: HTMLInputElement): Promise<void> {
+    const files = Array.from(fileInput.files ?? []);
+    fileInput.value = '';
     if (files.length === 0) return;
 
     this.uploading.set(true);
     try {
       for (const file of files) {
-        await this.upload(file);
+        await this.uploadFile(file);
       }
     } finally {
       this.uploading.set(false);
@@ -52,51 +50,48 @@ export class ExperimentDocuments {
     }
   }
 
-  async onDownload(document: ExperimentDocumentResponseDto) {
+  protected async download(document: ExperimentDocumentResponseDto): Promise<void> {
     try {
-      const blob = await this.documentService.getContent(this.experimentId(), document.id!);
-      this.downloadService.download(blob, document.fileName!);
+      this.fileDownloadService.download(await this.contentOf(document), document.fileName!);
     } catch {
-      this.toastService.error(
-        this.translateService.translate('experiment.documents.error.download')(),
-      );
+      this.toastDownloadFailed();
     }
   }
 
-  // the tab is opened before the await, browsers block a popup that is no longer tied to the click
-  async onView(document: ExperimentDocumentResponseDto) {
-    const tab = window.open('', '_blank');
+  protected async view(document: ExperimentDocumentResponseDto): Promise<void> {
     try {
-      const blob = await this.documentService.getContent(this.experimentId(), document.id!);
-      const objectUrl = URL.createObjectURL(blob);
-      if (tab) {
-        tab.location.href = objectUrl;
-      }
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      await this.fileDownloadService.openInNewTab(() => this.contentOf(document));
     } catch {
-      tab?.close();
-      this.toastService.error(
-        this.translateService.translate('experiment.documents.error.download')(),
-      );
+      this.toastDownloadFailed();
     }
   }
 
   // GLOBAL errors (403, 500) are already toasted by the restErrorInterceptor
-  private async upload(file: File) {
+  private async uploadFile(file: File): Promise<void> {
     try {
       await this.documentService.uploadDocument(this.experimentId(), file);
-    } catch (err) {
-      toErrorDtos(err)
-        .filter((error) => error.target !== ErrorDto.TargetEnum.Global)
-        .forEach((error) =>
+    } catch (error) {
+      toErrorDtos(error)
+        .filter((dto) => dto.target !== ErrorDto.TargetEnum.Global)
+        .forEach((dto) =>
           this.toastService.error(
             this.translateService.translate(
-              error.messageKey ?? 'experiment.documents.error.upload',
-              error.params,
+              dto.messageKey ?? 'experiment.documents.error.upload',
+              dto.params,
             )(),
             file.name,
           ),
         );
     }
+  }
+
+  private contentOf(document: ExperimentDocumentResponseDto): Promise<Blob> {
+    return this.documentService.getContent(this.experimentId(), document.id!);
+  }
+
+  private toastDownloadFailed(): void {
+    this.toastService.error(
+      this.translateService.translate('experiment.documents.error.download')(),
+    );
   }
 }
