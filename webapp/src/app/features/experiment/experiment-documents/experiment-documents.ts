@@ -9,7 +9,7 @@ import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { ExperimentDocumentService } from '@features/experiment/services/experiment-document.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { CsvDownloadService } from '@ui/table/csv-download.service';
+import { FileDownloadService } from '@ui/file-download/file-download.service';
 
 @Component({
   selector: 'app-experiment-documents',
@@ -22,7 +22,7 @@ export class ExperimentDocuments {
   private readonly permissions = inject(PermissionsService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
-  private readonly downloadService = inject(CsvDownloadService);
+  private readonly downloadService = inject(FileDownloadService);
 
   readonly experimentId = input.required<string>();
 

@@ -11,9 +11,9 @@ import ExperimentEdit from '@features/experiment/experiment-edit/experiment-edit
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
-import { CsvDownloadService } from '@ui/table/csv-download.service';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
@@ -32,7 +32,7 @@ export default class ExperimentTable {
   private readonly dialog = inject(MatDialog);
   protected experimentService = inject(ExperimentService);
   private readonly translateService = inject(TranslateService);
-  private readonly csvDownloadService = inject(CsvDownloadService);
+  private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   protected readonly permissions = inject(PermissionsService);
 
@@ -120,7 +120,7 @@ export default class ExperimentTable {
     try {
       const { sortModel, filterModel } = toGridFilterSortParams(api);
       const blob = await this.experimentService.getExperimentsCsv(sortModel, filterModel);
-      this.csvDownloadService.download(blob, 'experiments.csv');
+      this.fileDownloadService.download(blob, 'experiments.csv');
     } catch {
       this.toastService.error(this.translateService.translate('experiment.error.downloadFailed')());
     } finally {
