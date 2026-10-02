@@ -28,7 +28,7 @@ public class S3DocumentStorage implements DocumentStorage {
   public void store(ExperimentDocument document, InputStream content) {
     PutObjectRequest request =
         PutObjectRequest.builder()
-            .bucket(bucket())
+            .bucket(properties.bucket())
             .key(keyOf(document))
             .contentType(document.contentType())
             .contentLength(document.sizeBytes())
@@ -39,19 +39,11 @@ public class S3DocumentStorage implements DocumentStorage {
   @Override
   public InputStream load(ExperimentDocument document) {
     GetObjectRequest request =
-        GetObjectRequest.builder().bucket(bucket()).key(keyOf(document)).build();
+        GetObjectRequest.builder().bucket(properties.bucket()).key(keyOf(document)).build();
     return s3.getObject(request);
   }
 
   private String keyOf(ExperimentDocument document) {
     return properties.keyPrefix() + document.experimentId() + "/" + document.id();
-  }
-
-  private String bucket() {
-    if (properties.bucket().isBlank()) {
-      throw new IllegalStateException(
-          "No document bucket configured, set monteis.documents.s3.bucket");
-    }
-    return properties.bucket();
   }
 }
