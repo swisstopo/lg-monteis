@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.experiment.domain;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -33,6 +34,15 @@ public interface ExperimentRepository {
    *     experiment does not exist or is hidden from the caller
    */
   Experiment update(Experiment experiment);
+
+  /**
+   * Replaces the owners of an experiment with the given set, owners not in it are removed.
+   *
+   * @return the experiment with its new owner ids
+   * @throws ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException if the
+   *     experiment does not exist or is hidden from the caller
+   */
+  Experiment replaceOwners(UUID experimentId, Set<UUID> ownerIds);
 
   /**
    * Retrieves all unaudited experiments

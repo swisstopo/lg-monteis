@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.experiment.domain;
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
@@ -13,19 +14,18 @@ public class Experiment implements Auditable {
 
   @Id private UUID id;
   private String name;
-  private String owner;
   private Period period;
   private String comment;
   private Integer version;
   private Integer sensorCount;
+  private Set<UUID> ownerIds = Set.of();
 
   /**
    * Constructor for creating a NEW Experiment from a web request.
    */
   @Default
-  public Experiment(String name, String owner, Period period, String comment) {
+  public Experiment(String name, Period period, String comment) {
     this.name = name;
-    this.owner = owner;
     this.period = period;
     this.comment = comment;
   }
@@ -34,13 +34,20 @@ public class Experiment implements Auditable {
    * Constructor for REBUILDING an existing Experiment from the database (jOOQ).
    */
   public Experiment(
-      UUID id, String name, Period period, String comment, Integer version, Integer sensorCount) {
+      UUID id,
+      String name,
+      Period period,
+      String comment,
+      Integer version,
+      Integer sensorCount,
+      Set<UUID> ownerIds) {
     this.id = id;
     this.name = name;
     this.period = period;
     this.comment = comment;
     this.version = version;
     this.sensorCount = sensorCount;
+    setOwnerIds(ownerIds);
   }
 
   public Status getStatus(LocalDate today) {
@@ -61,14 +68,6 @@ public class Experiment implements Auditable {
 
   public void setName(String name) {
     this.name = name;
-  }
-
-  public String getOwner() {
-    return owner;
-  }
-
-  public void setOwner(String owner) {
-    this.owner = owner;
   }
 
   public Period getPeriod() {
@@ -101,5 +100,14 @@ public class Experiment implements Auditable {
 
   public void setSensorCount(Integer sensorCount) {
     this.sensorCount = sensorCount;
+  }
+
+  /** The Keycloak user ids of the owners, as stored. Whether they are still eligible is not checked here. */
+  public Set<UUID> getOwnerIds() {
+    return ownerIds;
+  }
+
+  public void setOwnerIds(Set<UUID> ownerIds) {
+    this.ownerIds = ownerIds == null ? Set.of() : Set.copyOf(ownerIds);
   }
 }

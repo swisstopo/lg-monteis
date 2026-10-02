@@ -31,6 +31,8 @@ public class SecurityConfig {
   };
   static final String EXPERIMENTS_PATH = "/api/experiments";
   static final String SENSORS_PATHS = "/api/sensors/**";
+  static final String EXPERIMENT_OWNER_CANDIDATES_PATH = "/api/experiments/{id}/owner-candidates";
+  static final String EXPERIMENT_OWNERS_PATH = "/api/experiments/{id}/owners";
 
   // every method that changes state; all of them are admin-only unless an earlier rule matched
   private static final Set<String> WRITE_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
@@ -50,6 +52,8 @@ public class SecurityConfig {
                     .permitAll()
                     // Per-experiment write check; the experiments_update RLS policy enforces the
                     // same rule in the database. Must precede the admin-only write rules below.
+                    .requestMatchers(EXPERIMENT_OWNER_CANDIDATES_PATH, EXPERIMENT_OWNERS_PATH)
+                    .access(allowIf(Capabilities::canManageExperimentOwners))
                     .requestMatchers(HttpMethod.PUT, ExperimentWriteAuthorizationManager.PATH)
                     .access(new ExperimentWriteAuthorizationManager())
                     .requestMatchers(HttpMethod.POST, EXPERIMENTS_PATH)
