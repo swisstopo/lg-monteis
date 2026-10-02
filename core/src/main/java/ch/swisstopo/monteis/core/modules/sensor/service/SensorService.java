@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.service;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
@@ -106,7 +107,8 @@ public class SensorService {
   public Sensor getSensor(UUID id) {
     return repository
         .findById(id)
-        .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
+        // RLS hides sensors outside the caller's experiments, so hidden and missing look the same
+        .orElseThrow(() -> new ObjectNotFoundException(Sensor.class));
   }
 
   public List<Formula> findAllFormulas() {

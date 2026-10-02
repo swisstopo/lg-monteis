@@ -65,6 +65,43 @@ describe('restErrorInterceptor', () => {
     expect(oauthService.initLoginFlow).not.toHaveBeenCalled();
   });
 
+  it('shows the backend message on 403 when the body carries a GLOBAL messageKey', () => {
+    const body: ErrorDto[] = [{ target: ErrorDto.TargetEnum.Global, messageKey: 'access.denied' }];
+
+    httpClient.get('/api/experiments/1').subscribe({ error: () => {} });
+    httpMock.expectOne('/api/experiments/1').flush(body, { status: 403, statusText: 'Forbidden' });
+
+    expect(translateService.translate).toHaveBeenCalledWith('access.denied', undefined);
+    expect(toastService.error).toHaveBeenCalledExactlyOnceWith('access.denied');
+    expect(oauthService.initLoginFlow).not.toHaveBeenCalled();
+  });
+
+  it('keeps the no-permission fallback on 403 when the body has no GLOBAL messageKey', () => {
+    const body: ErrorDto[] = [{ target: ErrorDto.TargetEnum.Form, messageKey: 'error.form' }];
+
+    httpClient.get('/api/whatever').subscribe({ error: () => {} });
+    httpMock.expectOne('/api/whatever').flush(body, { status: 403, statusText: 'Forbidden' });
+
+    expect(toastService.error).toHaveBeenCalledExactlyOnceWith('error.auth.forbidden');
+  });
+
+  it('shows the backend message on 404 when the body carries a GLOBAL messageKey', () => {
+    const body: ErrorDto = { target: ErrorDto.TargetEnum.Global, messageKey: 'object.not-found' };
+
+    httpClient.get('/api/experiments/1').subscribe({ error: () => {} });
+    httpMock.expectOne('/api/experiments/1').flush(body, { status: 404, statusText: 'Not Found' });
+
+    expect(translateService.translate).toHaveBeenCalledWith('object.not-found', undefined);
+    expect(toastService.error).toHaveBeenCalledExactlyOnceWith('object.not-found');
+  });
+
+  it('keeps the generic fallback on 404 without an ErrorDto body', () => {
+    httpClient.get('/api/whatever').subscribe({ error: () => {} });
+    httpMock.expectOne('/api/whatever').flush(null, { status: 404, statusText: 'Not Found' });
+
+    expect(toastService.error).toHaveBeenCalledExactlyOnceWith('error.system.generic');
+  });
+
   it('still surfaces a generic toast for a 500 with no ErrorDto body', () => {
     httpClient.get('/api/whatever').subscribe({ error: () => {} });
     httpMock.expectOne('/api/whatever').flush(null, { status: 500, statusText: 'Server Error' });

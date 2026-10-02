@@ -1,17 +1,28 @@
 package ch.swisstopo.monteis.core.infrastructure.jooq;
 
+import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.jooq.ConnectionProvider;
 import org.jooq.conf.RecordDirtyTracking;
 import org.jooq.conf.Settings;
 import org.jooq.impl.DataSourceConnectionProvider;
 import org.springframework.boot.jooq.autoconfigure.DefaultConfigurationCustomizer;
+import org.springframework.boot.jooq.autoconfigure.ExceptionTranslatorExecuteListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
+import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+import org.springframework.jdbc.support.SQLExceptionTranslator;
 
 @Configuration
 public class JooqConfig {
+
+  // SQLSTATE raised when a row-level security WITH CHECK rejects a write (e.g. the
+  // experiments_update policy of V16, whose check V17 feeds from app.write_experiment_ids).
+  private static final String INSUFFICIENT_PRIVILEGE = "42501";
+
   @Bean
   public DefaultConfigurationCustomizer configurationCustomizer() {
     return c -> {
@@ -34,5 +45,26 @@ public class JooqConfig {
   public ConnectionProvider connectionProvider(DataSource dataSource) {
     return new RlsConnectionProvider(
         new DataSourceConnectionProvider(new TransactionAwareDataSourceProxy(dataSource)));
+  }
+
+  /**
+   * Replaces Spring Boot's default jOOQ exception translator (it backs off via
+   * @ConditionalOnMissingBean). Spring maps SQLSTATE 42501 by its class "42" to {@code
+   * BadSqlGrammarException}; translate it to {@link PermissionDeniedDataAccessException} instead so
+   * a write rejected by RLS surfaces as 403 rather than as a server error.
+   */
+  @Bean
+  public ExceptionTranslatorExecuteListener jooqExceptionTranslator() {
+    SQLExceptionTranslator translator =
+        new SQLErrorCodeSQLExceptionTranslator("PostgreSQL") {
+          @Override
+          protected DataAccessException customTranslate(String task, String sql, SQLException ex) {
+            if (INSUFFICIENT_PRIVILEGE.equals(ex.getSQLState())) {
+              return new PermissionDeniedDataAccessException(buildMessage(task, sql, ex), ex);
+            }
+            return null;
+          }
+        };
+    return ExceptionTranslatorExecuteListener.of(context -> translator);
   }
 }

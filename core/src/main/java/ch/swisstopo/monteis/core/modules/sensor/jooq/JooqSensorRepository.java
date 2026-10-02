@@ -3,7 +3,7 @@ package ch.swisstopo.monteis.core.modules.sensor.jooq;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
@@ -157,8 +157,9 @@ public class JooqSensorRepository implements SensorRepository {
     // fetch existing
     SensorsRecord updatedRecord =
         dsl.selectFrom(SENSORS).where(SENSORS.ID.eq(sensor.getId())).fetchOne();
+    // same answer as for experiments: missing and RLS-hidden are indistinguishable (BR4.11)
     if (updatedRecord == null) {
-      throw new ObjectBusinessValidationException("object.deleted", Map.of());
+      throw new ObjectNotFoundException(Sensor.class);
     }
     // Read before the mapper overwrites it: the join table's row for the old main experiment can
     // only be found by the id the sensor is being moved away from.
@@ -252,7 +253,7 @@ public class JooqSensorRepository implements SensorRepository {
    * Mirrors {@code sensors.main_experiment} into the {@code experiment_sensor} join table, which is
    * what {@code can_access_sensor()} (row-level security) and the experiments grid's sensor count
    * read. Without this a sensor written through the API has no membership row at all: invisible to
-   * every user without {@code api:read-all}, and never counted on its experiment.
+   * every user without all-experiment access, and never counted on its experiment.
    *
    * <p>Only the sensor's own main-experiment row is touched: the previous one is deleted and the
    * new one inserted. Rows for any other experiment stay - the join table is many-to-many, and a

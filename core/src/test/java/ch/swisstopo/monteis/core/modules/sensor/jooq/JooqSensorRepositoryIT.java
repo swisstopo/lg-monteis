@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.query.*;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
@@ -407,7 +407,7 @@ class JooqSensorRepositoryIT {
 
   @Test
   @Transactional
-  void should_throw_on_update_deleted_sensor() {
+  void should_throw_not_found_on_update_of_a_deleted_sensor() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
@@ -415,11 +415,7 @@ class JooqSensorRepositoryIT {
           ghostSensor.setId(UUID.randomUUID());
 
           // Act & Assert
-          ObjectBusinessValidationException exception =
-              assertThrows(
-                  ObjectBusinessValidationException.class, () -> repository.update(ghostSensor));
-
-          assertEquals("object.deleted", exception.getMessageKey());
+          assertThrows(ObjectNotFoundException.class, () -> repository.update(ghostSensor));
         });
   }
 

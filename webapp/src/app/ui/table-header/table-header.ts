@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { MatFormField, MatInput, MatPrefix } from '@angular/material/input';
 import { PermissionsService } from '@core/auth/permissions.service';
@@ -16,6 +16,9 @@ export class TableHeader {
   protected readonly permissions = inject(PermissionsService);
 
   translationPrefix = `tableHeader`;
+
+  /** Extra write-gate for actions callers scope themselves (e.g. per-experiment write). */
+  readonly canWriteConditional = input<boolean>(false);
 
   searchAction = output<string>();
 

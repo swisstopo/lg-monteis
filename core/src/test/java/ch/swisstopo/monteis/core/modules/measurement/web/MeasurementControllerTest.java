@@ -94,7 +94,9 @@ class MeasurementControllerTest {
                 .param("id", unknownId.toString())
                 .param("from", validFrom.toString())
                 .param("to", validTo.toString()))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.messageKey").value("object.not-found"))
+        .andExpect(jsonPath("$.target").value("GLOBAL"));
   }
 
   @Test

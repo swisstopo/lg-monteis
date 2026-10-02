@@ -26,7 +26,7 @@ activate Backend
 Backend -> Backend : Security Filter: JWT validieren\n(Signatur via KC JWKS, Issuer, Audience)
 Backend -> Backend : MonteisJwtAuthenticationConverter: Rollen -> Authorities,\nSub & Experiment-IDs -> MonteisPrincipal,\nals Authentication im SecurityContextHolder ablegen
 
-Backend -> DB : set_config('app.read_all', ...)\nset_config('app.user_experiment_ids', ...)\n(RlsConnectionProvider, transaktionslokal)
+Backend -> DB : set_config('app.read_all_experiments', ...)\nset_config('app.read_experiment_ids', ...) …\n(RlsConnectionProvider, transaktionslokal)
 Backend -> DB : jOOQ Query ausführen\n(unverändert, ohne manuelle\nBerechtigungs-WHERE-Klausel)
 activate DB
 DB -> DB : RLS-Policy wertet GUCs aus\nund filtert Zeilen serverseitig

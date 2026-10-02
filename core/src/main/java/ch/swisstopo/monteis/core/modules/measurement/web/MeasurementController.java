@@ -1,11 +1,13 @@
 package ch.swisstopo.monteis.core.modules.measurement.web;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
@@ -48,7 +50,8 @@ public class MeasurementController {
     return measurementService
         .findChartData(id, from, to)
         .map(ResponseEntity::ok)
-        .orElseGet(() -> ResponseEntity.notFound().build());
+        // a sensor parameter RLS hides looks exactly like a missing one: 404 object.not-found
+        .orElseThrow(() -> new ObjectNotFoundException(SensorParameter.class));
   }
 
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
