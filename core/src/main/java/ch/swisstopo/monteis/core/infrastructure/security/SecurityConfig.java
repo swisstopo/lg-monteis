@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import java.util.Set;
 import java.util.function.Predicate;
 import org.springframework.context.annotation.Bean;
@@ -29,8 +30,7 @@ public class SecurityConfig {
   static final String[] PUBLIC_ENDPOINTS = {
     "/actuator/**", "/actuator", "/swagger-ui/**", "/v3/api-docs/**"
   };
-  static final String EXPERIMENTS_PATH = "/api/experiments";
-  static final String SENSORS_PATHS = "/api/sensors/**";
+  static final String SENSORS_PATHS = ApiPaths.SENSORS + "/**";
 
   // every method that changes state; all of them are admin-only unless an earlier rule matched
   private static final Set<String> WRITE_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
@@ -43,20 +43,18 @@ public class SecurityConfig {
       Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter,
       ObjectMapper objectMapper) {
     MonteisAccessDeniedHandler accessDeniedHandler = new MonteisAccessDeniedHandler(objectMapper);
+    ExperimentWriteAuthorizationManager experimentWrite = new ExperimentWriteAuthorizationManager();
     http.authorizeHttpRequests(
             request ->
                 request
                     .requestMatchers(PUBLIC_ENDPOINTS)
                     .permitAll()
-                    // Per-experiment write checks; the experiments_update and
-                    // experiment_documents_insert RLS policies enforce the same rule in the
-                    // database. Must precede the admin-only write rules below.
-                    .requestMatchers(HttpMethod.PUT, ExperimentWriteAuthorizationManager.PATH)
-                    .access(new ExperimentWriteAuthorizationManager())
-                    .requestMatchers(
-                        HttpMethod.POST, ExperimentWriteAuthorizationManager.DOCUMENTS_PATH)
-                    .access(new ExperimentWriteAuthorizationManager())
-                    .requestMatchers(HttpMethod.POST, EXPERIMENTS_PATH)
+                    // per-experiment writes, must precede the admin-only write rules below
+                    .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
+                    .access(experimentWrite)
+                    .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
+                    .access(experimentWrite)
+                    .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)
                     .access(allowIf(Capabilities::canCreateExperiment))
                     // sensor reads need no rule of their own: RLS filters the rows by experiment
                     .requestMatchers(HttpMethod.GET, SENSORS_PATHS)

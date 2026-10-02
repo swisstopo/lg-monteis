@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
+import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentUpload;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
@@ -32,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/experiments/{id}/documents")
+@RequestMapping(ApiPaths.EXPERIMENT_DOCUMENTS)
 public class ExperimentDocumentController {
 
   // column length of experiment_documents.file_name and .content_type
@@ -53,7 +54,7 @@ public class ExperimentDocumentController {
   @ApiResponse(responseCode = "200", description = "Successfully retrieved documents")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<ExperimentDocumentResponseDto>> getDocuments(
-      @PathVariable("id") UUID experimentId) {
+      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID experimentId) {
     return ResponseEntity.ok(mapper.toDtos(service.getDocuments(experimentId)));
   }
 
@@ -67,7 +68,8 @@ public class ExperimentDocumentController {
       consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExperimentDocumentResponseDto> uploadDocument(
-      @PathVariable("id") UUID experimentId, @RequestPart("file") MultipartFile file)
+      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID experimentId,
+      @RequestPart("file") MultipartFile file)
       throws IOException {
     if (file.isEmpty()) {
       throw new ObjectBusinessValidationException("document.validation.empty", Map.of());
@@ -93,7 +95,7 @@ public class ExperimentDocumentController {
               schema = @Schema(type = "string", format = "binary")))
   @GetMapping(path = "{documentId}/content")
   public ResponseEntity<Resource> downloadDocument(
-      @PathVariable("id") UUID experimentId, @PathVariable UUID documentId) {
+      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID experimentId, @PathVariable UUID documentId) {
     DocumentDownload download = service.download(experimentId, documentId);
     ExperimentDocument document = download.document();
     ContentDisposition disposition =
