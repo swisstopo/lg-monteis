@@ -116,6 +116,11 @@ public record Capabilities(
     return isAdmin();
   }
 
+  /** Assigning experiment owners is an admin function, PIs only edit the master data. */
+  public boolean canManageExperimentOwners() {
+    return isAdmin();
+  }
+
   public boolean canAccessDocuments() {
     return grants.contains(Grant.DOCUMENTS_READ);
   }

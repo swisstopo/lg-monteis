@@ -11,6 +11,7 @@ import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
@@ -40,6 +41,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping(ApiPaths.EXPERIMENTS)
 public class ExperimentController {
   private final ExperimentService service;
+  private final ExperimentOwnerService ownerService;
   private final ExperimentWebMapper mapper;
   private final Clock clock;
   private final PagedRequestParser pagedRequestParser;
@@ -47,11 +49,13 @@ public class ExperimentController {
 
   public ExperimentController(
       ExperimentService service,
+      ExperimentOwnerService ownerService,
       ExperimentWebMapper mapper,
       Clock clock,
       PagedRequestParser pagedRequestParser,
       ExperimentCsvExportQueryRepository csvExportQueryRepository) {
     this.service = service;
+    this.ownerService = ownerService;
     this.mapper = mapper;
     this.clock = clock;
     this.pagedRequestParser = pagedRequestParser;
@@ -64,7 +68,7 @@ public class ExperimentController {
   public ResponseEntity<ExperimentResponseDto> getExperiment(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
     LocalDate today = LocalDate.now(clock);
-    return ResponseEntity.ok(mapper.toDto(service.getById(id), today));
+    return ResponseEntity.ok(toDto(service.getById(id), today));
   }
 
   @Operation(
@@ -82,7 +86,7 @@ public class ExperimentController {
     LocalDate today = LocalDate.now(clock);
 
     Experiment createdExperiment = service.createExperiment(mapper.toDomain(dto));
-    return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDto(createdExperiment, today));
+    return ResponseEntity.status(HttpStatus.CREATED).body(toDto(createdExperiment, today));
   }
 
   @Operation(
@@ -106,7 +110,7 @@ public class ExperimentController {
     LocalDate today = LocalDate.now(clock);
 
     Experiment updated = service.updateExperiment(mapper.toDomain(dto));
-    return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated, today));
+    return ResponseEntity.status(HttpStatus.OK).body(toDto(updated, today));
   }
 
   @Operation(
@@ -120,7 +124,7 @@ public class ExperimentController {
   public ResponseEntity<List<ExperimentResponseDto>> getAllExperiments() {
     LocalDate today = LocalDate.now(clock);
     return ResponseEntity.ok(
-        service.findAllExperiments().stream().map(e -> mapper.toDto(e, today)).toList());
+        service.findAllExperiments().stream().map(e -> toDto(e, today)).toList());
   }
 
   @Operation(
@@ -137,7 +141,7 @@ public class ExperimentController {
 
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
     PagedResult<Experiment> domainResult = service.getExperiments(pagedRequestParser.parse(raw));
-    return mapper.toPagedDto(domainResult, today);
+    return mapper.toPagedDto(domainResult, ownerService.visibleOwners(domainResult.rows()), today);
   }
 
   @Operation(
@@ -173,5 +177,9 @@ public class ExperimentController {
             new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
     csvExportQueryRepository.streamCsv(exportRequest, writer);
     writer.flush();
+  }
+
+  private ExperimentResponseDto toDto(Experiment experiment, LocalDate today) {
+    return mapper.toDto(experiment, ownerService.visibleOwners(experiment), today);
   }
 }

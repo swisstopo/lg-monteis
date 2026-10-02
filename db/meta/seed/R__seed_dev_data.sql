@@ -3,7 +3,7 @@
 -- Delete-then-insert so the script is the single source of truth.
 
 -- 0. Truncate tables (added sensor_parameter to the list)
-TRUNCATE TABLE experiment_sensor, experiments, sensor_parameter, sensors, sensor_types, formulas CASCADE;
+TRUNCATE TABLE experiment_owner, experiment_sensor, experiments, sensor_parameter, sensors, sensor_types, formulas CASCADE;
 
 -- 1. Insert formulas (Parsington-compatible expressions using 'x')
 INSERT INTO formulas (id, expression, version)
@@ -31,17 +31,17 @@ VALUES
 -- MOVED UP: Must be inserted before sensors because sensors now have a main_experiment column
 INSERT INTO experiments (
     "id", "name", "comment",
-    "version", "owner",
+    "version",
     "start",
     "end"
 )
 VALUES
-    ('00000000-0000-7000-8000-000000000301', 'Mont Terri Alpha', 'Initial temperature and pressure survey', 1, 'User1',
+    ('00000000-0000-7000-8000-000000000301', 'Mont Terri Alpha', 'Initial temperature and pressure survey', 1,
      DATE '2024-01-15', DATE '2024-06-30'),
-    ('00000000-0000-7000-8000-000000000302', 'Mont Terri Beta', 'Deep borehole displacement and pressure monitoring', 1, 'User2',
+    ('00000000-0000-7000-8000-000000000302', 'Mont Terri Beta', 'Deep borehole displacement and pressure monitoring', 1,
      DATE '2024-07-01', DATE '2025-03-31'),
     -- No sensors: alice reads it through "Experiment Gamma/read" in docker/keycloak/realm/patch.local.json.
-    ('00000000-0000-7000-8000-000000000303', 'Mont Terri Gamma', 'Planned rock creep observation', 1, 'User3',
+    ('00000000-0000-7000-8000-000000000303', 'Mont Terri Gamma', 'Planned rock creep observation', 1,
      DATE '2025-04-01', DATE '2025-12-31');
 
 
@@ -115,6 +115,10 @@ VALUES
     ('00000000-0000-7000-8000-000000000302', '00000000-0000-7000-8000-000000000203'),
     ('00000000-0000-7000-8000-000000000302', '00000000-0000-7000-8000-000000000204');
 
+-- 6b. Experiment owners: alice (docker/keycloak/realm/patch.local.json) is a PI of Alpha.
+INSERT INTO experiment_owner (experiment_id, user_id)
+VALUES ('00000000-0000-7000-8000-000000000301', 'a11ce43c-8733-4a5e-a389-4760cbc21984');
+
 -- 7. Bulk load-testing experiments. Unlike the
 -- fixed sensors above, these IDs aren't referenced anywhere else, so they use
 -- real generated uuidv7() values.
@@ -122,7 +126,7 @@ VALUES
 
 INSERT INTO experiments (
     "name", "comment",
-    "version", "owner",
+    "version",
     "start",
     "end"
 )
@@ -130,7 +134,6 @@ SELECT
     'bulk-experiment-' || i,                               -- name
     'Auto-generated load testing experiment ' || i,   -- comment
     1,                                                -- version
-    'User' || ((i - 1) % 5 + 1),                      -- owner
     -- start
     CURRENT_DATE + (
                        CASE
