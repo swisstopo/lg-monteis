@@ -5,6 +5,9 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 import ch.swisstopo.monteis.core.infrastructure.csv.CsvWriter;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
 import java.io.IOException;
@@ -13,8 +16,13 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.jooq.DSLContext;
 import org.jooq.Record;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,15 +39,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExportQueryRepository {
 
+  private static final Logger log =
+      LoggerFactory.getLogger(JooqExperimentCsvExportQueryRepository.class);
+
   private static final List<String> HEADER =
-      List.of("name", "status", "period.start", "period.end", "sensorCount", "comment", "id");
+      List.of(
+          "name", "status", "period.start", "period.end", "sensorCount", "owners", "comment", "id");
+  private static final String OWNER_SEPARATOR = "; ";
 
   private final DSLContext dsl;
   private final Clock clock;
+  private final UserDirectory userDirectory;
 
-  public JooqExperimentCsvExportQueryRepository(DSLContext dsl, Clock clock) {
+  public JooqExperimentCsvExportQueryRepository(
+      DSLContext dsl, Clock clock, UserDirectory userDirectory) {
     this.dsl = dsl;
     this.clock = clock;
+    this.userDirectory = userDirectory;
   }
 
   @Override
@@ -48,7 +64,9 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
     // filter/sort semantics as the grid.
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
         PagedRequestJooqTranslator.translate(
-            exportRequest, JooqExperimentRepository.COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
+            ExperimentOwnerFilter.withoutOwnerFilter(exportRequest),
+            JooqExperimentRepository.COLUMNS_BY_COL_ID,
+            EXPERIMENTS.ID.asc());
 
     LocalDate today = LocalDate.now(clock);
     CsvWriter.writeRow(writer, HEADER);
@@ -60,10 +78,11 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
                 EXPERIMENTS.END,
                 JooqExperimentRepository.SENSOR_COUNT_FIELD.as(
                     JooqExperimentRepository.SENSOR_COUNT_FIELD_NAME),
+                JooqExperimentRepository.OWNER_IDS_FIELD,
                 EXPERIMENTS.COMMENT,
                 EXPERIMENTS.ID)
             .from(EXPERIMENTS)
-            .where(criteria.condition())
+            .where(criteria.condition().and(ExperimentOwnerFilter.condition(exportRequest)))
             .orderBy(criteria.sortFields())
             .limit(exportRequest.limit())
             .fetchLazy()) {
@@ -77,10 +96,28 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
                 r.get(EXPERIMENTS.START),
                 r.get(EXPERIMENTS.END),
                 r.get(JooqExperimentRepository.SENSOR_COUNT_FIELD_NAME, Integer.class),
+                ownerNames(
+                    r.get(EXPERIMENTS.ID), Set.of(r.get(JooqExperimentRepository.OWNER_IDS_FIELD))),
                 r.get(EXPERIMENTS.COMMENT),
                 r.get(EXPERIMENTS.ID)));
         writer.flush();
       }
+    }
+  }
+
+  /** Same rule as the API: only owners that are still PIs of the experiment are shown. */
+  private String ownerNames(UUID experimentId, Set<UUID> ownerIds) {
+    if (ownerIds.isEmpty()) {
+      return "";
+    }
+    try {
+      return userDirectory.principalInvestigatorsOf(experimentId).stream()
+          .filter(user -> ownerIds.contains(user.id()))
+          .map(DirectoryUser::displayName)
+          .collect(Collectors.joining(OWNER_SEPARATOR));
+    } catch (UserDirectoryUnavailableException e) {
+      log.warn("Exporting experiment {} without owners: {}", experimentId, e.getMessage());
+      return "";
     }
   }
 }
