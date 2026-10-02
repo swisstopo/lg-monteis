@@ -80,6 +80,17 @@ Daraus ergeben sich die Berechtigungsstufen Basisrolle (keine Rolle), Experiment
 
 - **Frontend-seitige Sichtbarkeit (rein kosmetisch):** Der Endpunkt `GET /api/me` (`CurrentUserController`) projiziert die `Capabilities` des Aufrufers als `CurrentUserDto` (`isAdmin`, `canWriteAllExperiments`, `writeExperimentIds` — leer bei `canWriteAllExperiments` —, `canAccessDocuments`). Das Angular-Frontend blendet darüber z. B. "Experiment erstellen/bearbeiten"-Buttons und das Sensor-Menü aus. Das ist ausschliesslich UX-Komfort — die eigentliche Durchsetzung bleibt vollständig serverseitig (siehe oben); ein Bypass dieser UI-Ausblendung führt zu keinem unautorisierten Zugriff.
 
+=== Experiment-Owner und Benutzerdaten aus Keycloak (MON-177)
+In der DB steht pro Owner nur die Keycloak-User-ID (`experiment_owner(experiment_id, user_id)`, Migration V18). Name und E-Mail holt `core` bei jeder Anzeige aus Keycloak, so landen keine Personendaten in unserer DB und es gibt nichts, das veralten kann.
+
+* *Zugriff auf Keycloak:* `core` hat einen eigenen confidential Client `monteis-core` mit Service Account (`realm-management`: `view-users`, `query-users`, `query-groups`). `UserDirectoryConfig` holt das Token per Client Credentials (`OAuth2ClientHttpRequestInterceptor`), ein Token für alle Aufrufer, nicht eines pro angemeldetem Benutzer. Das Secret kommt aus der Umgebung (`KC_CORE_CLIENT_SECRET`), lokal aus `docker/keycloak/realm/patch.local.json`.
+* *Wer Owner sein kann:* nur PIs des Experiments, also die aktiven Mitglieder der Gruppe, deren Attribut `write_experiment_ids` die Experiment-ID enthält (`/Experiments/<x>/read + write`). Gesucht wird über das Attribut, nie über den Gruppennamen.
+* *Wer Owner zuweist:* nur Admins (`Capabilities.canManageExperimentOwners`), über `GET /api/experiments/{id}/owner-candidates` und `PUT /api/experiments/{id}/owners`. PIs bearbeiten weiterhin nur die Stammdaten.
+* *Entfernen aus der Auswahlliste:* ein Owner zählt nur solange er PI ist. Wer die Gruppe verlässt oder in Keycloak gelöscht wird, verschwindet sofort aus allen Antworten (Liste, Detail, CSV), die verwaiste Zeile fällt beim nächsten Speichern der Owner weg. Kein Job, kein Keycloak-Event-Listener.
+* *Cache:* `KeycloakUserDirectory` hält die PIs pro Experiment 60 s im Speicher (`monteis.user-directory.cache-ttl`). Nichts davon wird persistiert, eine Änderung in Keycloak ist nach spätestens dieser Zeit sichtbar.
+* *Keycloak nicht erreichbar:* Lesen funktioniert weiter, die Owner fehlen dann (WARN-Log). Nur die Owner-Endpunkte antworten mit 503 `error.user-directory.unavailable`.
+* *Tabelle:* die Spalte `owners` ist filterbar (Set-Filter auf User-IDs, `null` = ohne Owner), aber nicht sortierbar, die Namen zum Sortieren liegen in Keycloak und nicht in der DB.
+
 === Core-API Optimistic Locking und Versionierung/Auditierung
 
 ==== Technischer Hintergrund: Optimistic Locking
