@@ -57,7 +57,7 @@
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.3",
     "@types/three": "^0.186.0",
-    "@vitest/browser-playwright": "^5.0.2",
+    "@vitest/browser-playwright": "^5.0.3",
     "angular-eslint": "22.5.0",
     "corepack": "^0.36.0",
     "eslint": "^10.11.0",
@@ -67,6 +67,6 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "8.71.0",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.3"
   }
 }
