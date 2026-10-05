@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, inject, input, resource, signal } f
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
-import { ErrorDto, ExperimentDocumentResponseDto } from '@core/generated';
+import { ExperimentDocumentResponseDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { ExperimentDocumentService } from '@features/experiment/services/experiment-document.service';
@@ -50,48 +50,51 @@ export class ExperimentDocuments {
     }
   }
 
-  protected async download(document: ExperimentDocumentResponseDto): Promise<void> {
-    try {
-      this.fileDownloadService.download(await this.contentOf(document), document.fileName!);
-    } catch {
-      this.toastDownloadFailed();
-    }
+  protected download(document: ExperimentDocumentResponseDto): Promise<void> {
+    return this.toastOnFailure(async () =>
+      this.fileDownloadService.download(await this.contentOf(document), document.fileName!),
+    );
   }
 
-  protected async view(document: ExperimentDocumentResponseDto): Promise<void> {
-    try {
-      await this.fileDownloadService.openInNewTab(() => this.contentOf(document));
-    } catch {
-      this.toastDownloadFailed();
-    }
+  protected view(document: ExperimentDocumentResponseDto): Promise<void> {
+    return this.toastOnFailure(() =>
+      this.fileDownloadService.openInNewTab(() => this.contentOf(document)),
+    );
   }
 
-  // GLOBAL errors (403, 500) are already toasted by the restErrorInterceptor
   private async uploadFile(file: File): Promise<void> {
     try {
       await this.documentService.uploadDocument(this.experimentId(), file);
     } catch (error) {
-      toErrorDtos(error)
-        .filter((dto) => dto.target !== ErrorDto.TargetEnum.Global)
-        .forEach((dto) =>
-          this.toastService.error(
-            this.translateService.translate(
-              dto.messageKey ?? 'experiment.documents.error.upload',
-              dto.params,
-            )(),
-            file.name,
-          ),
-        );
+      this.toastUploadErrors(error, file.name);
+    }
+  }
+
+  // a body without message key (network error, 500) still gets the generic toast
+  private toastUploadErrors(error: unknown, fileName: string): void {
+    const messages = toErrorDtos(error).map((dto) =>
+      this.translateService.translate(
+        dto.messageKey ?? 'experiment.documents.error.upload',
+        dto.params,
+      )(),
+    );
+    if (messages.length === 0) {
+      messages.push(this.translateService.translate('experiment.documents.error.upload')());
+    }
+    messages.forEach((message) => this.toastService.error(message, fileName));
+  }
+
+  private async toastOnFailure(action: () => Promise<void>): Promise<void> {
+    try {
+      await action();
+    } catch {
+      this.toastService.error(
+        this.translateService.translate('experiment.documents.error.download')(),
+      );
     }
   }
 
   private contentOf(document: ExperimentDocumentResponseDto): Promise<Blob> {
     return this.documentService.getContent(this.experimentId(), document.id!);
-  }
-
-  private toastDownloadFailed(): void {
-    this.toastService.error(
-      this.translateService.translate('experiment.documents.error.download')(),
-    );
   }
 }

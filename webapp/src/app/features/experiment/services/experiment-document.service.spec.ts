@@ -1,5 +1,7 @@
+import { HttpContext } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { ExperimentDocumentControllerService } from '@core/generated';
+import { SKIP_GLOBAL_ERROR_TOAST } from '@core/http/http-context';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExperimentDocumentService } from './experiment-document.service';
@@ -31,13 +33,22 @@ describe('ExperimentDocumentService', () => {
     const file = new File(['%PDF'], 'report.pdf');
 
     await expect(service.uploadDocument('experiment-1', file)).resolves.toEqual(DOCUMENT);
-    expect(api['uploadDocument']).toHaveBeenCalledWith('experiment-1', file);
+    const [experimentId, sentFile, , , options] = api['uploadDocument'].mock.calls[0];
+    expect([experimentId, sentFile]).toEqual(['experiment-1', file]);
+    expect(skipsGlobalErrorToast(options)).toBe(true);
   });
 
   it('fetches the content of a document', async () => {
     const content = await service.getContent('experiment-1', 'document-1');
 
     expect(await content.text()).toBe('%PDF');
-    expect(api['downloadDocument']).toHaveBeenCalledWith('experiment-1', 'document-1');
+    const [experimentId, documentId, , , options] = api['downloadDocument'].mock.calls[0];
+    expect([experimentId, documentId]).toEqual(['experiment-1', 'document-1']);
+    expect(skipsGlobalErrorToast(options)).toBe(true);
   });
 });
+
+// the documents section toasts these failures itself, a global toast would be the second one
+function skipsGlobalErrorToast(options: { context: HttpContext }): boolean {
+  return options.context.get(SKIP_GLOBAL_ERROR_TOAST);
+}

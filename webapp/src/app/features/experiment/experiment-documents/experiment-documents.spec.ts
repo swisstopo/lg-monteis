@@ -127,26 +127,48 @@ describe('ExperimentDocuments', () => {
     expect(view.fileInput()!.value).toBe('');
   });
 
-  it('toasts a validation error per file but leaves global errors to the interceptor', async () => {
+  it('toasts every failed upload with its file name, the interceptor is skipped', async () => {
     documentService.uploadDocument
       .mockRejectedValueOnce(
         new HttpErrorResponse({
-          status: 400,
+          status: 422,
           error: [{ messageKey: 'document.validation.empty', target: ErrorDto.TargetEnum.Form }],
         }),
       )
       .mockRejectedValueOnce(
         new HttpErrorResponse({
           status: 403,
-          error: [{ messageKey: 'error.accessDenied', target: ErrorDto.TargetEnum.Global }],
+          error: [{ messageKey: 'access.denied', target: ErrorDto.TargetEnum.Global }],
         }),
       );
     const view = await render();
 
     await selectFiles(view, new File([], 'empty.pdf'), new File(['x'], 'forbidden.pdf'));
 
-    expect(toast.error).toHaveBeenCalledTimes(1);
-    expect(toast.error).toHaveBeenCalledWith('document.validation.empty', 'empty.pdf');
+    expect(toast.error.mock.calls).toEqual([
+      ['document.validation.empty', 'empty.pdf'],
+      ['access.denied', 'forbidden.pdf'],
+    ]);
+  });
+
+  it('toasts the generic upload error when the response carries no message', async () => {
+    documentService.uploadDocument.mockRejectedValue(
+      new HttpErrorResponse({ status: 0, error: new ProgressEvent('error') }),
+    );
+    const view = await render();
+
+    await selectFiles(view, new File(['x'], 'report.pdf'));
+
+    expect(toast.error).toHaveBeenCalledWith('experiment.documents.error.upload', 'report.pdf');
+  });
+
+  it('toasts the generic upload error for an error without body', async () => {
+    documentService.uploadDocument.mockRejectedValue(new HttpErrorResponse({ status: 500 }));
+    const view = await render();
+
+    await selectFiles(view, new File(['x'], 'report.pdf'));
+
+    expect(toast.error).toHaveBeenCalledWith('experiment.documents.error.upload', 'report.pdf');
   });
 
   it('downloads a document from its name', async () => {
