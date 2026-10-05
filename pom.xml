@@ -44,19 +44,26 @@
     <aws-msk-iam-auth.version>2.3.9</aws-msk-iam-auth.version>
 
     <!-- Override the Spring Boot BOM's managed flyway.version so the test-scoped
-         flyway-core + flyway-database-postgresql (Testcontainers validation) and the
-         flyway-maven-plugin (jOOQ codegen) match the migration image runner (MON-87:
-         docker/migration builds FROM flyway/flyway 13.6.0-alpine). Keeps validator ==
-         runner so CI actually exercises the version that migrates cloud RDS/TimescaleDB. -->
+             flyway-core + flyway-database-postgresql (Testcontainers validation) and the
+             flyway-maven-plugin (jOOQ codegen) match the migration image runner (MON-87:
+             docker/migration builds FROM flyway/flyway 13.6.0-alpine). Keeps validator ==
+             runner so CI actually exercises the version that migrates cloud RDS/TimescaleDB. -->
     <flyway.version>13.9.0</flyway.version>
 
     <!-- Override the Spring Boot BOM's managed tomcat.version to pull the patched
-         tomcat-embed-core 11.0.25. Fixes CVE-2026-65182 (security constraint bypass),
-         CVE-2026-65905 (DIGEST auth replay bypass) and CVE-2026-68525 (FORM auth
-         bypass) in tomcat-embed-core 11.0.24, caught by the Trivy scan. Spring Boot
-         4.1.1 is currently the latest release and still manages the vulnerable 11.0.24.
-         Drop this override once the Spring Boot BOM manages >= 11.0.25. -->
+             tomcat-embed-core 11.0.25. Fixes CVE-2026-65182 (security constraint bypass),
+             CVE-2026-65905 (DIGEST auth replay bypass) and CVE-2026-68525 (FORM auth
+             bypass) in tomcat-embed-core 11.0.24, caught by the Trivy scan. Spring Boot
+             4.1.1 is currently the latest release and still manages the vulnerable 11.0.24.
+             Drop this override once the Spring Boot BOM manages >= 11.0.25. -->
     <tomcat.version>11.0.25</tomcat.version>
+
+    <!-- Override the Spring Boot BOM's managed jackson version to fix
+           CVE-2026-89407, CVE-2026-89425, CVE-2026-68497, CVE-2026-91776,
+           and CVE-2026-91777 caught by Trivy. Drop this override once the
+           Spring Boot BOM manages >= 3.1.7. -->
+    <jackson-bom.version>3.1.7</jackson-bom.version>
+    <jackson2.version>2.21.7</jackson2.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
 
@@ -156,6 +163,18 @@
         <artifactId>aws-msk-iam-auth</artifactId>
         <version>${aws-msk-iam-auth.version}</version>
       </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -241,9 +260,9 @@
                 <include>**/src/test/java/**/*.java</include>
               </includes>
               <!-- openapi-generator and jOOQ write their output under target/ into a
-                   .../src/main/java/... layout, which the includes above would otherwise match.
-                   Build output is never formatted, and on a built tree spotless:check would fail
-                   on files nobody can fix by hand. -->
+                                 .../src/main/java/... layout, which the includes above would otherwise match.
+                                 Build output is never formatted, and on a built tree spotless:check would fail
+                                 on files nobody can fix by hand. -->
               <excludes>
                 <exclude>**/target/**/*.java</exclude>
               </excludes>
