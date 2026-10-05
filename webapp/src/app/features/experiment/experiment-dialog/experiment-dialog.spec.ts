@@ -109,6 +109,20 @@ describe('ExperimentDialog', () => {
       expect(toast.success).toHaveBeenCalled();
     });
 
+    it('shows why a too long comment blocks saving', async () => {
+      const view = await render();
+      await view.type('name', 'Mont Terri Beta');
+
+      await view.type('comment', 'x'.repeat(4097));
+      view.input('comment').dispatchEvent(new Event('blur'));
+      await view.settle();
+
+      expect(view.button('experiment.button.save').disabled).toBe(true);
+      expect(view.element.querySelector('mat-error')?.textContent).toContain(
+        'experiment.comment.validation.maxLength',
+      );
+    });
+
     it('shows a server error on its field and stays open', async () => {
       experimentService.saveExperiment.mockRejectedValue(
         new HttpErrorResponse({
@@ -283,6 +297,10 @@ class DialogView {
     const input = this.input(field);
     input.value = value;
     input.dispatchEvent(new Event('input'));
+    await this.fixture.whenStable();
+  }
+
+  async settle(): Promise<void> {
     await this.fixture.whenStable();
   }
 

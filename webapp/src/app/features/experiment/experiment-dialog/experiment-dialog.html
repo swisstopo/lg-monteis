@@ -9,13 +9,7 @@
         [formField]="experimentForm.name"
         [placeholder]="'experiment.name.placeholder' | translate"
       />
-      @if (experimentForm.name().touched() && experimentForm.name().invalid()) {
-        <mat-error>
-          @for (error of experimentForm.name().errors(); track error) {
-            {{ error.message }}
-          }
-        </mat-error>
-      }
+      <mat-error [appFieldErrors]="experimentForm.name" />
     </mat-form-field>
 
     <mat-form-field appearance="outline">
@@ -23,13 +17,7 @@
       <input matInput [matDatepicker]="startPicker" [formField]="experimentForm.period.start" />
       <mat-datepicker-toggle matSuffix [for]="startPicker" [disabled]="readOnly()" />
       <mat-datepicker #startPicker />
-      @if (experimentForm.period.start().touched() && experimentForm.period.start().invalid()) {
-        <mat-error>
-          @for (error of experimentForm.period.start().errors(); track error) {
-            {{ error.message }}
-          }
-        </mat-error>
-      }
+      <mat-error [appFieldErrors]="experimentForm.period.start" />
     </mat-form-field>
 
     <mat-form-field appearance="outline">
@@ -37,18 +25,13 @@
       <input matInput [matDatepicker]="endPicker" [formField]="experimentForm.period.end" />
       <mat-datepicker-toggle matSuffix [for]="endPicker" [disabled]="readOnly()" />
       <mat-datepicker #endPicker />
-      @if (experimentForm.period.end().touched() && experimentForm.period.end().invalid()) {
-        <mat-error>
-          @for (error of experimentForm.period.end().errors(); track error) {
-            {{ error.message }}
-          }
-        </mat-error>
-      }
+      <mat-error [appFieldErrors]="experimentForm.period.end" />
     </mat-form-field>
 
     <mat-form-field class="full-width" appearance="outline">
       <mat-label>{{ 'experiment.comment.label' | translate }}</mat-label>
       <textarea matInput [formField]="experimentForm.comment" rows="3"></textarea>
+      <mat-error [appFieldErrors]="experimentForm.comment" />
     </mat-form-field>
   </form>
 
@@ -71,18 +54,13 @@
     <button
       matButton="tonal"
       type="button"
-      [disabled]="experimentForm().submitting() || experimentForm().invalid()"
+      [disabled]="saveDisabled()"
       (click)="saveAndCreateNew()"
     >
       <mat-icon fontIcon="save" />
       {{ 'experiment.button.saveAndCreate' | translate }}
     </button>
-    <button
-      matButton="filled"
-      type="submit"
-      form="experimentForm"
-      [disabled]="experimentForm().submitting() || experimentForm().invalid()"
-    >
+    <button matButton="filled" type="submit" form="experimentForm" [disabled]="saveDisabled()">
       <mat-icon fontIcon="save" />
       {{ 'experiment.button.save' | translate }}
     </button>

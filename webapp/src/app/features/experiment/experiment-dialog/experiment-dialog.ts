@@ -35,6 +35,7 @@ import { ExperimentDocuments } from '@features/experiment/experiment-documents/e
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FORM_DIALOG_CONFIG } from '@ui/dialog/form-dialog.config';
+import { FieldErrors } from '@ui/field-errors/field-errors';
 import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
 
 type DialogMode = 'create' | 'edit' | 'view';
@@ -66,6 +67,7 @@ export function openExperimentDialog(dialog: MatDialog, experimentId?: string) {
     FormRoot,
     TranslatePipe,
     ExperimentDocuments,
+    FieldErrors,
   ],
   templateUrl: './experiment-dialog.html',
   styleUrl: './experiment-dialog.scss',
@@ -108,6 +110,10 @@ export class ExperimentDialog {
       disabled(path, this.readOnly);
     },
     { submission: { action: () => this.save(() => this.dialogRef.close()) } },
+  );
+
+  protected readonly saveDisabled = computed(
+    () => this.experimentForm().submitting() || this.experimentForm().invalid(),
   );
 
   protected saveAndCreateNew(): Promise<boolean> {
