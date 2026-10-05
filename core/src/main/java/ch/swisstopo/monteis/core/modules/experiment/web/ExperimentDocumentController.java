@@ -3,7 +3,6 @@ package ch.swisstopo.monteis.core.modules.experiment.web;
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
-import ch.swisstopo.monteis.core.modules.experiment.service.DocumentDownload;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentDocumentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentDocumentResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -86,16 +85,18 @@ public class ExperimentDocumentController {
   @GetMapping(path = "{documentId}/content")
   public ResponseEntity<Resource> downloadDocument(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID experimentId, @PathVariable UUID documentId) {
-    DocumentDownload download = service.download(experimentId, documentId);
-    DocumentMetadata metadata = download.document().metadata();
+    ExperimentDocument document = service.getDocument(experimentId, documentId);
+    DocumentMetadata metadata = document.metadata();
     ContentDisposition disposition =
         ContentDisposition.attachment()
             .filename(metadata.fileName(), StandardCharsets.UTF_8)
             .build();
+    MediaType contentType = MediaType.parseMediaType(metadata.contentType());
+    // opened last: if building the headers throws, no S3 connection is left open
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-        .contentType(MediaType.parseMediaType(metadata.contentType()))
+        .contentType(contentType)
         .contentLength(metadata.sizeBytes())
-        .body(new InputStreamResource(download.content()));
+        .body(new InputStreamResource(service.openContent(document)));
   }
 }

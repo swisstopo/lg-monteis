@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.core.modules.experiment.service;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -117,30 +116,37 @@ class ExperimentDocumentServiceTest {
   }
 
   @Test
-  void should_hand_out_the_document_with_its_stored_content() {
+  void should_hand_out_a_document_without_opening_its_content() {
     // given
-    InputStream content = new ByteArrayInputStream(new byte[4]);
     given(documentRepository.getById(EXPERIMENT_ID, DOCUMENT.id())).willReturn(DOCUMENT);
-    given(storage.load(DOCUMENT)).willReturn(content);
 
     // when
-    DocumentDownload download = service.download(EXPERIMENT_ID, DOCUMENT.id());
+    ExperimentDocument document = service.getDocument(EXPERIMENT_ID, DOCUMENT.id());
 
     // then
-    assertAll(
-        () -> assertSame(DOCUMENT, download.document()),
-        () -> assertSame(content, download.content()));
+    assertSame(DOCUMENT, document);
+    then(storage).shouldHaveNoInteractions();
   }
 
   @Test
-  void should_not_open_the_storage_for_an_unknown_document() {
+  void should_open_the_stored_content_of_a_document() {
+    // given
+    InputStream content = new ByteArrayInputStream(new byte[4]);
+    given(storage.load(DOCUMENT)).willReturn(content);
+
+    // when / then
+    assertSame(content, service.openContent(DOCUMENT));
+  }
+
+  @Test
+  void should_not_find_an_unknown_document() {
     // given
     UUID documentId = UUID.randomUUID();
     given(documentRepository.getById(EXPERIMENT_ID, documentId))
         .willThrow(new ObjectNotFoundException(ExperimentDocument.class));
 
     // when / then
-    assertThrows(ObjectNotFoundException.class, () -> service.download(EXPERIMENT_ID, documentId));
-    then(storage).shouldHaveNoInteractions();
+    assertThrows(
+        ObjectNotFoundException.class, () -> service.getDocument(EXPERIMENT_ID, documentId));
   }
 }

@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -23,7 +24,6 @@ import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
-import ch.swisstopo.monteis.core.modules.experiment.service.DocumentDownload;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentDocumentService;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -131,8 +131,8 @@ class ExperimentDocumentControllerTest {
 
   @Test
   void should_stream_a_document_as_attachment() throws Exception {
-    given(service.download(ASSIGNED_EXPERIMENT, DOCUMENT.id()))
-        .willReturn(new DocumentDownload(DOCUMENT, new ByteArrayInputStream(CONTENT)));
+    given(service.getDocument(ASSIGNED_EXPERIMENT, DOCUMENT.id())).willReturn(DOCUMENT);
+    given(service.openContent(DOCUMENT)).willReturn(new ByteArrayInputStream(CONTENT));
 
     mockMvc
         .perform(
@@ -152,13 +152,15 @@ class ExperimentDocumentControllerTest {
   @Test
   void should_answer_404_for_an_unknown_document() throws Exception {
     UUID documentId = UUID.randomUUID();
-    given(service.download(ASSIGNED_EXPERIMENT, documentId))
+    given(service.getDocument(ASSIGNED_EXPERIMENT, documentId))
         .willThrow(new ObjectNotFoundException(ExperimentDocument.class));
 
     mockMvc
         .perform(
             get(DOCUMENTS + "/{documentId}/content", ASSIGNED_EXPERIMENT, documentId).with(jwt()))
         .andExpect(status().isNotFound());
+
+    then(service).should(never()).openContent(any());
   }
 
   private static MockMultipartFile file(String originalFileName, byte[] content) {

@@ -21,12 +21,14 @@ import org.jooq.exception.DataChangedException;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.unit.DataSize;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.validation.method.ParameterValidationResult;
@@ -72,6 +74,15 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(GlobalErrorControllerAdvice.class);
+
+  private final DataSize maxFileSize;
+
+  // the exception itself often carries -1, the container does not report the limit it hit
+  public GlobalErrorControllerAdvice(
+      @Value("${spring.servlet.multipart.max-file-size}") DataSize maxFileSize) {
+    this.maxFileSize = maxFileSize;
+  }
+
   private static final Set<String> INTERNAL_ANNOTATION_KEYS =
       Set.of("message", "groups", "payload");
   public static final String ERROR_ID = "errorId";
@@ -224,7 +235,9 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
       @NonNull HttpHeaders headers,
       @NonNull HttpStatusCode status,
       @NonNull WebRequest request) {
-    ErrorDto payload = ErrorDto.form("document.validation.tooLarge", Map.of());
+    ErrorDto payload =
+        ErrorDto.form(
+            "document.validation.tooLarge", Map.of("max", maxFileSize.toMegabytes() + " MB"));
     return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(payload);
   }
 

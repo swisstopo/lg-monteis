@@ -66,7 +66,8 @@ class GlobalErrorControllerAdviceTest {
 
   @Test
   void should_translate_max_upload_size_exceeded_exception_return_413() throws Exception {
-    // given a request whose multipart body exceeds spring.servlet.multipart.max-file-size
+    // given a request to an endpoint that throws a MaxUploadSizeExceededException without the
+    // limit, as the servlet container does
 
     // when
     var response = mockMvc.perform(get("/dummy/upload-too-large-error").with(jwt()));
@@ -75,7 +76,8 @@ class GlobalErrorControllerAdviceTest {
     response
         .andExpect(status().isContentTooLarge())
         .andExpect(jsonPath("$.target").value("FORM"))
-        .andExpect(jsonPath("$.messageKey").value("document.validation.tooLarge"));
+        .andExpect(jsonPath("$.messageKey").value("document.validation.tooLarge"))
+        .andExpect(jsonPath("$.params.max").value("50 MB"));
   }
 
   @Test
@@ -375,7 +377,7 @@ class GlobalErrorControllerAdviceTest {
 
     @GetMapping("/dummy/upload-too-large-error")
     public void throwUploadTooLargeError() {
-      throw new MaxUploadSizeExceededException(50L * 1024 * 1024);
+      throw new MaxUploadSizeExceededException(-1);
     }
 
     @GetMapping("/dummy/object-error")

@@ -443,7 +443,7 @@
     "validation": {
       "empty": "The file is empty.",
       "fileName": "The file name must be between 1 and {{max}} characters long.",
-      "tooLarge": "The file is larger than the allowed 50 MB."
+      "tooLarge": "The file is larger than the allowed {{max}}."
     }
   }
 }

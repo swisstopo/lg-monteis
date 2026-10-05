@@ -43,8 +43,12 @@ public class ExperimentDocumentService {
     return documentRepository.findByExperimentId(experimentId);
   }
 
-  public DocumentDownload download(UUID experimentId, UUID documentId) {
-    ExperimentDocument document = documentRepository.getById(experimentId, documentId);
-    return new DocumentDownload(document, storage.load(document));
+  public ExperimentDocument getDocument(UUID experimentId, UUID documentId) {
+    return documentRepository.getById(experimentId, documentId);
+  }
+
+  /** Opens the stored content of {@code document}; the caller closes the stream. */
+  public InputStream openContent(ExperimentDocument document) {
+    return storage.load(document);
   }
 }
