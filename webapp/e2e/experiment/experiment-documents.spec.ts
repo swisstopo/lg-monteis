@@ -33,12 +33,12 @@ test('uploads a document to an experiment and downloads it', async ({ page }) =>
 
   await upload(dialog, 'report.txt', 'measured values');
 
-  const documentLink = dialog.getByRole('link', { name: 'report.txt' });
-  await expect(documentLink).toBeVisible();
+  const fileNameButton = dialog.getByRole('button', { name: 'report.txt' });
+  await expect(fileNameButton).toBeVisible();
   await expect(dialog.getByText('admin-user')).toBeVisible();
 
   const download = page.waitForEvent('download');
-  await documentLink.click();
+  await fileNameButton.click();
   expect((await download).suggestedFilename()).toBe('report.txt');
 });
 
@@ -46,7 +46,7 @@ test('uploads a document to an experiment and downloads it', async ({ page }) =>
 test('views a document in a new tab', async ({ page }) => {
   const dialog = await editNewExperiment(page);
   await upload(dialog, 'report.txt', 'measured values');
-  await expect(dialog.getByRole('link', { name: 'report.txt' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'report.txt' })).toBeVisible();
 
   const tab = page.context().waitForEvent('page');
   await dialog.getByRole('button', { name: 'View document' }).click();

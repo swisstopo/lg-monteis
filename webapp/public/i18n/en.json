@@ -276,8 +276,8 @@
       "placeholder": "e.g., Mont Terri Alpha",
       "validation": {
         "required": "Experiment name is required",
-        "minLength": "Name must be at least 2 characters long",
-        "maxLength": "Name must be at most 50 characters long"
+        "minLength": "Name must be at least {{min}} characters long",
+        "maxLength": "Name must be at most {{max}} characters long"
       }
     },
     "status": {
@@ -297,7 +297,7 @@
     "comment": {
       "label": "Comment",
       "validation": {
-        "maxLength": "Comment must be at most 4096 characters long"
+        "maxLength": "Comment must be at most {{max}} characters long"
       }
     },
     "period": {

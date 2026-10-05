@@ -39,7 +39,7 @@ import { createColumns } from './columns';
 export default class ExperimentTable {
   private readonly datePipe = inject(DatePipe);
   private readonly dialog = inject(MatDialog);
-  protected experimentService = inject(ExperimentService);
+  private readonly experimentService = inject(ExperimentService);
   private readonly translateService = inject(TranslateService);
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
@@ -47,18 +47,18 @@ export default class ExperimentTable {
 
   readonly searchTerm = signal<string>('');
 
-  protected wrappedCols = createColumns(this.datePipe);
-  protected selectedExperimentId = signal<string | undefined>(undefined);
-  protected canEditSelected = computed(() => {
+  protected readonly wrappedCols = createColumns(this.datePipe);
+  protected readonly selectedExperimentId = signal<string | undefined>(undefined);
+  protected readonly canEditSelected = computed(() => {
     const experimentId = this.selectedExperimentId();
     return experimentId !== undefined && this.permissions.canWriteExperiment(experimentId);
   });
-  protected totalCount = signal<number | undefined>(undefined);
-  protected loadError = signal(false);
-  protected downloading = signal(false);
+  protected readonly totalCount = signal<number | undefined>(undefined);
+  protected readonly loadError = signal(false);
+  protected readonly downloading = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
 
-  protected gridOptions: GridOptions<ExperimentResponseDto> = {
+  protected readonly gridOptions: GridOptions<ExperimentResponseDto> = {
     domLayout: 'normal',
     autoSizeStrategy: {
       type: 'fitCellContents',
@@ -71,7 +71,7 @@ export default class ExperimentTable {
     },
   };
 
-  protected datasource = createPagedDatasource(
+  protected readonly datasource = createPagedDatasource(
     (params) => this.experimentService.getExperiments(params),
     this.totalCount,
     this.loadError,

@@ -170,10 +170,6 @@ export default class MeasurementsTable {
     });
   }
 
-  onWrappedRow(row: MeasurementResponseDto) {
-    console.log(row);
-  }
-
   onSelectionChanged(rows: MeasurementResponseDto[]): void {
     this.selectedRows.set(rows);
   }

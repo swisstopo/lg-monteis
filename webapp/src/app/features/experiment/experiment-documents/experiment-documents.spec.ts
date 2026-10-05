@@ -77,7 +77,7 @@ describe('ExperimentDocuments', () => {
     const { element } = await render();
 
     expect(documentService.getDocuments).toHaveBeenCalledWith('experiment-1');
-    expect(element.querySelector('a')?.textContent).toContain('report.pdf');
+    expect(element.querySelector('.file-name')?.textContent).toContain('report.pdf');
     expect(element.querySelector('.document-meta')?.textContent).toContain('alice');
   });
 
@@ -174,7 +174,7 @@ describe('ExperimentDocuments', () => {
   it('downloads a document from its name', async () => {
     const { element } = await render();
 
-    element.querySelector('a')!.click();
+    element.querySelector<HTMLButtonElement>('.file-name')!.click();
 
     await vi.waitFor(() => expect(fileDownload.download).toHaveBeenCalled());
     expect(documentService.getContent).toHaveBeenCalledWith('experiment-1', 'document-1');
@@ -194,7 +194,7 @@ describe('ExperimentDocuments', () => {
     documentService.getContent.mockRejectedValue(new Error('404'));
     const { element } = await render();
 
-    element.querySelector('a')!.click();
+    element.querySelector<HTMLButtonElement>('.file-name')!.click();
 
     await vi.waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith('experiment.documents.error.download'),

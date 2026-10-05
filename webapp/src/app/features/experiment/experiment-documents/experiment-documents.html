@@ -31,9 +31,9 @@
             >
               <mat-icon fontIcon="visibility" />
             </button>
-            <a href="" (click)="$event.preventDefault(); download(document)">{{
-              document.fileName
-            }}</a>
+            <button type="button" class="file-name" (click)="download(document)">
+              {{ document.fileName }}
+            </button>
           </div>
           <span class="document-meta">
             {{ document.uploadedAt | date: 'dd.MM.yyyy; HH:mm:ss' }}, {{ document.uploadedBy }}

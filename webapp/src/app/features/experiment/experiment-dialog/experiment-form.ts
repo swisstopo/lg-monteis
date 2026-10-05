@@ -1,7 +1,12 @@
 import { maxDate, maxLength, minDate, minLength, required, schema } from '@angular/forms/signals';
 import { ExperimentResponseDto, WriteExperimentDto } from '@core/generated';
 import { TranslateService } from '@ngx-translate/core';
-import { formatDate } from 'date-fns';
+import { formatDate, parseISO } from 'date-fns';
+
+// the backend validates the same limits (WriteExperimentDto)
+const NAME_MIN_LENGTH = 2;
+const NAME_MAX_LENGTH = 50;
+const COMMENT_MAX_LENGTH = 4096;
 
 export interface ExperimentFormModel {
   name: string;
@@ -46,14 +51,20 @@ export function experimentSchema(translateService: TranslateService) {
     required(path.name, {
       message: translateService.translate('experiment.name.validation.required'),
     });
-    minLength(path.name, 2, {
-      message: translateService.translate('experiment.name.validation.minLength'),
+    minLength(path.name, NAME_MIN_LENGTH, {
+      message: translateService.translate('experiment.name.validation.minLength', {
+        min: NAME_MIN_LENGTH,
+      }),
     });
-    maxLength(path.name, 50, {
-      message: translateService.translate('experiment.name.validation.maxLength'),
+    maxLength(path.name, NAME_MAX_LENGTH, {
+      message: translateService.translate('experiment.name.validation.maxLength', {
+        max: NAME_MAX_LENGTH,
+      }),
     });
-    maxLength(path.comment, 4096, {
-      message: translateService.translate('experiment.comment.validation.maxLength'),
+    maxLength(path.comment, COMMENT_MAX_LENGTH, {
+      message: translateService.translate('experiment.comment.validation.maxLength', {
+        max: COMMENT_MAX_LENGTH,
+      }),
     });
     required(path.period.start, {
       message: translateService.translate('experiment.period.start.validation.required'),
@@ -70,8 +81,10 @@ export function experimentSchema(translateService: TranslateService) {
   });
 }
 
+// parseISO reads a date-only string as local midnight, new Date() as UTC midnight, which is the
+// day before west of UTC
 function toDate(isoDate: string | undefined): Date {
-  return isoDate ? new Date(isoDate) : new Date();
+  return isoDate ? parseISO(isoDate) : new Date();
 }
 
 function toIsoDate(date: Date): string {

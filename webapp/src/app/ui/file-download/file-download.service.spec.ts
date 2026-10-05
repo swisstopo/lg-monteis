@@ -14,16 +14,20 @@ describe('FileDownloadService', () => {
     clickedAnchors = [];
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    stubAnchorClick((anchor) => clickedAnchors.push(anchor));
+  });
+
+  /** Lets `onClick` stand in for the click of every anchor the service creates. */
+  function stubAnchorClick(onClick: (anchor: HTMLAnchorElement) => void): void {
     vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
       const element = realCreateElement(tagName);
       if (tagName === 'a') {
-        vi.spyOn(element as HTMLAnchorElement, 'click').mockImplementation(() => {
-          clickedAnchors.push(element as HTMLAnchorElement);
-        });
+        const anchor = element as HTMLAnchorElement;
+        vi.spyOn(anchor, 'click').mockImplementation(() => onClick(anchor));
       }
       return element;
     });
-  });
+  }
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -40,14 +44,8 @@ describe('FileDownloadService', () => {
   });
 
   it('revokes the object URL even if the anchor click throws', () => {
-    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
-      const element = realCreateElement(tagName);
-      if (tagName === 'a') {
-        vi.spyOn(element as HTMLAnchorElement, 'click').mockImplementation(() => {
-          throw new Error('boom');
-        });
-      }
-      return element;
+    stubAnchorClick(() => {
+      throw new Error('boom');
     });
 
     expect(() => service.download(new Blob(), 'sensors.csv')).toThrow('boom');

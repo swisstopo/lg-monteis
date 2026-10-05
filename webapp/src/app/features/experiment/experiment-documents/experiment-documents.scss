@@ -39,16 +39,22 @@
     color: var(--mat-sys-primary);
   }
 
-  a {
+  // a button that reads as a link, it starts a download and goes nowhere
+  .file-name {
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    text-align: start;
     font: var(--mat-sys-body-large);
     color: var(--mat-sys-primary);
-    text-decoration: none;
     overflow-wrap: anywhere;
   }
 }
 
 .document-meta {
-  padding-left: 48px;
+  // below the file name, past the eye button in front of it
+  padding-left: var(--mat-icon-button-state-layer-size, 48px);
   font: var(--mat-sys-body-medium);
   color: var(--mat-sys-on-surface);
 }

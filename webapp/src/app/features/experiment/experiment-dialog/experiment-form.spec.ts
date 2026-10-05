@@ -35,7 +35,8 @@ describe('toFormModel', () => {
     expect(toFormModel(EXPERIMENT)).toEqual({
       name: 'Mont Terri Alpha',
       comment: 'borehole',
-      period: { start: new Date('2030-01-01'), end: new Date('2030-05-05') },
+      // local midnight, a date-only string must not shift a day west of UTC
+      period: { start: new Date(2030, 0, 1), end: new Date(2030, 4, 5) },
     });
   });
 
