@@ -32,7 +32,7 @@ describe('ExperimentTable', () => {
   let experimentService: {
     getExperiments: ReturnType<typeof vi.fn>;
     getExperimentsCsv: ReturnType<typeof vi.fn>;
-    experimentsChanged: ReturnType<typeof signal<boolean>>;
+    experimentsSaved: ReturnType<typeof signal<number>>;
   };
   let fileDownload: { download: ReturnType<typeof vi.fn> };
   let toast: { error: ReturnType<typeof vi.fn> };
@@ -42,7 +42,7 @@ describe('ExperimentTable', () => {
     experimentService = {
       getExperiments: vi.fn().mockResolvedValue({ rows: [], totalCount: 0 }),
       getExperimentsCsv: vi.fn().mockResolvedValue(new Blob(['name'])),
-      experimentsChanged: signal(false),
+      experimentsSaved: signal(0),
     };
     fileDownload = { download: vi.fn() };
     toast = { error: vi.fn() };
@@ -120,6 +120,19 @@ describe('ExperimentTable', () => {
     );
   });
 
+  it('reloads its rows whenever an experiment is saved', async () => {
+    const view = await render(EXPERIMENT_USER);
+    await view.gridReady();
+    const loadsBefore = experimentService.getExperiments.mock.calls.length;
+
+    experimentService.experimentsSaved.set(1);
+    await view.settle();
+
+    await vi.waitFor(() =>
+      expect(experimentService.getExperiments.mock.calls.length).toBeGreaterThan(loadsBefore),
+    );
+  });
+
   it('downloads the experiments as CSV', async () => {
     const view = await render(EXPERIMENT_USER);
     await view.gridReady();
@@ -159,6 +172,10 @@ class TableView {
   /** Waits until the grid is ready, the CSV download needs its filter and sort model. */
   async gridReady(): Promise<void> {
     await vi.waitFor(() => expect(this.fixture.componentInstance['gridApi']()).toBeDefined());
+  }
+
+  async settle(): Promise<void> {
+    await this.fixture.whenStable();
   }
 
   async select(experimentId: string): Promise<void> {

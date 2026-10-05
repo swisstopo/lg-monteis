@@ -12,9 +12,12 @@ export class SensorService {
   private readonly api = inject(SensorControllerService);
   private readonly sensorRequest = signal<{ id: string | undefined }>({ id: undefined });
   readonly error = signal<ErrorDto[] | undefined>(undefined);
-  // Bumped whenever a sensor is created/updated, so the sensor table can refresh its
-  // ag-grid infinite row model cache - ag-grid has no way to detect that on its own.
-  readonly sensorsChanged = signal(false);
+  private readonly saveCount = signal(0);
+  /**
+   * Grows with every saved sensor, so the sensor table can refresh its ag-grid infinite row model
+   * cache - ag-grid has no way to detect that on its own.
+   */
+  readonly sensorsSaved = this.saveCount.asReadonly();
 
   readonly sensor = resource({
     params: () => this.sensorRequest(),
@@ -44,7 +47,7 @@ export class SensorService {
   async createSensor(sensor: WriteSensorDto) {
     try {
       const result = await firstValueFrom(this.api.createSensor(sensor));
-      this.sensorsChanged.set(true);
+      this.saveCount.update((count) => count + 1);
       return result;
     } catch (err) {
       this.error.set(toErrorDtos(err));
@@ -55,7 +58,7 @@ export class SensorService {
   async updateSensor(id: string, sensor: WriteSensorDto) {
     try {
       const result = await firstValueFrom(this.api.updateSensor(id, sensor));
-      this.sensorsChanged.set(true);
+      this.saveCount.update((count) => count + 1);
       return result;
     } catch (err) {
       this.error.set(toErrorDtos(err));

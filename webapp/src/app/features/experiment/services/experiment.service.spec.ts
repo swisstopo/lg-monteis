@@ -61,10 +61,17 @@ describe('ExperimentService', () => {
     await service.saveExperiment(NEW_EXPERIMENT);
     TestBed.tick();
 
-    expect(service.experimentsChanged()).toBe(true);
+    expect(service.experimentsSaved()).toBe(1);
     await vi.waitFor(() =>
       expect(api['getAllExperiments'].mock.calls.length).toBeGreaterThan(loadsBefore),
     );
+  });
+
+  it('counts every save', async () => {
+    await service.saveExperiment(NEW_EXPERIMENT);
+    await service.saveExperiment({ ...NEW_EXPERIMENT, id: 'experiment-1', version: 1 });
+
+    expect(service.experimentsSaved()).toBe(2);
   });
 
   it('rethrows a failed save and leaves the table alone', async () => {
@@ -72,7 +79,7 @@ describe('ExperimentService', () => {
     api['createExperiment'].mockReturnValue(throwError(() => failure));
 
     await expect(service.saveExperiment(NEW_EXPERIMENT)).rejects.toBe(failure);
-    expect(service.experimentsChanged()).toBe(false);
+    expect(service.experimentsSaved()).toBe(0);
   });
 
   it('pages the experiments with the sort and filter of the grid', async () => {

@@ -12,9 +12,12 @@ import { firstValueFrom } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class ExperimentService {
   private readonly api = inject(ExperimentControllerService);
-  // Bumped whenever an experiment is created/updated, so the experiment table can refresh its
-  // ag-grid infinite row model cache - ag-grid has no way to detect that on its own.
-  readonly experimentsChanged = signal(false);
+  private readonly saveCount = signal(0);
+  /**
+   * Grows with every saved experiment, so the experiment table can refresh its ag-grid infinite
+   * row model cache - ag-grid has no way to detect that on its own.
+   */
+  readonly experimentsSaved = this.saveCount.asReadonly();
 
   readonly allExperiments = resource({
     loader: () => firstValueFrom(this.api.getAllExperiments()),
@@ -31,7 +34,7 @@ export class ExperimentService {
         ? this.api.updateExperiment(experiment.id, experiment)
         : this.api.createExperiment(experiment),
     );
-    this.experimentsChanged.set(true);
+    this.saveCount.update((count) => count + 1);
     this.allExperiments.reload();
     return saved;
   }

@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -82,13 +83,11 @@ export default class ExperimentTable {
       view.title = this.translateService.translate('tab.experiment')();
     });
 
-    // Re-fetch the currently visible pages whenever a experiment is created/updated elsewhere
-    // (e.g. via the edit dialog) - the infinite row model otherwise has no way to know.
+    // Re-fetch the currently visible pages whenever an experiment is saved elsewhere (e.g. via
+    // the dialog) - the infinite row model otherwise has no way to know.
     effect(() => {
-      if (this.experimentService.experimentsChanged()) {
-        this.gridApi()?.refreshInfiniteCache();
-        this.experimentService.experimentsChanged.set(false);
-      }
+      this.experimentService.experimentsSaved();
+      untracked(() => this.gridApi()?.refreshInfiniteCache());
     });
   }
 

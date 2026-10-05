@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
@@ -52,13 +52,11 @@ export default class SensorTable {
       view.title = this.translateService.translate('tab.sensor')();
     });
 
-    // Re-fetch the currently visible pages whenever a sensor is created/updated elsewhere
-    // (e.g. via the edit dialog) - the infinite row model otherwise has no way to know.
+    // Re-fetch the currently visible pages whenever a sensor is saved elsewhere (e.g. via the
+    // edit dialog) - the infinite row model otherwise has no way to know.
     effect(() => {
-      if (this.sensorService.sensorsChanged()) {
-        this.gridApi()?.refreshInfiniteCache();
-        this.sensorService.sensorsChanged.set(false);
-      }
+      this.sensorService.sensorsSaved();
+      untracked(() => this.gridApi()?.refreshInfiniteCache());
     });
   }
 
