@@ -21,22 +21,17 @@ async function editNewExperiment(page: Page): Promise<Locator> {
   return dialog;
 }
 
-async function upload(page: Page, dialog: Locator, name: string, content: string): Promise<void> {
-  const fileChooser = page.waitForEvent('filechooser');
+async function upload(dialog: Locator, name: string, content: string): Promise<void> {
+  const fileChooserOpened = dialog.page().waitForEvent('filechooser');
   await dialog.getByRole('button', { name: 'Add Document' }).click();
-  await (
-    await fileChooser
-  ).setFiles({
-    name,
-    mimeType: 'text/plain',
-    buffer: Buffer.from(content),
-  });
+  const fileChooser = await fileChooserOpened;
+  await fileChooser.setFiles({ name, mimeType: 'text/plain', buffer: Buffer.from(content) });
 }
 
 test('uploads a document to an experiment and downloads it', async ({ page }) => {
   const dialog = await editNewExperiment(page);
 
-  await upload(page, dialog, 'report.txt', 'measured values');
+  await upload(dialog, 'report.txt', 'measured values');
 
   const documentLink = dialog.getByRole('link', { name: 'report.txt' });
   await expect(documentLink).toBeVisible();
@@ -50,7 +45,7 @@ test('uploads a document to an experiment and downloads it', async ({ page }) =>
 // on its own, WebKit now and then ignores the next click right after a download
 test('views a document in a new tab', async ({ page }) => {
   const dialog = await editNewExperiment(page);
-  await upload(page, dialog, 'report.txt', 'measured values');
+  await upload(dialog, 'report.txt', 'measured values');
   await expect(dialog.getByRole('link', { name: 'report.txt' })).toBeVisible();
 
   const tab = page.context().waitForEvent('page');
@@ -62,7 +57,7 @@ test('views a document in a new tab', async ({ page }) => {
 test('rejects an empty file with a toast and lists nothing', async ({ page }) => {
   const dialog = await editNewExperiment(page);
 
-  await upload(page, dialog, 'empty.txt', '');
+  await upload(dialog, 'empty.txt', '');
 
   await expect(page.getByText('The file is empty.')).toBeVisible();
   await expect(dialog.getByText('No documents yet.')).toBeVisible();

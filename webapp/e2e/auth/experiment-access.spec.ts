@@ -5,7 +5,12 @@ import { expect, test } from '../support/fixtures';
 import { addUserToGroup, createExperimentAccessGroups } from '../support/keycloak';
 import { openAppAs, SEED_USERS, SeedUser } from '../support/login';
 import { findExperimentIdByName } from '../support/monteis-api';
-import { createSensorInDialog } from '../support/sensor-table';
+import {
+  createSensorInDialog,
+  filterSensorsByAlias,
+  openSensorTable,
+  sensorAliasCell,
+} from '../support/sensor-table';
 import { dataRows } from '../support/table';
 
 /**
@@ -30,7 +35,7 @@ test('shows a new sensor only to members of its experiment group', async ({
   await openExperimentTable(page);
   await createExperimentInDialog(page, experimentName);
   const dasSensorAlias = `SN-ACCESS-${crypto.randomUUID()}`;
-  await page.getByRole('link', { name: 'Sensor' }).click();
+  await openSensorTable(page);
   await createSensorInDialog(page, dasSensorAlias, experimentName);
 
   const experiment = {
@@ -60,7 +65,7 @@ async function expectSensorVisibility(
   try {
     const page = await context.newPage();
     await openAppAs(page, user);
-    await page.getByRole('link', { name: 'Sensor' }).click();
+    await openSensorTable(page);
 
     const rows = dataRows(page);
     // Both users see the sensors of the experiments they were already in, so rows here prove the
@@ -68,11 +73,11 @@ async function expectSensorVisibility(
     // table that never rendered.
     await expect(rows.first()).toBeVisible();
 
-    await page.getByRole('textbox', { name: 'DAS Sensor Alias Filter Input' }).fill(dasSensorAlias);
+    // waits for the filtered page, an empty grid in the middle of reloading would pass too
+    await filterSensorsByAlias(page, dasSensorAlias);
 
     if (shouldSeeSensor) {
-      // Exact: the floating-filter cell now holds the same text and would match a substring.
-      await expect(page.getByRole('gridcell', { name: dasSensorAlias, exact: true })).toBeVisible();
+      await expect(sensorAliasCell(page, dasSensorAlias)).toBeVisible();
       await expect(rows).toHaveCount(1);
     } else {
       await expect(rows).toHaveCount(0);

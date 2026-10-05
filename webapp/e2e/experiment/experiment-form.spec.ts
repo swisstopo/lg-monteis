@@ -3,32 +3,23 @@ import { waitForAutofocus } from '../support/dialog';
 import {
   createExperimentInDialog,
   editExperimentButton,
+  fillRequiredExperimentFields,
   openCreateExperimentDialog,
+  openExperimentTable,
   selectExperiment,
 } from '../support/experiment-table';
 import { uniqueExperimentName } from '../support/experiments';
-import { loginAsAdmin } from '../support/login';
+import { openAppAs, SEED_USERS } from '../support/login';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('http://localhost:4200/');
-  await loginAsAdmin(page);
-
-  await page.getByRole('link', { name: 'Experiment' }).click();
+  await openAppAs(page, SEED_USERS.admin);
+  await openExperimentTable(page);
 });
 
 test('should create experiment', async ({ page }) => {
   const dialog = await openCreateExperimentDialog(page);
-  await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
-
-  // Slice unique ID so we don't hit the 50 char max-length validation bounds
-  const uniqueId = crypto.randomUUID().substring(0, 8);
-  await dialog.getByLabel('Experiment Name').fill(`E2E TEST ${uniqueId}`);
-
+  await fillRequiredExperimentFields(dialog, uniqueExperimentName());
   await dialog.getByLabel('Comment').fill('This is an E2E test experiment comment.');
-
-  // Using dates like 01/01 and 05/05 prevents locale formatting parsing errors in Playwright
-  await dialog.getByLabel('Start Date').fill('01/01/2030');
-  await dialog.getByLabel('End Date').fill('05/05/2030');
 
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 
@@ -41,45 +32,29 @@ test('should update experiment', async ({ page }) => {
   await selectExperiment(page, name);
   await editExperimentButton(page).click();
   await expect(page.getByRole('heading', { name: 'Edit Experiment', level: 2 })).toBeVisible();
-
   const dialog = page.getByRole('dialog');
   await waitForAutofocus(dialog);
 
-  const uniqueId = crypto.randomUUID().substring(0, 8);
-  await dialog.getByLabel('Experiment Name').fill(`E2E TEST UPDATED ${uniqueId}`);
-
+  const updatedName = uniqueExperimentName();
+  await dialog.getByLabel('Experiment Name').fill(updatedName);
   await dialog.getByLabel('Comment').fill('Updated experiment comment.');
-
   await dialog.getByLabel('Start Date').fill('02/02/2030');
   await dialog.getByLabel('End Date').fill('04/04/2030');
-
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
 
-  await expect(page.getByText('Experiment saved successfully.')).toBeVisible();
+  await selectExperiment(page, updatedName);
 });
 
 test('should fail to create existing experiment', async ({ page }) => {
+  const name = uniqueExperimentName();
   const dialog = await openCreateExperimentDialog(page);
-  await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
-
-  const uniqueId = crypto.randomUUID().substring(0, 8);
-  const experimentName = `E2E TEST ${uniqueId}`;
-
-  await dialog.getByLabel('Experiment Name').fill(experimentName);
-
-  await dialog.getByLabel('Start Date').fill('01/01/2030');
-  await dialog.getByLabel('End Date').fill('05/05/2030');
-
+  await fillRequiredExperimentFields(dialog, name);
   await dialog.getByRole('button', { name: 'Save and create new', exact: true }).click();
-
   await expect(page.getByText('Experiment saved successfully.')).toBeVisible();
 
-  // Form should have reset, try to create another experiment with the same name
-  await dialog.getByLabel('Experiment Name').fill(experimentName);
-
-  await dialog.getByLabel('Start Date').fill('03/03/2030');
-  await dialog.getByLabel('End Date').fill('08/08/2030');
-
+  // the form is empty again for the next experiment, try the same name
+  await fillRequiredExperimentFields(dialog, name);
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 
   await expect(page.getByText('An entity with the same code already exists')).toBeVisible();
@@ -87,7 +62,6 @@ test('should fail to create existing experiment', async ({ page }) => {
 
 test('should show required validation errors', async ({ page }) => {
   const dialog = await openCreateExperimentDialog(page);
-  await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
 
   await dialog.getByLabel('Experiment Name').fill('x');
   await dialog.getByLabel('Experiment Name').fill('');
@@ -99,11 +73,7 @@ test('should show required validation errors', async ({ page }) => {
 
 test('should reject invalid date bounds', async ({ page }) => {
   const dialog = await openCreateExperimentDialog(page);
-  await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
-
-  const uniqueId = crypto.randomUUID().substring(0, 8);
-
-  await dialog.getByLabel('Experiment Name').fill(`E2E TEST ${uniqueId}`);
+  await dialog.getByLabel('Experiment Name').fill(uniqueExperimentName());
 
   await dialog.getByLabel('Start Date').fill('05/05/2030');
   await dialog.getByLabel('End Date').fill('01/01/2030');
@@ -113,8 +83,10 @@ test('should reject invalid date bounds', async ({ page }) => {
 });
 
 test('should close dialog on cancel', async ({ page }) => {
-  await page.getByRole('button', { name: 'Create Experiment' }).click();
-  await page.getByRole('button', { name: 'Cancel' }).click();
+  const dialog = await openCreateExperimentDialog(page);
+
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+
   await expect(
     page.getByRole('heading', { name: 'Setup new Experiment', level: 2 }),
   ).not.toBeVisible();

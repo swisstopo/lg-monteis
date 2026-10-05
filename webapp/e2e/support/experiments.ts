@@ -14,6 +14,12 @@ export const SEEDED_EXPERIMENTS = {
 
 const E2E_EXPERIMENT_PERIOD = { start: '2030-01-01', end: '2030-05-05' };
 
+/**
+ * The same period as typed into the experiment dialog. 01/01 and 05/05 read the same in every
+ * date locale, so the input parses them no matter which one the browser runs with.
+ */
+export const E2E_EXPERIMENT_DIALOG_PERIOD = { start: '01/01/2030', end: '05/05/2030' };
+
 /** Eight random hex characters, short enough to append to any length-limited field. */
 export function randomSuffix(): string {
   return crypto.randomUUID().substring(0, 8);
