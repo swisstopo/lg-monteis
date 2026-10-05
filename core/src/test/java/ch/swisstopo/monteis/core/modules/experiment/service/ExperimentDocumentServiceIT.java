@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.service;
 
+import static ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport.callAsAdmin;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_DOCUMENTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -8,11 +9,11 @@ import static org.mockito.BDDMockito.willThrow;
 
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.itconfig.SeedData;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentStorage;
 import java.io.InputStream;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,9 +28,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 @IT
 class ExperimentDocumentServiceIT {
 
-  private static final UUID EXPERIMENT_ALPHA =
-      UUID.fromString("00000000-0000-7000-8000-000000000301");
-
   @Autowired private ExperimentDocumentService service;
   @Autowired private DSLContext dsl;
   @Autowired private PlatformTransactionManager transactionManager;
@@ -41,7 +39,8 @@ class ExperimentDocumentServiceIT {
 
     SecurityContextTestSupport.runAsAdmin(
         () ->
-            service.upload(EXPERIMENT_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream()));
+            service.upload(
+                SeedData.EXPERIMENT_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream()));
 
     assertThat(countDocumentRows(fileName)).isEqualTo(1);
   }
@@ -59,7 +58,9 @@ class ExperimentDocumentServiceIT {
                 IllegalStateException.class,
                 () ->
                     service.upload(
-                        EXPERIMENT_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream())));
+                        SeedData.EXPERIMENT_ALPHA,
+                        pdfMetadata(fileName),
+                        InputStream.nullInputStream())));
 
     // then
     assertThat(countDocumentRows(fileName)).isZero();
@@ -75,16 +76,12 @@ class ExperimentDocumentServiceIT {
 
   // in a transaction of its own, RLS fails closed outside one and would always count 0
   private int countDocumentRows(String fileName) {
-    AtomicInteger count = new AtomicInteger();
-    SecurityContextTestSupport.runAsAdmin(
+    return callAsAdmin(
         () ->
             new TransactionTemplate(transactionManager)
-                .executeWithoutResult(
+                .execute(
                     status ->
-                        count.set(
-                            dsl.fetchCount(
-                                EXPERIMENT_DOCUMENTS,
-                                EXPERIMENT_DOCUMENTS.FILE_NAME.eq(fileName)))));
-    return count.get();
+                        dsl.fetchCount(
+                            EXPERIMENT_DOCUMENTS, EXPERIMENT_DOCUMENTS.FILE_NAME.eq(fileName))));
   }
 }

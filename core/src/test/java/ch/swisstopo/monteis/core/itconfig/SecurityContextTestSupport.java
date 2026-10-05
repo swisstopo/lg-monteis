@@ -5,6 +5,7 @@ import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationTo
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,6 +16,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * exercise the same row-level security policies a real request would.
  */
 public final class SecurityContextTestSupport {
+
+  /** The username every bound principal carries. */
+  public static final String USERNAME = "test";
 
   private SecurityContextTestSupport() {}
 
@@ -46,13 +50,33 @@ public final class SecurityContextTestSupport {
         action);
   }
 
+  /** {@link #runAsAdmin} for an action with a result. */
+  public static <T> T callAsAdmin(Supplier<T> action) {
+    return callAs(List.of(Grant.ADMIN), List.of(), List.of(), action);
+  }
+
   public static void runAs(
       List<GrantedAuthority> authorities,
       List<UUID> readExperimentIds,
       List<UUID> writeExperimentIds,
       Runnable action) {
+    callAs(
+        authorities,
+        readExperimentIds,
+        writeExperimentIds,
+        () -> {
+          action.run();
+          return null;
+        });
+  }
+
+  public static <T> T callAs(
+      List<GrantedAuthority> authorities,
+      List<UUID> readExperimentIds,
+      List<UUID> writeExperimentIds,
+      Supplier<T> action) {
     MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), "test", readExperimentIds, writeExperimentIds);
+        new MonteisPrincipal(UUID.randomUUID(), USERNAME, readExperimentIds, writeExperimentIds);
     var authentication = new MonteisAuthenticationToken(null, principal, authorities);
 
     SecurityContext previous = SecurityContextHolder.getContext();
@@ -60,7 +84,7 @@ public final class SecurityContextTestSupport {
       SecurityContext context = SecurityContextHolder.createEmptyContext();
       context.setAuthentication(authentication);
       SecurityContextHolder.setContext(context);
-      action.run();
+      return action.get();
     } finally {
       SecurityContextHolder.setContext(previous);
     }
