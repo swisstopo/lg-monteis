@@ -1,4 +1,5 @@
 import { expect, Locator, Page, Response } from '@playwright/test';
+import { waitForAutofocus } from './dialog';
 import { hasPath } from './responses';
 
 /** Opens the experiment table and waits until the backend answered its first page. */
@@ -33,13 +34,20 @@ export async function selectExperiment(page: Page, name: string): Promise<void> 
   await experimentNameCell(page, name).click();
 }
 
+/** Opens the Create Experiment dialog, ready to be filled. */
+export async function openCreateExperimentDialog(page: Page): Promise<Locator> {
+  await page.getByRole('button', { name: 'Create Experiment' }).click();
+  const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
+  return dialog;
+}
+
 /**
  * Creates experiment `name` through the Create Experiment dialog, which needs an admin. Tests
  * that change an experiment change their own: a seeded one is shared with every other test.
  */
 export async function createExperimentInDialog(page: Page, name: string): Promise<void> {
-  await page.getByRole('button', { name: 'Create Experiment' }).click();
-  const dialog = page.getByRole('dialog');
+  const dialog = await openCreateExperimentDialog(page);
   await dialog.getByLabel('Experiment Name').fill(name);
   await dialog.getByLabel('Start Date').fill('01/01/2030');
   await dialog.getByLabel('End Date').fill('05/05/2030');

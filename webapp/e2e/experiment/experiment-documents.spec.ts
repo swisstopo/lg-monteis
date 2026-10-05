@@ -33,7 +33,7 @@ async function upload(page: Page, dialog: Locator, name: string, content: string
   });
 }
 
-test('uploads a document to an experiment, downloads and views it', async ({ page }) => {
+test('uploads a document to an experiment and downloads it', async ({ page }) => {
   const dialog = await editNewExperiment(page);
 
   await upload(page, dialog, 'report.txt', 'measured values');
@@ -45,9 +45,17 @@ test('uploads a document to an experiment, downloads and views it', async ({ pag
   const download = page.waitForEvent('download');
   await documentLink.click();
   expect((await download).suggestedFilename()).toBe('report.txt');
+});
+
+// on its own, WebKit now and then ignores the next click right after a download
+test('views a document in a new tab', async ({ page }) => {
+  const dialog = await editNewExperiment(page);
+  await upload(page, dialog, 'report.txt', 'measured values');
+  await expect(dialog.getByRole('link', { name: 'report.txt' })).toBeVisible();
 
   const tab = page.context().waitForEvent('page');
   await dialog.getByRole('button', { name: 'View document' }).click();
+
   await expect(await tab).toHaveURL(/^blob:/);
 });
 

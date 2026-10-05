@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { waitForAutofocus } from '../support/dialog';
 import { loginAsAdmin } from '../support/login';
+import { createSensorInDialog, selectSensor } from '../support/sensor-table';
 
 // Coordinates FulcrumStubConfiguration (core/src/test) reports for every record it is asked for.
 // Keep both in step.
@@ -24,6 +26,7 @@ test('should create sensor', async ({ page }) => {
   // "DAS Sensor Alias", "Unit", "X (Local)"), so the table's filter inputs, now visible behind the
   // dialog, also match the generic page.getByLabel(...) substring match. Scope to the dialog.
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
   const uniqueId = crypto.randomUUID();
   // We need to make this ID unique due to the test running in parallel in different browsers.
@@ -76,6 +79,7 @@ test('should create sensor with a fulcrum id and take its coordinates from fulcr
   await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
 
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
   const uniqueId = crypto.randomUUID();
   // Unique per run: the three browser projects run in parallel and (das, das_sensor_alias) is
@@ -128,6 +132,7 @@ test('should reject a fulcrum id that is not a uuid', async ({ page }) => {
   await page.getByRole('button', { name: 'Create Sensor' }).click();
 
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
   await dialog.getByLabel('Fulcrum ID').fill('not-a-uuid');
   await dialog.getByLabel('Fulcrum ID').blur();
@@ -140,6 +145,7 @@ test('should refuse to save a fulcrum id that no fulcrum record matches', async 
   await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
 
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
   const uniqueId = crypto.randomUUID();
   await dialog.getByLabel('DAS Sensor Alias').fill(`SN-MISSING-${uniqueId}`);
@@ -187,6 +193,7 @@ test('should disable the coordinates while a fulcrum id is entered', async ({ pa
   await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
 
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
   const x = dialog.getByLabel('X (Local)');
   const y = dialog.getByLabel('Y (Local)');
@@ -212,13 +219,9 @@ test('should disable the coordinates while a fulcrum id is entered', async ({ pa
 });
 
 test('should update sensor', async ({ page }) => {
-  // "Edit Sensor" is only enabled once a row is selected. Infinite row model: the row initially
-  // renders as an empty placeholder while its data block loads. Clicking too early hits a
-  // not-yet-loaded node, which ag-grid silently ignores for selection - wait for real content
-  // before clicking.
-  const firstRow = page.locator('.ag-row').first();
-  await expect(firstRow.locator('[col-id="dasSensorAlias"]')).not.toBeEmpty();
-  await firstRow.click();
+  const dasSensorAlias = `SN-UPDATE-${crypto.randomUUID()}`;
+  await createSensorInDialog(page, dasSensorAlias);
+  await selectSensor(page, dasSensorAlias);
   await page.getByRole('button', { name: 'Edit Sensor' }).click();
   await expect(page.getByRole('heading', { name: 'Edit Sensor', level: 2 })).toBeVisible();
 
@@ -226,9 +229,10 @@ test('should update sensor', async ({ page }) => {
   // "DAS Sensor Alias"), so the table's filter inputs, now visible behind the dialog, also match
   // the generic page.getByLabel(...) substring match. Scope to the dialog.
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
-  const uniqueId = crypto.randomUUID();
-  await dialog.getByLabel('DAS Sensor Alias').fill(`SN-TEMP-${uniqueId}`);
+  const updatedAlias = `SN-UPDATED-${crypto.randomUUID()}`;
+  await dialog.getByLabel('DAS Sensor Alias').fill(updatedAlias);
   await dialog.getByLabel('Sensor Name').fill('E2E TEST UPDATED');
 
   const firstParameter = dialog.getByTestId('parameter-block-0');
@@ -248,10 +252,14 @@ test('should update sensor', async ({ page }) => {
   await expect(page.getByRole('option', { name: 'x * 1000 (v1)' })).toBeVisible();
   await formulaInput.press('ArrowDown');
   await formulaInput.press('Enter');
+  // WebKit lets the open panel swallow the click on Save
+  await expect(page.getByRole('option', { name: 'x * 1000 (v1)' })).toBeHidden();
 
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
 
-  await expect(page.getByText('Sensor saved successfully.')).toBeVisible();
+  // not the toast: the one of creating the sensor may still be showing
+  await selectSensor(page, updatedAlias);
 });
 
 test('should fail to create existing sensor', async ({ page }) => {
@@ -262,6 +270,7 @@ test('should fail to create existing sensor', async ({ page }) => {
   // "DAS Sensor Alias", "Unit", "X (Local)"), so the table's filter inputs, now visible behind the
   // dialog, also match the generic page.getByLabel(...) substring match. Scope to the dialog.
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
   const uniqueId = crypto.randomUUID();
 
@@ -334,6 +343,7 @@ test('should show required validation errors', async ({ page }) => {
   // Scoped to the dialog: the sensor table's "DAS Sensor Alias" column filter input, now visible
   // behind the dialog, also matches the generic page.getByLabel(...) substring match otherwise.
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
   await dialog.getByLabel('DAS Sensor Alias').fill('x');
   await dialog.getByLabel('DAS Sensor Alias').fill('');
@@ -356,6 +366,7 @@ test('should reject invalid alarm limits', async ({ page }) => {
   // Scoped to the dialog: the sensor table's "DAS Sensor Alias" column filter input, now visible
   // behind the dialog, also matches the generic page.getByLabel(...) substring match otherwise.
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
   const uniqueId = crypto.randomUUID();
 
@@ -379,6 +390,7 @@ test('should close dialog on cancel', async ({ page }) => {
 test('should add and remove a parameter', async ({ page }) => {
   await page.getByRole('button', { name: 'Create Sensor' }).click();
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
   const firstBlock = dialog.getByTestId('parameter-block-0');
   await expect(firstBlock.getByLabel('Remove Parameter')).toBeDisabled();

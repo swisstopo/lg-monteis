@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { waitForAutofocus } from '../support/dialog';
 import {
   createExperimentInDialog,
   editExperimentButton,
+  openCreateExperimentDialog,
   selectExperiment,
 } from '../support/experiment-table';
 import { uniqueExperimentName } from '../support/experiments';
@@ -15,10 +17,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('should create experiment', async ({ page }) => {
-  await page.getByRole('button', { name: 'Create Experiment' }).click();
+  const dialog = await openCreateExperimentDialog(page);
   await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
-
-  const dialog = page.getByRole('dialog');
 
   // Slice unique ID so we don't hit the 50 char max-length validation bounds
   const uniqueId = crypto.randomUUID().substring(0, 8);
@@ -43,6 +43,7 @@ test('should update experiment', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Edit Experiment', level: 2 })).toBeVisible();
 
   const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
 
   const uniqueId = crypto.randomUUID().substring(0, 8);
   await dialog.getByLabel('Experiment Name').fill(`E2E TEST UPDATED ${uniqueId}`);
@@ -58,10 +59,8 @@ test('should update experiment', async ({ page }) => {
 });
 
 test('should fail to create existing experiment', async ({ page }) => {
-  await page.getByRole('button', { name: 'Create Experiment' }).click();
+  const dialog = await openCreateExperimentDialog(page);
   await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
-
-  const dialog = page.getByRole('dialog');
 
   const uniqueId = crypto.randomUUID().substring(0, 8);
   const experimentName = `E2E TEST ${uniqueId}`;
@@ -87,10 +86,8 @@ test('should fail to create existing experiment', async ({ page }) => {
 });
 
 test('should show required validation errors', async ({ page }) => {
-  await page.getByRole('button', { name: 'Create Experiment' }).click();
+  const dialog = await openCreateExperimentDialog(page);
   await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
-
-  const dialog = page.getByRole('dialog');
 
   await dialog.getByLabel('Experiment Name').fill('x');
   await dialog.getByLabel('Experiment Name').fill('');
@@ -101,9 +98,8 @@ test('should show required validation errors', async ({ page }) => {
 });
 
 test('should reject invalid date bounds', async ({ page }) => {
-  await page.getByRole('button', { name: 'Create Experiment' }).click();
-
-  const dialog = page.getByRole('dialog');
+  const dialog = await openCreateExperimentDialog(page);
+  await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
 
   const uniqueId = crypto.randomUUID().substring(0, 8);
 
