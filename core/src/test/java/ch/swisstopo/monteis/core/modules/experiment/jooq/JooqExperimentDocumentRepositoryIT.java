@@ -39,12 +39,14 @@ class JooqExperimentDocumentRepositoryIT {
 
   @Test
   @Transactional
-  void should_create_a_document_uploaded_now_by_the_current_user() {
+  void should_create_a_document_uploaded_now_by_the_given_user() {
     // given
     UUID experimentId = newExperiment();
 
     // when
-    ExperimentDocument document = callAsAdmin(() -> repository.create(experimentId, REPORT));
+    ExperimentDocument document =
+        callAsAdmin(
+            () -> repository.create(experimentId, REPORT, SecurityContextTestSupport.USERNAME));
 
     // then
     assertThat(document.id()).isNotNull();
@@ -63,9 +65,12 @@ class JooqExperimentDocumentRepositoryIT {
     // given: the older one is inserted last, so it has the higher id, the order must come from
     // the upload time (both would share now() of the test transaction otherwise)
     UUID experimentId = newExperiment();
-    ExperimentDocument newer = callAsAdmin(() -> repository.create(experimentId, REPORT));
+    ExperimentDocument newer =
+        callAsAdmin(
+            () -> repository.create(experimentId, REPORT, SecurityContextTestSupport.USERNAME));
     UUID older = insertDocumentUploadedAt(experimentId, OffsetDateTime.now().minusDays(1));
-    callAsAdmin(() -> repository.create(newExperiment(), REPORT));
+    callAsAdmin(
+        () -> repository.create(newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
 
     // when
     List<ExperimentDocument> documents =
@@ -80,7 +85,9 @@ class JooqExperimentDocumentRepositoryIT {
   void should_not_find_a_document_under_another_experiment() {
     // given
     UUID otherExperimentId = newExperiment();
-    ExperimentDocument document = callAsAdmin(() -> repository.create(newExperiment(), REPORT));
+    ExperimentDocument document =
+        callAsAdmin(
+            () -> repository.create(newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
 
     // when / then
     assertThrows(
@@ -106,8 +113,10 @@ class JooqExperimentDocumentRepositoryIT {
     // given
     UUID readable = newExperiment();
     UUID hidden = newExperiment();
-    ExperimentDocument readableDocument = callAsAdmin(() -> repository.create(readable, REPORT));
-    ExperimentDocument hiddenDocument = callAsAdmin(() -> repository.create(hidden, REPORT));
+    ExperimentDocument readableDocument =
+        callAsAdmin(() -> repository.create(readable, REPORT, SecurityContextTestSupport.USERNAME));
+    ExperimentDocument hiddenDocument =
+        callAsAdmin(() -> repository.create(hidden, REPORT, SecurityContextTestSupport.USERNAME));
 
     // when / then
     SecurityContextTestSupport.runAsUser(
@@ -132,7 +141,12 @@ class JooqExperimentDocumentRepositoryIT {
     SecurityContextTestSupport.runAsUser(
         List.of(experimentId),
         List.of(experimentId),
-        () -> assertThat(repository.create(experimentId, REPORT).id()).isNotNull());
+        () ->
+            assertThat(
+                    repository
+                        .create(experimentId, REPORT, SecurityContextTestSupport.USERNAME)
+                        .id())
+                .isNotNull());
   }
 
   @Test
@@ -148,14 +162,17 @@ class JooqExperimentDocumentRepositoryIT {
         () ->
             assertThrows(
                 PermissionDeniedDataAccessException.class,
-                () -> repository.create(experimentId, REPORT)));
+                () ->
+                    repository.create(experimentId, REPORT, SecurityContextTestSupport.USERNAME)));
   }
 
   @Test
   @Transactional
   void should_reject_updating_a_document_even_for_an_admin() {
     // given
-    ExperimentDocument document = callAsAdmin(() -> repository.create(newExperiment(), REPORT));
+    ExperimentDocument document =
+        callAsAdmin(
+            () -> repository.create(newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
 
     // when: no UPDATE policy, RLS filters every row out
     int updated =
@@ -174,7 +191,9 @@ class JooqExperimentDocumentRepositoryIT {
   @Transactional
   void should_reject_deleting_a_document_even_for_an_admin() {
     // given
-    ExperimentDocument document = callAsAdmin(() -> repository.create(newExperiment(), REPORT));
+    ExperimentDocument document =
+        callAsAdmin(
+            () -> repository.create(newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
 
     // when: no DELETE policy, RLS filters every row out
     int deleted =

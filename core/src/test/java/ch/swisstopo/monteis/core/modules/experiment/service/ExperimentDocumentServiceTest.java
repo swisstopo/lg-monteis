@@ -11,6 +11,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
+import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentStorage;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
@@ -43,6 +44,7 @@ class ExperimentDocumentServiceTest {
   @Mock private ExperimentRepository experimentRepository;
   @Mock private ExperimentDocumentRepository documentRepository;
   @Mock private DocumentStorage storage;
+  @Mock private CurrentUserProvider currentUserProvider;
 
   @InjectMocks private ExperimentDocumentService service;
 
@@ -50,7 +52,8 @@ class ExperimentDocumentServiceTest {
   void should_record_the_upload_before_storing_its_content() {
     // given
     InputStream content = new ByteArrayInputStream(new byte[4]);
-    given(documentRepository.create(EXPERIMENT_ID, METADATA)).willReturn(DOCUMENT);
+    given(currentUserProvider.requireCurrentUsername()).willReturn("alice");
+    given(documentRepository.create(EXPERIMENT_ID, METADATA, "alice")).willReturn(DOCUMENT);
 
     // when
     ExperimentDocument uploaded = service.upload(EXPERIMENT_ID, METADATA, content);
@@ -58,16 +61,17 @@ class ExperimentDocumentServiceTest {
     // then
     assertSame(DOCUMENT, uploaded);
     InOrder order = inOrder(experimentRepository, documentRepository, storage);
-    order.verify(experimentRepository).getById(EXPERIMENT_ID);
-    order.verify(documentRepository).create(EXPERIMENT_ID, METADATA);
+    order.verify(experimentRepository).requireVisible(EXPERIMENT_ID);
+    order.verify(documentRepository).create(EXPERIMENT_ID, METADATA, "alice");
     order.verify(storage).store(DOCUMENT, content);
   }
 
   @Test
   void should_not_upload_to_an_experiment_the_caller_cannot_see() {
     // given
-    given(experimentRepository.getById(EXPERIMENT_ID))
-        .willThrow(new ObjectNotFoundException(Experiment.class));
+    willThrow(new ObjectNotFoundException(Experiment.class))
+        .given(experimentRepository)
+        .requireVisible(EXPERIMENT_ID);
 
     // when / then
     assertThrows(
@@ -80,7 +84,8 @@ class ExperimentDocumentServiceTest {
   @Test
   void should_store_nothing_when_row_level_security_rejects_the_upload() {
     // given
-    given(documentRepository.create(EXPERIMENT_ID, METADATA))
+    given(currentUserProvider.requireCurrentUsername()).willReturn("alice");
+    given(documentRepository.create(EXPERIMENT_ID, METADATA, "alice"))
         .willThrow(new PermissionDeniedDataAccessException("rls", null));
 
     // when / then
@@ -100,7 +105,7 @@ class ExperimentDocumentServiceTest {
 
     // then
     assertEquals(List.of(DOCUMENT), documents);
-    then(experimentRepository).should().getById(EXPERIMENT_ID);
+    then(experimentRepository).should().requireVisible(EXPERIMENT_ID);
   }
 
   @Test
@@ -108,7 +113,7 @@ class ExperimentDocumentServiceTest {
     // given
     willThrow(new ObjectNotFoundException(Experiment.class))
         .given(experimentRepository)
-        .getById(EXPERIMENT_ID);
+        .requireVisible(EXPERIMENT_ID);
 
     // when / then
     assertThrows(ObjectNotFoundException.class, () -> service.getDocuments(EXPERIMENT_ID));

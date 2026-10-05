@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.service;
 
+import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentStorage;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
@@ -16,14 +17,17 @@ public class ExperimentDocumentService {
   private final ExperimentRepository experimentRepository;
   private final ExperimentDocumentRepository documentRepository;
   private final DocumentStorage storage;
+  private final CurrentUserProvider currentUserProvider;
 
   public ExperimentDocumentService(
       ExperimentRepository experimentRepository,
       ExperimentDocumentRepository documentRepository,
-      DocumentStorage storage) {
+      DocumentStorage storage,
+      CurrentUserProvider currentUserProvider) {
     this.experimentRepository = experimentRepository;
     this.documentRepository = documentRepository;
     this.storage = storage;
+    this.currentUserProvider = currentUserProvider;
   }
 
   // insert first, so RLS rejects a forbidden upload before anything reaches the storage, and a
@@ -31,15 +35,17 @@ public class ExperimentDocumentService {
   @Transactional
   public ExperimentDocument upload(
       UUID experimentId, DocumentMetadata metadata, InputStream content) {
-    experimentRepository.getById(experimentId);
-    ExperimentDocument document = documentRepository.create(experimentId, metadata);
+    experimentRepository.requireVisible(experimentId);
+    ExperimentDocument document =
+        documentRepository.create(
+            experimentId, metadata, currentUserProvider.requireCurrentUsername());
     storage.store(document, content);
     return document;
   }
 
   @Transactional(readOnly = true)
   public List<ExperimentDocument> getDocuments(UUID experimentId) {
-    experimentRepository.getById(experimentId);
+    experimentRepository.requireVisible(experimentId);
     return documentRepository.findByExperimentId(experimentId);
   }
 

@@ -3,7 +3,6 @@ package ch.swisstopo.monteis.core.modules.experiment.jooq;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_DOCUMENTS;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
-import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentDocumentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
@@ -18,22 +17,21 @@ import org.springframework.transaction.annotation.Transactional;
 public class JooqExperimentDocumentRepository implements ExperimentDocumentRepository {
 
   private final DSLContext dsl;
-  private final CurrentUserProvider currentUserProvider;
 
-  public JooqExperimentDocumentRepository(DSLContext dsl, CurrentUserProvider currentUserProvider) {
+  public JooqExperimentDocumentRepository(DSLContext dsl) {
     this.dsl = dsl;
-    this.currentUserProvider = currentUserProvider;
   }
 
   @Override
   @Transactional
-  public ExperimentDocument create(UUID experimentId, DocumentMetadata metadata) {
+  public ExperimentDocument create(
+      UUID experimentId, DocumentMetadata metadata, String uploadedBy) {
     return dsl.insertInto(EXPERIMENT_DOCUMENTS)
         .set(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID, experimentId)
         .set(EXPERIMENT_DOCUMENTS.FILE_NAME, metadata.fileName())
         .set(EXPERIMENT_DOCUMENTS.CONTENT_TYPE, metadata.contentType())
         .set(EXPERIMENT_DOCUMENTS.SIZE_BYTES, metadata.sizeBytes())
-        .set(EXPERIMENT_DOCUMENTS.UPLOADED_BY, currentUserProvider.requireCurrentUsername())
+        .set(EXPERIMENT_DOCUMENTS.UPLOADED_BY, uploadedBy)
         .returning()
         .fetchSingle(JooqExperimentDocumentRepository::toDomain);
   }

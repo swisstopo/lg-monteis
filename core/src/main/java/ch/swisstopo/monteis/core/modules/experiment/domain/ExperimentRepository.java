@@ -52,6 +52,14 @@ public interface ExperimentRepository {
   Experiment getById(UUID id);
 
   /**
+   * Checks that an experiment exists and is visible to the caller, without loading it.
+   *
+   * @throws ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException if the
+   *     experiment does not exist or is hidden from the caller
+   */
+  void requireVisible(UUID id);
+
+  /**
    * Retrieves a page of {@link Experiment}s
    *
    * @param request the requested page, together with an optional sort/filter model
