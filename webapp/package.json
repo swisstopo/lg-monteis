@@ -29,7 +29,7 @@
     "@angular/router": "^22.1.6",
     "@giro3d/giro3d": "^2.0.4",
     "@ngx-translate/core": "^18.0.0",
-    "@scion/components": "^22.3.0",
+    "@scion/components": "^22.4.0",
     "@scion/microfrontend-platform": "^3.0.0",
     "@scion/toolkit": "^2.2.0",
     "@scion/workbench": "22.0.0-beta.2",
