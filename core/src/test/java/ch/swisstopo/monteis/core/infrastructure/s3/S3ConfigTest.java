@@ -18,12 +18,14 @@ class S3ConfigTest {
 
   @Test
   void should_talk_to_aws_without_a_local_endpoint() {
+    // when / then
     contextRunner.run(
         context -> assertThat(endpointOverride(context.getBean(S3Client.class))).isNull());
   }
 
   @Test
   void should_talk_to_the_local_s3_mock_with_a_local_endpoint() {
+    // when / then
     contextRunner
         .withPropertyValues("monteis.documents.s3.local-endpoint=http://localhost:9010")
         .run(
@@ -34,6 +36,7 @@ class S3ConfigTest {
 
   @Test
   void should_not_start_without_a_bucket() {
+    // when / then
     contextRunner
         .withPropertyValues("monteis.documents.s3.bucket=")
         .run(context -> assertThat(context).hasFailed());

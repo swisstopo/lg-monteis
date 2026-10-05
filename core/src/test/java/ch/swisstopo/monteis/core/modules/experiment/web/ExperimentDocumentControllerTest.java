@@ -45,6 +45,7 @@ import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequ
 class ExperimentDocumentControllerTest {
 
   private static final String DOCUMENTS = "/api/experiments/{id}/documents";
+  private static final String DOCUMENT_CONTENT = DOCUMENTS + "/{documentId}/content";
   private static final byte[] CONTENT = "%PDF-1.7".getBytes(StandardCharsets.UTF_8);
   private static final ExperimentDocument DOCUMENT =
       new ExperimentDocument(
@@ -59,8 +60,10 @@ class ExperimentDocumentControllerTest {
 
   @Test
   void should_list_the_documents_of_an_experiment() throws Exception {
+    // given
     given(service.getDocuments(ASSIGNED_EXPERIMENT)).willReturn(List.of(DOCUMENT));
 
+    // when / then
     mockMvc
         .perform(get(DOCUMENTS, ASSIGNED_EXPERIMENT).with(jwt()))
         .andExpect(status().isOk())
@@ -75,9 +78,11 @@ class ExperimentDocumentControllerTest {
 
   @Test
   void should_answer_404_for_the_documents_of_a_hidden_experiment() throws Exception {
+    // given
     given(service.getDocuments(OTHER_EXPERIMENT))
         .willThrow(new ObjectNotFoundException(Experiment.class));
 
+    // when / then
     mockMvc
         .perform(get(DOCUMENTS, OTHER_EXPERIMENT).with(jwt()))
         .andExpect(status().isNotFound())
@@ -86,9 +91,11 @@ class ExperimentDocumentControllerTest {
 
   @Test
   void should_store_an_upload_and_answer_201() throws Exception {
+    // given
     given(service.upload(eq(ASSIGNED_EXPERIMENT), any(), any(InputStream.class)))
         .willReturn(DOCUMENT);
 
+    // when / then
     mockMvc
         .perform(
             uploadRequest(ASSIGNED_EXPERIMENT, file("C:\\Users\\pi\\Bericht Mai.pdf", CONTENT))
@@ -107,6 +114,7 @@ class ExperimentDocumentControllerTest {
 
   @Test
   void should_reject_an_empty_upload() throws Exception {
+    // when / then
     mockMvc
         .perform(
             uploadRequest(ASSIGNED_EXPERIMENT, file("empty.pdf", new byte[0]))
@@ -119,6 +127,7 @@ class ExperimentDocumentControllerTest {
 
   @Test
   void should_forbid_an_upload_to_an_experiment_the_caller_may_only_read() throws Exception {
+    // when / then
     mockMvc
         .perform(
             uploadRequest(OTHER_EXPERIMENT, file("report.pdf", CONTENT))
@@ -131,13 +140,13 @@ class ExperimentDocumentControllerTest {
 
   @Test
   void should_stream_a_document_as_attachment() throws Exception {
+    // given
     given(service.getDocument(ASSIGNED_EXPERIMENT, DOCUMENT.id())).willReturn(DOCUMENT);
     given(service.openContent(DOCUMENT)).willReturn(new ByteArrayInputStream(CONTENT));
 
+    // when / then
     mockMvc
-        .perform(
-            get(DOCUMENTS + "/{documentId}/content", ASSIGNED_EXPERIMENT, DOCUMENT.id())
-                .with(jwt()))
+        .perform(get(DOCUMENT_CONTENT, ASSIGNED_EXPERIMENT, DOCUMENT.id()).with(jwt()))
         .andExpect(status().isOk())
         .andExpect(header().string("Content-Type", "application/pdf"))
         .andExpect(header().longValue("Content-Length", CONTENT.length))
@@ -151,14 +160,16 @@ class ExperimentDocumentControllerTest {
 
   @Test
   void should_answer_404_for_an_unknown_document() throws Exception {
+    // given
     UUID documentId = UUID.randomUUID();
     given(service.getDocument(ASSIGNED_EXPERIMENT, documentId))
         .willThrow(new ObjectNotFoundException(ExperimentDocument.class));
 
+    // when / then
     mockMvc
-        .perform(
-            get(DOCUMENTS + "/{documentId}/content", ASSIGNED_EXPERIMENT, documentId).with(jwt()))
-        .andExpect(status().isNotFound());
+        .perform(get(DOCUMENT_CONTENT, ASSIGNED_EXPERIMENT, documentId).with(jwt()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.messageKey").value("object.not-found"));
 
     then(service).should(never()).openContent(any());
   }

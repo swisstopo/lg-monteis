@@ -35,13 +35,16 @@ class ExperimentDocumentServiceIT {
 
   @Test
   void should_commit_the_document_row_when_its_content_is_stored() {
+    // given
     String fileName = uniqueFileName();
 
+    // when
     SecurityContextTestSupport.runAsAdmin(
         () ->
             service.upload(
                 SeedData.EXPERIMENT_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream()));
 
+    // then
     assertThat(countDocumentRows(fileName)).isEqualTo(1);
   }
 

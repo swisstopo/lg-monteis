@@ -122,7 +122,7 @@ describe('ExperimentTable', () => {
 
   it('reloads its rows whenever an experiment is saved', async () => {
     const view = await render(EXPERIMENT_USER);
-    await view.gridReady();
+    await view.gridReady(experimentService);
     const loadsBefore = experimentService.getExperiments.mock.calls.length;
 
     experimentService.experimentsSaved.set(1);
@@ -135,7 +135,7 @@ describe('ExperimentTable', () => {
 
   it('downloads the experiments as CSV', async () => {
     const view = await render(EXPERIMENT_USER);
-    await view.gridReady();
+    await view.gridReady(experimentService);
 
     view.button('experiment.tableHeader.download')!.click();
 
@@ -146,7 +146,7 @@ describe('ExperimentTable', () => {
   it('toasts a failed CSV download', async () => {
     experimentService.getExperimentsCsv.mockRejectedValue(new Error('500'));
     const view = await render(EXPERIMENT_USER);
-    await view.gridReady();
+    await view.gridReady(experimentService);
 
     view.button('experiment.tableHeader.download')!.click();
 
@@ -169,9 +169,12 @@ class TableView {
     );
   }
 
-  /** Waits until the grid is ready, the CSV download needs its filter and sort model. */
-  async gridReady(): Promise<void> {
-    await vi.waitFor(() => expect(this.fixture.componentInstance['gridApi']()).toBeDefined());
+  /**
+   * Waits until the grid asked for its first rows: it is ready then, and the CSV download needs
+   * its filter and sort model.
+   */
+  async gridReady(experimentService: { getExperiments: ReturnType<typeof vi.fn> }): Promise<void> {
+    await vi.waitFor(() => expect(experimentService.getExperiments).toHaveBeenCalled());
   }
 
   async settle(): Promise<void> {

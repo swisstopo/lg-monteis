@@ -281,16 +281,15 @@ class DialogView {
   }
 
   buttonLabels(): string[] {
-    return [...this.element.querySelectorAll('mat-dialog-actions button')].map(
-      (button) => button.textContent?.trim().split(/\s+/).pop() ?? '',
-    );
+    return this.actionButtons().map(labelOf);
   }
 
   button(label: string): HTMLButtonElement {
-    return [...this.element.querySelectorAll<HTMLButtonElement>('mat-dialog-actions button')].find(
-      (button) =>
-        button.textContent?.includes(label) && !button.textContent?.includes(label + 'AndCreate'),
-    )!;
+    return this.actionButtons().find((button) => labelOf(button) === label)!;
+  }
+
+  private actionButtons(): HTMLButtonElement[] {
+    return [...this.element.querySelectorAll<HTMLButtonElement>('mat-dialog-actions button')];
   }
 
   async type(field: keyof typeof LABELS, value: string): Promise<void> {
@@ -308,4 +307,9 @@ class DialogView {
     this.button(label).click();
     await this.fixture.whenStable();
   }
+}
+
+// the icons render through fontIcon classes, the button's text is its label alone
+function labelOf(button: HTMLButtonElement): string {
+  return button.textContent?.trim() ?? '';
 }

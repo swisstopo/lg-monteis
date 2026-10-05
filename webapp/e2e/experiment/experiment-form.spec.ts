@@ -11,6 +11,9 @@ import {
 import { uniqueExperimentName } from '../support/experiments';
 import { openAppAs, SEED_USERS } from '../support/login';
 
+// inside E2E_EXPERIMENT_DIALOG_PERIOD and as locale-proof: day and month read the same
+const UPDATED_PERIOD = { start: '02/02/2030', end: '04/04/2030' };
+
 test.beforeEach(async ({ page }) => {
   await openAppAs(page, SEED_USERS.admin);
   await openExperimentTable(page);
@@ -38,8 +41,8 @@ test('should update experiment', async ({ page }) => {
   const updatedName = uniqueExperimentName();
   await dialog.getByLabel('Experiment Name').fill(updatedName);
   await dialog.getByLabel('Comment').fill('Updated experiment comment.');
-  await dialog.getByLabel('Start Date').fill('02/02/2030');
-  await dialog.getByLabel('End Date').fill('04/04/2030');
+  await dialog.getByLabel('Start Date').fill(UPDATED_PERIOD.start);
+  await dialog.getByLabel('End Date').fill(UPDATED_PERIOD.end);
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(dialog).toHaveCount(0);
 

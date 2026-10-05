@@ -38,6 +38,7 @@ class CurrentUserProviderTest {
 
   @Test
   void should_have_no_user_without_authentication() {
+    // when / then
     assertAll(
         () -> assertNull(provider.getCurrentUserHandle()),
         () -> assertThrows(IllegalStateException.class, provider::requireCurrentUsername));

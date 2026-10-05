@@ -89,6 +89,7 @@ class S3DocumentStorageIT {
 
   @Test
   void should_fail_to_load_a_document_that_was_never_stored() {
+    // when / then
     assertThrows(NoSuchKeyException.class, () -> storage.load(document(1)));
   }
 

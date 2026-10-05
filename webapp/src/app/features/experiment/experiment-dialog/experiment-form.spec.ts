@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { form } from '@angular/forms/signals';
+import { FieldTree, form } from '@angular/forms/signals';
 import { ExperimentResponseDto } from '@core/generated';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { describe, expect, it } from 'vitest';
@@ -81,24 +81,18 @@ describe('experimentSchema', () => {
   function errorsOf(model: ExperimentFormModel) {
     const field = experimentForm(model);
     return {
-      name: field
-        .name()
-        .errors()
-        .map((error) => error.message),
-      comment: field
-        .comment()
-        .errors()
-        .map((error) => error.message),
-      start: field.period
-        .start()
-        .errors()
-        .map((error) => error.message),
-      end: field.period
-        .end()
-        .errors()
-        .map((error) => error.message),
+      name: messagesOf(field.name),
+      comment: messagesOf(field.comment),
+      start: messagesOf(field.period.start),
+      end: messagesOf(field.period.end),
       valid: field().valid(),
     };
+  }
+
+  function messagesOf(field: FieldTree<unknown>): (string | undefined)[] {
+    return field()
+      .errors()
+      .map((error) => error.message);
   }
 
   it('accepts a valid experiment', () => {
