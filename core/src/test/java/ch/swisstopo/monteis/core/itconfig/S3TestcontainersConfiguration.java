@@ -25,6 +25,7 @@ public class S3TestcontainersConfiguration {
 
   /** An S3Mock that already holds {@link #BUCKET}. */
   public static GenericContainer<?> s3Mock() {
+    // the same version as the s3 service of docker/compose.yml, bump both together
     return new GenericContainer<>("adobe/s3mock:5.2.3")
         .withEnv("COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS", BUCKET)
         .withExposedPorts(PORT)

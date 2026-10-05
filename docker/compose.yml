@@ -201,7 +201,8 @@ services:
   # ── local S3 for experiment documents (MON-171) ────────────────────────────
   # stands in for the monteis-dev-hot-storage bucket. Adobe S3Mock (Apache 2.0),
   # MinIO is AGPL and LocalStack needs an account. host port 9010, because 9090
-  # is taken by the openapi profile of core
+  # is taken by the openapi profile of core. S3TestcontainersConfiguration runs the
+  # same image for the e2e tests, bump both together
   s3:
     image: adobe/s3mock:5.2.3
     container_name: monteis-s3
