@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import ch.swisstopo.monteis.core.itconfig.S3TestcontainersConfiguration;
+import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -95,9 +96,7 @@ class S3DocumentStorageIT {
     return new ExperimentDocument(
         UUID.randomUUID(),
         UUID.randomUUID(),
-        "report.pdf",
-        "application/pdf",
-        sizeBytes,
+        new DocumentMetadata("report.pdf", "application/pdf", sizeBytes),
         OffsetDateTime.now(),
         "alice");
   }

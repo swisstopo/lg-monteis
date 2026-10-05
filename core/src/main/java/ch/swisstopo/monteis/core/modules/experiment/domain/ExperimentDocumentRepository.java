@@ -12,7 +12,7 @@ public interface ExperimentDocumentRepository {
    * @throws org.springframework.dao.PermissionDeniedDataAccessException if the caller may not
    *     write the experiment
    */
-  ExperimentDocument create(UUID experimentId, DocumentUpload upload);
+  ExperimentDocument create(UUID experimentId, DocumentMetadata metadata);
 
   /**
    * Retrieves the documents of an experiment, newest first.

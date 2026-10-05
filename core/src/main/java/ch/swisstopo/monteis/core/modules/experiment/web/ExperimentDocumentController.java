@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentUpload;
+import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import ch.swisstopo.monteis.core.modules.experiment.service.DocumentDownload;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentDocumentService;
@@ -66,10 +66,9 @@ public class ExperimentDocumentController {
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID experimentId,
       @RequestPart("file") MultipartFile file)
       throws IOException {
-    DocumentUpload upload =
-        DocumentUpload.of(file.getOriginalFilename(), file.getContentType(), file.getSize());
+    DocumentMetadata metadata = mapper.toMetadata(file);
     try (InputStream content = file.getInputStream()) {
-      ExperimentDocument document = service.upload(experimentId, upload, content);
+      ExperimentDocument document = service.upload(experimentId, metadata, content);
       return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDto(document));
     }
   }
@@ -88,15 +87,15 @@ public class ExperimentDocumentController {
   public ResponseEntity<Resource> downloadDocument(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID experimentId, @PathVariable UUID documentId) {
     DocumentDownload download = service.download(experimentId, documentId);
-    ExperimentDocument document = download.document();
+    DocumentMetadata metadata = download.document().metadata();
     ContentDisposition disposition =
         ContentDisposition.attachment()
-            .filename(document.fileName(), StandardCharsets.UTF_8)
+            .filename(metadata.fileName(), StandardCharsets.UTF_8)
             .build();
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-        .contentType(MediaType.parseMediaType(document.contentType()))
-        .contentLength(document.sizeBytes())
+        .contentType(MediaType.parseMediaType(metadata.contentType()))
+        .contentLength(metadata.sizeBytes())
         .body(new InputStreamResource(download.content()));
   }
 }

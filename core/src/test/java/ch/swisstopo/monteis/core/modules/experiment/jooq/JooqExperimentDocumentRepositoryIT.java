@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentUpload;
+import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import java.util.List;
 import java.util.UUID;
@@ -30,8 +30,8 @@ class JooqExperimentDocumentRepositoryIT {
       UUID.fromString("00000000-0000-7000-8000-000000000301");
   private static final UUID EXPERIMENT_BETA =
       UUID.fromString("00000000-0000-7000-8000-000000000302");
-  private static final DocumentUpload REPORT =
-      new DocumentUpload("report.pdf", "application/pdf", 42);
+  private static final DocumentMetadata REPORT =
+      new DocumentMetadata("report.pdf", "application/pdf", 42);
 
   @Autowired private JooqExperimentDocumentRepository repository;
   @Autowired private DSLContext dsl;
@@ -45,9 +45,7 @@ class JooqExperimentDocumentRepositoryIT {
 
           assertThat(document.id()).isNotNull();
           assertThat(document.experimentId()).isEqualTo(EXPERIMENT_ALPHA);
-          assertThat(document.fileName()).isEqualTo("report.pdf");
-          assertThat(document.contentType()).isEqualTo("application/pdf");
-          assertThat(document.sizeBytes()).isEqualTo(42);
+          assertThat(document.metadata()).isEqualTo(REPORT);
           assertThat(document.uploadedAt()).isNotNull();
           assertThat(document.uploadedBy()).isEqualTo("test");
           assertThat(repository.getById(EXPERIMENT_ALPHA, document.id())).isEqualTo(document);
@@ -61,7 +59,8 @@ class JooqExperimentDocumentRepositoryIT {
         () -> {
           ExperimentDocument older = repository.create(EXPERIMENT_ALPHA, REPORT);
           ExperimentDocument newer =
-              repository.create(EXPERIMENT_ALPHA, new DocumentUpload("plan.txt", "text/plain", 1));
+              repository.create(
+                  EXPERIMENT_ALPHA, new DocumentMetadata("plan.txt", "text/plain", 1));
           repository.create(EXPERIMENT_BETA, REPORT);
 
           assertThat(repository.findByExperimentId(EXPERIMENT_ALPHA))

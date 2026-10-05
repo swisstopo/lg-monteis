@@ -30,10 +30,10 @@ public class S3DocumentStorage implements DocumentStorage {
         PutObjectRequest.builder()
             .bucket(properties.bucket())
             .key(keyOf(document))
-            .contentType(document.contentType())
-            .contentLength(document.sizeBytes())
+            .contentType(document.metadata().contentType())
+            .contentLength(document.metadata().sizeBytes())
             .build();
-    s3.putObject(request, RequestBody.fromInputStream(content, document.sizeBytes()));
+    s3.putObject(request, RequestBody.fromInputStream(content, document.metadata().sizeBytes()));
   }
 
   @Override

@@ -8,8 +8,8 @@ import static org.mockito.BDDMockito.willThrow;
 
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentStorage;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentUpload;
 import java.io.InputStream;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -68,8 +68,8 @@ class ExperimentDocumentServiceIT {
     return "upload-" + UUID.randomUUID() + ".pdf";
   }
 
-  private static DocumentUpload upload(String fileName) {
-    return new DocumentUpload(fileName, "application/pdf", 4);
+  private static DocumentMetadata upload(String fileName) {
+    return new DocumentMetadata(fileName, "application/pdf", 4);
   }
 
   // in a transaction of its own, RLS fails closed outside one and would always count 0

@@ -5,7 +5,7 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_DOCUMEN
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentDocumentsRecord;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentUpload;
+import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentRepository;
 import java.util.List;
@@ -27,12 +27,12 @@ public class JooqExperimentDocumentRepository implements ExperimentDocumentRepos
 
   @Override
   @Transactional
-  public ExperimentDocument create(UUID experimentId, DocumentUpload upload) {
+  public ExperimentDocument create(UUID experimentId, DocumentMetadata metadata) {
     return dsl.insertInto(EXPERIMENT_DOCUMENTS)
         .set(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID, experimentId)
-        .set(EXPERIMENT_DOCUMENTS.FILE_NAME, upload.fileName())
-        .set(EXPERIMENT_DOCUMENTS.CONTENT_TYPE, upload.contentType())
-        .set(EXPERIMENT_DOCUMENTS.SIZE_BYTES, upload.sizeBytes())
+        .set(EXPERIMENT_DOCUMENTS.FILE_NAME, metadata.fileName())
+        .set(EXPERIMENT_DOCUMENTS.CONTENT_TYPE, metadata.contentType())
+        .set(EXPERIMENT_DOCUMENTS.SIZE_BYTES, metadata.sizeBytes())
         .set(EXPERIMENT_DOCUMENTS.UPLOADED_BY, currentUserProvider.getCurrentUsername())
         .returning()
         .fetchSingle(JooqExperimentDocumentRepository::toDomain);
@@ -61,9 +61,10 @@ public class JooqExperimentDocumentRepository implements ExperimentDocumentRepos
     return new ExperimentDocument(
         documentRecord.getId(),
         documentRecord.getExperimentId(),
-        documentRecord.getFileName(),
-        documentRecord.getContentType(),
-        documentRecord.getSizeBytes(),
+        new DocumentMetadata(
+            documentRecord.getFileName(),
+            documentRecord.getContentType(),
+            documentRecord.getSizeBytes()),
         documentRecord.getUploadedAt(),
         documentRecord.getUploadedBy());
   }

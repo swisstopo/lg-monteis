@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentUpload;
+import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import ch.swisstopo.monteis.core.modules.experiment.service.DocumentDownload;
@@ -50,9 +50,7 @@ class ExperimentDocumentControllerTest {
       new ExperimentDocument(
           UUID.randomUUID(),
           ASSIGNED_EXPERIMENT,
-          "Bericht Mai.pdf",
-          "application/pdf",
-          CONTENT.length,
+          new DocumentMetadata("Bericht Mai.pdf", "application/pdf", CONTENT.length),
           OffsetDateTime.of(2026, 2, 13, 9, 3, 26, 0, ZoneOffset.UTC),
           "experiment_pi");
 
@@ -103,7 +101,7 @@ class ExperimentDocumentControllerTest {
         .should()
         .upload(
             eq(ASSIGNED_EXPERIMENT),
-            eq(new DocumentUpload("Bericht Mai.pdf", "application/pdf", CONTENT.length)),
+            eq(new DocumentMetadata("Bericht Mai.pdf", "application/pdf", CONTENT.length)),
             any(InputStream.class));
   }
 

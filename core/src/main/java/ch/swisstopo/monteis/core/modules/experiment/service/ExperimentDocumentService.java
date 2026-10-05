@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.core.modules.experiment.service;
 
+import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentStorage;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentUpload;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
@@ -29,9 +29,10 @@ public class ExperimentDocumentService {
   // insert first, so RLS rejects a forbidden upload before anything reaches the storage, and a
   // failed store rolls the insert back
   @Transactional
-  public ExperimentDocument upload(UUID experimentId, DocumentUpload upload, InputStream content) {
+  public ExperimentDocument upload(
+      UUID experimentId, DocumentMetadata metadata, InputStream content) {
     experimentRepository.getById(experimentId);
-    ExperimentDocument document = documentRepository.create(experimentId, upload);
+    ExperimentDocument document = documentRepository.create(experimentId, metadata);
     storage.store(document, content);
     return document;
   }
