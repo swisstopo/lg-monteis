@@ -34,6 +34,7 @@ import { FormErrorService } from '@core/utils/form-error.service';
 import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { FORM_DIALOG_CONFIG } from '@ui/dialog/form-dialog.config';
 import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
 
 type DialogMode = 'create' | 'edit' | 'view';
@@ -41,9 +42,7 @@ type DialogMode = 'create' | 'edit' | 'view';
 /** Opens the dialog for a new experiment, or for `experimentId` (read-only if not writable). */
 export function openExperimentDialog(dialog: MatDialog, experimentId?: string) {
   return dialog.open(ExperimentDialog, {
-    width: '60vw',
-    maxWidth: '1200px',
-    autoFocus: true,
+    ...FORM_DIALOG_CONFIG,
     bindings: experimentId ? [inputBinding('experimentId', () => experimentId)] : [],
   });
 }

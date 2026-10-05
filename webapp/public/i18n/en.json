@@ -304,13 +304,15 @@
       "start": {
         "label": "Start Date",
         "validation": {
-          "required": "Experiment start date is required"
+          "required": "Experiment start date is required",
+          "bounds": "Start date must not be after end date"
         }
       },
       "end": {
         "label": "End Date",
         "validation": {
-          "required": "Experiment end date is required"
+          "required": "Experiment end date is required",
+          "bounds": "End date must not be before start date"
         }
       }
     },
@@ -320,10 +322,8 @@
     "success": "Experiment saved successfully.",
     "error": {
       "unspecified": {
-        "title": "Error",
         "message": "An unspecified error occurred while saving the experiment."
       },
-      "noId": "No experiment id provided",
       "connection": "Failed to connect to the backend server.",
       "downloadFailed": "Failed to download experiments as CSV."
     },
@@ -332,18 +332,6 @@
       "create": "Create Experiment",
       "edit": "Edit Experiment",
       "view": "View"
-    },
-    "experimentDate": {
-      "to": {
-        "validation": {
-          "bounds": "End date must be after start date"
-        }
-      },
-      "from": {
-        "validation": {
-          "bounds": "Start date must be before end date"
-        }
-      }
     },
     "button": {
       "cancel": "Cancel",

@@ -140,7 +140,7 @@ describe('experimentSchema', () => {
       period: { start: new Date(2030, 4, 5), end: new Date(2030, 0, 1) },
     });
 
-    expect(errors.start).toEqual(['experiment.experimentDate.from.validation.bounds']);
-    expect(errors.end).toEqual(['experiment.experimentDate.to.validation.bounds']);
+    expect(errors.start).toEqual(['experiment.period.start.validation.bounds']);
+    expect(errors.end).toEqual(['experiment.period.end.validation.bounds']);
   });
 });

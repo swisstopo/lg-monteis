@@ -109,7 +109,7 @@ test('should reject invalid date bounds', async ({ page }) => {
   await dialog.getByLabel('End Date').fill('01/01/2030');
   await dialog.getByLabel('End Date').blur();
 
-  await expect(page.getByText('End date must be after start date')).toBeVisible();
+  await expect(page.getByText('End date must not be before start date')).toBeVisible();
 });
 
 test('should close dialog on cancel', async ({ page }) => {

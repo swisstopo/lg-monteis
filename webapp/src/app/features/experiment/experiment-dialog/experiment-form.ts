@@ -41,25 +41,31 @@ export function toWriteDto(
 }
 
 // the messages are signals, so they follow a language switch
-export function experimentSchema(i18n: TranslateService) {
+export function experimentSchema(translateService: TranslateService) {
   return schema<ExperimentFormModel>((path) => {
-    required(path.name, { message: i18n.translate('experiment.name.validation.required') });
-    minLength(path.name, 2, { message: i18n.translate('experiment.name.validation.minLength') });
-    maxLength(path.name, 50, { message: i18n.translate('experiment.name.validation.maxLength') });
+    required(path.name, {
+      message: translateService.translate('experiment.name.validation.required'),
+    });
+    minLength(path.name, 2, {
+      message: translateService.translate('experiment.name.validation.minLength'),
+    });
+    maxLength(path.name, 50, {
+      message: translateService.translate('experiment.name.validation.maxLength'),
+    });
     maxLength(path.comment, 4096, {
-      message: i18n.translate('experiment.comment.validation.maxLength'),
+      message: translateService.translate('experiment.comment.validation.maxLength'),
     });
     required(path.period.start, {
-      message: i18n.translate('experiment.period.start.validation.required'),
+      message: translateService.translate('experiment.period.start.validation.required'),
     });
     required(path.period.end, {
-      message: i18n.translate('experiment.period.end.validation.required'),
+      message: translateService.translate('experiment.period.end.validation.required'),
     });
     maxDate(path.period.start, ({ valueOf }) => valueOf(path.period.end), {
-      message: i18n.translate('experiment.experimentDate.from.validation.bounds'),
+      message: translateService.translate('experiment.period.start.validation.bounds'),
     });
     minDate(path.period.end, ({ valueOf }) => valueOf(path.period.start), {
-      message: i18n.translate('experiment.experimentDate.to.validation.bounds'),
+      message: translateService.translate('experiment.period.end.validation.bounds'),
     });
   });
 }

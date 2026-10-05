@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  inputBinding,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import {
   applyEach,
   disabled,
@@ -14,7 +23,7 @@ import {
 import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatButton } from '@angular/material/button';
 import { MatOption } from '@angular/material/core';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
@@ -35,6 +44,7 @@ import { ExperimentService } from '@features/experiment/services/experiment.serv
 import { Das, getDasMetadata, getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { FORM_DIALOG_CONFIG } from '@ui/dialog/form-dialog.config';
 
 // Canonical 8-4-4-4-12 form, the only shape java.util.UUID round-trips. Deliberately not
 // version-restricted: the backend accepts any UUID here, and Fulcrum owns the ids we store.
@@ -144,6 +154,14 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
     },
     parameters,
   };
+}
+
+/** Opens the dialog for a new sensor, or for editing `sensorId`. */
+export function openSensorDialog(dialog: MatDialog, sensorId?: string) {
+  return dialog.open(SensorEdit, {
+    ...FORM_DIALOG_CONFIG,
+    bindings: sensorId ? [inputBinding('sensorId', () => sensorId)] : [],
+  });
 }
 
 @Component({

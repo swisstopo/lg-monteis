@@ -1,11 +1,11 @@
-import { Component, effect, inject, inputBinding, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { SensorParameterRowResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
-import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
+import { openSensorDialog } from '@features/sensor/sensor-edit/sensor-edit';
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
@@ -66,28 +66,19 @@ export default class SensorTable {
     this.gridApi.set(api);
   }
 
-  onWrappedRow(row: SensorParameterRowResponseDto) {
-    console.log(row);
-  }
-
   onSelectionChanged(rows: SensorParameterRowResponseDto[]): void {
     this.selectedSensorId.set(rows[0]?.sensorId);
   }
 
   onCreate(): void {
-    this.dialog.open(SensorEdit, { width: '60vw', maxWidth: '1200px', autoFocus: true });
+    openSensorDialog(this.dialog);
   }
 
   onEdit(): void {
     const sensorId = this.selectedSensorId();
-    if (sensorId === undefined) return;
-
-    this.dialog.open(SensorEdit, {
-      width: '60vw',
-      maxWidth: '1200px',
-      autoFocus: true,
-      bindings: [inputBinding('sensorId', () => sensorId)],
-    });
+    if (sensorId !== undefined) {
+      openSensorDialog(this.dialog, sensorId);
+    }
   }
 
   async onDownload(): Promise<void> {
