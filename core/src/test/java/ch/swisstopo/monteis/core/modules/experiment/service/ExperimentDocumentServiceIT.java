@@ -40,9 +40,10 @@ class ExperimentDocumentServiceIT {
     String fileName = uniqueFileName();
 
     SecurityContextTestSupport.runAsAdmin(
-        () -> service.upload(EXPERIMENT_ALPHA, upload(fileName), InputStream.nullInputStream()));
+        () ->
+            service.upload(EXPERIMENT_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream()));
 
-    assertThat(documentsNamed(fileName)).isEqualTo(1);
+    assertThat(countDocumentRows(fileName)).isEqualTo(1);
   }
 
   @Test
@@ -58,22 +59,22 @@ class ExperimentDocumentServiceIT {
                 IllegalStateException.class,
                 () ->
                     service.upload(
-                        EXPERIMENT_ALPHA, upload(fileName), InputStream.nullInputStream())));
+                        EXPERIMENT_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream())));
 
     // then
-    assertThat(documentsNamed(fileName)).isZero();
+    assertThat(countDocumentRows(fileName)).isZero();
   }
 
   private static String uniqueFileName() {
     return "upload-" + UUID.randomUUID() + ".pdf";
   }
 
-  private static DocumentMetadata upload(String fileName) {
+  private static DocumentMetadata pdfMetadata(String fileName) {
     return new DocumentMetadata(fileName, "application/pdf", 4);
   }
 
   // in a transaction of its own, RLS fails closed outside one and would always count 0
-  private int documentsNamed(String fileName) {
+  private int countDocumentRows(String fileName) {
     AtomicInteger count = new AtomicInteger();
     SecurityContextTestSupport.runAsAdmin(
         () ->

@@ -91,7 +91,7 @@ class ExperimentDocumentControllerTest {
 
     mockMvc
         .perform(
-            upload(ASSIGNED_EXPERIMENT, file("C:\\Users\\pi\\Bericht Mai.pdf", CONTENT))
+            uploadRequest(ASSIGNED_EXPERIMENT, file("C:\\Users\\pi\\Bericht Mai.pdf", CONTENT))
                 .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(DOCUMENT.id().toString()))
@@ -109,7 +109,7 @@ class ExperimentDocumentControllerTest {
   void should_reject_an_empty_upload() throws Exception {
     mockMvc
         .perform(
-            upload(ASSIGNED_EXPERIMENT, file("empty.pdf", new byte[0]))
+            uploadRequest(ASSIGNED_EXPERIMENT, file("empty.pdf", new byte[0]))
                 .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
         .andExpect(status().isUnprocessableContent())
         .andExpect(jsonPath("$.messageKey").value("document.validation.empty"));
@@ -121,7 +121,7 @@ class ExperimentDocumentControllerTest {
   void should_forbid_an_upload_to_an_experiment_the_caller_may_only_read() throws Exception {
     mockMvc
         .perform(
-            upload(OTHER_EXPERIMENT, file("report.pdf", CONTENT))
+            uploadRequest(OTHER_EXPERIMENT, file("report.pdf", CONTENT))
                 .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.messageKey").value("access.denied"));
@@ -165,7 +165,7 @@ class ExperimentDocumentControllerTest {
     return new MockMultipartFile("file", originalFileName, "application/pdf", content);
   }
 
-  private static MockMultipartHttpServletRequestBuilder upload(
+  private static MockMultipartHttpServletRequestBuilder uploadRequest(
       UUID experimentId, MockMultipartFile file) {
     return multipart(DOCUMENTS, experimentId).file(file).with(csrf());
   }
