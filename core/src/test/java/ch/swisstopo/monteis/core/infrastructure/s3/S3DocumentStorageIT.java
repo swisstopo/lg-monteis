@@ -39,11 +39,11 @@ class S3DocumentStorageIT {
   static void createStorage() {
     DocumentStorageProperties properties =
         new DocumentStorageProperties(
-            S3TestcontainersConfiguration.BUCKET, "eu-central-1", KEY_PREFIX);
-    s3 =
-        new S3Config()
-            .localS3Client(
-                properties, URI.create(S3TestcontainersConfiguration.endpointOf(S3_MOCK)));
+            S3TestcontainersConfiguration.BUCKET,
+            "eu-central-1",
+            KEY_PREFIX,
+            URI.create(S3TestcontainersConfiguration.endpointOf(S3_MOCK)));
+    s3 = new S3Config().s3Client(properties);
     storage = new S3DocumentStorage(s3, properties);
   }
 
