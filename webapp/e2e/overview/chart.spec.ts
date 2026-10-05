@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { format } from 'date-fns';
+import { format, subMinutes } from 'date-fns';
 import { loginAsAdmin } from '../support/login';
 
 // Both time fields use the same 'HH:mm' placeholder, so locate all four range fields by their
@@ -59,7 +59,10 @@ test('should require a date range before plotting', async ({ page }) => {
 test('should default the time fields to a full 24h day in HH:mm format', async ({ page }) => {
   await expect(startTime(page)).toHaveValue('00:00');
 
-  await expect(endTime(page)).toHaveValue(format(new Date(), 'HH:mm'));
+  // the page took "now" when it opened, the clock may have passed a minute since
+  const now = new Date();
+  const minutes = [subMinutes(now, 1), now].map((time) => format(time, 'HH:mm'));
+  await expect(endTime(page)).toHaveValue(new RegExp(`^(${minutes.join('|')})$`));
 });
 
 test('should keep typed times in 24h format instead of converting them to AM/PM', async ({
