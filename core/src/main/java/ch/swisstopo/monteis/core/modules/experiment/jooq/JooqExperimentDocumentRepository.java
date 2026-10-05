@@ -33,7 +33,7 @@ public class JooqExperimentDocumentRepository implements ExperimentDocumentRepos
         .set(EXPERIMENT_DOCUMENTS.FILE_NAME, metadata.fileName())
         .set(EXPERIMENT_DOCUMENTS.CONTENT_TYPE, metadata.contentType())
         .set(EXPERIMENT_DOCUMENTS.SIZE_BYTES, metadata.sizeBytes())
-        .set(EXPERIMENT_DOCUMENTS.UPLOADED_BY, currentUserProvider.getCurrentUsername())
+        .set(EXPERIMENT_DOCUMENTS.UPLOADED_BY, currentUserProvider.requireCurrentUsername())
         .returning()
         .fetchSingle(JooqExperimentDocumentRepository::toDomain);
   }

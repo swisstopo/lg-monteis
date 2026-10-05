@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.infrastructure.security;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,18 +33,18 @@ class CurrentUserProviderTest {
     // when / then
     assertAll(
         () -> assertEquals(subject.toString(), provider.getCurrentUserHandle()),
-        () -> assertEquals("alice", provider.getCurrentUsername()));
+        () -> assertEquals("alice", provider.requireCurrentUsername()));
   }
 
   @Test
-  void should_return_null_without_authentication() {
+  void should_have_no_user_without_authentication() {
     assertAll(
         () -> assertNull(provider.getCurrentUserHandle()),
-        () -> assertNull(provider.getCurrentUsername()));
+        () -> assertThrows(IllegalStateException.class, provider::requireCurrentUsername));
   }
 
   @Test
-  void should_return_null_for_another_principal_type() {
+  void should_have_no_user_for_another_principal_type() {
     // given
     SecurityContextHolder.getContext()
         .setAuthentication(new TestingAuthenticationToken("someone", "secret"));
@@ -51,6 +52,6 @@ class CurrentUserProviderTest {
     // when / then
     assertAll(
         () -> assertNull(provider.getCurrentUserHandle()),
-        () -> assertNull(provider.getCurrentUsername()));
+        () -> assertThrows(IllegalStateException.class, provider::requireCurrentUsername));
   }
 }
