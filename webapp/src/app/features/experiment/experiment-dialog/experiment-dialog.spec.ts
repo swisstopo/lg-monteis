@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, input } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef } from '@angular/material/dialog';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ErrorDto, ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
@@ -9,7 +9,7 @@ import { ExperimentDocuments } from '@features/experiment/experiment-documents/e
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ExperimentDialog, openExperimentDialog } from './experiment-dialog';
+import { ExperimentDialog } from './experiment-dialog';
 
 const EXPERIMENT: ExperimentResponseDto = {
   id: 'experiment-1',
@@ -222,13 +222,13 @@ describe('ExperimentDialog', () => {
       expect(view.title()).toBe('experiment.dialog.title.view');
       await vi.waitFor(() => expect(view.input('name').value).toBe('Mont Terri Alpha'));
       expect(view.input('name').disabled).toBe(true);
-      expect(view.buttonLabels()).toEqual(['experiment.button.close']);
+      expect(view.buttonLabels()).toEqual(['button.close']);
     });
 
     it('offers only Close', async () => {
       const view = await render('experiment-1');
 
-      expect(view.buttonLabels()).toEqual(['experiment.button.close']);
+      expect(view.buttonLabels()).toEqual(['button.close']);
     });
 
     it('shows the documents without upload', async () => {
@@ -236,30 +236,6 @@ describe('ExperimentDialog', () => {
 
       expect(view.documents()?.readOnly()).toBe(true);
     });
-  });
-});
-
-describe('openExperimentDialog', () => {
-  it('opens the dialog for a new experiment', () => {
-    const dialog = { open: vi.fn() };
-
-    openExperimentDialog(dialog as unknown as MatDialog);
-
-    expect(dialog.open).toHaveBeenCalledWith(
-      ExperimentDialog,
-      expect.objectContaining({ bindings: [] }),
-    );
-  });
-
-  it('binds the experiment id and the view-only flag', () => {
-    const dialog = { open: vi.fn() };
-
-    openExperimentDialog(dialog as unknown as MatDialog, {
-      experimentId: 'experiment-1',
-      viewOnly: true,
-    });
-
-    expect(dialog.open.mock.calls[0][1].bindings).toHaveLength(2);
   });
 });
 

@@ -1,14 +1,14 @@
 import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { MatButton } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { SensorParameterRowResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
-import { openSensorDialog } from '@features/sensor/sensor-edit/sensor-edit';
+import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { FormDialogService } from '@ui/dialog/form-dialog.service';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
@@ -25,7 +25,7 @@ import { createColumns } from './columns';
   styleUrl: './sensor-table.scss',
 })
 export default class SensorTable {
-  private readonly dialog = inject(MatDialog);
+  private readonly formDialog = inject(FormDialogService);
   protected sensorService = inject(SensorService);
   private readonly translateService = inject(TranslateService);
   private readonly fileDownloadService = inject(FileDownloadService);
@@ -69,13 +69,13 @@ export default class SensorTable {
   }
 
   onCreate(): void {
-    openSensorDialog(this.dialog);
+    this.formDialog.open(SensorEdit);
   }
 
   onEdit(): void {
     const sensorId = this.selectedSensorId();
     if (sensorId !== undefined) {
-      openSensorDialog(this.dialog, sensorId);
+      this.formDialog.open(SensorEdit, { sensorId });
     }
   }
 

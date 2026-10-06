@@ -1,6 +1,4 @@
-<h2 mat-dialog-title>{{ 'experiment.dialog.title.' + mode() | translate }}</h2>
-
-<mat-dialog-content>
+<app-dialog-layout [title]="'experiment.dialog.title.' + mode() | translate" [mode]="mode()">
   <form id="experimentForm" class="form-layout" [formRoot]="experimentForm">
     <mat-form-field appearance="outline">
       <mat-label>{{ 'experiment.name.label' | translate }}</mat-label>
@@ -38,31 +36,14 @@
   @if (experimentId(); as experimentId) {
     <app-experiment-documents [experimentId]="experimentId" [readOnly]="readOnly()" />
   }
-</mat-dialog-content>
 
-<mat-dialog-actions align="end">
-  @if (readOnly()) {
-    <button matButton="filled" mat-dialog-close>
-      <mat-icon fontIcon="close" />
-      {{ 'experiment.button.close' | translate }}
-    </button>
-  } @else {
-    <button matButton mat-dialog-close>
-      <mat-icon fontIcon="cancel" />
-      {{ 'experiment.button.cancel' | translate }}
-    </button>
-    <button
-      matButton="tonal"
-      type="button"
-      [disabled]="saveDisabled()"
-      (click)="saveAndCreateNew()"
-    >
-      <mat-icon fontIcon="save" />
+  <app-dismiss-button dialog-action-dismiss [kind]="readOnly() ? 'close' : 'cancel'" />
+  <ng-container ngProjectAs="[dialog-action-submit]">
+    <app-submit-button [form]="experimentForm" variant="secondary" (pressed)="saveAndCreateNew()">
       {{ 'experiment.button.saveAndCreate' | translate }}
-    </button>
-    <button matButton="filled" type="submit" form="experimentForm" [disabled]="saveDisabled()">
-      <mat-icon fontIcon="save" />
+    </app-submit-button>
+    <app-submit-button [form]="experimentForm" formId="experimentForm">
       {{ 'experiment.button.save' | translate }}
-    </button>
-  }
-</mat-dialog-actions>
+    </app-submit-button>
+  </ng-container>
+</app-dialog-layout>

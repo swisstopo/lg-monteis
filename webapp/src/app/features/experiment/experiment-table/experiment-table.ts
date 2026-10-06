@@ -9,16 +9,16 @@ import {
   untracked,
 } from '@angular/core';
 import { MatButton } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
-import { openExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
+import { ExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { FormDialogService } from '@ui/dialog/form-dialog.service';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
@@ -38,7 +38,7 @@ import { createColumns } from './columns';
 })
 export default class ExperimentTable {
   private readonly datePipe = inject(DatePipe);
-  private readonly dialog = inject(MatDialog);
+  private readonly formDialog = inject(FormDialogService);
   private readonly experimentService = inject(ExperimentService);
   private readonly translateService = inject(TranslateService);
   private readonly fileDownloadService = inject(FileDownloadService);
@@ -100,7 +100,7 @@ export default class ExperimentTable {
   }
 
   onCreate(): void {
-    openExperimentDialog(this.dialog);
+    this.formDialog.open(ExperimentDialog);
   }
 
   onView(): void {
@@ -114,7 +114,7 @@ export default class ExperimentTable {
   private openSelected(viewOnly: boolean): void {
     const experimentId = this.selectedExperimentId();
     if (experimentId !== undefined) {
-      openExperimentDialog(this.dialog, { experimentId, viewOnly });
+      this.formDialog.open(ExperimentDialog, { experimentId, viewOnly });
     }
   }
 

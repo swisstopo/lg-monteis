@@ -1,20 +1,16 @@
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { MatDialog } from '@angular/material/dialog';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ToastService } from '@core/notifications/toast.service';
-import { openExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
+import { ExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { FormDialogService } from '@ui/dialog/form-dialog.service';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ExperimentTable from './experiment-table';
-
-vi.mock('@features/experiment/experiment-dialog/experiment-dialog', () => ({
-  openExperimentDialog: vi.fn(),
-}));
 
 // main.ts registers these for the app, the test bed never runs it
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -32,7 +28,7 @@ const EXPERIMENT_PI: Caller = { isAdmin: false, writeExperimentIds: [WRITABLE] }
 const EXPERIMENT_USER: Caller = { isAdmin: false, writeExperimentIds: [] };
 
 describe('ExperimentTable', () => {
-  let dialog: { open: ReturnType<typeof vi.fn> };
+  let formDialog: { open: ReturnType<typeof vi.fn> };
   let experimentService: {
     getExperiments: ReturnType<typeof vi.fn>;
     getExperimentsCsv: ReturnType<typeof vi.fn>;
@@ -42,8 +38,7 @@ describe('ExperimentTable', () => {
   let toast: { error: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    vi.mocked(openExperimentDialog).mockClear();
-    dialog = { open: vi.fn() };
+    formDialog = { open: vi.fn() };
     experimentService = {
       getExperiments: vi.fn().mockResolvedValue({ rows: [], totalCount: 0 }),
       getExperimentsCsv: vi.fn().mockResolvedValue(new Blob(['name'])),
@@ -60,7 +55,7 @@ describe('ExperimentTable', () => {
       providers: [
         provideTranslateService(),
         WorkbenchView,
-        { provide: MatDialog, useValue: dialog },
+        { provide: FormDialogService, useValue: formDialog },
         { provide: ExperimentService, useValue: experimentService },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
@@ -87,7 +82,7 @@ describe('ExperimentTable', () => {
     await view.select(READ_ONLY);
     view.button('experiment.tableHeader.view')!.click();
 
-    expect(openExperimentDialog).toHaveBeenCalledWith(dialog, {
+    expect(formDialog.open).toHaveBeenCalledWith(ExperimentDialog, {
       experimentId: READ_ONLY,
       viewOnly: true,
     });
@@ -100,9 +95,9 @@ describe('ExperimentTable', () => {
     view.button('experiment.tableHeader.view')!.click();
     view.button('experiment.tableHeader.edit')!.click();
 
-    expect(vi.mocked(openExperimentDialog).mock.calls).toEqual([
-      [dialog, { experimentId: WRITABLE, viewOnly: true }],
-      [dialog, { experimentId: WRITABLE, viewOnly: false }],
+    expect(formDialog.open.mock.calls).toEqual([
+      [ExperimentDialog, { experimentId: WRITABLE, viewOnly: true }],
+      [ExperimentDialog, { experimentId: WRITABLE, viewOnly: false }],
     ]);
   });
 
@@ -122,7 +117,7 @@ describe('ExperimentTable', () => {
     const view = await render(ADMIN);
     view.button('experiment.tableHeader.create')!.click();
 
-    expect(openExperimentDialog).toHaveBeenCalledWith(dialog);
+    expect(formDialog.open).toHaveBeenCalledWith(ExperimentDialog);
   });
 
   it('puts View, the one primary action, last and blue', async () => {

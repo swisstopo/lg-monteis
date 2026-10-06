@@ -4,7 +4,6 @@ import {
   computed,
   inject,
   input,
-  inputBinding,
   linkedSignal,
   resource,
 } from '@angular/core';
@@ -17,15 +16,13 @@ import {
   submit,
   TreeValidationResult,
 } from '@angular/forms/signals';
-import { MatButton } from '@angular/material/button';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import {
   MatDatepicker,
   MatDatepickerInput,
   MatDatepickerToggle,
 } from '@angular/material/datepicker';
-import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatIcon } from '@angular/material/icon';
+import { MatDialogRef } from '@angular/material/dialog';
 import { MatError, MatFormField, MatInput, MatLabel, MatSuffix } from '@angular/material/input';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { toErrorDtos } from '@core/http/api-error.model';
@@ -34,36 +31,19 @@ import { FormErrorService } from '@core/utils/form-error.service';
 import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { FORM_DIALOG_CONFIG } from '@ui/dialog/form-dialog.config';
+import { DialogLayout, DialogMode } from '@ui/dialog/dialog-layout';
+import { SubmitButton } from '@ui/dialog/submit-button';
+import { DismissButton } from '@ui/dismiss-button/dismiss-button';
 import { FieldErrors } from '@ui/field-errors/field-errors';
 import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
-
-type DialogMode = 'create' | 'edit' | 'view';
-
-/** An existing experiment to open, read-only with `viewOnly` even if the caller may write it. */
-export interface ExperimentDialogTarget {
-  experimentId: string;
-  viewOnly: boolean;
-}
-
-/** Opens the dialog for a new experiment, or for `target`. */
-export function openExperimentDialog(dialog: MatDialog, target?: ExperimentDialogTarget) {
-  return dialog.open(ExperimentDialog, {
-    ...FORM_DIALOG_CONFIG,
-    bindings: target
-      ? [
-          inputBinding('experimentId', () => target.experimentId),
-          inputBinding('viewOnly', () => target.viewOnly),
-        ]
-      : [],
-  });
-}
 
 @Component({
   selector: 'app-experiment-dialog',
   providers: [provideNativeDateAdapter()],
   imports: [
-    MatDialogModule,
+    DialogLayout,
+    SubmitButton,
+    DismissButton,
     MatFormField,
     MatLabel,
     MatInput,
@@ -72,8 +52,6 @@ export function openExperimentDialog(dialog: MatDialog, target?: ExperimentDialo
     MatDatepicker,
     MatDatepickerInput,
     MatDatepickerToggle,
-    MatButton,
-    MatIcon,
     FormField,
     FormRoot,
     TranslatePipe,
@@ -124,10 +102,6 @@ export class ExperimentDialog {
       disabled(path, this.readOnly);
     },
     { submission: { action: () => this.save(() => this.dialogRef.close()) } },
-  );
-
-  protected readonly saveDisabled = computed(
-    () => this.experimentForm().submitting() || this.experimentForm().invalid(),
   );
 
   protected saveAndCreateNew(): Promise<boolean> {

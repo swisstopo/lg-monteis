@@ -243,7 +243,6 @@
       "removeButton": "Remove Parameter"
     },
     "button": {
-      "cancel": "Cancel",
       "saveAndCreate": "Save and create new",
       "save": "Save"
     },
@@ -334,8 +333,6 @@
       "view": "View"
     },
     "button": {
-      "cancel": "Cancel",
-      "close": "Close",
       "saveAndCreate": "Save and create new",
       "save": "Save"
     },
@@ -445,5 +442,9 @@
       "fileName": "The file name must be between 1 and {{max}} characters long.",
       "tooLarge": "The file is larger than the allowed {{max}}."
     }
+  },
+  "button": {
+    "cancel": "Cancel",
+    "close": "Close"
   }
 }
