@@ -54,9 +54,9 @@ test('should create sensor with a fulcrum id and take its coordinates from fulcr
   await dialog.getByLabel('Fulcrum ID').fill(fulcrumId);
   await expect(dialog.getByLabel('X (Local)')).toBeDisabled();
 
-  // The response of the create call proves the backend really went to Fulcrum: createSensor
-  // overwrites the form's coordinates with the record's. Read on the Playwright side, Chromium
-  // drops the body of a browser response once the grid reloads.
+  // the response of the create call proves the backend really asked Fulcrum, createSensor
+  // overwrites the form's coordinates with the record's. it is read on the playwright side,
+  // chromium drops the body of a browser response once the grid reloads
   const created = new Promise<{ fulcrumId: string; coordinates: unknown }>((resolve) =>
     page.route('**/api/sensors', async (route) => {
       if (route.request().method() !== 'POST') return route.fallback();

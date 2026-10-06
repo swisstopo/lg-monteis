@@ -83,8 +83,8 @@ export default class ExperimentTable {
       view.title = this.translateService.translate('tab.experiment')();
     });
 
-    // Re-fetch the currently visible pages whenever an experiment is saved elsewhere (e.g. via
-    // the dialog) - the infinite row model otherwise has no way to know.
+    // the infinite row model has no way to notice a save in the dialog, so the visible pages are
+    // fetched again on every one
     effect(() => {
       this.experimentService.experimentsSaved();
       untracked(() => this.gridApi()?.refreshInfiniteCache());

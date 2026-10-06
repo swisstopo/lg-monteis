@@ -12,10 +12,10 @@ public class CurrentUserProvider {
   }
 
   /**
-   * The username of the authenticated caller, for records that show who made them.
+   * Returns the username of the authenticated caller, for records that show who made them.
    *
-   * @throws IllegalStateException without an authenticated MonteisPrincipal: the filter chain
-   *     authenticates every write, so this is a programming error, not a user error
+   * @throws IllegalStateException without an authenticated {@link MonteisPrincipal}. the filter
+   *     chain authenticates every write, so getting here without one is a bug, not a user error
    */
   public String requireCurrentUsername() {
     return currentPrincipal()

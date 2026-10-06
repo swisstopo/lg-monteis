@@ -12,7 +12,7 @@ import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ExperimentTable from './experiment-table';
 
-// main.ts registers these for the app
+// main.ts registers these for the app, the test bed never runs it
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 const WRITABLE = 'experiment-writable';

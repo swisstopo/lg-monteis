@@ -11,7 +11,7 @@ import {
 import { uniqueExperimentName } from '../support/experiments';
 import { openAppAs, SEED_USERS } from '../support/login';
 
-// inside E2E_EXPERIMENT_DIALOG_PERIOD and as locale-proof: day and month read the same
+// day and month are the same number, the dialog parses them alike in every date locale
 const UPDATED_PERIOD = { start: '02/02/2030', end: '04/04/2030' };
 
 test.beforeEach(async ({ page }) => {

@@ -3,7 +3,10 @@ import { DOCUMENT, inject, Injectable } from '@angular/core';
 // the new tab loads the object URL asynchronously, revoking it right away leaves the tab blank
 const NEW_TAB_URL_LIFETIME_MS = 60_000;
 
-/** Hands an already fetched blob to the browser, as a download or in a new tab. */
+/**
+ * Hands an already fetched blob to the browser, as a download or in a new tab. The API needs the
+ * token, a plain link to it would not send one.
+ */
 @Injectable({ providedIn: 'root' })
 export class FileDownloadService {
   private readonly document = inject(DOCUMENT);

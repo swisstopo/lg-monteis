@@ -10,8 +10,9 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 /**
- * Keeps each document under {@code <keyPrefix><experimentId>/<documentId>}, so the key never
- * depends on the user supplied file name.
+ * Keeps each document under {@code <keyPrefix><experimentId>/<documentId>}. The file name is not
+ * part of the key, two uploads with the same name would overwrite each other and the user would
+ * decide what the key looks like.
  */
 @Component
 public class S3DocumentStorage implements DocumentStorage {

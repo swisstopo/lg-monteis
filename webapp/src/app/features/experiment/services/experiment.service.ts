@@ -14,8 +14,9 @@ export class ExperimentService {
   private readonly api = inject(ExperimentControllerService);
   private readonly saveCount = signal(0);
   /**
-   * Grows with every saved experiment, so the experiment table can refresh its ag-grid infinite
-   * row model cache - ag-grid has no way to detect that on its own.
+   * Grows with every saved experiment. The experiment table refreshes its rows on each change, its
+   * ag-grid infinite row model cannot notice a save on its own. A counter, not a flag: the table
+   * only reads it, nothing has to reset it.
    */
   readonly experimentsSaved = this.saveCount.asReadonly();
 

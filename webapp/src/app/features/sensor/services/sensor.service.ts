@@ -14,8 +14,9 @@ export class SensorService {
   readonly error = signal<ErrorDto[] | undefined>(undefined);
   private readonly saveCount = signal(0);
   /**
-   * Grows with every saved sensor, so the sensor table can refresh its ag-grid infinite row model
-   * cache - ag-grid has no way to detect that on its own.
+   * Grows with every saved sensor. The sensor table refreshes its rows on each change, its ag-grid
+   * infinite row model cannot notice a save on its own. A counter, not a flag: the table only reads
+   * it, nothing has to reset it.
    */
   readonly sensorsSaved = this.saveCount.asReadonly();
 

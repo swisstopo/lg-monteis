@@ -77,7 +77,8 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
 
   private final DataSize maxFileSize;
 
-  // the exception itself often carries -1, the container does not report the limit it hit
+  // the exception mostly carries -1, tomcat does not tell which limit it hit, so the user gets the
+  // configured one
   public GlobalErrorControllerAdvice(
       @Value("${spring.servlet.multipart.max-file-size}") DataSize maxFileSize) {
     this.maxFileSize = maxFileSize;

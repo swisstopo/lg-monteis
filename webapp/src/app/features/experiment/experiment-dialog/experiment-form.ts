@@ -3,7 +3,7 @@ import { ExperimentResponseDto, WriteExperimentDto } from '@core/generated';
 import { TranslateService } from '@ngx-translate/core';
 import { formatDate, parseISO } from 'date-fns';
 
-// the backend validates the same limits (WriteExperimentDto)
+// the same limits as WriteExperimentDto, the backend rejects anything the form would let through
 const NAME_MIN_LENGTH = 2;
 const NAME_MAX_LENGTH = 50;
 const COMMENT_MAX_LENGTH = 4096;
@@ -45,7 +45,7 @@ export function toWriteDto(
   };
 }
 
-// the messages are signals, so they follow a language switch
+// the messages are signals, a language switch then updates errors that are already shown
 export function experimentSchema(translateService: TranslateService) {
   return schema<ExperimentFormModel>((path) => {
     required(path.name, {

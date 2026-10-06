@@ -11,12 +11,13 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 @Configuration
 public class S3Config {
 
-  // against AWS the credentials come from the default chain, EKS pod identity in the cluster
+  // no credentials set: against AWS the default chain finds the EKS pod identity of the cluster
   @Bean(destroyMethod = "close")
   S3Client s3Client(DocumentStorageProperties properties) {
     S3ClientBuilder builder = S3Client.builder().region(Region.of(properties.region()));
     if (properties.localEndpoint() != null) {
-      // the S3Mock checks no signatures, dummy credentials spare an AWS login
+      // the S3Mock does not check signatures, but the SDK signs every request and needs credentials
+      // for it. dummy ones spare the developer an AWS login
       builder
           .endpointOverride(properties.localEndpoint())
           .forcePathStyle(true)

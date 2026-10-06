@@ -52,8 +52,8 @@ export default class SensorTable {
       view.title = this.translateService.translate('tab.sensor')();
     });
 
-    // Re-fetch the currently visible pages whenever a sensor is saved elsewhere (e.g. via the
-    // edit dialog) - the infinite row model otherwise has no way to know.
+    // the infinite row model has no way to notice a save in the dialog, so the visible pages are
+    // fetched again on every one
     effect(() => {
       this.sensorService.sensorsSaved();
       untracked(() => this.gridApi()?.refreshInfiniteCache());

@@ -90,7 +90,7 @@ export class ExperimentDialog {
   });
   protected readonly readOnly = computed(() => this.mode() === 'view');
 
-  // load errors are toasted by the restErrorInterceptor
+  // no error handling here, the restErrorInterceptor already toasts a failed load
   private readonly loadedExperiment = resource({
     params: () => this.experimentId(),
     loader: ({ params: experimentId }) => this.experimentService.getExperiment(experimentId),
@@ -135,8 +135,8 @@ export class ExperimentDialog {
     return undefined;
   }
 
-  // the form model is set as well, in create mode experiment already is undefined and would not
-  // recompute it
+  // the form model is set as well: in create mode experiment already is undefined, setting it
+  // again would not recompute the form model
   private startNextExperiment(): void {
     this.experiment.set(undefined);
     this.formModel.set(toFormModel(undefined));

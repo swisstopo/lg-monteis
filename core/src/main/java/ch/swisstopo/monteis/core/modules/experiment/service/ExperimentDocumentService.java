@@ -53,7 +53,7 @@ public class ExperimentDocumentService {
     return documentRepository.getById(experimentId, documentId);
   }
 
-  /** Opens the stored content of {@code document}; the caller closes the stream. */
+  /** Opens the stored content of {@code document}. The caller closes it, it holds a connection. */
   public InputStream openContent(ExperimentDocument document) {
     return storage.load(document);
   }

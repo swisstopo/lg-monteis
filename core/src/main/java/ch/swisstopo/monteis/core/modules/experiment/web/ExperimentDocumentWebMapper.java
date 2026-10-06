@@ -20,7 +20,7 @@ public interface ExperimentDocumentWebMapper {
 
   List<ExperimentDocumentResponseDto> toDtos(List<ExperimentDocument> domains);
 
-  /** The metadata of an uploaded file, without what the browser adds to its name and type. */
+  /** Maps an uploaded file to its metadata, cleaned of what browsers add to its name and type. */
   default DocumentMetadata toMetadata(MultipartFile file) {
     return DocumentMetadata.of(
         fileNameOf(file.getOriginalFilename()),
@@ -28,7 +28,7 @@ public interface ExperimentDocumentWebMapper {
         file.getSize());
   }
 
-  // some browsers send the full client path
+  // some browsers send the full client path instead of the file name
   private static String fileNameOf(String originalFileName) {
     String path = originalFileName == null ? "" : originalFileName;
     return path.substring(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1).strip();

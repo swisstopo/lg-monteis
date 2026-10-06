@@ -49,7 +49,8 @@ public class SecurityConfig {
                 request
                     .requestMatchers(PUBLIC_ENDPOINTS)
                     .permitAll()
-                    // per-experiment writes, must precede the admin-only write rules below
+                    // first match wins, the per-experiment writes have to come before the
+                    // admin-only write rule below
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
