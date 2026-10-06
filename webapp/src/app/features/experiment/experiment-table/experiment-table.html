@@ -1,5 +1,8 @@
 <div class="metrics-panel">
-  <app-table-header (searchAction)="onSearch($event)">
+  <app-table-header
+    (searchAction)="onSearch($event)"
+    [canWriteConditional]="permissions.hasAnyExperimentWriteAccess()"
+  >
     <button read-action matButton="text" [disabled]="downloading()" (click)="onDownload()">
       @if (downloading()) {
         <mat-spinner diameter="16"></mat-spinner>
@@ -14,7 +17,12 @@
       {{ 'experiment.tableHeader.create' | translate }}
     </button>
 
-    <button write-action matButton="filled" [disabled]="!selectedExperimentId()" (click)="onEdit()">
+    <button
+      conditional-write-action
+      matButton="filled"
+      [disabled]="!canEditSelected()"
+      (click)="onEdit()"
+    >
       <mat-icon fontIcon="edit"></mat-icon>
       {{ 'experiment.tableHeader.edit' | translate }}
     </button>

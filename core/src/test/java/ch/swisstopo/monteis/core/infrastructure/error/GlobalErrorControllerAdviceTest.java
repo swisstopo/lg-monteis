@@ -1,8 +1,11 @@
 package ch.swisstopo.monteis.core.infrastructure.error;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.WRITE_AUTHORITY;
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -14,8 +17,10 @@ import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAuthenticationException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import jakarta.validation.Constraint;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -32,11 +37,12 @@ import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -206,7 +212,8 @@ class GlobalErrorControllerAdviceTest {
     mockMvc
         .perform(
             post("/dummy/validate")
-                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
         .andExpect(status().isUnprocessableContent())
@@ -254,7 +261,8 @@ class GlobalErrorControllerAdviceTest {
     mockMvc
         .perform(
             post("/dummy/validate-global")
-                .with(jwt().authorities(new SimpleGrantedAuthority(WRITE_AUTHORITY)))
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validJson))
         .andExpect(status().isUnprocessableContent())
@@ -262,6 +270,54 @@ class GlobalErrorControllerAdviceTest {
         .andExpect(jsonPath("$[0].field").doesNotExist()) // Proves it is a global/form-level error
         .andExpect(jsonPath("$[0].actualValue").doesNotExist())
         .andExpect(jsonPath("$[0].messageKey").value("form.invalid"));
+  }
+
+  @Test
+  void should_translate_object_not_found_exception_return_404_global() throws Exception {
+    mockMvc
+        .perform(get("/dummy/not-found-error").with(jwt()))
+        .andExpect(status().isNotFound())
+        .andExpect(
+            content()
+                .json(
+                    "{\"target\":\"GLOBAL\",\"field\":null,\"actualValue\":null,"
+                        + "\"messageKey\":\"object.not-found\",\"params\":{}}",
+                    JsonCompareMode.STRICT));
+  }
+
+  @Test
+  void should_render_every_not_found_with_a_byte_identical_body() throws Exception {
+    // no error id, no echoed id: two lookups cannot be told apart (NFR1.4)
+    String first =
+        mockMvc
+            .perform(get("/dummy/not-found-error").with(jwt()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String second =
+        mockMvc
+            .perform(get("/dummy/not-found-error").with(jwt()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    assertEquals(first, second);
+    assertFalse(first.contains("Experiment"), first);
+  }
+
+  @Test
+  void should_translate_row_level_security_refusal_return_403_global_access_denied()
+      throws Exception {
+    mockMvc
+        .perform(get("/dummy/rls-denied-error").with(jwt()))
+        .andExpect(status().isForbidden())
+        .andExpect(
+            content()
+                .json(
+                    "{\"target\":\"GLOBAL\",\"field\":null,\"actualValue\":null,"
+                        + "\"messageKey\":\"access.denied\",\"params\":{}}",
+                    JsonCompareMode.STRICT))
+        .andExpect(content().string(not(containsStringIgnoringCase("row-level security"))));
   }
 
   // --- Fakes to test the Advice ---
@@ -305,6 +361,17 @@ class GlobalErrorControllerAdviceTest {
     @GetMapping("/dummy/object-error")
     public void throwObjectError() {
       throw new ObjectBusinessValidationException("object.invalid", Map.of());
+    }
+
+    @GetMapping("/dummy/not-found-error")
+    public void throwNotFoundError() {
+      throw new ObjectNotFoundException(Object.class);
+    }
+
+    @GetMapping("/dummy/rls-denied-error")
+    public void throwRlsDeniedError() {
+      throw new PermissionDeniedDataAccessException(
+          "new row violates row-level security policy for table experiments", null);
     }
 
     @GetMapping("/dummy/field-error")

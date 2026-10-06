@@ -4,6 +4,7 @@ import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAuthenticationException;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -21,6 +22,7 @@ import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSourceResolvable;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -54,6 +56,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  *       value.</li>
  *   <li>Jakarta Bean Validation errors are mapped based on whether they are
  *       field or object constraint violations.</li>
+ *   <li>{@link ObjectNotFoundException} (missing or hidden by row-level
+ *       security) and row-level security write refusals are mapped to global
+ *       404 {@code object.not-found} and 403 {@code access.denied} errors.</li>
  *   <li>Unexpected technical failures are mapped to global errors and receive
  *       a correlation identifier for troubleshooting.</li>
  * </ul>
@@ -160,6 +165,34 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
   protected ResponseEntity<ErrorDto> handleOptimisticLocking(DataChangedException ex) {
     ErrorDto payload = ErrorDto.form("optimistic.locking", Map.of());
     return ResponseEntity.status(HttpStatus.CONFLICT).body(payload);
+  }
+
+  /**
+   * Same body as a filter-chain denial ({@code MonteisAccessDeniedHandler}), so clients have one
+   * message path for 403 (contract C5).
+   */
+  @ExceptionHandler(PermissionDeniedDataAccessException.class)
+  @ApiResponse(
+      responseCode = "403",
+      description = "Write rejected by row-level security (e.g. experiment not writable).",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  protected ResponseEntity<ErrorDto> handlePermissionDenied(
+      PermissionDeniedDataAccessException ex) {
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorDto.accessDenied());
+  }
+
+  /**
+   * A missing object and one hidden by row-level security get the identical response, so
+   * existence never leaks (BR4.11, NFR1.4). Nothing about the requested id is echoed.
+   */
+  @ExceptionHandler(ObjectNotFoundException.class)
+  @ApiResponse(
+      responseCode = "404",
+      description = "Object does not exist or is not visible to the caller.",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  public ResponseEntity<ErrorDto> handleObjectNotFound(ObjectNotFoundException e) {
+    ErrorDto payload = ErrorDto.global(ObjectNotFoundException.MESSAGE_KEY, Map.of());
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(payload);
   }
 
   @ExceptionHandler(InvalidPagedRequestException.class)

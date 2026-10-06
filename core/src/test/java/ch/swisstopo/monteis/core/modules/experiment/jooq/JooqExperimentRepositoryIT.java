@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.query.*;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
@@ -102,15 +102,35 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
-  void should_return_null_for_nonexistent_experiment() {
+  void should_throw_not_found_for_nonexistent_experiment() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
-          // Act
-          Experiment details = repository.getById(UUID.randomUUID());
+          UUID randomId = UUID.randomUUID();
 
-          // Assert
-          assertNull(details, "Non-existent experiment should resolve to null");
+          // Act & Assert
+          assertThrows(ObjectNotFoundException.class, () -> repository.getById(randomId));
         });
+  }
+
+  @Test
+  @Transactional
+  void should_throw_not_found_for_an_experiment_hidden_by_row_level_security() {
+    // Arrange: exists (created as admin), but the user below has no experiment ids at all
+    UUID[] hiddenId = new UUID[1];
+    SecurityContextTestSupport.runAsAdmin(
+        () ->
+            hiddenId[0] =
+                createExperimentWithDsl(
+                    "Hidden Experiment",
+                    "Not assigned to the user",
+                    LocalDate.of(2024, Month.JANUARY, 1),
+                    LocalDate.of(2024, Month.DECEMBER, 31)));
+
+    SecurityContextTestSupport.runAsUser(
+        List.of(),
+        () ->
+            // Act & Assert: same outcome as a random id (BR4.11)
+            assertThrows(ObjectNotFoundException.class, () -> repository.getById(hiddenId[0])));
   }
 
   @Test
@@ -249,7 +269,7 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
-  void should_throw_on_update_deleted_experiment() {
+  void should_throw_not_found_on_update_of_a_deleted_experiment() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
@@ -257,12 +277,54 @@ class JooqExperimentRepositoryIT {
           ghostExperiment.setId(UUID.randomUUID()); // non-existent ID
 
           // Act & Assert
-          ObjectBusinessValidationException exception =
-              assertThrows(
-                  ObjectBusinessValidationException.class,
-                  () -> repository.update(ghostExperiment));
+          assertThrows(ObjectNotFoundException.class, () -> repository.update(ghostExperiment));
+        });
+  }
 
-          assertEquals("object.deleted", exception.getMessageKey());
+  @Test
+  @Transactional
+  void should_throw_not_found_on_update_of_an_experiment_hidden_by_row_level_security() {
+    // Arrange
+    Experiment[] hidden = new Experiment[1];
+    SecurityContextTestSupport.runAsAdmin(
+        () -> hidden[0] = repository.create(buildDummyDomainExperiment("HIDDEN-EXP", "Owner")));
+    hidden[0].setComment("Should never be written");
+
+    SecurityContextTestSupport.runAsUser(
+        List.of(),
+        () -> assertThrows(ObjectNotFoundException.class, () -> repository.update(hidden[0])));
+  }
+
+  @Test
+  @Transactional
+  void should_update_an_experiment_the_user_is_assigned_to_write() {
+    // Arrange
+    Experiment[] assigned = new Experiment[1];
+    SecurityContextTestSupport.runAsAdmin(
+        () -> assigned[0] = repository.create(buildDummyDomainExperiment("PI-EXP", "Owner")));
+    UUID id = assigned[0].getId();
+    assigned[0].setComment("Edited by its PI");
+
+    // Act & Assert: api:experiment:write on this id passes the RLS WITH CHECK
+    SecurityContextTestSupport.runAsUser(
+        List.of(id),
+        List.of(id),
+        () -> assertEquals("Edited by its PI", repository.update(assigned[0]).getComment()));
+  }
+
+  @Test
+  @Transactional
+  void should_let_a_global_editor_read_and_update_any_experiment() {
+    // Arrange
+    Experiment[] any = new Experiment[1];
+    SecurityContextTestSupport.runAsAdmin(
+        () -> any[0] = repository.create(buildDummyDomainExperiment("ANY-EXP", "Owner")));
+    any[0].setComment("Edited by the global editor");
+
+    SecurityContextTestSupport.runAsGlobalEditor(
+        () -> {
+          assertEquals("ANY-EXP", repository.getById(any[0].getId()).getName());
+          assertEquals("Edited by the global editor", repository.update(any[0]).getComment());
         });
   }
 

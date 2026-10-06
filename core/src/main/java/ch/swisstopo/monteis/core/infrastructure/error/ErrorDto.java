@@ -76,6 +76,17 @@ public record ErrorDto(
   }
 
   /**
+   * Creates the global {@code access.denied} error every 403 carries, whether
+   * the filter chain or row-level security refused the request, so clients
+   * have one message path for both.
+   *
+   * @return the global access-denied error DTO
+   */
+  public static ErrorDto accessDenied() {
+    return global("access.denied", Map.of());
+  }
+
+  /**
    * Creates an error affecting the validity of a complete form or object.
    *
    * <p>Form errors are used when the validation failure cannot be attributed

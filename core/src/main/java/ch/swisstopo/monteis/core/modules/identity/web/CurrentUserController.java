@@ -1,10 +1,9 @@
 package ch.swisstopo.monteis.core.modules.identity.web;
 
-import ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter;
+import ch.swisstopo.monteis.core.infrastructure.security.Capabilities;
 import ch.swisstopo.monteis.core.modules.identity.web.dto.CurrentUserDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import java.util.Objects;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,19 +16,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class CurrentUserController {
 
   @Operation(
-      summary = "Get the current caller's derived permissions",
+      operationId = "getCurrentUser",
+      summary = "Get the current caller's permissions",
       description =
-          "Reflects the authorities already granted by MonteisJwtAuthenticationConverter.")
+          "Projects the caller's Capabilities, for UI gating only; the backend"
+              + " enforces every rule itself.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved current user info")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<CurrentUserDto> getCurrentUser(Authentication authentication) {
-    boolean canWrite =
-        authentication.getAuthorities().stream()
-            .anyMatch(
-                authority ->
-                    Objects.equals(
-                        authority.getAuthority(),
-                        MonteisJwtAuthenticationConverter.WRITE_AUTHORITY));
-    return ResponseEntity.ok(new CurrentUserDto(canWrite));
+    Capabilities capabilities = Capabilities.of(authentication);
+    return ResponseEntity.ok(
+        new CurrentUserDto(
+            capabilities.isAdmin(),
+            capabilities.canWriteAllExperiments(),
+            // empty when canWriteAllExperiments (BR4.10); sorted for a stable response
+            capabilities.writableExperimentIds().stream().sorted().toList(),
+            capabilities.canAccessDocuments()));
   }
 }

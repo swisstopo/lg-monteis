@@ -1,12 +1,11 @@
 package ch.swisstopo.monteis.core.itconfig;
 
+import ch.swisstopo.monteis.core.infrastructure.security.Grant;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
-import ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -19,23 +18,41 @@ public final class SecurityContextTestSupport {
 
   private SecurityContextTestSupport() {}
 
+  /** {@code api:admin}: all experiments, read and write. */
   public static void runAsAdmin(Runnable action) {
-    runAs(
-        List.of(new SimpleGrantedAuthority(MonteisJwtAuthenticationConverter.READ_ALL_AUTHORITY)),
-        List.of(),
-        action);
+    runAs(List.of(Grant.ADMIN), List.of(), List.of(), action);
   }
 
-  public static void runAsUser(List<UUID> experimentIds, Runnable action) {
+  /** {@code api:experiment:write-all}: all experiments, read and write, no admin functions. */
+  public static void runAsGlobalEditor(Runnable action) {
+    runAs(List.of(Grant.EXPERIMENT_WRITE_ALL), List.of(), List.of(), action);
+  }
+
+  /** {@code api:experiment:read} on {@code readExperimentIds} only. */
+  public static void runAsUser(List<UUID> readExperimentIds, Runnable action) {
+    runAs(List.of(Grant.EXPERIMENT_READ), readExperimentIds, List.of(), action);
+  }
+
+  /**
+   * {@code api:experiment:read} on {@code readExperimentIds} plus {@code api:experiment:write} on
+   * {@code writeExperimentIds}.
+   */
+  public static void runAsUser(
+      List<UUID> readExperimentIds, List<UUID> writeExperimentIds, Runnable action) {
     runAs(
-        List.of(new SimpleGrantedAuthority(MonteisJwtAuthenticationConverter.READ_AUTHORITY)),
-        experimentIds,
+        List.of(Grant.EXPERIMENT_READ, Grant.EXPERIMENT_WRITE),
+        readExperimentIds,
+        writeExperimentIds,
         action);
   }
 
   public static void runAs(
-      List<GrantedAuthority> authorities, List<UUID> experimentIds, Runnable action) {
-    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "test", experimentIds);
+      List<GrantedAuthority> authorities,
+      List<UUID> readExperimentIds,
+      List<UUID> writeExperimentIds,
+      Runnable action) {
+    MonteisPrincipal principal =
+        new MonteisPrincipal(UUID.randomUUID(), "test", readExperimentIds, writeExperimentIds);
     var authentication = new MonteisAuthenticationToken(null, principal, authorities);
 
     SecurityContext previous = SecurityContextHolder.getContext();

@@ -1,13 +1,10 @@
-import { Browser, expect, Page, test } from '@playwright/test';
-import { createKeycloakAdminApi, grantExperimentAccess } from '../support/keycloak';
-import { loginAsAdmin, loginAsAlice, loginAsBob } from '../support/login';
-import { createMonteisApi, findExperimentIdByName } from '../support/monteis-api';
-
-const APP_URL = 'http://localhost:4200/';
-
-// Every run of this test creates its own experiment, named after this test's Greek letter plus a
-// random suffix. Another test that needs its own experiments takes the next letter.
-const GREEK_LETTER = 'Alpha';
+import { Browser, Page } from '@playwright/test';
+import { uniqueExperimentName } from '../support/experiments';
+import { expect, test } from '../support/fixtures';
+import { addUserToGroup, createExperimentAccessGroups } from '../support/keycloak';
+import { openAppAs, SEED_USERS, SeedUser } from '../support/login';
+import { findExperimentIdByName } from '../support/monteis-api';
+import { dataRows } from '../support/table';
 
 /**
  * End-to-end check of per-experiment read access: an admin creates an experiment and a sensor on
@@ -16,49 +13,41 @@ const GREEK_LETTER = 'Alpha';
  * This is the full path the sensor's experiment_sensor row gates - the row JooqSensorRepository
  * writes on create, which the can_access_sensor() row-level-security predicate reads.
  */
-test('shows a new sensor only to members of its experiment group', async ({ page, browser }) => {
+test('shows a new sensor only to members of its experiment group', async ({
+  page,
+  browser,
+  adminApi,
+  keycloakApi,
+}) => {
   // Three full Keycloak logins plus experiment and sensor creation through the UI.
   test.slow();
 
-  const adminApi = await createMonteisApi('admin-user', 'admin-user');
-  const keycloakApi = await createKeycloakAdminApi();
+  await openAppAs(page, SEED_USERS.admin);
 
-  try {
-    await page.goto(APP_URL);
-    await loginAsAdmin(page);
+  const experimentName = await createExperimentThroughUi(page);
+  const dasSensorAlias = `SN-ACCESS-${crypto.randomUUID()}`;
+  await createSensor(page, dasSensorAlias, experimentName);
 
-    const experimentName = await createExperiment(page);
-    const dasSensorAlias = `SN-ACCESS-${crypto.randomUUID()}`;
-    await createSensor(page, dasSensorAlias, experimentName);
+  const experiment = {
+    name: experimentName,
+    id: await findExperimentIdByName(adminApi, experimentName),
+  };
+  const accessGroups = await createExperimentAccessGroups(keycloakApi, experiment);
+  await addUserToGroup(keycloakApi, SEED_USERS.bob, accessGroups.read);
 
-    await grantExperimentAccess(keycloakApi, {
-      experimentName,
-      experimentId: await findExperimentIdByName(adminApi, experimentName),
-      username: 'bob',
-    });
-
-    // bob is now a member of "Experiment <name>", alice is not.
-    await expectSensorVisibility(browser, loginAsBob, dasSensorAlias, true);
-    await expectSensorVisibility(browser, loginAsAlice, dasSensorAlias, false);
-  } finally {
-    await adminApi.dispose();
-    await keycloakApi.dispose();
-  }
+  // bob is now a member of "Experiment <name>/read", alice is not.
+  await expectSensorVisibility(browser, SEED_USERS.bob, dasSensorAlias, true);
+  await expectSensorVisibility(browser, SEED_USERS.alice, dasSensorAlias, false);
 });
 
-/**
- * Creates this test's experiment through the UI, as `<Greek letter>-<random>`. Experiment names
- * are unique in the database and these tests never delete what they create, so every run - and
- * every browser project running in parallel - needs its own name.
- */
-async function createExperiment(page: Page): Promise<string> {
+/** Creates an experiment with a fresh name through the UI and returns that name. */
+async function createExperimentThroughUi(page: Page): Promise<string> {
   await page.getByRole('link', { name: 'Experiment' }).click();
   await page.getByRole('button', { name: 'Create Experiment' }).click();
   await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
 
   const dialog = page.getByRole('dialog');
-  // Slice unique ID so we don't hit the 50 char max-length validation bounds
-  const experimentName = `${GREEK_LETTER}-${crypto.randomUUID().substring(0, 8)}`;
+  const experimentName = uniqueExperimentName();
 
   await dialog.getByLabel('Experiment Name').fill(experimentName);
   // Using dates like 01/01 and 05/05 prevents locale formatting parsing errors in Playwright
@@ -127,20 +116,17 @@ async function createSensor(
  */
 async function expectSensorVisibility(
   browser: Browser,
-  loginAs: (page: Page) => Promise<void>,
+  user: SeedUser,
   dasSensorAlias: string,
   shouldSeeSensor: boolean,
 ): Promise<void> {
   const context = await browser.newContext();
   try {
     const page = await context.newPage();
-    await page.goto(APP_URL);
-    await loginAs(page);
+    await openAppAs(page, user);
     await page.getByRole('link', { name: 'Sensor' }).click();
 
-    // One selection checkbox per data row - the header and floating-filter rows carry gridcells
-    // too, so counting those would never reach zero.
-    const rows = page.getByRole('checkbox', { name: /toggle row selection/ });
+    const rows = dataRows(page);
     // Both users see the sensors of the experiments they were already in, so rows here prove the
     // grid loaded - without that, the filtered-to-nothing assertion below would also pass on a
     // table that never rendered.

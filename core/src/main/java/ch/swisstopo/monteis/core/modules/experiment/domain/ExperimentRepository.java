@@ -29,6 +29,8 @@ public interface ExperimentRepository {
    *
    * @param experiment the experiment to update
    * @return the updated experiment instance including DB managed state such as version
+   * @throws ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException if the
+   *     experiment does not exist or is hidden from the caller
    */
   Experiment update(Experiment experiment);
 
@@ -43,7 +45,9 @@ public interface ExperimentRepository {
    * Retrieves an {@link Experiment} by its ID
    *
    * @param id the ID of the experiment to retrieve
-   * @return the experiment response DTO
+   * @return the experiment
+   * @throws ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException if the
+   *     experiment does not exist or is hidden from the caller
    */
   Experiment getById(UUID id);
 

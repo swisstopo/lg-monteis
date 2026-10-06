@@ -15,12 +15,13 @@ Client -> AuthFilter : Request (Header: Bearer JWT)
 AuthFilter -> AuthFilter : Signatur prüfen (JWKS)
 AuthFilter -> Converter : Jwt konvertieren
 
-Converter -> Converter : Rolle user -> api:read,\nRolle admin -> api:write + api:read-all,\nsub & experiment_ids -> MonteisPrincipal
+Converter -> Converter : 5 Client-Rollen 1:1 -> api:*-Authorities,\nsub, read_/write_experiment_ids -> MonteisPrincipal
 Converter -> Holder : Authentication ablegen\n(Principal + Authorities, für die Dauer des Requests)
 
 AuthFilter -> Repo : filterChain.doFilter(...)
 Repo -> ConnProvider : Connection anfordern
 ConnProvider -> Holder : Authentication lesen
+ConnProvider -> ConnProvider : Capabilities.of(Authentication)
 ConnProvider -> DB : GUCs setzen (transaktionslokal)
 Repo -> DB : jOOQ Query (unverändert)
 DB -> DB : RLS-Policy filtert Zeilen

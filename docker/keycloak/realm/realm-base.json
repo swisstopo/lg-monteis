@@ -17,20 +17,32 @@
     "client": {
       "monteis-spa": [
         {
-          "name": "monteis-client:read",
-          "description": "Read access to experiments/sensors the user is explicitly scoped to via their experiment group memberships (see the 'Experiments' groups). Never assign this directly to a user - assign an experiment group instead.",
+          "name": "monteis-client:experiment:read",
+          "description": "Read access to the experiments listed in the caller's read_experiment_ids claim. Granted via an '/Experiments/<experiment>/read' or '/read + write' group - never assign this directly to a user.",
           "composite": false,
           "clientRole": true
         },
         {
-          "name": "monteis-client:read-all",
-          "description": "Read access to all experiments/sensors, bypassing per-experiment scoping. Granted via the 'Monteis Read All' or 'Monteis Admin' group - never assign this directly to a user.",
+          "name": "monteis-client:experiment:write",
+          "description": "Write access to the experiments listed in the caller's write_experiment_ids claim. Granted via an '/Experiments/<experiment>/read + write' group - never assign this directly to a user.",
           "composite": false,
           "clientRole": true
         },
         {
-          "name": "monteis-client:write",
-          "description": "Write access to all experiments/sensors. Only ever valid combined with monteis-client:read-all (see the 'Monteis Admin' group) - write without read-all, or write combined with monteis-client:read, is a misconfiguration.",
+          "name": "monteis-client:experiment:write:all",
+          "description": "Read + write access to all experiments, bypassing per-experiment scoping (write:all implies all-experiment read). Not granted by default; add it to a dedicated group for non-admins, never assign it directly to a user.",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "monteis-client:documents:read",
+          "description": "Open and download documents in the document directory. Granted via the 'Experiments' group (inherited by every experiment subgroup) or the 'Monteis Admin' group - never assign this directly to a user.",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "monteis-client:admin",
+          "description": "Admin functions, including sensors; implies read + write access to all experiments. Granted via the 'Monteis Admin' group - never assign this directly to a user.",
           "composite": false,
           "clientRole": true
         }
@@ -89,7 +101,7 @@
     },
     {
       "name": "monteis-roles",
-      "description": "Adds the users client roles to the JWT issued by Keycloak.",
+      "description": "Adds the user's monteis-spa client roles (and only those - the mapper is filtered to client monteis-spa) to the monteis_access.roles claim of the access token.",
       "protocol": "openid-connect",
       "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
       "protocolMappers": [
@@ -99,6 +111,7 @@
           "protocolMapper": "oidc-usermodel-client-role-mapper",
           "consentRequired": false,
           "config": {
+            "usermodel.clientRoleMapping.clientId": "monteis-spa",
             "claim.name": "monteis_access.roles",
             "jsonType.label": "String",
             "multivalued": "true",
@@ -109,18 +122,46 @@
     },
     {
       "name": "monteis-experiment-access",
-      "description": "Adds the caller's experiment_ids user attribute to access tokens, so SecurityContextFilter can derive RLS-visible experiment ids directly from the JWT.",
+      "description": "Adds read_experiment_ids / write_experiment_ids to access tokens, aggregated from the caller's groups. write implies read: write_experiment_ids is mapped into both claims, so a write group only sets write_experiment_ids.",
       "protocol": "openid-connect",
       "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
       "protocolMappers": [
         {
-          "name": "experiment-ids",
+          "name": "read-experiment-ids",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-attribute-mapper",
           "consentRequired": false,
           "config": {
-            "user.attribute": "experiment_ids",
-            "claim.name": "experiment_ids",
+            "user.attribute": "read_experiment_ids",
+            "claim.name": "read_experiment_ids",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "aggregate.attrs": "true",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "write-experiment-ids-as-read",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "write_experiment_ids",
+            "claim.name": "read_experiment_ids",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "aggregate.attrs": "true",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "write-experiment-ids",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "write_experiment_ids",
+            "claim.name": "write_experiment_ids",
             "jsonType.label": "String",
             "multivalued": "true",
             "aggregate.attrs": "true",
@@ -162,29 +203,22 @@
       "path": "/Monteis Admin",
       "attributes": {
         "description": [
-          "Full administrators: read-all + write access to every experiment. Members get both monteis-client:read-all and monteis-client:write."
+          "Full administrators: admin functions (which imply read + write access to every experiment) and document access. Members get monteis-client:admin and monteis-client:documents:read."
         ]
       },
-      "clientRoles": { "monteis-spa": ["monteis-client:read-all", "monteis-client:write"] }
-    },
-    {
-      "name": "Monteis Read All",
-      "path": "/Monteis Read All",
-      "attributes": {
-        "description": [
-          "Read-only access to every experiment, without write access. Members get monteis-client:read-all."
-        ]
-      },
-      "clientRoles": { "monteis-spa": ["monteis-client:read-all"] }
+      "clientRoles": {
+        "monteis-spa": ["monteis-client:admin", "monteis-client:documents:read"]
+      }
     },
     {
       "name": "Experiments",
       "path": "/Experiments",
       "attributes": {
         "description": [
-          "Namespace for per-experiment groups. One subgroup per experiment: set its experiment_ids attribute + monteis-client:read. A user's experiment_ids claim unions every subgroup they belong to."
+          "Per-experiment groups: <experiment>/read and <experiment>/read + write. Every member inherits documents:read from here. Keep roles and attributes off <experiment> itself - both subgroups inherit them. read + write gets both roles and ids."
         ]
-      }
+      },
+      "clientRoles": { "monteis-spa": ["monteis-client:documents:read"] }
     }
   ],
   "users": [],
