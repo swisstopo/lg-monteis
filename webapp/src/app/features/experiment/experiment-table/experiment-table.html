@@ -12,18 +12,6 @@
       {{ 'experiment.tableHeader.download' | translate }}
     </button>
 
-    @if (!canEditSelected()) {
-      <button
-        read-action
-        matButton="filled"
-        [disabled]="selectedExperimentId() === undefined"
-        (click)="onOpenSelected()"
-      >
-        <mat-icon fontIcon="visibility"></mat-icon>
-        {{ 'experiment.tableHeader.view' | translate }}
-      </button>
-    }
-
     <button write-action matButton="tonal" (click)="onCreate()">
       <mat-icon fontIcon="add"></mat-icon>
       {{ 'experiment.tableHeader.create' | translate }}
@@ -31,12 +19,22 @@
 
     <button
       conditional-write-action
-      matButton="filled"
+      matButton="tonal"
       [disabled]="!canEditSelected()"
-      (click)="onOpenSelected()"
+      (click)="onEdit()"
     >
       <mat-icon fontIcon="edit"></mat-icon>
       {{ 'experiment.tableHeader.edit' | translate }}
+    </button>
+
+    <button
+      primary-action
+      matButton="filled"
+      [disabled]="selectedExperimentId() === undefined"
+      (click)="onView()"
+    >
+      <mat-icon fontIcon="visibility"></mat-icon>
+      {{ 'experiment.tableHeader.view' | translate }}
     </button>
   </app-table-header>
   @if (loadError()) {

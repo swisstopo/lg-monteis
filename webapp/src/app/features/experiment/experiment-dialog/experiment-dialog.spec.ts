@@ -59,10 +59,11 @@ describe('ExperimentDialog', () => {
     });
   });
 
-  async function render(experimentId?: string) {
+  async function render(experimentId?: string, { viewOnly = false } = {}) {
     const fixture = TestBed.createComponent(ExperimentDialog);
     if (experimentId) {
       fixture.componentRef.setInput('experimentId', experimentId);
+      fixture.componentRef.setInput('viewOnly', viewOnly);
     }
     await fixture.whenStable();
     return new DialogView(fixture);
@@ -213,6 +214,17 @@ describe('ExperimentDialog', () => {
       );
     });
 
+    it('stays read-only when opened for viewing, even for a writer', async () => {
+      canWrite = true;
+
+      const view = await render('experiment-1', { viewOnly: true });
+
+      expect(view.title()).toBe('experiment.dialog.title.view');
+      await vi.waitFor(() => expect(view.input('name').value).toBe('Mont Terri Alpha'));
+      expect(view.input('name').disabled).toBe(true);
+      expect(view.buttonLabels()).toEqual(['experiment.button.close']);
+    });
+
     it('offers only Close', async () => {
       const view = await render('experiment-1');
 
@@ -239,12 +251,15 @@ describe('openExperimentDialog', () => {
     );
   });
 
-  it('binds the experiment id', () => {
+  it('binds the experiment id and the view-only flag', () => {
     const dialog = { open: vi.fn() };
 
-    openExperimentDialog(dialog as unknown as MatDialog, 'experiment-1');
+    openExperimentDialog(dialog as unknown as MatDialog, {
+      experimentId: 'experiment-1',
+      viewOnly: true,
+    });
 
-    expect(dialog.open.mock.calls[0][1].bindings).toHaveLength(1);
+    expect(dialog.open.mock.calls[0][1].bindings).toHaveLength(2);
   });
 });
 

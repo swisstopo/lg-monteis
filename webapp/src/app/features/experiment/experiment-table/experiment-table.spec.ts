@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ToastService } from '@core/notifications/toast.service';
-import { ExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
+import { openExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
@@ -11,6 +11,10 @@ import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ExperimentTable from './experiment-table';
+
+vi.mock('@features/experiment/experiment-dialog/experiment-dialog', () => ({
+  openExperimentDialog: vi.fn(),
+}));
 
 // main.ts registers these for the app, the test bed never runs it
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -38,6 +42,7 @@ describe('ExperimentTable', () => {
   let toast: { error: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
+    vi.mocked(openExperimentDialog).mockClear();
     dialog = { open: vi.fn() };
     experimentService = {
       getExperiments: vi.fn().mockResolvedValue({ rows: [], totalCount: 0 }),
@@ -82,23 +87,26 @@ describe('ExperimentTable', () => {
     await view.select(READ_ONLY);
     view.button('experiment.tableHeader.view')!.click();
 
-    expect(view.button('experiment.tableHeader.view')?.disabled).toBe(false);
-    expect(dialog.open).toHaveBeenCalledWith(ExperimentDialog, expect.anything());
-    expect(dialog.open.mock.calls[0][1].bindings).toHaveLength(1);
+    expect(openExperimentDialog).toHaveBeenCalledWith(dialog, {
+      experimentId: READ_ONLY,
+      viewOnly: true,
+    });
   });
 
-  it('lets a writer edit an experiment they may write', async () => {
+  it('lets a writer view or edit an experiment they may write', async () => {
     const view = await render(EXPERIMENT_PI);
-
     await view.select(WRITABLE);
 
-    expect(view.button('experiment.tableHeader.view')).toBeUndefined();
-    expect(view.button('experiment.tableHeader.edit')?.disabled).toBe(false);
+    view.button('experiment.tableHeader.view')!.click();
     view.button('experiment.tableHeader.edit')!.click();
-    expect(dialog.open).toHaveBeenCalledTimes(1);
+
+    expect(vi.mocked(openExperimentDialog).mock.calls).toEqual([
+      [dialog, { experimentId: WRITABLE, viewOnly: true }],
+      [dialog, { experimentId: WRITABLE, viewOnly: false }],
+    ]);
   });
 
-  it('offers a writer View instead of Edit on an experiment they may only read', async () => {
+  it('lets a writer only view an experiment they may only read', async () => {
     const view = await render(EXPERIMENT_PI);
 
     await view.select(READ_ONLY);
@@ -114,10 +122,21 @@ describe('ExperimentTable', () => {
     const view = await render(ADMIN);
     view.button('experiment.tableHeader.create')!.click();
 
-    expect(dialog.open).toHaveBeenCalledWith(
-      ExperimentDialog,
-      expect.objectContaining({ bindings: [] }),
-    );
+    expect(openExperimentDialog).toHaveBeenCalledWith(dialog);
+  });
+
+  it('puts View, the one primary action, last and blue', async () => {
+    const view = await render(ADMIN);
+
+    expect(view.labels()).toEqual([
+      'experiment.tableHeader.download',
+      'experiment.tableHeader.create',
+      'experiment.tableHeader.edit',
+      'experiment.tableHeader.view',
+    ]);
+    expect(view.button('experiment.tableHeader.view')?.getAttribute('matbutton')).toBe('filled');
+    expect(view.button('experiment.tableHeader.create')?.getAttribute('matbutton')).toBe('tonal');
+    expect(view.button('experiment.tableHeader.edit')?.getAttribute('matbutton')).toBe('tonal');
   });
 
   it('reloads its rows whenever an experiment is saved', async () => {
@@ -161,6 +180,12 @@ class TableView {
 
   constructor(private readonly fixture: ComponentFixture<ExperimentTable>) {
     this.element = fixture.nativeElement as HTMLElement;
+  }
+
+  labels(): string[] {
+    return [...this.element.querySelectorAll('app-table-header button')].map(
+      (button) => button.textContent?.trim() ?? '',
+    );
   }
 
   button(label: string): HTMLButtonElement | undefined {

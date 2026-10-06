@@ -16,8 +16,9 @@ import { expectTableToolbar } from '../support/table';
  * - every level sees the Sensor menu entry and the sensor table (row-level security filters the
  *   sensors); only admins see the sensor write actions;
  * - Create Experiment is admin-only;
- * - Edit Experiment is shown to callers with any experiment write access and enabled only on rows
- *   they may write; View takes its place on the rows they may only read.
+ * - View is shown to everyone and opens the selected experiment read-only; Edit Experiment is
+ *   shown in addition to callers with any experiment write access and enabled only on rows they
+ *   may write.
  */
 
 const WITHOUT_WRITE_ACCESS: SeedUser[] = [SEED_USERS.bob, SEED_USERS.basisUser];
@@ -75,7 +76,7 @@ test(`${label(SEED_USERS.alice)} may edit only the experiments with write access
 
   await selectExperiment(page, SEEDED_EXPERIMENTS.alpha);
   await expect(editExperimentButton(page)).toBeEnabled();
-  await expect(viewExperimentButton(page)).toHaveCount(0);
+  await expect(viewExperimentButton(page)).toBeEnabled();
 
   await selectExperiment(page, readOnlyExperiment.name);
   await expect(editExperimentButton(page)).toBeDisabled();

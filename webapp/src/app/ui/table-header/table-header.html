@@ -17,5 +17,7 @@
     @if (canWriteConditional()) {
       <ng-content select="[conditional-write-action]"></ng-content>
     }
+    <!-- last, carbon puts the one primary action of a toolbar at its far right -->
+    <ng-content select="[primary-action]"></ng-content>
   </div>
 </div>

@@ -103,10 +103,18 @@ export default class ExperimentTable {
     openExperimentDialog(this.dialog);
   }
 
-  onOpenSelected(): void {
+  onView(): void {
+    this.openSelected(true);
+  }
+
+  onEdit(): void {
+    this.openSelected(false);
+  }
+
+  private openSelected(viewOnly: boolean): void {
     const experimentId = this.selectedExperimentId();
     if (experimentId !== undefined) {
-      openExperimentDialog(this.dialog, experimentId);
+      openExperimentDialog(this.dialog, { experimentId, viewOnly });
     }
   }
 

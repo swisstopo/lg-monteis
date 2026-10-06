@@ -7,6 +7,7 @@ import {
   openCreateExperimentDialog,
   openExperimentTable,
   selectExperiment,
+  viewExperimentButton,
 } from '../support/experiment-table';
 import { uniqueExperimentName } from '../support/experiments';
 import { openAppAs, SEED_USERS } from '../support/login';
@@ -47,6 +48,20 @@ test('should update experiment', async ({ page }) => {
   await expect(dialog).toHaveCount(0);
 
   await selectExperiment(page, updatedName);
+});
+
+test('should view an experiment read-only, even with write access', async ({ page }) => {
+  const name = uniqueExperimentName();
+  await createExperimentInDialog(page, name);
+  await selectExperiment(page, name);
+
+  await viewExperimentButton(page).click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'View Experiment', level: 2 })).toBeVisible();
+  await expect(dialog.getByLabel('Experiment Name')).toHaveValue(name);
+  await expect(dialog.getByLabel('Experiment Name')).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
 });
 
 test('should fail to create existing experiment', async ({ page }) => {

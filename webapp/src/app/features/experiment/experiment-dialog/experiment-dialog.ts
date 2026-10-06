@@ -40,11 +40,22 @@ import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
 
 type DialogMode = 'create' | 'edit' | 'view';
 
-/** Opens the dialog for a new experiment, or for `experimentId` (read-only if not writable). */
-export function openExperimentDialog(dialog: MatDialog, experimentId?: string) {
+/** An existing experiment to open, read-only with `viewOnly` even if the caller may write it. */
+export interface ExperimentDialogTarget {
+  experimentId: string;
+  viewOnly: boolean;
+}
+
+/** Opens the dialog for a new experiment, or for `target`. */
+export function openExperimentDialog(dialog: MatDialog, target?: ExperimentDialogTarget) {
   return dialog.open(ExperimentDialog, {
     ...FORM_DIALOG_CONFIG,
-    bindings: experimentId ? [inputBinding('experimentId', () => experimentId)] : [],
+    bindings: target
+      ? [
+          inputBinding('experimentId', () => target.experimentId),
+          inputBinding('viewOnly', () => target.viewOnly),
+        ]
+      : [],
   });
 }
 
@@ -82,10 +93,13 @@ export class ExperimentDialog {
   private readonly dialogRef = inject<MatDialogRef<ExperimentDialog>>(MatDialogRef);
 
   readonly experimentId = input<string>();
+  readonly viewOnly = input(false);
 
+  // without write access it is view whatever the caller asked for, the backend would reject a save
   protected readonly mode = computed<DialogMode>(() => {
     const experimentId = this.experimentId();
     if (experimentId === undefined) return 'create';
+    if (this.viewOnly()) return 'view';
     return this.permissions.canWriteExperiment(experimentId) ? 'edit' : 'view';
   });
   protected readonly readOnly = computed(() => this.mode() === 'view');
