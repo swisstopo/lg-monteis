@@ -6,14 +6,16 @@ import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakGroup;
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakUnavailableException;
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakUser;
 import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.AccessDenied;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.KeycloakUnavailable;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.Known;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.NoWriteGroup;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * The PIs of an experiment are the enabled members of the groups whose {@code
@@ -46,52 +48,71 @@ class KeycloakUserDirectory implements UserDirectory {
 
   @Override
   public PrincipalInvestigators principalInvestigatorsOf(UUID experimentId) {
-    return cacheKey(experimentId)
-        .map(cache::getIfPresent)
-        .orElseGet(() -> currentPrincipalInvestigatorsOf(experimentId));
+    Optional<CacheKey> key = keyForCurrentCaller(experimentId);
+    if (key.isEmpty()) {
+      return noCaller();
+    }
+    PrincipalInvestigators cached = cache.getIfPresent(key.get());
+    if (cached != null) {
+      return cached;
+    }
+    return askKeycloakAndCache(key.get());
   }
 
   @Override
   public PrincipalInvestigators currentPrincipalInvestigatorsOf(UUID experimentId) {
-    Optional<CacheKey> key = cacheKey(experimentId);
+    Optional<CacheKey> key = keyForCurrentCaller(experimentId);
     if (key.isEmpty()) {
-      return new PrincipalInvestigators.KeycloakUnavailable("no caller to ask Keycloak with");
+      return noCaller();
     }
-    PrincipalInvestigators lookup = load(experimentId);
-    if (lookup instanceof PrincipalInvestigators.Known
-        || lookup instanceof PrincipalInvestigators.NoWriteGroup) {
-      cache.put(key.get(), lookup);
-    }
-    return lookup;
+    return askKeycloakAndCache(key.get());
   }
 
-  private Optional<CacheKey> cacheKey(UUID experimentId) {
+  private Optional<CacheKey> keyForCurrentCaller(UUID experimentId) {
     return currentUser.currentSubject().map(caller -> new CacheKey(caller, experimentId));
   }
 
-  private PrincipalInvestigators load(UUID experimentId) {
+  private static PrincipalInvestigators noCaller() {
+    return new KeycloakUnavailable("no caller to ask Keycloak with");
+  }
+
+  private PrincipalInvestigators askKeycloakAndCache(CacheKey key) {
+    PrincipalInvestigators answer = askKeycloak(key.experimentId());
+    if (isComplete(answer)) {
+      cache.put(key, answer);
+    }
+    return answer;
+  }
+
+  private static boolean isComplete(PrincipalInvestigators answer) {
+    return answer instanceof Known || answer instanceof NoWriteGroup;
+  }
+
+  private PrincipalInvestigators askKeycloak(UUID experimentId) {
     try {
-      List<KeycloakGroup> writeGroups =
-          keycloak.findGroupsByAttribute(WRITE_EXPERIMENT_IDS, experimentId.toString());
+      List<KeycloakGroup> writeGroups = writeGroupsOf(experimentId);
       if (writeGroups.isEmpty()) {
-        return new PrincipalInvestigators.NoWriteGroup();
+        return new NoWriteGroup();
       }
-      return new PrincipalInvestigators.Known(enabledMembers(writeGroups));
+      return new Known(enabledMembersOf(writeGroups));
     } catch (KeycloakAccessDeniedException e) {
-      return new PrincipalInvestigators.AccessDenied(e.getMessage());
+      return new AccessDenied(e.getMessage());
     } catch (KeycloakUnavailableException e) {
-      return new PrincipalInvestigators.KeycloakUnavailable(e.getMessage());
+      return new KeycloakUnavailable(e.getMessage());
     }
   }
 
-  private List<DirectoryUser> enabledMembers(List<KeycloakGroup> groups) {
+  private List<KeycloakGroup> writeGroupsOf(UUID experimentId) {
+    return keycloak.findGroupsByAttribute(WRITE_EXPERIMENT_IDS, experimentId.toString());
+  }
+
+  /** Someone in two write groups is listed once. */
+  private List<DirectoryUser> enabledMembersOf(List<KeycloakGroup> groups) {
     return groups.stream()
         .flatMap(group -> keycloak.groupMembers(group.id()).stream())
         .filter(KeycloakUser::enabled)
-        .collect(Collectors.toMap(KeycloakUser::id, Function.identity(), (first, _) -> first))
-        .values()
-        .stream()
         .map(KeycloakUserDirectory::toDirectoryUser)
+        .distinct()
         .sorted(DirectoryUser.BY_NAME)
         .toList();
   }
