@@ -12,9 +12,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class ExperimentService {
   private final ExperimentRepository repository;
+  private final ExperimentOwnerService ownerService;
 
-  public ExperimentService(ExperimentRepository repository) {
+  public ExperimentService(ExperimentRepository repository, ExperimentOwnerService ownerService) {
     this.repository = repository;
+    this.ownerService = ownerService;
   }
 
   @AuditChanges
@@ -24,7 +26,7 @@ public class ExperimentService {
 
   @AuditChanges
   public Experiment updateExperiment(Experiment experiment) {
-    return repository.update(experiment);
+    return ownerService.dropFormerOwners(repository.update(experiment));
   }
 
   public Experiment getById(UUID experimentId) {

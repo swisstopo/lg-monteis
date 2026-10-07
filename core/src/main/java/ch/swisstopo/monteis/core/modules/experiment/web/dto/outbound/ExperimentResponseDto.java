@@ -13,4 +13,5 @@ public record ExperimentResponseDto(
     Status status,
     Integer version,
     Integer sensorCount,
-    List<ExperimentOwnerDto> owners) {}
+    List<ExperimentOwnerDto> owners,
+    boolean ownersUnavailable) {}

@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.experiment.web;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.experiment.service.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
@@ -23,13 +24,13 @@ public interface ExperimentWebMapper {
 
   // --- Outbound Domain -> API Serialization DTO Mappings ---
   @Mapping(target = "status", expression = "java(domain.getStatus(today))")
-  @Mapping(target = "owners", source = "owners")
-  ExperimentResponseDto toDto(
-      Experiment domain, List<DirectoryUser> owners, @Context LocalDate today);
+  @Mapping(target = "owners", source = "owners.users")
+  @Mapping(target = "ownersUnavailable", source = "owners.unavailable")
+  ExperimentResponseDto toDto(Experiment domain, VisibleOwners owners, @Context LocalDate today);
 
   /** For an experiment nested in another resource (a sensor's main experiment), without owners. */
   default ExperimentResponseDto toDto(Experiment domain, @Context LocalDate today) {
-    return toDto(domain, List.of(), today);
+    return toDto(domain, VisibleOwners.NONE, today);
   }
 
   ExperimentOwnerDto toOwnerDto(DirectoryUser user);
@@ -39,11 +40,13 @@ public interface ExperimentWebMapper {
   // --- Paged Outbound Domain -> Paged API Serialization DTO Mappings ---
   default PagedResult<ExperimentResponseDto> toPagedDto(
       PagedResult<Experiment> pagedResult,
-      Map<UUID, List<DirectoryUser>> ownersByExperiment,
+      Map<UUID, VisibleOwners> ownersByExperiment,
       LocalDate today) {
     return new PagedResult<>(
         pagedResult.rows().stream()
-            .map(e -> toDto(e, ownersByExperiment.getOrDefault(e.getId(), List.of()), today))
+            .map(
+                e ->
+                    toDto(e, ownersByExperiment.getOrDefault(e.getId(), VisibleOwners.NONE), today))
             .toList(),
         pagedResult.totalCount());
   }
