@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.infrastructure.userdirectory;
+package ch.swisstopo.monteis.core.infrastructure.keycloak;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-record KeycloakGroup(
+public record KeycloakGroup(
     String id, String path, Map<String, List<String>> attributes, List<KeycloakGroup> subGroups) {
 
   Stream<KeycloakGroup> withDescendants() {
