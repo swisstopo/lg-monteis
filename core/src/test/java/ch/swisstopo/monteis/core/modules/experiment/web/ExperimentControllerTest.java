@@ -31,9 +31,9 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
-import ch.swisstopo.monteis.core.modules.experiment.service.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
@@ -128,13 +128,10 @@ class ExperimentControllerTest {
     expectedExperiment.getStatus(referenceToday);
 
     given(service.getById(EXPERIMENT_ID)).willReturn(expectedExperiment);
-    given(ownerService.visibleOwners(expectedExperiment))
-        .willReturn(new VisibleOwners(List.of(OWNER), false));
+    given(ownerService.ownersOf(expectedExperiment)).willReturn(VisibleOwners.of(List.of(OWNER)));
     given(
             mapper.toDto(
-                eq(expectedExperiment),
-                eq(new VisibleOwners(List.of(OWNER), false)),
-                any(LocalDate.class)))
+                eq(expectedExperiment), eq(VisibleOwners.of(List.of(OWNER))), any(LocalDate.class)))
         .willReturn(expectedResponseDto);
 
     // when / then
@@ -154,10 +151,7 @@ class ExperimentControllerTest {
     then(service).should().getById(EXPERIMENT_ID);
     then(mapper)
         .should()
-        .toDto(
-            eq(expectedExperiment),
-            eq(new VisibleOwners(List.of(OWNER), false)),
-            any(LocalDate.class));
+        .toDto(eq(expectedExperiment), eq(VisibleOwners.of(List.of(OWNER))), any(LocalDate.class));
   }
 
   @Test
@@ -194,9 +188,8 @@ class ExperimentControllerTest {
 
     given(pagedRequestParser.parse(any())).willReturn(parsedRequest);
     given(service.getExperiments(parsedRequest)).willReturn(domainResult);
-    Map<UUID, VisibleOwners> owners =
-        Map.of(EXPERIMENT_ID, new VisibleOwners(List.of(OWNER), false));
-    given(ownerService.visibleOwners(List.of(experiment1))).willReturn(owners);
+    Map<UUID, VisibleOwners> owners = Map.of(EXPERIMENT_ID, VisibleOwners.of(List.of(OWNER)));
+    given(ownerService.ownersByExperiment(List.of(experiment1))).willReturn(owners);
     given(mapper.toPagedDto(eq(domainResult), eq(owners), any(LocalDate.class)))
         .willReturn(dtoResult);
 
@@ -238,7 +231,7 @@ class ExperimentControllerTest {
               return null;
             })
         .given(csvExportQueryRepository)
-        .streamCsv(eq(exportRequest), any());
+        .streamCsv(eq(exportRequest), any(), any());
 
     // when / then
     mockMvc
@@ -250,7 +243,7 @@ class ExperimentControllerTest {
         .andExpect(content().string("name,status\r\nEXP-01,ACTIVE\r\n"));
 
     then(pagedRequestParser).should().parseForExport(any());
-    then(csvExportQueryRepository).should().streamCsv(eq(exportRequest), any());
+    then(csvExportQueryRepository).should().streamCsv(eq(exportRequest), any(), any());
   }
 
   @Test
@@ -262,7 +255,7 @@ class ExperimentControllerTest {
     given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
     willThrow(new InvalidPagedRequestException("Unknown sortable/filterable column: bogus"))
         .given(csvExportQueryRepository)
-        .streamCsv(eq(exportRequest), any());
+        .streamCsv(eq(exportRequest), any(), any());
 
     // when / then
     mockMvc
@@ -399,6 +392,7 @@ class ExperimentControllerTest {
 
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(service.updateExperiment(mockDomain)).willReturn(mockDomain);
+    given(ownerService.dropFormerOwners(mockDomain)).willReturn(mockDomain);
     given(mapper.toDto(eq(mockDomain), any(), any(LocalDate.class)))
         .willReturn(expectedResponseDto);
 
@@ -528,6 +522,7 @@ class ExperimentControllerTest {
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(service.updateExperiment(mockDomain)).willReturn(mockDomain);
+    given(ownerService.dropFormerOwners(mockDomain)).willReturn(mockDomain);
 
     // when / then
     mockMvc

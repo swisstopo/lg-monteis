@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.experiment.query;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.function.Function;
 
 /**
  * Read-flow contract for streaming all experiments matching a filter/sort as CSV, straight to a
@@ -11,5 +12,13 @@ import java.io.Writer;
  * records.
  */
 public interface ExperimentCsvExportQueryRepository {
-  void streamCsv(PagedRequest exportRequest, Writer writer) throws IOException;
+  /**
+   * @param owners resolves the owners shown in a row, the owner rule lives with the caller and
+   *     needs Keycloak, which a query repository has no business asking
+   */
+  void streamCsv(
+      PagedRequest exportRequest,
+      Writer writer,
+      Function<ExperimentOwnership, VisibleOwners> owners)
+      throws IOException;
 }

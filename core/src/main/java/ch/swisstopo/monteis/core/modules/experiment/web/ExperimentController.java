@@ -109,7 +109,9 @@ public class ExperimentController {
     }
     LocalDate today = LocalDate.now(clock);
 
-    Experiment updated = service.updateExperiment(mapper.toDomain(dto));
+    // own audit snapshots: the PI's change, then the owners that are no longer PIs
+    Experiment updated =
+        ownerService.dropFormerOwners(service.updateExperiment(mapper.toDomain(dto)));
     return ResponseEntity.status(HttpStatus.OK).body(toDto(updated, today));
   }
 
@@ -141,7 +143,8 @@ public class ExperimentController {
 
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
     PagedResult<Experiment> domainResult = service.getExperiments(pagedRequestParser.parse(raw));
-    return mapper.toPagedDto(domainResult, ownerService.visibleOwners(domainResult.rows()), today);
+    return mapper.toPagedDto(
+        domainResult, ownerService.ownersByExperiment(domainResult.rows()), today);
   }
 
   @Operation(
@@ -175,11 +178,11 @@ public class ExperimentController {
     Writer writer =
         new BufferedWriter(
             new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
-    csvExportQueryRepository.streamCsv(exportRequest, writer);
+    csvExportQueryRepository.streamCsv(exportRequest, writer, ownerService.ownerResolver());
     writer.flush();
   }
 
   private ExperimentResponseDto toDto(Experiment experiment, LocalDate today) {
-    return mapper.toDto(experiment, ownerService.visibleOwners(experiment), today);
+    return mapper.toDto(experiment, ownerService.ownersOf(experiment), today);
   }
 }

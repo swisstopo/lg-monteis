@@ -21,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ExperimentServiceTest {
   @Mock private ExperimentRepository repository;
-  @Mock private ExperimentOwnerService ownerService;
 
   @InjectMocks private ExperimentService service;
 
@@ -42,14 +41,12 @@ class ExperimentServiceTest {
   }
 
   @Test
-  void should_update_experiment_and_drop_former_owners() {
+  void should_delegate_update_experiment_to_repository() {
     // given
     Experiment inputExperiment = mock(Experiment.class);
-    Experiment updatedExperiment = mock(Experiment.class);
     Experiment expectedExperiment = mock(Experiment.class);
 
-    given(repository.update(inputExperiment)).willReturn(updatedExperiment);
-    given(ownerService.dropFormerOwners(updatedExperiment)).willReturn(expectedExperiment);
+    given(repository.update(inputExperiment)).willReturn(expectedExperiment);
 
     // when
     Experiment actualExperiment = service.updateExperiment(inputExperiment);
