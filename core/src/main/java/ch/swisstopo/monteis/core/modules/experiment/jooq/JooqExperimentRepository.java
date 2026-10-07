@@ -116,12 +116,11 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
     // Default to a deterministic order so offset-based paging stays stable across separate
     // requests (Postgres does not guarantee row order without an ORDER BY).
+    ExperimentOwnerFilter.Split ownerFilter = ExperimentOwnerFilter.split(request);
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
         PagedRequestJooqTranslator.translate(
-            ExperimentOwnerFilter.withoutOwnerFilter(request),
-            COLUMNS_BY_COL_ID,
-            EXPERIMENTS.ID.asc());
-    var condition = criteria.condition().and(ExperimentOwnerFilter.condition(request));
+            ownerFilter.requestWithoutOwnersColumn(), COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
+    var condition = criteria.condition().and(ownerFilter.ownerCondition());
 
     List<Experiment> data =
         selectExperiments()
