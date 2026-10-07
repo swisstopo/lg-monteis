@@ -107,13 +107,7 @@ class KeycloakUserDirectory implements UserDirectory {
 
   private Pis cachedOrLoadedPisOf(CacheKey key, Optional<Pis> earlierFailure) {
     Optional<Pis> cached = cachedPisOf(key);
-    if (cached.isPresent()) {
-      return cached.get();
-    }
-    if (earlierFailure.isPresent()) {
-      return earlierFailure.get();
-    }
-    return loadPis(key);
+    return cached.orElseGet(() -> earlierFailure.orElseGet(() -> loadPis(key)));
   }
 
   private Optional<Pis> cachedPisOf(CacheKey key) {
@@ -135,7 +129,7 @@ class KeycloakUserDirectory implements UserDirectory {
 
   private Pis fetchPisFromKeycloak(UUID experimentId) {
     try {
-      List<KeycloakGroup> writeGroups = writeGroupsOf(experimentId);
+      List<KeycloakGroup> writeGroups = findWriteGroupsOf(experimentId);
       if (writeGroups.isEmpty()) {
         return new NoWriteGroup();
       }
@@ -148,7 +142,7 @@ class KeycloakUserDirectory implements UserDirectory {
     }
   }
 
-  private List<KeycloakGroup> writeGroupsOf(UUID experimentId) {
+  private List<KeycloakGroup> findWriteGroupsOf(UUID experimentId) {
     return keycloak.findGroupsByAttribute(WRITE_EXPERIMENT_IDS, experimentId.toString());
   }
 
