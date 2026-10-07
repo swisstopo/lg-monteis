@@ -57,7 +57,7 @@ public class ExperimentOwnerController {
       produces = MediaType.APPLICATION_JSON_VALUE)
   public List<ExperimentOwnerDto> getOwnerCandidates(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
-    return mapper.toOwnerDtos(ownerService.candidates(id));
+    return mapper.toOwnerDtos(ownerService.ownerCandidates(id));
   }
 
   @Operation(

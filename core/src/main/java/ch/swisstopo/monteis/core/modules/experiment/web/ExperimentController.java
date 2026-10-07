@@ -178,7 +178,7 @@ public class ExperimentController {
     Writer writer =
         new BufferedWriter(
             new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
-    csvExportQueryRepository.streamCsv(exportRequest, writer, ownerService.ownerResolver());
+    csvExportQueryRepository.streamCsv(exportRequest, writer, ownerService.ownersForExport());
     writer.flush();
   }
 

@@ -4,6 +4,10 @@ import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidatio
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.AccessDenied;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.KeycloakUnavailable;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.Known;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.NoWriteGroup;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDeniedException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
@@ -30,7 +34,7 @@ import org.springframework.stereotype.Service;
  * Owners are stored as Keycloak ids only. An owner counts as long as they are a PI of the
  * experiment in Keycloak, so someone who lost write access, was disabled or was deleted disappears
  * from every response right away, the stale row goes with the next save of the experiment or its
- * owners. Only a complete answer from Keycloak ({@link PrincipalInvestigators.Known}) ever removes anyone.
+ * owners. Only a complete answer from Keycloak ({@link Known}) ever removes anyone.
  */
 @Service
 public class ExperimentOwnerService {
@@ -53,59 +57,45 @@ public class ExperimentOwnerService {
     this.userDirectory = userDirectory;
   }
 
-  /** For one experiment. Never fails because of Keycloak. */
+  /** Never fails because of Keycloak. */
   public VisibleOwners ownersOf(Experiment experiment) {
-    return resolver().ownersOf(ownershipOf(experiment));
+    return new VisibleOwnersResolver(userDirectory).ownersOf(storedOwnersOf(experiment));
   }
 
-  /** For a page of experiments, in their order. Stops asking Keycloak once it is unavailable. */
+  /** In the order of the experiments, asks Keycloak no more once it is unavailable. */
   public Map<UUID, VisibleOwners> ownersByExperiment(Collection<Experiment> experiments) {
-    OwnerResolver resolver = resolver();
-    Map<UUID, VisibleOwners> owners = new LinkedHashMap<>();
+    VisibleOwnersResolver resolver = new VisibleOwnersResolver(userDirectory);
+    Map<UUID, VisibleOwners> ownersByExperiment = new LinkedHashMap<>();
     for (Experiment experiment : experiments) {
-      owners.put(experiment.getId(), resolver.ownersOf(ownershipOf(experiment)));
+      ownersByExperiment.put(experiment.getId(), resolver.ownersOf(storedOwnersOf(experiment)));
     }
-    return owners;
+    return ownersByExperiment;
   }
 
-  /** Every visible owner of a readable experiment, each once, sorted by name. Feeds the filter. */
+  /** Every visible owner of a readable experiment, each once, sorted by name. */
   public List<DirectoryUser> filterableOwners() {
-    OwnerResolver resolver = resolver();
+    VisibleOwnersResolver resolver = new VisibleOwnersResolver(userDirectory);
     Set<DirectoryUser> owners = new TreeSet<>(DirectoryUser.BY_NAME);
-    for (StoredOwners ownership : ownerQueryRepository.findStoredOwners()) {
-      owners.addAll(resolver.ownersOf(ownership).users());
+    for (StoredOwners storedOwners : ownerQueryRepository.findStoredOwners()) {
+      owners.addAll(resolver.ownersOf(storedOwners).users());
     }
     return List.copyOf(owners);
   }
 
-  /**
-   * For a run over many experiments, e.g. a CSV export: resolves one after the other and gives up
-   * on Keycloak once it is unavailable.
-   */
-  public Function<StoredOwners, VisibleOwners> ownerResolver() {
-    return resolver()::ownersOf;
-  }
-
-  private OwnerResolver resolver() {
-    return new OwnerResolver(userDirectory);
+  /** For one CSV export, asks Keycloak no more once it is unavailable. */
+  public Function<StoredOwners, VisibleOwners> ownersForExport() {
+    return new VisibleOwnersResolver(userDirectory)::ownersOf;
   }
 
   /**
-   * The current PIs, asked fresh. A missing write group means there is no one to pick yet.
+   * The current PIs. Without a write group there is no one to pick yet.
    *
    * @throws UserDirectoryDeniedException if Keycloak refuses
    * @throws UserDirectoryUnavailableException if Keycloak cannot be asked
    */
-  public List<DirectoryUser> candidates(UUID experimentId) {
+  public List<DirectoryUser> ownerCandidates(UUID experimentId) {
     repository.requireVisible(experimentId);
-    return switch (userDirectory.currentPrincipalInvestigatorsOf(experimentId)) {
-      case PrincipalInvestigators.Known known -> known.users();
-      case PrincipalInvestigators.NoWriteGroup _ -> List.of();
-      case PrincipalInvestigators.AccessDenied denied ->
-          throw new UserDirectoryDeniedException(denied.reason());
-      case PrincipalInvestigators.KeycloakUnavailable unavailable ->
-          throw new UserDirectoryUnavailableException(unavailable.reason());
-    };
+    return currentPisOrFail(experimentId);
   }
 
   /**
@@ -115,88 +105,71 @@ public class ExperimentOwnerService {
    */
   @AuditChanges
   public Experiment replaceOwners(UUID experimentId, Set<UUID> ownerIds) {
-    Set<UUID> candidateIds = ids(candidates(experimentId));
-    Set<UUID> notEligible = new HashSet<>(ownerIds);
-    notEligible.removeAll(candidateIds);
-    if (!notEligible.isEmpty()) {
-      throw new FieldBusinessValidationException(
-          OWNER_IDS_FIELD, notEligible, NOT_ELIGIBLE_KEY, Map.of());
-    }
+    rejectOwnersWhoAreNoPis(ownerIds, ownerCandidates(experimentId));
     return repository.replaceOwners(experimentId, ownerIds);
   }
 
-  /**
-   * Drops the stored owners that are no longer PIs. Best effort after a save: anything short of a
-   * complete answer from Keycloak keeps every owner, and a failure is only logged.
-   */
+  /** Best effort after a save, never fails and keeps every owner if Keycloak can't tell. */
   @AuditChanges
   public Experiment dropFormerOwners(Experiment experiment) {
-    if (experiment.getOwnerIds().isEmpty()
-        || !(userDirectory.currentPrincipalInvestigatorsOf(experiment.getId())
-            instanceof PrincipalInvestigators.Known known)) {
+    Set<UUID> formerOwners = formerOwnersOf(experiment);
+    if (formerOwners.isEmpty()) {
       return experiment;
     }
-    Set<UUID> retained = new HashSet<>(experiment.getOwnerIds());
-    retained.retainAll(ids(known.users()));
-    if (retained.equals(experiment.getOwnerIds())) {
-      return experiment;
+    return removeOwnersQuietly(experiment, formerOwners);
+  }
+
+  private List<DirectoryUser> currentPisOrFail(UUID experimentId) {
+    return switch (userDirectory.currentPrincipalInvestigatorsOf(experimentId)) {
+      case Known known -> known.users();
+      case NoWriteGroup _ -> List.of();
+      case AccessDenied denied -> throw new UserDirectoryDeniedException(denied.reason());
+      case KeycloakUnavailable unavailable ->
+          throw new UserDirectoryUnavailableException(unavailable.reason());
+    };
+  }
+
+  private static void rejectOwnersWhoAreNoPis(Set<UUID> ownerIds, List<DirectoryUser> pis) {
+    Set<UUID> noPis = idsWithout(ownerIds, userIds(pis));
+    if (!noPis.isEmpty()) {
+      throw new FieldBusinessValidationException(
+          OWNER_IDS_FIELD, noPis, NOT_ELIGIBLE_KEY, Map.of());
     }
+  }
+
+  /** Empty unless Keycloak knows the PIs, an owner never goes because Keycloak can't tell. */
+  private Set<UUID> formerOwnersOf(Experiment experiment) {
+    if (experiment.getOwnerIds().isEmpty()) {
+      return Set.of();
+    }
+    PrincipalInvestigators pis = userDirectory.currentPrincipalInvestigatorsOf(experiment.getId());
+    if (pis instanceof Known known) {
+      return idsWithout(experiment.getOwnerIds(), userIds(known.users()));
+    }
+    return Set.of();
+  }
+
+  private Experiment removeOwnersQuietly(Experiment experiment, Set<UUID> formerOwners) {
+    Set<UUID> remainingOwners = idsWithout(experiment.getOwnerIds(), formerOwners);
     try {
-      return repository.replaceOwners(experiment.getId(), retained);
+      return repository.replaceOwners(experiment.getId(), remainingOwners);
     } catch (RuntimeException e) {
       log.warn("Keeping the former owners of experiment {}: {}", experiment.getId(), e.toString());
       return experiment;
     }
   }
 
-  private static StoredOwners ownershipOf(Experiment experiment) {
+  private static StoredOwners storedOwnersOf(Experiment experiment) {
     return new StoredOwners(experiment.getId(), experiment.getOwnerIds());
   }
 
-  private static Set<UUID> ids(List<DirectoryUser> users) {
+  private static Set<UUID> userIds(List<DirectoryUser> users) {
     return users.stream().map(DirectoryUser::id).collect(Collectors.toSet());
   }
 
-  /**
-   * Resolves the visible owners of one experiment after the other. Once Keycloak is unavailable
-   * it is not asked again, every further experiment gets {@link VisibleOwners#UNAVAILABLE} right
-   * away instead of waiting for another timeout.
-   */
-  private static final class OwnerResolver {
-
-    private final UserDirectory userDirectory;
-    private boolean keycloakUnavailable;
-
-    private OwnerResolver(UserDirectory userDirectory) {
-      this.userDirectory = userDirectory;
-    }
-
-    VisibleOwners ownersOf(StoredOwners ownership) {
-      if (!ownership.hasOwners()) {
-        return VisibleOwners.NONE;
-      }
-      if (keycloakUnavailable) {
-        return VisibleOwners.UNAVAILABLE;
-      }
-      UUID experimentId = ownership.experimentId();
-      return switch (userDirectory.principalInvestigatorsOf(experimentId)) {
-        case PrincipalInvestigators.Known known ->
-            VisibleOwners.of(
-                known.users().stream().filter(pi -> ownership.isOwner(pi.id())).toList());
-        case PrincipalInvestigators.NoWriteGroup _ -> {
-          log.warn("Experiment {} has owners but no write group", experimentId);
-          yield VisibleOwners.NONE;
-        }
-        case PrincipalInvestigators.AccessDenied denied -> {
-          log.warn("Hiding the owners of experiment {}: {}", experimentId, denied.reason());
-          yield VisibleOwners.NONE;
-        }
-        case PrincipalInvestigators.KeycloakUnavailable unavailable -> {
-          log.warn("Showing experiments without owners: {}", unavailable.reason());
-          keycloakUnavailable = true;
-          yield VisibleOwners.UNAVAILABLE;
-        }
-      };
-    }
+  private static Set<UUID> idsWithout(Set<UUID> ids, Set<UUID> removed) {
+    Set<UUID> remaining = new HashSet<>(ids);
+    remaining.removeAll(removed);
+    return Set.copyOf(remaining);
   }
 }
