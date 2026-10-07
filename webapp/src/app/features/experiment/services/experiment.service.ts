@@ -1,16 +1,10 @@
 import { Injectable, inject, resource, signal } from '@angular/core';
 import {
   ExperimentControllerService,
+  ExperimentOwnerControllerService,
   ExperimentResponseDto,
   WriteExperimentDto,
 } from '@core/generated';
-import {
-  ErrorDto,
-  ExperimentControllerService,
-  ExperimentOwnerControllerService,
-  WriteExperimentDto,
-} from '@core/generated';
-import { toErrorDtos } from '@core/http/api-error.model';
 import { skipGlobalErrorToast } from '@core/http/http-context';
 import { toPagedRequestParams } from '@ui/table/paged-request.mapper';
 import { IGetRowsParams } from 'ag-grid-community';
@@ -48,15 +42,15 @@ export class ExperimentService {
     return saved;
   }
 
-  async replaceOwners(id: string, ownerIds: string[]) {
-    try {
-      const result = await firstValueFrom(this.ownerApi.replaceOwners(id, { ownerIds }));
-      this.experimentsChanged.set(true);
-      return result;
-    } catch (err) {
-      this.error.set(toErrorDtos(err));
-      throw err;
-    }
+  async replaceOwners(id: string, ownerIds: string[]): Promise<ExperimentResponseDto> {
+    // the dialog shows the failure at the owner field
+    const saved = await firstValueFrom(
+      this.ownerApi.replaceOwners(id, { ownerIds }, 'body', false, {
+        context: skipGlobalErrorToast(),
+      }),
+    );
+    this.saveCount.update((count) => count + 1);
+    return saved;
   }
 
   getOwnerCandidates(id: string) {

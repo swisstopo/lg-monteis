@@ -327,7 +327,9 @@
       "placeholder": "Search by name or email",
       "hint": "Only PIs of this experiment can be owners.",
       "noCandidates": "This experiment has no PIs in Keycloak yet.",
-      "remove": "Remove owner"
+      "remove": "Remove owner",
+      "unavailable": "Contact details currently unavailable",
+      "createHint": "Owners can be assigned once the PI group of this experiment exists in Keycloak."
     },
     "success": "Experiment saved successfully.",
     "error": {

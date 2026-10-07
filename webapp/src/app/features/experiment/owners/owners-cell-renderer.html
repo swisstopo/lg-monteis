@@ -1,13 +1,17 @@
-@for (owner of owners(); track owner.id; let last = $last) {
-  <a
-    class="owners-cell-renderer_owner"
-    data-testid="experiment-owner"
-    [href]="owner.email ? 'mailto:' + owner.email : null"
-    [matTooltip]="contactOf(owner)"
-    matTooltipClass="owners-cell-renderer_tooltip"
-    >{{ displayName(owner) }}</a
+@if (unavailable()) {
+  <span data-testid="owners-unavailable" [matTooltip]="'experiment.owners.unavailable' | translate"
+    >–</span
   >
-  @if (!last) {
-    <span>, </span>
+} @else {
+  @for (owner of owners(); track owner.id; let last = $last) {
+    <span
+      class="owners-cell-renderer_owner"
+      data-testid="experiment-owner"
+      [matTooltip]="owner.email ?? ''"
+      >{{ displayName(owner) }}</span
+    >
+    @if (!last) {
+      <span>, </span>
+    }
   }
 }

@@ -31,6 +31,29 @@
       <textarea matInput [formField]="experimentForm.comment" rows="3"></textarea>
       <mat-error [appFieldErrors]="experimentForm.comment" />
     </mat-form-field>
+
+    @switch (true) {
+      @case (mode() === 'create') {
+        <p class="full-width" data-testid="owners-create-hint">
+          {{ 'experiment.owners.createHint' | translate }}
+        </p>
+      }
+      @case (canManageOwners()) {
+        <app-experiment-owner-picker
+          class="full-width"
+          [experimentId]="experimentId()!"
+          [(selectedOwnerIds)]="ownerIds"
+          [error]="ownerError()"
+        />
+      }
+      @default {
+        <app-experiment-owner-list
+          class="full-width"
+          [owners]="owners()"
+          [unavailable]="ownersUnavailable()"
+        />
+      }
+    }
   </form>
 
   @if (experimentId(); as experimentId) {
