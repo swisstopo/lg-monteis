@@ -147,7 +147,7 @@ class ExperimentOwnerServiceTest {
   }
 
   @Nested
-  class Candidates {
+  class OwnerCandidates {
 
     @Test
     void should_check_the_experiment_is_readable_first() {
@@ -155,7 +155,7 @@ class ExperimentOwnerServiceTest {
           .given(repository)
           .requireVisible(EXPERIMENT_ID);
 
-      assertThrows(ObjectNotFoundException.class, () -> service.candidates(EXPERIMENT_ID));
+      assertThrows(ObjectNotFoundException.class, () -> service.ownerCandidates(EXPERIMENT_ID));
       then(userDirectory).shouldHaveNoInteractions();
     }
 
@@ -163,7 +163,7 @@ class ExperimentOwnerServiceTest {
     void should_ask_keycloak_fresh() {
       given(userDirectory.currentPrincipalInvestigatorsOf(EXPERIMENT_ID)).willReturn(known(ALICE));
 
-      assertEquals(List.of(ALICE), service.candidates(EXPERIMENT_ID));
+      assertEquals(List.of(ALICE), service.ownerCandidates(EXPERIMENT_ID));
       then(userDirectory).should(never()).principalInvestigatorsOf(any());
     }
 
@@ -172,7 +172,7 @@ class ExperimentOwnerServiceTest {
       given(userDirectory.currentPrincipalInvestigatorsOf(EXPERIMENT_ID))
           .willReturn(new PrincipalInvestigators.NoWriteGroup());
 
-      assertEquals(List.of(), service.candidates(EXPERIMENT_ID));
+      assertEquals(List.of(), service.ownerCandidates(EXPERIMENT_ID));
     }
 
     @Test
@@ -182,9 +182,10 @@ class ExperimentOwnerServiceTest {
               new PrincipalInvestigators.AccessDenied("403"),
               new PrincipalInvestigators.KeycloakUnavailable("down"));
 
-      assertThrows(UserDirectoryDeniedException.class, () -> service.candidates(EXPERIMENT_ID));
       assertThrows(
-          UserDirectoryUnavailableException.class, () -> service.candidates(EXPERIMENT_ID));
+          UserDirectoryDeniedException.class, () -> service.ownerCandidates(EXPERIMENT_ID));
+      assertThrows(
+          UserDirectoryUnavailableException.class, () -> service.ownerCandidates(EXPERIMENT_ID));
     }
   }
 
