@@ -1,10 +1,10 @@
 package ch.swisstopo.monteis.core.modules.experiment.service;
 
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.AccessDenied;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.KeycloakUnavailable;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.Known;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.NoWriteGroup;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.AccessDenied;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.KeycloakUnavailable;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.Known;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.NoWriteGroup;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.modules.experiment.query.StoredOwners;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
@@ -37,11 +37,11 @@ final class VisibleOwnersResolver {
       return VisibleOwners.UNAVAILABLE;
     }
     UUID experimentId = storedOwners.experimentId();
-    return switch (userDirectory.principalInvestigatorsOf(experimentId)) {
-      case Known known -> onlyOwnersAmong(known.users(), storedOwners);
-      case NoWriteGroup _ -> hideOwners(experimentId, "the experiment has no write group");
-      case AccessDenied denied -> hideOwners(experimentId, denied.reason());
-      case KeycloakUnavailable unavailable -> giveUpOnKeycloak(unavailable.reason());
+    return switch (userDirectory.pisForReading(experimentId)) {
+      case Known(var pis) -> onlyOwnersAmong(pis, storedOwners);
+      case NoWriteGroup() -> hideOwners(experimentId, "the experiment has no write group");
+      case AccessDenied(var reason) -> hideOwners(experimentId, reason);
+      case KeycloakUnavailable(var reason) -> giveUpOnKeycloak(reason);
     };
   }
 

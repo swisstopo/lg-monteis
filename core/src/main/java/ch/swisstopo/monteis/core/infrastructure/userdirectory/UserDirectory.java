@@ -10,8 +10,8 @@ import java.util.UUID;
 public interface UserDirectory {
 
   /** The PIs of the experiment, possibly from a short lived cache. For anything that reads. */
-  PrincipalInvestigators principalInvestigatorsOf(UUID experimentId);
+  Pis pisForReading(UUID experimentId);
 
-  /** Like {@link #principalInvestigatorsOf} but always asks the identity provider. For anything that writes. */
-  PrincipalInvestigators currentPrincipalInvestigatorsOf(UUID experimentId);
+  /** Like {@link #pisForReading} but always asks the identity provider. For anything that writes. */
+  Pis pisForWriting(UUID experimentId);
 }

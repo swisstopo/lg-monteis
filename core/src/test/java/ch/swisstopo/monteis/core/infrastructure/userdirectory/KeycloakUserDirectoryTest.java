@@ -44,7 +44,9 @@ class KeycloakUserDirectoryTest {
 
   @BeforeEach
   void setUp() {
-    directory = new KeycloakUserDirectory(keycloak, currentUser, Duration.ofMinutes(1), 100);
+    directory =
+        new KeycloakUserDirectory(
+            keycloak, currentUser, new UserDirectoryProperties(Duration.ofMinutes(1), 100));
     Mockito.lenient().when(currentUser.currentSubject()).thenReturn(Optional.of(UUID.randomUUID()));
   }
 
@@ -53,17 +55,15 @@ class KeycloakUserDirectoryTest {
     givenWriteGroupWith(ALICE, DISABLED, BOB);
 
     assertEquals(
-        new PrincipalInvestigators.Known(List.of(directoryUser(BOB), directoryUser(ALICE))),
-        directory.principalInvestigatorsOf(EXPERIMENT_ID));
+        new Pis.Known(List.of(directoryUser(BOB), directoryUser(ALICE))),
+        directory.pisForReading(EXPERIMENT_ID));
   }
 
   @Test
   void should_tell_a_missing_write_group() {
     given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT)).willReturn(List.of());
 
-    assertEquals(
-        new PrincipalInvestigators.NoWriteGroup(),
-        directory.principalInvestigatorsOf(EXPERIMENT_ID));
+    assertEquals(new Pis.NoWriteGroup(), directory.pisForReading(EXPERIMENT_ID));
   }
 
   @Test
@@ -72,22 +72,18 @@ class KeycloakUserDirectoryTest {
         .willThrow(new KeycloakAccessDeniedException("forbidden", null))
         .willThrow(new KeycloakUnavailableException("down", null));
 
-    assertInstanceOf(
-        PrincipalInvestigators.AccessDenied.class,
-        directory.principalInvestigatorsOf(EXPERIMENT_ID));
-    assertInstanceOf(
-        PrincipalInvestigators.KeycloakUnavailable.class,
-        directory.principalInvestigatorsOf(EXPERIMENT_ID));
+    assertInstanceOf(Pis.AccessDenied.class, directory.pisForReading(EXPERIMENT_ID));
+    assertInstanceOf(Pis.KeycloakUnavailable.class, directory.pisForReading(EXPERIMENT_ID));
   }
 
   @Test
   void should_cache_complete_answers_per_caller() {
     givenWriteGroupWith(ALICE);
 
-    directory.principalInvestigatorsOf(EXPERIMENT_ID);
-    directory.principalInvestigatorsOf(EXPERIMENT_ID);
+    directory.pisForReading(EXPERIMENT_ID);
+    directory.pisForReading(EXPERIMENT_ID);
     given(currentUser.currentSubject()).willReturn(Optional.of(UUID.randomUUID()));
-    directory.principalInvestigatorsOf(EXPERIMENT_ID);
+    directory.pisForReading(EXPERIMENT_ID);
 
     then(keycloak).should(times(2)).groupMembers("rw");
   }
@@ -99,19 +95,18 @@ class KeycloakUserDirectoryTest {
         .willReturn(List.of(WRITE_GROUP));
     given(keycloak.groupMembers("rw")).willReturn(List.of(ALICE));
 
-    directory.principalInvestigatorsOf(EXPERIMENT_ID);
+    directory.pisForReading(EXPERIMENT_ID);
 
-    assertInstanceOf(
-        PrincipalInvestigators.Known.class, directory.principalInvestigatorsOf(EXPERIMENT_ID));
+    assertInstanceOf(Pis.Known.class, directory.pisForReading(EXPERIMENT_ID));
   }
 
   @Test
   void should_ask_keycloak_again_for_a_fresh_lookup() {
     givenWriteGroupWith(ALICE);
 
-    directory.principalInvestigatorsOf(EXPERIMENT_ID);
-    directory.currentPrincipalInvestigatorsOf(EXPERIMENT_ID);
-    directory.principalInvestigatorsOf(EXPERIMENT_ID);
+    directory.pisForReading(EXPERIMENT_ID);
+    directory.pisForWriting(EXPERIMENT_ID);
+    directory.pisForReading(EXPERIMENT_ID);
 
     then(keycloak).should(times(2)).groupMembers("rw");
   }
@@ -120,9 +115,7 @@ class KeycloakUserDirectoryTest {
   void should_not_ask_keycloak_without_a_caller() {
     given(currentUser.currentSubject()).willReturn(Optional.empty());
 
-    assertInstanceOf(
-        PrincipalInvestigators.KeycloakUnavailable.class,
-        directory.principalInvestigatorsOf(EXPERIMENT_ID));
+    assertInstanceOf(Pis.KeycloakUnavailable.class, directory.pisForReading(EXPERIMENT_ID));
     then(keycloak).shouldHaveNoInteractions();
   }
 
@@ -132,6 +125,6 @@ class KeycloakUserDirectoryTest {
   }
 
   private static DirectoryUser directoryUser(KeycloakUser user) {
-    return new DirectoryUser(user.id(), user.firstName(), user.lastName(), user.email());
+    return DirectoryUser.from(user);
   }
 }
