@@ -31,8 +31,6 @@ public class SecurityConfig {
     "/actuator/**", "/actuator", "/swagger-ui/**", "/v3/api-docs/**"
   };
   static final String SENSORS_PATHS = ApiPaths.SENSORS + "/**";
-  static final String EXPERIMENT_OWNER_CANDIDATES_PATH = "/api/experiments/{id}/owner-candidates";
-  static final String EXPERIMENT_OWNERS_PATH = "/api/experiments/{id}/owners";
 
   // every method that changes state; all of them are admin-only unless an earlier rule matched
   private static final Set<String> WRITE_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
@@ -53,7 +51,8 @@ public class SecurityConfig {
                     .permitAll()
                     // first match wins, the per-experiment writes have to come before the
                     // admin-only write rule below
-                    .requestMatchers(EXPERIMENT_OWNER_CANDIDATES_PATH, EXPERIMENT_OWNERS_PATH)
+                    .requestMatchers(
+                        ApiPaths.EXPERIMENT_OWNER_CANDIDATES, ApiPaths.EXPERIMENT_OWNERS)
                     .access(allowIf(Capabilities::canManageExperimentOwners))
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
                     .access(experimentWrite)

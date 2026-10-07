@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
+import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentOwnersDto;
@@ -19,14 +20,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/experiments")
 public class ExperimentOwnerController {
-  public static final String CANDIDATES_PATH = "/api/experiments/{id}/owner-candidates";
-  public static final String OWNERS_PATH = "/api/experiments/{id}/owners";
 
   private final ExperimentOwnerService ownerService;
   private final ExperimentWebMapper mapper;
@@ -45,7 +42,7 @@ public class ExperimentOwnerController {
           "Every owner of an experiment visible to the caller, each once, sorted by name. Feeds"
               + " the owner filter of the experiment table. Empty when Keycloak is unavailable.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved owners")
-  @GetMapping(path = "/owners", produces = MediaType.APPLICATION_JSON_VALUE)
+  @GetMapping(path = ApiPaths.ALL_EXPERIMENT_OWNERS, produces = MediaType.APPLICATION_JSON_VALUE)
   public List<ExperimentOwnerDto> getAssignedOwners() {
     return mapper.toOwnerDtos(ownerService.filterableOwners());
   }
@@ -55,8 +52,11 @@ public class ExperimentOwnerController {
       description = "The PIs of the experiment in Keycloak, i.e. the members of its write group.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved candidates")
   @ApiResponse(responseCode = "503", description = "Keycloak is unavailable")
-  @GetMapping(path = "/{id}/owner-candidates", produces = MediaType.APPLICATION_JSON_VALUE)
-  public List<ExperimentOwnerDto> getOwnerCandidates(@PathVariable UUID id) {
+  @GetMapping(
+      path = ApiPaths.EXPERIMENT_OWNER_CANDIDATES,
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  public List<ExperimentOwnerDto> getOwnerCandidates(
+      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
     return mapper.toOwnerDtos(ownerService.candidates(id));
   }
 
@@ -66,11 +66,12 @@ public class ExperimentOwnerController {
   @ApiResponse(responseCode = "200", description = "Owners successfully replaced")
   @ApiResponse(responseCode = "503", description = "Keycloak is unavailable")
   @PutMapping(
-      path = "/{id}/owners",
+      path = ApiPaths.EXPERIMENT_OWNERS,
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExperimentResponseDto> replaceOwners(
-      @PathVariable UUID id, @Valid @RequestBody WriteExperimentOwnersDto dto) {
+      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id,
+      @Valid @RequestBody WriteExperimentOwnersDto dto) {
     Experiment updated = ownerService.replaceOwners(id, Set.copyOf(dto.ownerIds()));
     return ResponseEntity.ok(
         mapper.toDto(updated, ownerService.ownersOf(updated), LocalDate.now(clock)));
