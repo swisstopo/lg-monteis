@@ -12,78 +12,35 @@ import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDenie
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
-import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentOwnerQueryRepository;
-import ch.swisstopo.monteis.core.modules.experiment.query.StoredOwners;
-import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Owners are stored as Keycloak ids only. An owner counts as long as they are a PI of the
- * experiment in Keycloak, so someone who lost write access, was disabled or was deleted disappears
- * from every response right away, the stale row goes with the next save of the experiment or its
- * owners. Only a complete answer from Keycloak ({@link Known}) ever removes anyone.
+ * Who may be an owner and who is one. Owners are stored as Keycloak ids only and have to be PIs of
+ * the experiment. Someone who stopped being a PI goes with the next save of the experiment or its
+ * owners, and only a complete answer from Keycloak ({@link Known}) ever removes anyone.
  */
 @Service
-public class ExperimentOwnerService {
+public class ExperimentOwnerAssignment {
 
   public static final String OWNER_IDS_FIELD = "ownerIds";
   public static final String NOT_ELIGIBLE_KEY = "experiment.owner.not-eligible";
 
-  private static final Logger log = LoggerFactory.getLogger(ExperimentOwnerService.class);
+  private static final Logger log = LoggerFactory.getLogger(ExperimentOwnerAssignment.class);
 
   private final ExperimentRepository repository;
-  private final ExperimentOwnerQueryRepository ownerQueryRepository;
   private final UserDirectory userDirectory;
 
-  public ExperimentOwnerService(
-      ExperimentRepository repository,
-      ExperimentOwnerQueryRepository ownerQueryRepository,
-      UserDirectory userDirectory) {
+  public ExperimentOwnerAssignment(ExperimentRepository repository, UserDirectory userDirectory) {
     this.repository = repository;
-    this.ownerQueryRepository = ownerQueryRepository;
     this.userDirectory = userDirectory;
-  }
-
-  /** Never fails because of Keycloak. */
-  public VisibleOwners ownersOf(Experiment experiment) {
-    return new VisibleOwnersResolver(userDirectory).ownersOf(storedOwnersOf(experiment));
-  }
-
-  /** In the order of the experiments, asks Keycloak no more once it is unavailable. */
-  public Map<UUID, VisibleOwners> ownersByExperiment(Collection<Experiment> experiments) {
-    VisibleOwnersResolver resolver = new VisibleOwnersResolver(userDirectory);
-    Map<UUID, VisibleOwners> ownersByExperiment = new LinkedHashMap<>();
-    for (Experiment experiment : experiments) {
-      ownersByExperiment.put(experiment.getId(), resolver.ownersOf(storedOwnersOf(experiment)));
-    }
-    return ownersByExperiment;
-  }
-
-  /** Every visible owner of a readable experiment, each once, sorted by name. */
-  public List<DirectoryUser> filterableOwners() {
-    VisibleOwnersResolver resolver = new VisibleOwnersResolver(userDirectory);
-    Set<DirectoryUser> owners = new TreeSet<>(DirectoryUser.BY_NAME);
-    for (StoredOwners storedOwners : ownerQueryRepository.findStoredOwners()) {
-      owners.addAll(resolver.ownersOf(storedOwners).users());
-    }
-    return List.copyOf(owners);
-  }
-
-  /** For one CSV export, asks Keycloak no more once it is unavailable. */
-  public Function<StoredOwners, VisibleOwners> ownersForExport() {
-    return new VisibleOwnersResolver(userDirectory)::ownersOf;
   }
 
   /**
@@ -154,10 +111,6 @@ public class ExperimentOwnerService {
       log.warn("Keeping the former owners of experiment {}: {}", experiment.getId(), e.toString());
       return experiment;
     }
-  }
-
-  private static StoredOwners storedOwnersOf(Experiment experiment) {
-    return new StoredOwners(experiment.getId(), experiment.getOwnerIds());
   }
 
   private static Set<UUID> userIds(List<DirectoryUser> users) {

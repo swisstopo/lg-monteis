@@ -46,7 +46,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
 
   @Autowired private JooqExperimentCsvExportQueryRepository exportRepository;
 
-  /** Stands in for ExperimentOwnerService's resolver, the owner rule is tested there. */
+  /** Stands in for ExperimentOwnerQueries.ownersForExport, the owner rule is tested there. */
   private Function<StoredOwners, VisibleOwners> owners = _ -> VisibleOwners.NONE;
 
   private static final DirectoryUser ALICE =
