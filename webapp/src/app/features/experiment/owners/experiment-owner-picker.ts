@@ -24,12 +24,15 @@ import { ownerDisplayName } from './owner-name';
     TranslatePipe,
   ],
   templateUrl: './experiment-owner-picker.html',
+  styleUrl: './experiment-owner-picker.scss',
 })
 export class ExperimentOwnerPicker {
   private readonly experimentService = inject(ExperimentService);
 
   readonly experimentId = input.required<string>();
   readonly selectedOwnerIds = model<string[]>([]);
+  /** Message key of a failed save. */
+  readonly error = input<string>();
 
   protected readonly displayName = ownerDisplayName;
   protected readonly searchText = signal('');

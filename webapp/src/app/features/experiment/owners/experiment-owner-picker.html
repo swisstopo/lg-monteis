@@ -28,7 +28,11 @@
       <mat-option [value]="owner.id">{{ displayName(owner) }} ({{ owner.email }})</mat-option>
     }
   </mat-autocomplete>
-  @if (candidates.error()) {
+  @if (error(); as error) {
+    <mat-hint class="experiment-owner-picker_error" data-testid="owner-error">{{
+      error | translate
+    }}</mat-hint>
+  } @else if (candidates.error()) {
     <mat-hint>{{ 'error.user-directory.unavailable' | translate }}</mat-hint>
   } @else if (!candidates.isLoading() && candidates.value()?.length === 0) {
     <mat-hint>{{ 'experiment.owners.noCandidates' | translate }}</mat-hint>
