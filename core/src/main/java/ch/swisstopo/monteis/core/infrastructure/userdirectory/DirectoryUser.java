@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.userdirectory;
 
+import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakUser;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.UUID;
@@ -14,6 +15,10 @@ public record DirectoryUser(UUID id, String firstName, String lastName, String e
           .thenComparing(
               DirectoryUser::firstName, Comparator.nullsLast(String::compareToIgnoreCase))
           .thenComparing(DirectoryUser::id);
+
+  public static DirectoryUser from(KeycloakUser user) {
+    return new DirectoryUser(user.id(), user.firstName(), user.lastName(), user.email());
+  }
 
   public String displayName() {
     return Stream.of(firstName, lastName)

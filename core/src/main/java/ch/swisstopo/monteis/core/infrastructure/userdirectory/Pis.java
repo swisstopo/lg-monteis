@@ -7,21 +7,21 @@ import java.util.List;
  * for every other case the PIs are unknown right now and nothing may be concluded from their
  * absence.
  */
-public sealed interface PrincipalInvestigators {
+public sealed interface Pis {
 
   /** The experiment's write group exists, these are its enabled members. */
-  record Known(List<DirectoryUser> users) implements PrincipalInvestigators {
+  record Known(List<DirectoryUser> users) implements Pis {
     public Known {
       users = List.copyOf(users);
     }
   }
 
   /** No group grants write access to the experiment, or the caller cannot see it. */
-  record NoWriteGroup() implements PrincipalInvestigators {}
+  record NoWriteGroup() implements Pis {}
 
   /** Keycloak answered 403, the realm's permissions do not match what core expects. */
-  record AccessDenied(String reason) implements PrincipalInvestigators {}
+  record AccessDenied(String reason) implements Pis {}
 
   /** Keycloak could not be asked. */
-  record KeycloakUnavailable(String reason) implements PrincipalInvestigators {}
+  record KeycloakUnavailable(String reason) implements Pis {}
 }

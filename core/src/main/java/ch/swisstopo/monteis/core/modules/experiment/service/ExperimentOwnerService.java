@@ -3,11 +3,10 @@ package ch.swisstopo.monteis.core.modules.experiment.service;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.AccessDenied;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.KeycloakUnavailable;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.Known;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators.NoWriteGroup;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.AccessDenied;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.KeycloakUnavailable;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.Known;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.NoWriteGroup;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDeniedException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
@@ -120,12 +119,11 @@ public class ExperimentOwnerService {
   }
 
   private List<DirectoryUser> currentPisOrFail(UUID experimentId) {
-    return switch (userDirectory.currentPrincipalInvestigatorsOf(experimentId)) {
-      case Known known -> known.users();
-      case NoWriteGroup _ -> List.of();
-      case AccessDenied denied -> throw new UserDirectoryDeniedException(denied.reason());
-      case KeycloakUnavailable unavailable ->
-          throw new UserDirectoryUnavailableException(unavailable.reason());
+    return switch (userDirectory.pisForWriting(experimentId)) {
+      case Known(var pis) -> pis;
+      case NoWriteGroup() -> List.of();
+      case AccessDenied(var reason) -> throw new UserDirectoryDeniedException(reason);
+      case KeycloakUnavailable(var reason) -> throw new UserDirectoryUnavailableException(reason);
     };
   }
 
@@ -142,9 +140,8 @@ public class ExperimentOwnerService {
     if (experiment.getOwnerIds().isEmpty()) {
       return Set.of();
     }
-    PrincipalInvestigators pis = userDirectory.currentPrincipalInvestigatorsOf(experiment.getId());
-    if (pis instanceof Known known) {
-      return idsWithout(experiment.getOwnerIds(), userIds(known.users()));
+    if (userDirectory.pisForWriting(experiment.getId()) instanceof Known(var pis)) {
+      return idsWithout(experiment.getOwnerIds(), userIds(pis));
     }
     return Set.of();
   }
