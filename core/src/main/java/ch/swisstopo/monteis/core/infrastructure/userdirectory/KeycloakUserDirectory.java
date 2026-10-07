@@ -10,6 +10,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -20,7 +21,8 @@ import java.util.stream.Collectors;
  * docker/keycloak/realm}). We search by that attribute, never by the group name.
  *
  * <p>Keycloak answers with the caller's permissions, so the cache is per caller: what one user was
- * allowed to read must never be served to another.
+ * allowed to read must never be served to another. Only complete answers are cached, a failed
+ * lookup is asked again next time.
  */
 class KeycloakUserDirectory implements UserDirectory {
 
@@ -30,41 +32,60 @@ class KeycloakUserDirectory implements UserDirectory {
 
   private final KeycloakAdminClient keycloak;
   private final CurrentUserProvider currentUser;
-  private final Cache<CacheKey, List<DirectoryUser>> principalInvestigators;
+  private final Cache<CacheKey, PiLookup> cache;
 
   KeycloakUserDirectory(
-      KeycloakAdminClient keycloak, CurrentUserProvider currentUser, Duration cacheTtl) {
+      KeycloakAdminClient keycloak,
+      CurrentUserProvider currentUser,
+      Duration cacheTtl,
+      long cacheMaxSize) {
     this.keycloak = keycloak;
     this.currentUser = currentUser;
-    this.principalInvestigators = Caffeine.newBuilder().expireAfterWrite(cacheTtl).build();
+    this.cache = Caffeine.newBuilder().expireAfterWrite(cacheTtl).maximumSize(cacheMaxSize).build();
   }
 
   @Override
-  public List<DirectoryUser> principalInvestigatorsOf(UUID experimentId) {
-    UUID caller =
-        currentUser
-            .currentSubject()
-            .orElseThrow(
-                () ->
-                    new UserDirectoryUnavailableException(
-                        "No caller to ask Keycloak for the PIs of experiment " + experimentId,
-                        null));
+  public PiLookup lookupPis(UUID experimentId) {
+    return cacheKey(experimentId)
+        .map(cache::getIfPresent)
+        .orElseGet(() -> lookupPisFresh(experimentId));
+  }
+
+  @Override
+  public PiLookup lookupPisFresh(UUID experimentId) {
+    Optional<CacheKey> key = cacheKey(experimentId);
+    if (key.isEmpty()) {
+      return new PiLookup.Unavailable("no caller to ask Keycloak with");
+    }
+    PiLookup lookup = load(experimentId);
+    if (lookup instanceof PiLookup.Found || lookup instanceof PiLookup.NoWriteGroup) {
+      cache.put(key.get(), lookup);
+    }
+    return lookup;
+  }
+
+  private Optional<CacheKey> cacheKey(UUID experimentId) {
+    return currentUser.currentSubject().map(caller -> new CacheKey(caller, experimentId));
+  }
+
+  private PiLookup load(UUID experimentId) {
     try {
-      return principalInvestigators.get(
-          new CacheKey(caller, experimentId), key -> loadPrincipalInvestigators(experimentId));
+      List<KeycloakGroup> writeGroups =
+          keycloak.findGroupsByAttribute(WRITE_EXPERIMENT_IDS, experimentId.toString());
+      if (writeGroups.isEmpty()) {
+        return new PiLookup.NoWriteGroup();
+      }
+      return new PiLookup.Found(enabledMembers(writeGroups));
     } catch (KeycloakAccessDeniedException e) {
-      throw new UserDirectoryAccessDeniedException(
-          "Keycloak denied reading the PIs of experiment " + experimentId, e);
+      return new PiLookup.Denied(e.getMessage());
     } catch (KeycloakUnavailableException e) {
-      throw new UserDirectoryUnavailableException(
-          "Keycloak failed reading the PIs of experiment " + experimentId, e);
+      return new PiLookup.Unavailable(e.getMessage());
     }
   }
 
-  private List<DirectoryUser> loadPrincipalInvestigators(UUID experimentId) {
-    return keycloak.findGroupsByAttribute(WRITE_EXPERIMENT_IDS, experimentId.toString()).stream()
-        .map(KeycloakGroup::id)
-        .flatMap(groupId -> keycloak.groupMembers(groupId).stream())
+  private List<DirectoryUser> enabledMembers(List<KeycloakGroup> groups) {
+    return groups.stream()
+        .flatMap(group -> keycloak.groupMembers(group.id()).stream())
         .filter(KeycloakUser::enabled)
         .collect(Collectors.toMap(KeycloakUser::id, Function.identity(), (first, _) -> first))
         .values()

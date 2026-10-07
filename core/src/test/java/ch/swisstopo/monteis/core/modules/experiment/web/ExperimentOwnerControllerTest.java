@@ -15,12 +15,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDeniedException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
-import ch.swisstopo.monteis.core.modules.experiment.service.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import java.time.Clock;
@@ -60,7 +61,7 @@ class ExperimentOwnerControllerTest {
 
   @Test
   void should_list_assigned_owners_for_every_reader() throws Exception {
-    given(ownerService.assignedOwners()).willReturn(List.of(ALICE));
+    given(ownerService.filterableOwners()).willReturn(List.of(ALICE));
     given(mapper.toOwnerDtos(List.of(ALICE))).willReturn(List.of(ALICE_DTO));
 
     mockMvc
@@ -112,8 +113,8 @@ class ExperimentOwnerControllerTest {
         new ExperimentResponseDto(
             ASSIGNED_EXPERIMENT, "EXP", null, null, null, 2, 0, List.of(ALICE_DTO), false);
     given(ownerService.replaceOwners(ASSIGNED_EXPERIMENT, Set.of(ALICE.id()))).willReturn(updated);
-    given(ownerService.visibleOwners(updated)).willReturn(new VisibleOwners(List.of(ALICE), false));
-    given(mapper.toDto(eq(updated), eq(new VisibleOwners(List.of(ALICE), false)), any()))
+    given(ownerService.ownersOf(updated)).willReturn(VisibleOwners.of(List.of(ALICE)));
+    given(mapper.toDto(eq(updated), eq(VisibleOwners.of(List.of(ALICE))), any()))
         .willReturn(response);
 
     mockMvc
@@ -166,7 +167,7 @@ class ExperimentOwnerControllerTest {
   @Test
   void should_answer_503_when_keycloak_is_unavailable() throws Exception {
     given(ownerService.candidates(ASSIGNED_EXPERIMENT))
-        .willThrow(new UserDirectoryUnavailableException("down", null));
+        .willThrow(new UserDirectoryUnavailableException("down"));
 
     mockMvc
         .perform(
@@ -175,6 +176,20 @@ class ExperimentOwnerControllerTest {
         .andExpect(status().isServiceUnavailable())
         .andExpect(jsonPath("$.target").value("GLOBAL"))
         .andExpect(jsonPath("$.messageKey").value("error.user-directory.unavailable"));
+  }
+
+  @Test
+  void should_answer_502_when_keycloak_denies() throws Exception {
+    given(ownerService.candidates(ASSIGNED_EXPERIMENT))
+        .willThrow(new UserDirectoryDeniedException("403"));
+
+    mockMvc
+        .perform(
+            get("/api/experiments/{id}/owner-candidates", ASSIGNED_EXPERIMENT)
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication())))
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.target").value("GLOBAL"))
+        .andExpect(jsonPath("$.messageKey").value("error.user-directory.denied"));
   }
 
   private static String ownersBody(UUID... ownerIds) {

@@ -3,7 +3,7 @@ package ch.swisstopo.monteis.core.modules.experiment.web;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
-import ch.swisstopo.monteis.core.modules.experiment.service.VisibleOwners;
+import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;

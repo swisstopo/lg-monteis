@@ -4,29 +4,29 @@ import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOwner.EX
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.BDDMockito.given;
 
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.SetFilterModel;
 import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentOwnership;
+import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -46,7 +46,8 @@ class JooqExperimentCsvExportQueryRepositoryIT {
 
   @Autowired private JooqExperimentCsvExportQueryRepository exportRepository;
 
-  @MockitoBean private UserDirectory userDirectory;
+  /** Stands in for ExperimentOwnerService's resolver, the owner rule is tested there. */
+  private Function<ExperimentOwnership, VisibleOwners> owners = _ -> VisibleOwners.NONE;
 
   private static final DirectoryUser ALICE =
       new DirectoryUser(UUID.randomUUID(), "Alice", "Example", "alice@example.test");
@@ -55,7 +56,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
 
   @Test
   @Transactional
-  void should_export_the_names_of_owners_that_are_still_pis() {
+  void should_export_the_resolved_owner_names_for_the_stored_owners() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           UUID experimentId =
@@ -64,23 +65,26 @@ class JooqExperimentCsvExportQueryRepositoryIT {
                   null,
                   LocalDate.of(2024, 1, 1),
                   LocalDate.of(2024, 12, 31));
-          UUID formerPi = UUID.randomUUID();
-          addOwners(experimentId, ALICE.id(), BOB.id(), formerPi);
-          given(userDirectory.principalInvestigatorsOf(experimentId))
-              .willReturn(List.of(BOB, ALICE));
+          addOwners(experimentId, ALICE.id(), BOB.id());
+          List<ExperimentOwnership> asked = new ArrayList<>();
+          owners =
+              ownership -> {
+                asked.add(ownership);
+                return VisibleOwners.of(List.of(BOB, ALICE));
+              };
 
           String csv = streamToString(nameFilter("OwnerCsvExportExperiment"));
 
+          assertEquals(
+              List.of(new ExperimentOwnership(experimentId, Set.of(ALICE.id(), BOB.id()))), asked);
           List<String> lines = List.of(csv.split("\r\n"));
-          assertTrue(
-              lines.get(1).contains(",0,Bob Builder; Alice Example,,"),
-              "owners in directory order, the former PI left out: " + csv);
+          assertTrue(lines.get(1).contains(",0,Bob Builder; Alice Example,,"), csv);
         });
   }
 
   @Test
   @Transactional
-  void should_export_without_owner_names_when_keycloak_is_unavailable() {
+  void should_mark_the_owners_unavailable_when_keycloak_is_unavailable() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           UUID experimentId =
@@ -90,12 +94,11 @@ class JooqExperimentCsvExportQueryRepositoryIT {
                   LocalDate.of(2024, 1, 1),
                   LocalDate.of(2024, 12, 31));
           addOwners(experimentId, ALICE.id());
-          given(userDirectory.principalInvestigatorsOf(experimentId))
-              .willThrow(new UserDirectoryUnavailableException("down", null));
+          owners = _ -> VisibleOwners.UNAVAILABLE;
 
           String csv = streamToString(nameFilter("OfflineCsvExportExperiment"));
 
-          assertTrue(List.of(csv.split("\r\n")).get(1).contains(",0,,"), csv);
+          assertTrue(List.of(csv.split("\r\n")).get(1).contains(",0,(unavailable),"), csv);
         });
   }
 
@@ -110,7 +113,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           createExperiment(
               "FilteredCsvOther", null, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
           addOwners(owned, ALICE.id());
-          given(userDirectory.principalInvestigatorsOf(owned)).willReturn(List.of(ALICE));
+          owners = _ -> VisibleOwners.of(List.of(ALICE));
 
           PagedRequest request =
               new PagedRequest(
@@ -274,7 +277,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
   private String streamToString(PagedRequest request) {
     StringWriter writer = new StringWriter();
     try {
-      exportRepository.streamCsv(request, writer);
+      exportRepository.streamCsv(request, writer, owners);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }

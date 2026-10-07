@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.userdirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
@@ -28,7 +28,7 @@ class KeycloakUserDirectoryTest {
 
   private static final UUID EXPERIMENT_ID = UUID.randomUUID();
   private static final String EXPERIMENT = EXPERIMENT_ID.toString();
-  private static final UUID CALLER = UUID.randomUUID();
+  private static final String WRITE_IDS = KeycloakUserDirectory.WRITE_EXPERIMENT_IDS;
   private static final KeycloakGroup WRITE_GROUP =
       new KeycloakGroup("rw", "/Experiments/Alpha/read + write", null, null);
   private static final KeycloakUser ALICE =
@@ -44,66 +44,81 @@ class KeycloakUserDirectoryTest {
 
   @BeforeEach
   void setUp() {
-    directory = new KeycloakUserDirectory(keycloak, currentUser, Duration.ofMinutes(1));
-    Mockito.lenient().when(currentUser.currentSubject()).thenReturn(Optional.of(CALLER));
+    directory = new KeycloakUserDirectory(keycloak, currentUser, Duration.ofMinutes(1), 100);
+    Mockito.lenient().when(currentUser.currentSubject()).thenReturn(Optional.of(UUID.randomUUID()));
   }
 
   @Test
-  void should_read_the_enabled_members_of_the_write_groups_sorted_by_name() {
+  void should_find_the_enabled_members_of_the_write_groups_sorted_by_name() {
     givenWriteGroupWith(ALICE, DISABLED, BOB);
 
     assertEquals(
-        List.of(directoryUser(BOB), directoryUser(ALICE)),
-        directory.principalInvestigatorsOf(EXPERIMENT_ID));
+        new PiLookup.Found(List.of(directoryUser(BOB), directoryUser(ALICE))),
+        directory.lookupPis(EXPERIMENT_ID));
   }
 
   @Test
-  void should_cache_per_caller() {
+  void should_tell_a_missing_write_group() {
+    given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT)).willReturn(List.of());
+
+    assertEquals(new PiLookup.NoWriteGroup(), directory.lookupPis(EXPERIMENT_ID));
+  }
+
+  @Test
+  void should_tell_a_denial_apart_from_an_unavailable_keycloak() {
+    given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT))
+        .willThrow(new KeycloakAccessDeniedException("forbidden", null))
+        .willThrow(new KeycloakUnavailableException("down", null));
+
+    assertInstanceOf(PiLookup.Denied.class, directory.lookupPis(EXPERIMENT_ID));
+    assertInstanceOf(PiLookup.Unavailable.class, directory.lookupPis(EXPERIMENT_ID));
+  }
+
+  @Test
+  void should_cache_complete_answers_per_caller() {
     givenWriteGroupWith(ALICE);
 
-    directory.principalInvestigatorsOf(EXPERIMENT_ID);
-    directory.principalInvestigatorsOf(EXPERIMENT_ID);
+    directory.lookupPis(EXPERIMENT_ID);
+    directory.lookupPis(EXPERIMENT_ID);
     given(currentUser.currentSubject()).willReturn(Optional.of(UUID.randomUUID()));
-    directory.principalInvestigatorsOf(EXPERIMENT_ID);
+    directory.lookupPis(EXPERIMENT_ID);
 
     then(keycloak).should(times(2)).groupMembers("rw");
   }
 
   @Test
-  void should_report_a_denial_apart_from_an_unavailable_keycloak() {
-    given(keycloak.findGroupsByAttribute(KeycloakUserDirectory.WRITE_EXPERIMENT_IDS, EXPERIMENT))
-        .willThrow(new KeycloakAccessDeniedException("forbidden", null));
+  void should_not_cache_a_failed_lookup() {
+    given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT))
+        .willThrow(new KeycloakUnavailableException("down", null))
+        .willReturn(List.of(WRITE_GROUP));
+    given(keycloak.groupMembers("rw")).willReturn(List.of(ALICE));
 
-    assertThrows(
-        UserDirectoryAccessDeniedException.class,
-        () -> directory.principalInvestigatorsOf(EXPERIMENT_ID));
+    directory.lookupPis(EXPERIMENT_ID);
+
+    assertInstanceOf(PiLookup.Found.class, directory.lookupPis(EXPERIMENT_ID));
   }
 
   @Test
-  void should_report_an_unavailable_keycloak() {
-    given(keycloak.findGroupsByAttribute(KeycloakUserDirectory.WRITE_EXPERIMENT_IDS, EXPERIMENT))
-        .willThrow(new KeycloakUnavailableException("down", null));
+  void should_ask_keycloak_again_for_a_fresh_lookup() {
+    givenWriteGroupWith(ALICE);
 
-    UserDirectoryUnavailableException e =
-        assertThrows(
-            UserDirectoryUnavailableException.class,
-            () -> directory.principalInvestigatorsOf(EXPERIMENT_ID));
-    assertEquals(UserDirectoryUnavailableException.class, e.getClass());
+    directory.lookupPis(EXPERIMENT_ID);
+    directory.lookupPisFresh(EXPERIMENT_ID);
+    directory.lookupPis(EXPERIMENT_ID);
+
+    then(keycloak).should(times(2)).groupMembers("rw");
   }
 
   @Test
   void should_not_ask_keycloak_without_a_caller() {
     given(currentUser.currentSubject()).willReturn(Optional.empty());
 
-    assertThrows(
-        UserDirectoryUnavailableException.class,
-        () -> directory.principalInvestigatorsOf(EXPERIMENT_ID));
+    assertInstanceOf(PiLookup.Unavailable.class, directory.lookupPis(EXPERIMENT_ID));
     then(keycloak).shouldHaveNoInteractions();
   }
 
   private void givenWriteGroupWith(KeycloakUser... members) {
-    given(keycloak.findGroupsByAttribute(KeycloakUserDirectory.WRITE_EXPERIMENT_IDS, EXPERIMENT))
-        .willReturn(List.of(WRITE_GROUP));
+    given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT)).willReturn(List.of(WRITE_GROUP));
     given(keycloak.groupMembers("rw")).willReturn(List.of(members));
   }
 

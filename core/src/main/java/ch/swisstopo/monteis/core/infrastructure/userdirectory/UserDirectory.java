@@ -1,20 +1,17 @@
 package ch.swisstopo.monteis.core.infrastructure.userdirectory;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
  * Read access to the users of the identity provider, with the permissions of the current caller.
- * Nothing returned here is persisted.
+ * Nothing returned here is persisted. Never throws for an identity provider that fails, the
+ * outcome says so.
  */
 public interface UserDirectory {
 
-  /**
-   * The enabled members of the group granting write access to the experiment (its PIs), sorted
-   * by last and first name.
-   *
-   * @throws UserDirectoryAccessDeniedException if the caller may not read them
-   * @throws UserDirectoryUnavailableException if the identity provider cannot be asked
-   */
-  List<DirectoryUser> principalInvestigatorsOf(UUID experimentId);
+  /** The PIs of the experiment, possibly from a short lived cache. For anything that reads. */
+  PiLookup lookupPis(UUID experimentId);
+
+  /** Like {@link #lookupPis} but always asks the identity provider. For anything that writes. */
+  PiLookup lookupPisFresh(UUID experimentId);
 }

@@ -13,6 +13,7 @@ public class UserDirectoryConfig {
       KeycloakAdminClient keycloak,
       CurrentUserProvider currentUser,
       UserDirectoryProperties properties) {
-    return new KeycloakUserDirectory(keycloak, currentUser, properties.cacheTtl());
+    return new KeycloakUserDirectory(
+        keycloak, currentUser, properties.cacheTtl(), properties.cacheMaxSize());
   }
 }

@@ -32,7 +32,8 @@
       "forbidden": "You don't have permission for this action."
     },
     "user-directory": {
-      "unavailable": "User data could not be loaded from Keycloak. Please try again later."
+      "unavailable": "User data could not be loaded from Keycloak. Please try again later.",
+      "denied": "Keycloak refused to show the users, its permissions for MONTEIS are misconfigured. Please contact an administrator."
     }
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
