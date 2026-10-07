@@ -54,11 +54,9 @@ public class KeycloakClient {
   public List<KeycloakUser> groupMembers(String groupId) {
     return getList(
         uri ->
-            uri.path("/groups/{id}/members")
-                .queryParam("max", ALL_MEMBERS)
-                // the brief representation leaves out first and last name
-                .queryParam("briefRepresentation", false)
-                .build(groupId),
+            // the brief representation already has names, email and enabled, the full one only
+            // adds what we don't read
+            uri.path("/groups/{id}/members").queryParam("max", ALL_MEMBERS).build(groupId),
         USERS);
   }
 
@@ -67,6 +65,7 @@ public class KeycloakClient {
         uri ->
             uri.path("/groups")
                 .queryParam("q", query)
+                // the brief representation leaves out the attributes the hits are filtered on
                 .queryParam("briefRepresentation", false)
                 .build(),
         GROUPS);
