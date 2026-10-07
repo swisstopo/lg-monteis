@@ -7,9 +7,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.security.oauth2.core.OAuth2AuthorizationException;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -17,6 +19,9 @@ import org.springframework.web.client.RestClientException;
  * Reads experiment PIs through the Keycloak admin API. The groups granting write access carry
  * the experiment id in their {@code write_experiment_ids} attribute (see the realm in {@code
  * docker/keycloak/realm}), that attribute is what we search for, never the group name.
+ *
+ * <p>Every call carries the caller's token, so the cache is per caller: what one user was allowed
+ * to read must never be served to another.
  */
 class KeycloakUserDirectory implements UserDirectory {
 
@@ -28,17 +33,31 @@ class KeycloakUserDirectory implements UserDirectory {
   private static final ParameterizedTypeReference<List<KeycloakUser>> USERS =
       new ParameterizedTypeReference<>() {};
 
-  private final RestClient keycloakAdmin;
-  private final Cache<UUID, List<DirectoryUser>> principalInvestigators;
+  private record CacheKey(UUID caller, UUID experimentId) {}
 
-  KeycloakUserDirectory(RestClient keycloakAdmin, Duration cacheTtl) {
+  private final RestClient keycloakAdmin;
+  private final Supplier<Optional<UUID>> currentCaller;
+  private final Cache<CacheKey, List<DirectoryUser>> principalInvestigators;
+
+  KeycloakUserDirectory(
+      RestClient keycloakAdmin, Supplier<Optional<UUID>> currentCaller, Duration cacheTtl) {
     this.keycloakAdmin = keycloakAdmin;
+    this.currentCaller = currentCaller;
     this.principalInvestigators = Caffeine.newBuilder().expireAfterWrite(cacheTtl).build();
   }
 
   @Override
   public List<DirectoryUser> principalInvestigatorsOf(UUID experimentId) {
-    return principalInvestigators.get(experimentId, this::loadPrincipalInvestigators);
+    UUID caller =
+        currentCaller
+            .get()
+            .orElseThrow(
+                () ->
+                    new UserDirectoryUnavailableException(
+                        "No caller to ask Keycloak for the PIs of experiment " + experimentId,
+                        null));
+    return principalInvestigators.get(
+        new CacheKey(caller, experimentId), key -> loadPrincipalInvestigators(key.experimentId()));
   }
 
   private List<DirectoryUser> loadPrincipalInvestigators(UUID experimentId) {
@@ -52,7 +71,10 @@ class KeycloakUserDirectory implements UserDirectory {
         }
       }
       return members.values().stream().sorted(DirectoryUser.BY_NAME).toList();
-    } catch (RestClientException | OAuth2AuthorizationException e) {
+    } catch (HttpClientErrorException.Forbidden e) {
+      throw new UserDirectoryAccessDeniedException(
+          "Keycloak denied reading the PIs of experiment " + experimentId, e);
+    } catch (RestClientException e) {
       throw new UserDirectoryUnavailableException(
           "Keycloak admin API failed reading the PIs of experiment " + experimentId, e);
     }
