@@ -54,6 +54,7 @@ class EndpointCoverageTest {
           "GET /api/sensors/csv",
           "GET /api/sensors/formulas",
           "GET /api/sensors/types",
+          "GET /api/sensors/detail/{id}",
           "POST /api/sensors",
           "PUT /api/sensors/{id}",
           "POST /api/sensors/republish-config",
