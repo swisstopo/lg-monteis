@@ -82,25 +82,30 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
             .limit(exportRequest.limit())
             .fetchLazy()) {
       for (Record r : cursor) {
-        Period period = new Period(r.get(EXPERIMENTS.START), r.get(EXPERIMENTS.END));
-        CsvWriter.writeRow(
-            writer,
-            Arrays.asList(
-                r.get(EXPERIMENTS.NAME),
-                period.getStatus(today),
-                r.get(EXPERIMENTS.START),
-                r.get(EXPERIMENTS.END),
-                r.get(JooqExperimentRepository.SENSOR_COUNT_FIELD_NAME, Integer.class),
-                ownerNames(
-                    owners.apply(
-                        new StoredOwners(
-                            r.get(EXPERIMENTS.ID),
-                            Set.of(r.get(JooqExperimentRepository.OWNER_IDS_FIELD))))),
-                r.get(EXPERIMENTS.COMMENT),
-                r.get(EXPERIMENTS.ID)));
+        CsvWriter.writeRow(writer, rowOf(r, today, owners));
         writer.flush();
       }
     }
+  }
+
+  private static List<Object> rowOf(
+      Record r, LocalDate today, Function<StoredOwners, VisibleOwners> owners) {
+    Period period = new Period(r.get(EXPERIMENTS.START), r.get(EXPERIMENTS.END));
+    VisibleOwners visibleOwners = owners.apply(storedOwnersOf(r));
+    return Arrays.asList(
+        r.get(EXPERIMENTS.NAME),
+        period.getStatus(today),
+        r.get(EXPERIMENTS.START),
+        r.get(EXPERIMENTS.END),
+        r.get(JooqExperimentRepository.SENSOR_COUNT_FIELD_NAME, Integer.class),
+        ownerNames(visibleOwners),
+        r.get(EXPERIMENTS.COMMENT),
+        r.get(EXPERIMENTS.ID));
+  }
+
+  private static StoredOwners storedOwnersOf(Record r) {
+    return new StoredOwners(
+        r.get(EXPERIMENTS.ID), Set.of(r.get(JooqExperimentRepository.OWNER_IDS_FIELD)));
   }
 
   private static String ownerNames(VisibleOwners owners) {
