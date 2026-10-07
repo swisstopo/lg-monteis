@@ -23,8 +23,7 @@ import org.springframework.web.client.RestClient;
 class KeycloakClientTest {
 
   private static final String ADMIN_URI = "http://keycloak/admin/realms/monteis";
-  private static final String MEMBERS_URI =
-      ADMIN_URI + "/groups/rw/members?max=-1&briefRepresentation=false";
+  private static final String MEMBERS_URI = ADMIN_URI + "/groups/rw/members?max=-1";
   private static final String SEARCH_URI =
       ADMIN_URI + "/groups?q=write_experiment_ids:exp-1&briefRepresentation=false";
 
