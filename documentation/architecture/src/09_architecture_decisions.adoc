@@ -264,3 +264,56 @@ Es gibt keinen Service Account und kein Secret für `core`. Details in Kap. 8, <
 *Fine Grained Permission pro Experiment:* bildet RLS genau nach, braucht aber pro Experiment eine dritte manuelle Pflegestelle neben den beiden Gruppen (ADR-009 aus MON-196). +
 *Kontaktdaten oder Anzeigenamen in der DB kopieren:* würde Sortieren erlauben, ist aber genau die doppelte Haltung von Personendaten, die wir vermeiden wollen.
 |===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: Sichtbare Owner, und warum welche fehlen
+
+| Datum
+| 07.10.2026
+
+| Status
+| entschieden (MON-177)
+
+| Kontext & Problem
+| Owner stehen als Keycloak User-ID in der DB, Name und E-Mail kommen aus Keycloak (siehe ADR "Benutzerdaten nur in Keycloak, gelesen mit dem Token des Aufrufers"). Zwei Fragen blieben offen. Erstens: wer gilt als Owner, den man anzeigt? Ein Benutzer, der die Gruppe verlassen hat, deaktiviert oder gelöscht wurde, ist kein PI mehr, seine Zeile in `experiment_owner` steht aber noch. Zweitens: was passiert, wenn Keycloak nicht antwortet? Der erste Wurf hatte ein boolsches `ownersUnavailable`, damit liess sich ein Ausfall nicht von einem 403 oder einer fehlenden Schreibgruppe unterscheiden, und für den Benutzer ist das nicht dasselbe (warten vs. Setup kaputt). Dazu kommt, dass Listen, Owner-Filter und CSV viele Experimente auf einmal auflösen, bei einem langsamen Keycloak würde jede Zeile einzeln in den Timeout laufen.
+
+| Entscheidung
+| Gespeichert werden nur User-IDs. Angezeigt werden die "sichtbaren" Owner (`VisibleOwners`): gespeicherte Owner-IDs geschnitten mit den aktuellen PIs des Experiments (aktive Mitglieder der Schreibgruppe, Gruppe gefunden über das Attribut `write_experiment_ids`). Ehemalige PIs sind sofort überall weg (Tabelle, Dialog, CSV, Filterwerte), ihre DB-Zeile wird erst beim nächsten Speichern der Stammdaten oder der Owner des Experiments entfernt.
+
+Keycloak antwortet mit einem von vier Fällen (`Pis`): `Known(users)`, `NoWriteGroup`, `AccessDenied` (403) oder `KeycloakUnavailable`. Nur `Known` ist eine vollständige Antwort. Aus den anderen drei wird nichts gelöscht und nichts geschlossen, ein Owner verschwindet nie, nur weil Keycloak es nicht sagen konnte.
+
+Die API liefert `ownersStatus` (`OwnersStatus`: `SHOWN`, `KEYCLOAK_UNAVAILABLE`, `ACCESS_DENIED`, `NO_WRITE_GROUP`) statt `ownersUnavailable`. Die UI zeigt "–" mit dem Grund als Tooltip, das CSV schreibt `(unavailable)`, `(access denied)` oder `(no write group)`. Lesen schlägt nie wegen Keycloak fehl.
+
+Fail fast: werden viele Experimente auf einmal aufgelöst (eine Tabellenseite, die Filterwerte, ein CSV-Export), wird Keycloak nach dem ersten `KeycloakUnavailable` nicht mehr gefragt, der Rest bekommt `KEYCLOAK_UNAVAILABLE`. Ein langsames Keycloak kostet so einen Timeout pro Request, nicht einen pro Zeile.
+
+Lesen darf einen Cache benutzen, Schreiben fragt immer Keycloak (Kandidaten für Owner, Owner ersetzen, ehemalige Owner entfernen). Der Cache gilt pro Aufrufer und Experiment, 60 s TTL, maximal 10'000 Einträge, und nur definitive Antworten (`Known`, `NoWriteGroup`) werden gespeichert. Fehler werden beim nächsten Mal wieder gefragt.
+
+403 und fehlende Schreibgruppe werden als WARN geloggt (Setup-Problem). Die Admin-Endpunkte antworten bei 403 mit 502 `error.user-directory.denied`, bei `KeycloakUnavailable` mit 503 `error.user-directory.unavailable`. Konzept in Kap. 8, <<Experiment-Owner und Benutzerdaten aus Keycloak (MON-177)>>.
+
+| Begründung
+| **Schneiden mit den PIs:** wer nicht mehr in der Gruppe ist, soll nicht weiter als Owner auftreten, und zwar sofort, nicht erst nach einem Cleanup. Die DB-Zeile ist dafür nur Erinnerung, welche PIs das Experiment als Owner markiert hat.
+
+**Vier Fälle statt eines Booleans:** Ausfall, 403 und fehlende Gruppe haben verschiedene Ursachen und verschiedene Abhilfe. Nur `Known` darf etwas entfernen, sonst würde ein PI, dessen Token die Gruppe nicht sieht, beim Speichern alle Owner löschen.
+
+**Fail fast:** der Timeout ist das teure an einem toten Keycloak. Ihn einmal pro Request zu zahlen hält Tabelle und Export benutzbar.
+
+**Cache pro Aufrufer:** Keycloak antwortet mit den Rechten des Aufrufers, die Antwort des einen darf nie an einen anderen gehen. Schreibzugriffe umgehen den Cache, damit ein Admin Gruppenänderungen sofort sieht und die Validierung nie auf alten Daten läuft.
+
+**`NoWriteGroup` wird mitgecacht:** es ist ebenfalls eine definitive Antwort (die Gruppe gibt es für diesen Benutzer nicht). Ohne das würde jeder Seitenaufruf für Experimente mit Ownern aber ohne Gruppe wieder suchen.
+
+| Konsequenzen
+| Eine neu angelegte Schreibgruppe erscheint in Lesezugriffen nach höchstens 60 s, Schreibzugriffe sehen sie sofort. Bei Ausfall zeigt die Liste "–" statt Owner, der Rest der Antwort bleibt intakt. Fehlende Gruppe oder 403 tauchen als WARN im Log auf und müssen im Realm behoben werden.
+
+Bekannte Einschränkung: der Owner-Filter arbeitet auf den gespeicherten IDs, die Anzeige auf den aktuellen PIs. Bis zum nächsten Speichern findet der Filter deshalb noch einen Ex-PI, und "(no owner)" verpasst Experimente, deren gespeicherte Owner alle Ex-PIs sind. Keycloak-Daten in den SQL-Filter zu holen war zu teuer, das nehmen wir in Kauf.
+
+| Verworfene Alternativen
+| *Boolsches `ownersUnavailable`:* kann Ausfall, 403 und fehlende Schreibgruppe nicht unterscheiden. +
+*Ganze Antwort fehlschlagen lassen, wenn Keycloak down ist:* eine Liste von Experimenten soll nicht wegen Kontaktdaten unlesbar werden. +
+*Owner bei jeder Antwort ausser `Known` entfernen:* ein PI, dessen Token die Gruppe nicht sieht, würde beim Speichern alle Owner löschen. +
+*Nächtlicher Cleanup-Job:* bräuchte einen technischen Account, den wir bewusst abgeschafft haben. +
+*Fehler mitcachen oder ein Cache für alle Benutzer:* würde Ausfälle länger sichtbar halten und die Rechte eines Benutzers an einen anderen ausliefern.
+|===
