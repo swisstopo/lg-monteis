@@ -8,8 +8,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -639,7 +638,17 @@ class SensorControllerTest {
     // given
     SensorDetailResponseDto detail =
         new SensorDetailResponseDto(
-            SENSOR_ID, "Test", "ALIAS", Das.SOL_EXPERTS, null, null, null, true, null, 1, List.of());
+            SENSOR_ID,
+            "Test",
+            "ALIAS",
+            Das.SOL_EXPERTS,
+            null,
+            null,
+            null,
+            true,
+            null,
+            1,
+            List.of());
     given(service.findDetailById(SENSOR_ID, LocalDate.of(2024, 1, 1))).willReturn(detail);
 
     // when / then
