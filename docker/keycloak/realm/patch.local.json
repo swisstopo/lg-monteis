@@ -1,7 +1,4 @@
 {
-  "core": {
-    "secret": "monteis-core-local"
-  },
   "spa": {
     "redirectUris": [
       "http://localhost:4200/*",

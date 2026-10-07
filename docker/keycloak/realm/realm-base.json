@@ -9,6 +9,7 @@
   "accessTokenLifespan": 300,
   "ssoSessionIdleTimeout": 1800,
   "ssoSessionMaxLifespan": 36000,
+  "adminPermissionsEnabled": true,
   "roles": {
     "realm": [
       { "name": "user", "description": "Standard MONTEIS user" },
@@ -197,17 +198,35 @@
       "directAccessGrantsEnabled": false
     },
     {
-      "clientId": "monteis-core",
-      "name": "MONTEIS Core user directory (service account)",
-      "description": "core reads experiment PIs and their contact data through the admin API. The secret comes from the environment patch, never from this file.",
-      "enabled": true,
-      "protocol": "openid-connect",
-      "publicClient": false,
-      "clientAuthenticatorType": "client-secret",
-      "serviceAccountsEnabled": true,
-      "standardFlowEnabled": false,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false
+      "clientId": "admin-permissions",
+      "description": "Fine grained admin permissions (v2). core asks the admin API with the caller's token, so every experiment user may view groups and their members, i.e. the PIs and their contact data. Keycloak creates this client itself, only the policies below are imported.",
+      "authorizationServicesEnabled": true,
+      "authorizationSettings": {
+        "decisionStrategy": "UNANIMOUS",
+        "policies": [
+          {
+            "name": "experiment-users",
+            "description": "Everyone who reads experiments in MONTEIS, per experiment or all of them.",
+            "type": "role",
+            "logic": "POSITIVE",
+            "config": {
+              "roles": "[{\"id\":\"monteis-spa/monteis-client:experiment:read\",\"required\":false},{\"id\":\"monteis-spa/monteis-client:experiment:write:all\",\"required\":false}]"
+            }
+          },
+          {
+            "name": "experiment-users-view-groups",
+            "description": "View every group and its members, which the owners of an experiment and the owner candidates are read from (MON-177).",
+            "type": "scope",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "defaultResourceType": "Groups",
+              "resources": "[\"Groups\"]",
+              "scopes": "[\"view\",\"view-members\"]",
+              "applyPolicies": "[\"experiment-users\"]"
+            }
+          }
+        ]
+      }
     }
   ],
   "groups": [
@@ -220,7 +239,8 @@
         ]
       },
       "clientRoles": {
-        "monteis-spa": ["monteis-client:admin", "monteis-client:documents:read"]
+        "monteis-spa": ["monteis-client:admin", "monteis-client:documents:read"],
+        "realm-management": ["view-users", "query-users", "query-groups"]
       }
     },
     {
@@ -231,17 +251,13 @@
           "Per-experiment groups: <experiment>/read and <experiment>/read + write. Every member inherits documents:read from here. Keep roles and attributes off <experiment> itself - both subgroups inherit them. read + write gets both roles and ids."
         ]
       },
-      "clientRoles": { "monteis-spa": ["monteis-client:documents:read"] }
+      "clientRoles": {
+        "monteis-spa": ["monteis-client:documents:read"],
+        "realm-management": ["query-users", "query-groups"]
+      }
     }
   ],
-  "users": [
-    {
-      "username": "service-account-monteis-core",
-      "enabled": true,
-      "serviceAccountClientId": "monteis-core",
-      "clientRoles": { "realm-management": ["view-users", "query-users", "query-groups"] }
-    }
-  ],
+  "users": [],
   "components": {
     "org.keycloak.userprofile.UserProfileProvider": [
       {
