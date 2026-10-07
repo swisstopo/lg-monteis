@@ -2,7 +2,8 @@ package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
-import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerAssignment;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerQueries;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentOwnersDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
@@ -25,13 +26,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ExperimentOwnerController {
 
-  private final ExperimentOwnerService ownerService;
+  private final ExperimentOwnerQueries ownerQueries;
+  private final ExperimentOwnerAssignment ownerAssignment;
   private final ExperimentWebMapper mapper;
   private final Clock clock;
 
   public ExperimentOwnerController(
-      ExperimentOwnerService ownerService, ExperimentWebMapper mapper, Clock clock) {
-    this.ownerService = ownerService;
+      ExperimentOwnerQueries ownerQueries,
+      ExperimentOwnerAssignment ownerAssignment,
+      ExperimentWebMapper mapper,
+      Clock clock) {
+    this.ownerQueries = ownerQueries;
+    this.ownerAssignment = ownerAssignment;
     this.mapper = mapper;
     this.clock = clock;
   }
@@ -44,7 +50,7 @@ public class ExperimentOwnerController {
   @ApiResponse(responseCode = "200", description = "Successfully retrieved owners")
   @GetMapping(path = ApiPaths.ALL_EXPERIMENT_OWNERS, produces = MediaType.APPLICATION_JSON_VALUE)
   public List<ExperimentOwnerDto> getAssignedOwners() {
-    return mapper.toOwnerDtos(ownerService.filterableOwners());
+    return mapper.toOwnerDtos(ownerQueries.filterableOwners());
   }
 
   @Operation(
@@ -57,7 +63,7 @@ public class ExperimentOwnerController {
       produces = MediaType.APPLICATION_JSON_VALUE)
   public List<ExperimentOwnerDto> getOwnerCandidates(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
-    return mapper.toOwnerDtos(ownerService.ownerCandidates(id));
+    return mapper.toOwnerDtos(ownerAssignment.ownerCandidates(id));
   }
 
   @Operation(
@@ -72,8 +78,7 @@ public class ExperimentOwnerController {
   public ResponseEntity<ExperimentResponseDto> replaceOwners(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id,
       @Valid @RequestBody WriteExperimentOwnersDto dto) {
-    Experiment updated = ownerService.replaceOwners(id, Set.copyOf(dto.ownerIds()));
-    return ResponseEntity.ok(
-        mapper.toDto(updated, ownerService.ownersOf(updated), LocalDate.now(clock)));
+    Experiment updated = ownerAssignment.replaceOwners(id, Set.copyOf(dto.ownerIds()));
+    return ResponseEntity.ok(mapper.toDto(ownerQueries.withOwners(updated), LocalDate.now(clock)));
   }
 }

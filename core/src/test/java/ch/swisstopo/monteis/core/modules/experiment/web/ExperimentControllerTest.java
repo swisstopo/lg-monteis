@@ -4,6 +4,7 @@ import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIM
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.OTHER_EXPERIMENT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -32,8 +33,10 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
-import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerAssignment;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerQueries;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentWithOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
@@ -73,7 +76,8 @@ class ExperimentControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @MockitoBean private ExperimentService service;
-  @MockitoBean private ExperimentOwnerService ownerService;
+  @MockitoBean private ExperimentOwnerQueries ownerQueries;
+  @MockitoBean private ExperimentOwnerAssignment ownerAssignment;
 
   @MockitoBean private ExperimentWebMapper mapper;
   @MockitoBean private PagedRequestParser pagedRequestParser;
@@ -97,6 +101,22 @@ class ExperimentControllerTest {
       new DirectoryUser(UUID.randomUUID(), "Alice", "Example", "alice@example.test");
   private static final ExperimentOwnerDto OWNER_DTO =
       new ExperimentOwnerDto(OWNER.id(), OWNER.firstName(), OWNER.lastName(), OWNER.email());
+
+  @BeforeEach
+  void experimentsComeWithoutOwners() {
+    given(ownerQueries.withOwners(any(Experiment.class)))
+        .willAnswer(call -> withoutOwners(call.getArgument(0)));
+    given(ownerQueries.withOwners(anyList()))
+        .willAnswer(
+            call ->
+                call.<List<Experiment>>getArgument(0).stream()
+                    .map(ExperimentControllerTest::withoutOwners)
+                    .toList());
+  }
+
+  private static ExperimentWithOwners withoutOwners(Experiment experiment) {
+    return new ExperimentWithOwners(experiment, VisibleOwners.NONE);
+  }
 
   @Test
   void should_route_get_experiment_and_verify_output() throws Exception {
@@ -128,11 +148,10 @@ class ExperimentControllerTest {
     expectedExperiment.getStatus(referenceToday);
 
     given(service.getById(EXPERIMENT_ID)).willReturn(expectedExperiment);
-    given(ownerService.ownersOf(expectedExperiment)).willReturn(VisibleOwners.of(List.of(OWNER)));
-    given(
-            mapper.toDto(
-                eq(expectedExperiment), eq(VisibleOwners.of(List.of(OWNER))), any(LocalDate.class)))
-        .willReturn(expectedResponseDto);
+    ExperimentWithOwners withOwners =
+        new ExperimentWithOwners(expectedExperiment, VisibleOwners.of(List.of(OWNER)));
+    given(ownerQueries.withOwners(expectedExperiment)).willReturn(withOwners);
+    given(mapper.toDto(eq(withOwners), any(LocalDate.class))).willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -149,9 +168,7 @@ class ExperimentControllerTest {
         .andExpect(jsonPath("$.owners[0].email").value(OWNER.email()));
 
     then(service).should().getById(EXPERIMENT_ID);
-    then(mapper)
-        .should()
-        .toDto(eq(expectedExperiment), eq(VisibleOwners.of(List.of(OWNER))), any(LocalDate.class));
+    then(mapper).should().toDto(eq(withOwners), any(LocalDate.class));
   }
 
   @Test
@@ -188,10 +205,10 @@ class ExperimentControllerTest {
 
     given(pagedRequestParser.parse(any())).willReturn(parsedRequest);
     given(service.getExperiments(parsedRequest)).willReturn(domainResult);
-    Map<UUID, VisibleOwners> owners = Map.of(EXPERIMENT_ID, VisibleOwners.of(List.of(OWNER)));
-    given(ownerService.ownersByExperiment(List.of(experiment1))).willReturn(owners);
-    given(mapper.toPagedDto(eq(domainResult), eq(owners), any(LocalDate.class)))
-        .willReturn(dtoResult);
+    PagedResult<ExperimentWithOwners> withOwners =
+        new PagedResult<>(List.of(withoutOwners(experiment1)), 1);
+    given(ownerQueries.withOwners(domainResult)).willReturn(withOwners);
+    given(mapper.toPagedDto(eq(withOwners), any(LocalDate.class))).willReturn(dtoResult);
 
     // when / then
     mockMvc
@@ -213,7 +230,7 @@ class ExperimentControllerTest {
     // Verify interaction sequence
     then(pagedRequestParser).should().parse(any());
     then(service).should().getExperiments(parsedRequest);
-    then(mapper).should().toPagedDto(eq(domainResult), eq(owners), any(LocalDate.class));
+    then(mapper).should().toPagedDto(eq(withOwners), any(LocalDate.class));
 
     then(service).shouldHaveNoMoreInteractions();
     then(mapper).shouldHaveNoMoreInteractions();
@@ -293,7 +310,8 @@ class ExperimentControllerTest {
             false);
 
     given(service.findAllExperiments()).willReturn(List.of(experiment1));
-    given(mapper.toDto(eq(experiment1), any(), any(LocalDate.class))).willReturn(responseDto);
+    given(mapper.toDto(eq(withoutOwners(experiment1)), any(LocalDate.class)))
+        .willReturn(responseDto);
 
     // when / then
     mockMvc
@@ -304,7 +322,7 @@ class ExperimentControllerTest {
         .andExpect(jsonPath("$[0].comment").value("A test experiment"));
 
     then(service).should().findAllExperiments();
-    then(mapper).should().toDto(eq(experiment1), any(), any(LocalDate.class));
+    then(mapper).should().toDto(eq(withoutOwners(experiment1)), any(LocalDate.class));
   }
 
   @Test
@@ -336,7 +354,7 @@ class ExperimentControllerTest {
 
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(service.createExperiment(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(eq(mockDomain), any(), any(LocalDate.class)))
+    given(mapper.toDto(eq(withoutOwners(mockDomain)), any(LocalDate.class)))
         .willReturn(expectedResponseDto);
 
     // when / then
@@ -360,7 +378,7 @@ class ExperimentControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteExperimentDto.class));
     then(service).should().createExperiment(mockDomain);
-    then(mapper).should().toDto(eq(mockDomain), any(), any(LocalDate.class));
+    then(mapper).should().toDto(eq(withoutOwners(mockDomain)), any(LocalDate.class));
   }
 
   @Test
@@ -392,8 +410,8 @@ class ExperimentControllerTest {
 
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(service.updateExperiment(mockDomain)).willReturn(mockDomain);
-    given(ownerService.dropFormerOwners(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(eq(mockDomain), any(), any(LocalDate.class)))
+    given(ownerAssignment.dropFormerOwners(mockDomain)).willReturn(mockDomain);
+    given(mapper.toDto(eq(withoutOwners(mockDomain)), any(LocalDate.class)))
         .willReturn(expectedResponseDto);
 
     // when / then
@@ -413,7 +431,7 @@ class ExperimentControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteExperimentDto.class));
     then(service).should().updateExperiment(mockDomain);
-    then(mapper).should().toDto(eq(mockDomain), any(), any(LocalDate.class));
+    then(mapper).should().toDto(eq(withoutOwners(mockDomain)), any(LocalDate.class));
   }
 
   @Test
@@ -522,7 +540,7 @@ class ExperimentControllerTest {
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(service.updateExperiment(mockDomain)).willReturn(mockDomain);
-    given(ownerService.dropFormerOwners(mockDomain)).willReturn(mockDomain);
+    given(ownerAssignment.dropFormerOwners(mockDomain)).willReturn(mockDomain);
 
     // when / then
     mockMvc

@@ -4,13 +4,12 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentWithOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -37,17 +36,15 @@ public interface ExperimentWebMapper {
 
   List<ExperimentOwnerDto> toOwnerDtos(List<DirectoryUser> users);
 
+  default ExperimentResponseDto toDto(
+      ExperimentWithOwners experimentWithOwners, @Context LocalDate today) {
+    return toDto(experimentWithOwners.experiment(), experimentWithOwners.owners(), today);
+  }
+
   // --- Paged Outbound Domain -> Paged API Serialization DTO Mappings ---
   default PagedResult<ExperimentResponseDto> toPagedDto(
-      PagedResult<Experiment> pagedResult,
-      Map<UUID, VisibleOwners> ownersByExperiment,
-      LocalDate today) {
+      PagedResult<ExperimentWithOwners> page, LocalDate today) {
     return new PagedResult<>(
-        pagedResult.rows().stream()
-            .map(
-                e ->
-                    toDto(e, ownersByExperiment.getOrDefault(e.getId(), VisibleOwners.NONE), today))
-            .toList(),
-        pagedResult.totalCount());
+        page.rows().stream().map(row -> toDto(row, today)).toList(), page.totalCount());
   }
 }
