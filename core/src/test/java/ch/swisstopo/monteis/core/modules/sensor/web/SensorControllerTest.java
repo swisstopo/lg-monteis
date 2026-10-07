@@ -37,6 +37,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeD
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
@@ -631,5 +632,21 @@ class SensorControllerTest {
         null,
         sensorVersion,
         List.of(defaultResponseParameterDto(paramVersion)));
+  }
+
+  @Test
+  void should_route_get_sensor_detail_with_today_from_clock() throws Exception {
+    // given
+    SensorDetailResponseDto detail =
+        new SensorDetailResponseDto(
+            SENSOR_ID, "Test", "ALIAS", Das.SOL_EXPERTS, null, null, null, true, null, 1, List.of());
+    given(service.findDetailById(SENSOR_ID, LocalDate.of(2024, 1, 1))).willReturn(detail);
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors/detail/{id}", SENSOR_ID).with(jwt()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(SENSOR_ID.toString()))
+        .andExpect(jsonPath("$.parameters").isEmpty());
   }
 }
