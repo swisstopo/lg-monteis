@@ -1,7 +1,5 @@
-@if (unavailable()) {
-  <span data-testid="owners-unavailable" [matTooltip]="'experiment.owners.unavailable' | translate"
-    >–</span
-  >
+@if (missingOwnersKey(); as missingOwnersKey) {
+  <span data-testid="owners-missing" [matTooltip]="missingOwnersKey | translate">–</span>
 } @else {
   @for (owner of owners(); track owner.id; let last = $last) {
     <span

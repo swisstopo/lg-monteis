@@ -32,6 +32,7 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.experiment.query.OwnersStatus;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerAssignment;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerQueries;
@@ -143,7 +144,7 @@ class ExperimentControllerTest {
             0,
             1,
             List.of(OWNER_DTO),
-            false);
+            OwnersStatus.SHOWN);
 
     expectedExperiment.getStatus(referenceToday);
 
@@ -200,7 +201,7 @@ class ExperimentControllerTest {
             2,
             1,
             List.of(),
-            false);
+            OwnersStatus.SHOWN);
     PagedResult<ExperimentResponseDto> dtoResult = new PagedResult<>(List.of(responseDto), 1);
 
     given(pagedRequestParser.parse(any())).willReturn(parsedRequest);
@@ -307,7 +308,7 @@ class ExperimentControllerTest {
             2,
             1,
             List.of(),
-            false);
+            OwnersStatus.SHOWN);
 
     given(service.findAllExperiments()).willReturn(List.of(experiment1));
     given(mapper.toDto(eq(withoutOwners(experiment1)), any(LocalDate.class)))
@@ -348,7 +349,7 @@ class ExperimentControllerTest {
             0,
             1,
             List.of(),
-            false);
+            OwnersStatus.SHOWN);
 
     Experiment mockDomain = mock(Experiment.class);
 
@@ -404,7 +405,7 @@ class ExperimentControllerTest {
             3,
             2,
             List.of(),
-            false);
+            OwnersStatus.SHOWN);
 
     Experiment mockDomain = mock(Experiment.class);
 

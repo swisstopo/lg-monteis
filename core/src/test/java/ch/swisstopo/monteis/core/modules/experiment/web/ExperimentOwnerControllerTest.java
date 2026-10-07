@@ -20,6 +20,7 @@ import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnava
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.experiment.query.OwnersStatus;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerAssignment;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerQueries;
@@ -114,7 +115,15 @@ class ExperimentOwnerControllerTest {
     Experiment updated = mock(Experiment.class);
     ExperimentResponseDto response =
         new ExperimentResponseDto(
-            ASSIGNED_EXPERIMENT, "EXP", null, null, null, 2, 0, List.of(ALICE_DTO), false);
+            ASSIGNED_EXPERIMENT,
+            "EXP",
+            null,
+            null,
+            null,
+            2,
+            0,
+            List.of(ALICE_DTO),
+            OwnersStatus.SHOWN);
     given(ownerAssignment.replaceOwners(ASSIGNED_EXPERIMENT, Set.of(ALICE.id())))
         .willReturn(updated);
     ExperimentWithOwners withOwners =

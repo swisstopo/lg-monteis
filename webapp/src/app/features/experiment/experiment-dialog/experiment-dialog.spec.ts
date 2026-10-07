@@ -27,7 +27,7 @@ const EXPERIMENT: ExperimentResponseDto = {
   comment: 'borehole',
   period: { start: '2030-01-01', end: '2030-05-05' },
   owners: [ALICE],
-  ownersUnavailable: false,
+  ownersStatus: 'SHOWN',
 };
 
 /** Stands in for the documents section, which has its own spec. */
@@ -48,7 +48,7 @@ class ExperimentOwnerPickerStub {
 @Component({ selector: 'app-experiment-owner-list', template: '' })
 class ExperimentOwnerListStub {
   owners = input<ExperimentOwnerDto[]>([]);
-  unavailable = input(false);
+  status = input<string>();
 }
 
 describe('ExperimentDialog', () => {
@@ -306,17 +306,17 @@ describe('ExperimentDialog', () => {
       expect(view.ownerPicker()).toBeNull();
     });
 
-    it('tells when the owners cannot be loaded', async () => {
+    it('tells why the owners are missing', async () => {
       canWrite = false;
       experimentService.getExperiment.mockResolvedValue({
         ...EXPERIMENT,
         owners: [],
-        ownersUnavailable: true,
+        ownersStatus: 'KEYCLOAK_UNAVAILABLE',
       });
 
       const view = await render('experiment-1');
 
-      await vi.waitFor(() => expect(view.ownerList()?.unavailable()).toBe(true));
+      await vi.waitFor(() => expect(view.ownerList()?.status()).toBe('KEYCLOAK_UNAVAILABLE'));
     });
   });
 

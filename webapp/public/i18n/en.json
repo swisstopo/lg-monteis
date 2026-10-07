@@ -329,7 +329,11 @@
       "hint": "Only PIs of this experiment can be owners.",
       "noCandidates": "This experiment has no PIs in Keycloak yet.",
       "remove": "Remove owner",
-      "unavailable": "Contact details currently unavailable",
+      "status": {
+        "KEYCLOAK_UNAVAILABLE": "Contact details currently unavailable",
+        "ACCESS_DENIED": "Owners hidden, Keycloak permissions misconfigured",
+        "NO_WRITE_GROUP": "Owners hidden, the experiment has no PI group"
+      },
       "createHint": "Owners can be assigned once the PI group of this experiment exists in Keycloak."
     },
     "success": "Experiment saved successfully.",

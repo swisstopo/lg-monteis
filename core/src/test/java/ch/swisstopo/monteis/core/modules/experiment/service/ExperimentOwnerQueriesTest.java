@@ -64,14 +64,14 @@ class ExperimentOwnerQueriesTest {
     void should_hide_owners_without_a_write_group() {
       given(userDirectory.pisForReading(EXPERIMENT_ID)).willReturn(new Pis.NoWriteGroup());
 
-      assertEquals(VisibleOwners.NONE, ownersOf(experiment(EXPERIMENT_ID, ALICE.id())));
+      assertEquals(VisibleOwners.NO_WRITE_GROUP, ownersOf(experiment(EXPERIMENT_ID, ALICE.id())));
     }
 
     @Test
     void should_hide_owners_when_keycloak_denies_reading_them() {
       given(userDirectory.pisForReading(EXPERIMENT_ID)).willReturn(new Pis.AccessDenied("403"));
 
-      assertEquals(VisibleOwners.NONE, ownersOf(experiment(EXPERIMENT_ID, ALICE.id())));
+      assertEquals(VisibleOwners.ACCESS_DENIED, ownersOf(experiment(EXPERIMENT_ID, ALICE.id())));
     }
 
     @Test
@@ -79,7 +79,8 @@ class ExperimentOwnerQueriesTest {
       given(userDirectory.pisForReading(EXPERIMENT_ID))
           .willReturn(new Pis.KeycloakUnavailable("down"));
 
-      assertEquals(VisibleOwners.UNAVAILABLE, ownersOf(experiment(EXPERIMENT_ID, ALICE.id())));
+      assertEquals(
+          VisibleOwners.KEYCLOAK_UNAVAILABLE, ownersOf(experiment(EXPERIMENT_ID, ALICE.id())));
     }
   }
 
@@ -112,7 +113,7 @@ class ExperimentOwnerQueriesTest {
                   experiment(EXPERIMENT_ID, ALICE.id()),
                   experiment(OTHER_EXPERIMENT_ID, BOB.id())));
 
-      assertEquals(VisibleOwners.UNAVAILABLE, owners.get(1).owners());
+      assertEquals(VisibleOwners.KEYCLOAK_UNAVAILABLE, owners.get(1).owners());
       then(userDirectory).should(never()).pisForReading(OTHER_EXPERIMENT_ID);
     }
   }

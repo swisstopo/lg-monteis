@@ -5,6 +5,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
 import { ICellRendererParams } from 'ag-grid-community';
 import { ownerDisplayName } from './owner-name';
+import { missingOwnersKey } from './owners-status';
 
 @Component({
   selector: 'app-owners-cell-renderer',
@@ -15,7 +16,7 @@ import { ownerDisplayName } from './owner-name';
 })
 export class OwnersCellRenderer implements ICellRendererAngularComp {
   protected readonly owners = signal<ExperimentOwnerDto[]>([]);
-  protected readonly unavailable = signal(false);
+  protected readonly missingOwnersKey = signal<string | undefined>(undefined);
   protected readonly displayName = ownerDisplayName;
 
   agInit(params: ICellRendererParams<ExperimentResponseDto, ExperimentOwnerDto[]>): void {
@@ -24,7 +25,7 @@ export class OwnersCellRenderer implements ICellRendererAngularComp {
 
   refresh(params: ICellRendererParams<ExperimentResponseDto, ExperimentOwnerDto[]>): boolean {
     this.owners.set(params.value ?? []);
-    this.unavailable.set(params.data?.ownersUnavailable ?? false);
+    this.missingOwnersKey.set(missingOwnersKey(params.data?.ownersStatus));
     return true;
   }
 }

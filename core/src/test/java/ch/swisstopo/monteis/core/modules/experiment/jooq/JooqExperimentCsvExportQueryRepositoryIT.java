@@ -84,7 +84,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
 
   @Test
   @Transactional
-  void should_mark_the_owners_unavailable_when_keycloak_is_unavailable() {
+  void should_write_why_the_owners_are_missing() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           UUID experimentId =
@@ -94,11 +94,17 @@ class JooqExperimentCsvExportQueryRepositoryIT {
                   LocalDate.of(2024, 1, 1),
                   LocalDate.of(2024, 12, 31));
           addOwners(experimentId, ALICE.id());
-          owners = _ -> VisibleOwners.UNAVAILABLE;
-
-          String csv = streamToString(nameFilter("OfflineCsvExportExperiment"));
-
-          assertTrue(List.of(csv.split("\r\n")).get(1).contains(",0,(unavailable),"), csv);
+          Map<VisibleOwners, String> cells =
+              Map.of(
+                  VisibleOwners.KEYCLOAK_UNAVAILABLE, ",0,(unavailable),",
+                  VisibleOwners.ACCESS_DENIED, ",0,(access denied),",
+                  VisibleOwners.NO_WRITE_GROUP, ",0,(no write group),");
+          cells.forEach(
+              (missing, cell) -> {
+                owners = _ -> missing;
+                String csv = streamToString(nameFilter("OfflineCsvExportExperiment"));
+                assertTrue(List.of(csv.split("\r\n")).get(1).contains(cell), csv);
+              });
         });
   }
 
