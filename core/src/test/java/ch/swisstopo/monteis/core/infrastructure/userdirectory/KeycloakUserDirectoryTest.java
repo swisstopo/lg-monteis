@@ -53,15 +53,17 @@ class KeycloakUserDirectoryTest {
     givenWriteGroupWith(ALICE, DISABLED, BOB);
 
     assertEquals(
-        new PiLookup.Found(List.of(directoryUser(BOB), directoryUser(ALICE))),
-        directory.lookupPis(EXPERIMENT_ID));
+        new PrincipalInvestigators.Known(List.of(directoryUser(BOB), directoryUser(ALICE))),
+        directory.principalInvestigatorsOf(EXPERIMENT_ID));
   }
 
   @Test
   void should_tell_a_missing_write_group() {
     given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT)).willReturn(List.of());
 
-    assertEquals(new PiLookup.NoWriteGroup(), directory.lookupPis(EXPERIMENT_ID));
+    assertEquals(
+        new PrincipalInvestigators.NoWriteGroup(),
+        directory.principalInvestigatorsOf(EXPERIMENT_ID));
   }
 
   @Test
@@ -70,18 +72,22 @@ class KeycloakUserDirectoryTest {
         .willThrow(new KeycloakAccessDeniedException("forbidden", null))
         .willThrow(new KeycloakUnavailableException("down", null));
 
-    assertInstanceOf(PiLookup.Denied.class, directory.lookupPis(EXPERIMENT_ID));
-    assertInstanceOf(PiLookup.Unavailable.class, directory.lookupPis(EXPERIMENT_ID));
+    assertInstanceOf(
+        PrincipalInvestigators.AccessDenied.class,
+        directory.principalInvestigatorsOf(EXPERIMENT_ID));
+    assertInstanceOf(
+        PrincipalInvestigators.KeycloakUnavailable.class,
+        directory.principalInvestigatorsOf(EXPERIMENT_ID));
   }
 
   @Test
   void should_cache_complete_answers_per_caller() {
     givenWriteGroupWith(ALICE);
 
-    directory.lookupPis(EXPERIMENT_ID);
-    directory.lookupPis(EXPERIMENT_ID);
+    directory.principalInvestigatorsOf(EXPERIMENT_ID);
+    directory.principalInvestigatorsOf(EXPERIMENT_ID);
     given(currentUser.currentSubject()).willReturn(Optional.of(UUID.randomUUID()));
-    directory.lookupPis(EXPERIMENT_ID);
+    directory.principalInvestigatorsOf(EXPERIMENT_ID);
 
     then(keycloak).should(times(2)).groupMembers("rw");
   }
@@ -93,18 +99,19 @@ class KeycloakUserDirectoryTest {
         .willReturn(List.of(WRITE_GROUP));
     given(keycloak.groupMembers("rw")).willReturn(List.of(ALICE));
 
-    directory.lookupPis(EXPERIMENT_ID);
+    directory.principalInvestigatorsOf(EXPERIMENT_ID);
 
-    assertInstanceOf(PiLookup.Found.class, directory.lookupPis(EXPERIMENT_ID));
+    assertInstanceOf(
+        PrincipalInvestigators.Known.class, directory.principalInvestigatorsOf(EXPERIMENT_ID));
   }
 
   @Test
   void should_ask_keycloak_again_for_a_fresh_lookup() {
     givenWriteGroupWith(ALICE);
 
-    directory.lookupPis(EXPERIMENT_ID);
-    directory.lookupPisFresh(EXPERIMENT_ID);
-    directory.lookupPis(EXPERIMENT_ID);
+    directory.principalInvestigatorsOf(EXPERIMENT_ID);
+    directory.currentPrincipalInvestigatorsOf(EXPERIMENT_ID);
+    directory.principalInvestigatorsOf(EXPERIMENT_ID);
 
     then(keycloak).should(times(2)).groupMembers("rw");
   }
@@ -113,7 +120,9 @@ class KeycloakUserDirectoryTest {
   void should_not_ask_keycloak_without_a_caller() {
     given(currentUser.currentSubject()).willReturn(Optional.empty());
 
-    assertInstanceOf(PiLookup.Unavailable.class, directory.lookupPis(EXPERIMENT_ID));
+    assertInstanceOf(
+        PrincipalInvestigators.KeycloakUnavailable.class,
+        directory.principalInvestigatorsOf(EXPERIMENT_ID));
     then(keycloak).shouldHaveNoInteractions();
   }
 

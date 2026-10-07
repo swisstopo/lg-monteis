@@ -17,8 +17,6 @@ public interface ExperimentCsvExportQueryRepository {
    *     needs Keycloak, which a query repository has no business asking
    */
   void streamCsv(
-      PagedRequest exportRequest,
-      Writer writer,
-      Function<ExperimentOwnership, VisibleOwners> owners)
+      PagedRequest exportRequest, Writer writer, Function<StoredOwners, VisibleOwners> owners)
       throws IOException;
 }

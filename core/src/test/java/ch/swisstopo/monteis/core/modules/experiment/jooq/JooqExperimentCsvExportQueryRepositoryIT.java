@@ -11,7 +11,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
-import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentOwnership;
+import ch.swisstopo.monteis.core.modules.experiment.query.StoredOwners;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -47,7 +47,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
   @Autowired private JooqExperimentCsvExportQueryRepository exportRepository;
 
   /** Stands in for ExperimentOwnerService's resolver, the owner rule is tested there. */
-  private Function<ExperimentOwnership, VisibleOwners> owners = _ -> VisibleOwners.NONE;
+  private Function<StoredOwners, VisibleOwners> owners = _ -> VisibleOwners.NONE;
 
   private static final DirectoryUser ALICE =
       new DirectoryUser(UUID.randomUUID(), "Alice", "Example", "alice@example.test");
@@ -66,17 +66,17 @@ class JooqExperimentCsvExportQueryRepositoryIT {
                   LocalDate.of(2024, 1, 1),
                   LocalDate.of(2024, 12, 31));
           addOwners(experimentId, ALICE.id(), BOB.id());
-          List<ExperimentOwnership> asked = new ArrayList<>();
+          List<StoredOwners> asked = new ArrayList<>();
           owners =
-              ownership -> {
-                asked.add(ownership);
+              storedOwners -> {
+                asked.add(storedOwners);
                 return VisibleOwners.of(List.of(BOB, ALICE));
               };
 
           String csv = streamToString(nameFilter("OwnerCsvExportExperiment"));
 
           assertEquals(
-              List.of(new ExperimentOwnership(experimentId, Set.of(ALICE.id(), BOB.id()))), asked);
+              List.of(new StoredOwners(experimentId, Set.of(ALICE.id(), BOB.id()))), asked);
           List<String> lines = List.of(csv.split("\r\n"));
           assertTrue(lines.get(1).contains(",0,Bob Builder; Alice Example,,"), csv);
         });
