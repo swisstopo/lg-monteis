@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.keycloak;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import org.springframework.core.ParameterizedTypeReference;
@@ -11,12 +10,13 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriBuilder;
 
 /**
- * The Keycloak admin API of the realm, asked with the caller's token. Knows Keycloak's paths and
- * representations, nothing about MONTEIS.
+ * Keycloak's admin REST API for the realm, asked with the caller's token. Knows Keycloak's paths
+ * and representations, nothing about MONTEIS.
  */
-public class KeycloakAdminClient {
+public class KeycloakClient {
 
-  static final int MEMBERS_PAGE_SIZE = 100;
+  /** Keycloak's members endpoint returns 100 users unless asked otherwise, -1 lifts the limit. */
+  static final int ALL_MEMBERS = -1;
 
   private static final ParameterizedTypeReference<List<KeycloakGroup>> GROUPS =
       new ParameterizedTypeReference<>() {};
@@ -25,22 +25,23 @@ public class KeycloakAdminClient {
 
   private final RestClient restClient;
 
-  KeycloakAdminClient(RestClient restClient) {
+  KeycloakClient(RestClient restClient) {
     this.restClient = restClient;
   }
 
   /**
-   * Every group, at any depth, whose attribute {@code name} contains {@code value}.
+   * Every group, at any depth, whose attribute {@code attributeName} contains {@code
+   * attributeValue}.
    *
    * @throws KeycloakAccessDeniedException if the caller may not search groups
    * @throws KeycloakUnavailableException if Keycloak cannot be asked
    */
-  public List<KeycloakGroup> findGroupsByAttribute(String name, String value) {
+  public List<KeycloakGroup> findGroupsByAttribute(String attributeName, String attributeValue) {
     // the search answers with the top level groups and the path down to each hit, so the hit
     // itself can be any level deep
-    return searchGroups(name + ":" + value).stream()
-        .flatMap(KeycloakGroup::withDescendants)
-        .filter(group -> group.hasAttributeValue(name, value))
+    return searchGroups(attributeName + ":" + attributeValue).stream()
+        .flatMap(KeycloakGroup::selfAndAllSubgroups)
+        .filter(group -> group.hasAttributeValue(attributeName, attributeValue))
         .toList();
   }
 
@@ -51,13 +52,14 @@ public class KeycloakAdminClient {
    * @throws KeycloakUnavailableException if Keycloak cannot be asked
    */
   public List<KeycloakUser> groupMembers(String groupId) {
-    List<KeycloakUser> members = new ArrayList<>();
-    List<KeycloakUser> page;
-    do {
-      page = membersPage(groupId, members.size());
-      members.addAll(page);
-    } while (page.size() == MEMBERS_PAGE_SIZE);
-    return members;
+    return getList(
+        uri ->
+            uri.path("/groups/{id}/members")
+                .queryParam("max", ALL_MEMBERS)
+                // the brief representation leaves out first and last name
+                .queryParam("briefRepresentation", false)
+                .build(groupId),
+        USERS);
   }
 
   private List<KeycloakGroup> searchGroups(String query) {
@@ -68,18 +70,6 @@ public class KeycloakAdminClient {
                 .queryParam("briefRepresentation", false)
                 .build(),
         GROUPS);
-  }
-
-  private List<KeycloakUser> membersPage(String groupId, int first) {
-    return getList(
-        uri ->
-            uri.path("/groups/{id}/members")
-                .queryParam("first", first)
-                .queryParam("max", MEMBERS_PAGE_SIZE)
-                // the brief representation leaves out first and last name
-                .queryParam("briefRepresentation", false)
-                .build(groupId),
-        USERS);
   }
 
   private <T> List<T> getList(

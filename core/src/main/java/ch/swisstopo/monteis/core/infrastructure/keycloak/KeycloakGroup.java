@@ -9,11 +9,11 @@ import java.util.stream.Stream;
 public record KeycloakGroup(
     String id, String path, Map<String, List<String>> attributes, List<KeycloakGroup> subGroups) {
 
-  Stream<KeycloakGroup> withDescendants() {
+  Stream<KeycloakGroup> selfAndAllSubgroups() {
     Stream<KeycloakGroup> descendants =
         subGroups == null
             ? Stream.empty()
-            : subGroups.stream().flatMap(KeycloakGroup::withDescendants);
+            : subGroups.stream().flatMap(KeycloakGroup::selfAndAllSubgroups);
     return Stream.concat(Stream.of(this), descendants);
   }
 
