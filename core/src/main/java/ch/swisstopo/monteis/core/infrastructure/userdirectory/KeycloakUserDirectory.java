@@ -32,7 +32,7 @@ class KeycloakUserDirectory implements UserDirectory {
 
   private final KeycloakAdminClient keycloak;
   private final CurrentUserProvider currentUser;
-  private final Cache<CacheKey, PiLookup> cache;
+  private final Cache<CacheKey, PrincipalInvestigators> cache;
 
   KeycloakUserDirectory(
       KeycloakAdminClient keycloak,
@@ -45,20 +45,21 @@ class KeycloakUserDirectory implements UserDirectory {
   }
 
   @Override
-  public PiLookup lookupPis(UUID experimentId) {
+  public PrincipalInvestigators principalInvestigatorsOf(UUID experimentId) {
     return cacheKey(experimentId)
         .map(cache::getIfPresent)
-        .orElseGet(() -> lookupPisFresh(experimentId));
+        .orElseGet(() -> currentPrincipalInvestigatorsOf(experimentId));
   }
 
   @Override
-  public PiLookup lookupPisFresh(UUID experimentId) {
+  public PrincipalInvestigators currentPrincipalInvestigatorsOf(UUID experimentId) {
     Optional<CacheKey> key = cacheKey(experimentId);
     if (key.isEmpty()) {
-      return new PiLookup.Unavailable("no caller to ask Keycloak with");
+      return new PrincipalInvestigators.KeycloakUnavailable("no caller to ask Keycloak with");
     }
-    PiLookup lookup = load(experimentId);
-    if (lookup instanceof PiLookup.Found || lookup instanceof PiLookup.NoWriteGroup) {
+    PrincipalInvestigators lookup = load(experimentId);
+    if (lookup instanceof PrincipalInvestigators.Known
+        || lookup instanceof PrincipalInvestigators.NoWriteGroup) {
       cache.put(key.get(), lookup);
     }
     return lookup;
@@ -68,18 +69,18 @@ class KeycloakUserDirectory implements UserDirectory {
     return currentUser.currentSubject().map(caller -> new CacheKey(caller, experimentId));
   }
 
-  private PiLookup load(UUID experimentId) {
+  private PrincipalInvestigators load(UUID experimentId) {
     try {
       List<KeycloakGroup> writeGroups =
           keycloak.findGroupsByAttribute(WRITE_EXPERIMENT_IDS, experimentId.toString());
       if (writeGroups.isEmpty()) {
-        return new PiLookup.NoWriteGroup();
+        return new PrincipalInvestigators.NoWriteGroup();
       }
-      return new PiLookup.Found(enabledMembers(writeGroups));
+      return new PrincipalInvestigators.Known(enabledMembers(writeGroups));
     } catch (KeycloakAccessDeniedException e) {
-      return new PiLookup.Denied(e.getMessage());
+      return new PrincipalInvestigators.AccessDenied(e.getMessage());
     } catch (KeycloakUnavailableException e) {
-      return new PiLookup.Unavailable(e.getMessage());
+      return new PrincipalInvestigators.KeycloakUnavailable(e.getMessage());
     }
   }
 

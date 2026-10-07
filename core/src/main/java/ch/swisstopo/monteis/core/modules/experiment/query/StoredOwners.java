@@ -4,9 +4,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /** The stored owner ids of an experiment, whether or not they are still PIs. */
-public record ExperimentOwnership(UUID experimentId, Set<UUID> ownerIds) {
+public record StoredOwners(UUID experimentId, Set<UUID> ownerIds) {
 
-  public ExperimentOwnership {
+  public StoredOwners {
     ownerIds = Set.copyOf(ownerIds);
   }
 

@@ -3,14 +3,14 @@ package ch.swisstopo.monteis.core.modules.experiment.service;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.PiLookup;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.PrincipalInvestigators;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDeniedException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentOwnerQueryRepository;
-import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentOwnership;
+import ch.swisstopo.monteis.core.modules.experiment.query.StoredOwners;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import java.util.Collection;
 import java.util.HashSet;
@@ -30,7 +30,7 @@ import org.springframework.stereotype.Service;
  * Owners are stored as Keycloak ids only. An owner counts as long as they are a PI of the
  * experiment in Keycloak, so someone who lost write access, was disabled or was deleted disappears
  * from every response right away, the stale row goes with the next save of the experiment or its
- * owners. Only a complete answer from Keycloak ({@link PiLookup.Found}) ever removes anyone.
+ * owners. Only a complete answer from Keycloak ({@link PrincipalInvestigators.Known}) ever removes anyone.
  */
 @Service
 public class ExperimentOwnerService {
@@ -72,7 +72,7 @@ public class ExperimentOwnerService {
   public List<DirectoryUser> filterableOwners() {
     OwnerResolver resolver = resolver();
     Set<DirectoryUser> owners = new TreeSet<>(DirectoryUser.BY_NAME);
-    for (ExperimentOwnership ownership : ownerQueryRepository.findOwnerships()) {
+    for (StoredOwners ownership : ownerQueryRepository.findStoredOwners()) {
       owners.addAll(resolver.ownersOf(ownership).users());
     }
     return List.copyOf(owners);
@@ -82,7 +82,7 @@ public class ExperimentOwnerService {
    * For a run over many experiments, e.g. a CSV export: resolves one after the other and gives up
    * on Keycloak once it is unavailable.
    */
-  public Function<ExperimentOwnership, VisibleOwners> ownerResolver() {
+  public Function<StoredOwners, VisibleOwners> ownerResolver() {
     return resolver()::ownersOf;
   }
 
@@ -98,11 +98,12 @@ public class ExperimentOwnerService {
    */
   public List<DirectoryUser> candidates(UUID experimentId) {
     repository.requireVisible(experimentId);
-    return switch (userDirectory.lookupPisFresh(experimentId)) {
-      case PiLookup.Found found -> found.pis();
-      case PiLookup.NoWriteGroup _ -> List.of();
-      case PiLookup.Denied denied -> throw new UserDirectoryDeniedException(denied.reason());
-      case PiLookup.Unavailable unavailable ->
+    return switch (userDirectory.currentPrincipalInvestigatorsOf(experimentId)) {
+      case PrincipalInvestigators.Known known -> known.users();
+      case PrincipalInvestigators.NoWriteGroup _ -> List.of();
+      case PrincipalInvestigators.AccessDenied denied ->
+          throw new UserDirectoryDeniedException(denied.reason());
+      case PrincipalInvestigators.KeycloakUnavailable unavailable ->
           throw new UserDirectoryUnavailableException(unavailable.reason());
     };
   }
@@ -131,11 +132,12 @@ public class ExperimentOwnerService {
   @AuditChanges
   public Experiment dropFormerOwners(Experiment experiment) {
     if (experiment.getOwnerIds().isEmpty()
-        || !(userDirectory.lookupPisFresh(experiment.getId()) instanceof PiLookup.Found found)) {
+        || !(userDirectory.currentPrincipalInvestigatorsOf(experiment.getId())
+            instanceof PrincipalInvestigators.Known known)) {
       return experiment;
     }
     Set<UUID> retained = new HashSet<>(experiment.getOwnerIds());
-    retained.retainAll(ids(found.pis()));
+    retained.retainAll(ids(known.users()));
     if (retained.equals(experiment.getOwnerIds())) {
       return experiment;
     }
@@ -147,8 +149,8 @@ public class ExperimentOwnerService {
     }
   }
 
-  private static ExperimentOwnership ownershipOf(Experiment experiment) {
-    return new ExperimentOwnership(experiment.getId(), experiment.getOwnerIds());
+  private static StoredOwners ownershipOf(Experiment experiment) {
+    return new StoredOwners(experiment.getId(), experiment.getOwnerIds());
   }
 
   private static Set<UUID> ids(List<DirectoryUser> users) {
@@ -169,7 +171,7 @@ public class ExperimentOwnerService {
       this.userDirectory = userDirectory;
     }
 
-    VisibleOwners ownersOf(ExperimentOwnership ownership) {
+    VisibleOwners ownersOf(StoredOwners ownership) {
       if (!ownership.hasOwners()) {
         return VisibleOwners.NONE;
       }
@@ -177,19 +179,19 @@ public class ExperimentOwnerService {
         return VisibleOwners.UNAVAILABLE;
       }
       UUID experimentId = ownership.experimentId();
-      return switch (userDirectory.lookupPis(experimentId)) {
-        case PiLookup.Found found ->
+      return switch (userDirectory.principalInvestigatorsOf(experimentId)) {
+        case PrincipalInvestigators.Known known ->
             VisibleOwners.of(
-                found.pis().stream().filter(pi -> ownership.isOwner(pi.id())).toList());
-        case PiLookup.NoWriteGroup _ -> {
+                known.users().stream().filter(pi -> ownership.isOwner(pi.id())).toList());
+        case PrincipalInvestigators.NoWriteGroup _ -> {
           log.warn("Experiment {} has owners but no write group", experimentId);
           yield VisibleOwners.NONE;
         }
-        case PiLookup.Denied denied -> {
+        case PrincipalInvestigators.AccessDenied denied -> {
           log.warn("Hiding the owners of experiment {}: {}", experimentId, denied.reason());
           yield VisibleOwners.NONE;
         }
-        case PiLookup.Unavailable unavailable -> {
+        case PrincipalInvestigators.KeycloakUnavailable unavailable -> {
           log.warn("Showing experiments without owners: {}", unavailable.reason());
           keycloakUnavailable = true;
           yield VisibleOwners.UNAVAILABLE;

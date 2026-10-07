@@ -10,8 +10,8 @@ import java.util.UUID;
 public interface UserDirectory {
 
   /** The PIs of the experiment, possibly from a short lived cache. For anything that reads. */
-  PiLookup lookupPis(UUID experimentId);
+  PrincipalInvestigators principalInvestigatorsOf(UUID experimentId);
 
-  /** Like {@link #lookupPis} but always asks the identity provider. For anything that writes. */
-  PiLookup lookupPisFresh(UUID experimentId);
+  /** Like {@link #principalInvestigatorsOf} but always asks the identity provider. For anything that writes. */
+  PrincipalInvestigators currentPrincipalInvestigatorsOf(UUID experimentId);
 }

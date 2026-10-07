@@ -8,7 +8,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
-import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentOwnership;
+import ch.swisstopo.monteis.core.modules.experiment.query.StoredOwners;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import java.io.IOException;
 import java.io.Writer;
@@ -53,9 +53,7 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
 
   @Override
   public void streamCsv(
-      PagedRequest exportRequest,
-      Writer writer,
-      Function<ExperimentOwnership, VisibleOwners> owners)
+      PagedRequest exportRequest, Writer writer, Function<StoredOwners, VisibleOwners> owners)
       throws IOException {
     // Reuses JooqExperimentRepository's colId->Field map so the export honors exactly the same
     // filter/sort semantics as the grid.
@@ -95,7 +93,7 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
                 r.get(JooqExperimentRepository.SENSOR_COUNT_FIELD_NAME, Integer.class),
                 ownerNames(
                     owners.apply(
-                        new ExperimentOwnership(
+                        new StoredOwners(
                             r.get(EXPERIMENTS.ID),
                             Set.of(r.get(JooqExperimentRepository.OWNER_IDS_FIELD))))),
                 r.get(EXPERIMENTS.COMMENT),
