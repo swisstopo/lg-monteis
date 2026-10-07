@@ -11,20 +11,18 @@ import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.web.client.RestClient;
 
 @Configuration
-public class KeycloakAdminConfig {
+public class KeycloakConfig {
 
   @Bean
-  KeycloakAdminClient keycloakAdminClient(
-      RestClient.Builder builder,
-      KeycloakAdminProperties properties,
-      CurrentUserProvider currentUser) {
+  KeycloakClient keycloakClient(
+      RestClient.Builder builder, KeycloakProperties properties, CurrentUserProvider currentUser) {
     HttpClientSettings settings =
         HttpClientSettings.defaults()
             .withTimeouts(properties.connectTimeout(), properties.readTimeout());
-    return new KeycloakAdminClient(
+    return new KeycloakClient(
         builder
             .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings))
-            .baseUrl(properties.adminUri())
+            .baseUrl(properties.apiUri())
             .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
             .requestInterceptor(callerToken(currentUser))
             .build());

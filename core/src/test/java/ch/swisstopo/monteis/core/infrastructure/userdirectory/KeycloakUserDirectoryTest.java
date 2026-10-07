@@ -7,7 +7,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakAccessDeniedException;
-import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakAdminClient;
+import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakClient;
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakGroup;
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakUnavailableException;
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakUser;
@@ -38,7 +38,7 @@ class KeycloakUserDirectoryTest {
   private static final KeycloakUser DISABLED =
       new KeycloakUser(UUID.randomUUID(), "Dan", "Disabled", null, false);
 
-  @Mock private KeycloakAdminClient keycloak;
+  @Mock private KeycloakClient keycloak;
   @Mock private CurrentUserProvider currentUser;
   private KeycloakUserDirectory directory;
 

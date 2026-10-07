@@ -20,20 +20,22 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.ResponseCreator;
 import org.springframework.web.client.RestClient;
 
-class KeycloakAdminClientTest {
+class KeycloakClientTest {
 
   private static final String ADMIN_URI = "http://keycloak/admin/realms/monteis";
+  private static final String MEMBERS_URI =
+      ADMIN_URI + "/groups/rw/members?max=-1&briefRepresentation=false";
   private static final String SEARCH_URI =
       ADMIN_URI + "/groups?q=write_experiment_ids:exp-1&briefRepresentation=false";
 
   private MockRestServiceServer keycloak;
-  private KeycloakAdminClient client;
+  private KeycloakClient client;
 
   @BeforeEach
   void setUp() {
     RestClient.Builder builder = RestClient.builder().baseUrl(ADMIN_URI);
     keycloak = MockRestServiceServer.bindTo(builder).build();
-    client = new KeycloakAdminClient(builder.build());
+    client = new KeycloakClient(builder.build());
   }
 
   @Test
@@ -62,13 +64,10 @@ class KeycloakAdminClientTest {
   }
 
   @Test
-  void should_page_through_the_members() {
-    keycloak
-        .expect(once(), requestTo(membersUri(0)))
-        .andRespond(json(users(KeycloakAdminClient.MEMBERS_PAGE_SIZE)));
-    keycloak.expect(once(), requestTo(membersUri(100))).andRespond(json(users(1)));
+  void should_read_all_members_in_one_request() {
+    keycloak.expect(once(), requestTo(MEMBERS_URI)).andRespond(json(users(150)));
 
-    assertEquals(KeycloakAdminClient.MEMBERS_PAGE_SIZE + 1, client.groupMembers("rw").size());
+    assertEquals(150, client.groupMembers("rw").size());
     keycloak.verify();
   }
 
@@ -83,13 +82,9 @@ class KeycloakAdminClientTest {
 
   @Test
   void should_report_a_server_error_as_unavailable() {
-    keycloak.expect(once(), requestTo(membersUri(0))).andRespond(withServerError());
+    keycloak.expect(once(), requestTo(MEMBERS_URI)).andRespond(withServerError());
 
     assertThrows(KeycloakUnavailableException.class, () -> client.groupMembers("rw"));
-  }
-
-  private static String membersUri(int first) {
-    return ADMIN_URI + "/groups/rw/members?first=" + first + "&max=100&briefRepresentation=false";
   }
 
   private static String users(int count) {

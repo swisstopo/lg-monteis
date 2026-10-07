@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.userdirectory;
 
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakAccessDeniedException;
-import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakAdminClient;
+import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakClient;
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakGroup;
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakUnavailableException;
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakUser;
@@ -32,12 +32,12 @@ class KeycloakUserDirectory implements UserDirectory {
 
   private record CacheKey(UUID caller, UUID experimentId) {}
 
-  private final KeycloakAdminClient keycloak;
+  private final KeycloakClient keycloak;
   private final CurrentUserProvider currentUser;
   private final Cache<CacheKey, PrincipalInvestigators> cache;
 
   KeycloakUserDirectory(
-      KeycloakAdminClient keycloak,
+      KeycloakClient keycloak,
       CurrentUserProvider currentUser,
       Duration cacheTtl,
       long cacheMaxSize) {
