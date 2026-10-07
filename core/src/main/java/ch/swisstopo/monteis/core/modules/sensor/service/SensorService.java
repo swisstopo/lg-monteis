@@ -7,6 +7,9 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorDetailQueryRepository;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,14 +22,17 @@ public class SensorService {
   private final SensorRepository repository;
   private final SensorConfigPublisher configPublisher;
   private final FulcrumService fulcrumService;
+  private final SensorDetailQueryRepository detailQueryRepository;
 
   public SensorService(
       SensorRepository repository,
       SensorConfigPublisher configPublisher,
-      FulcrumService fulcrumService) {
+      FulcrumService fulcrumService,
+      SensorDetailQueryRepository detailQueryRepository) {
     this.repository = repository;
     this.configPublisher = configPublisher;
     this.fulcrumService = fulcrumService;
+    this.detailQueryRepository = detailQueryRepository;
   }
 
   @AuditChanges
@@ -130,9 +136,9 @@ public class SensorService {
     }
   }
 
-  public SensorDetail findDetailById(UUID id) {
-    return repository
-        .findDetailById(id)
+  public SensorDetailResponseDto findDetailById(UUID id, LocalDate today) {
+    return detailQueryRepository
+        .findById(id, today)
         .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
   }
 }

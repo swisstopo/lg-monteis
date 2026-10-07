@@ -192,11 +192,14 @@ public class SensorController {
     writer.flush();
   }
 
-  @Operation(summary = "Get sensor details by id", description = "Retrieves sensor details by id")
-  @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
+  @Operation(
+      summary = "Get sensor details by id",
+      description =
+          "Retrieves a sensor with all its parameters, each including its latest reading.")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved sensor details")
   @GetMapping(path = "/detail/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorDetailResponseDto> getSensorDetail(@PathVariable UUID id) {
     LocalDate today = LocalDate.now(clock);
-    return ResponseEntity.ok(mapper.toDetailDto(service.findDetailById(id), today));
+    return ResponseEntity.ok(service.findDetailById(id, today));
   }
 }

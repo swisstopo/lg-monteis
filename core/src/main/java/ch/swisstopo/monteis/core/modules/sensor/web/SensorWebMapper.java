@@ -100,11 +100,4 @@ public interface SensorWebMapper {
   CoordinatesDto toDto(Coordinates domain);
 
   AlarmLimitsDto toDto(AlarmLimits domain);
-
-  @Mapping(target = "das", source = "DAS")
-  SensorDetailResponseDto toDetailDto(SensorDetail domain, @Context LocalDate today);
-
-  SensorDetailParameterResponseDto toDetailDto(SensorDetailParameter domain);
-
-  SensorParameterReadingResponseDto toDto(SensorParameterReading domain);
 }

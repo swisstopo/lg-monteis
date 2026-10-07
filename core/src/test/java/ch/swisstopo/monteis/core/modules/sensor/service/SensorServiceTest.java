@@ -20,6 +20,9 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorDetailQueryRepository;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +41,7 @@ class SensorServiceTest {
   @Mock private SensorRepository repository;
   @Mock private SensorConfigPublisher configPublisher;
   @Mock private FulcrumService fulcrumService;
+  @Mock private SensorDetailQueryRepository detailQueryRepository;
 
   @InjectMocks private SensorService service;
 
@@ -327,5 +331,30 @@ class SensorServiceTest {
 
     given(sensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
     given(fulcrumService.getSensorById(FULCRUM_RECORD_ID)).willReturn(Optional.of(fulcrumSensor));
+  }
+
+  @Test
+  void should_return_sensor_detail_from_query_repository() {
+    // given
+    UUID sensorId = UUID.randomUUID();
+    LocalDate today = LocalDate.of(2024, 1, 1);
+    SensorDetailResponseDto detail = mock(SensorDetailResponseDto.class);
+    given(detailQueryRepository.findById(sensorId, today)).willReturn(Optional.of(detail));
+
+    // when / then
+    assertEquals(detail, service.findDetailById(sensorId, today));
+    then(repository).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_throw_when_sensor_detail_does_not_exist() {
+    // given
+    UUID sensorId = UUID.randomUUID();
+    LocalDate today = LocalDate.of(2024, 1, 1);
+    given(detailQueryRepository.findById(sensorId, today)).willReturn(Optional.empty());
+
+    // when / then
+    assertThrows(
+        ObjectBusinessValidationException.class, () -> service.findDetailById(sensorId, today));
   }
 }
