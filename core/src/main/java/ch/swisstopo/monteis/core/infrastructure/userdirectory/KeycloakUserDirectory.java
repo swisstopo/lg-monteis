@@ -12,7 +12,10 @@ import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.Known;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.NoWriteGroup;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -51,21 +54,20 @@ class KeycloakUserDirectory implements UserDirectory {
   }
 
   @Override
-  public Pis pisForReading(UUID experimentId) {
-    Optional<CacheKey> key = keyForRequestingUser(experimentId);
-    if (key.isEmpty()) {
-      return noRequestingUser();
+  public Map<UUID, Pis> pisForReading(Collection<UUID> experimentIds) {
+    Optional<UUID> requestingUserId = currentUser.currentSubject();
+    if (requestingUserId.isEmpty()) {
+      return eachWith(experimentIds, noRequestingUser());
     }
-    return cachedPisOf(key.get()).orElseGet(() -> freshPisOf(key.get()));
+    List<CacheKey> keys =
+        experimentIds.stream().map(id -> new CacheKey(requestingUserId.get(), id)).toList();
+    return loadPisUntilKeycloakFails(keys);
   }
 
   @Override
   public Pis pisForWriting(UUID experimentId) {
     Optional<CacheKey> key = keyForRequestingUser(experimentId);
-    if (key.isEmpty()) {
-      return noRequestingUser();
-    }
-    return freshPisOf(key.get());
+    return key.map(this::loadPis).orElseGet(KeycloakUserDirectory::noRequestingUser);
   }
 
   private Optional<CacheKey> keyForRequestingUser(UUID experimentId) {
@@ -76,17 +78,52 @@ class KeycloakUserDirectory implements UserDirectory {
     return new KeycloakUnavailable("no requesting user to ask Keycloak with");
   }
 
-  private Pis freshPisOf(CacheKey key) {
-    Pis pis = fetchPisFromKeycloak(key.experimentId());
-    cacheIfComplete(key, pis);
-    return pis;
+  private static Map<UUID, Pis> eachWith(Collection<UUID> experimentIds, Pis pis) {
+    Map<UUID, Pis> pisByExperiment = new LinkedHashMap<>();
+    experimentIds.forEach(id -> pisByExperiment.put(id, pis));
+    return pisByExperiment;
+  }
+
+  /**
+   * Once Keycloak is unavailable it is not asked again, the remaining experiments get the same
+   * answer instead of waiting for another timeout each. Cached answers are still used.
+   */
+  private Map<UUID, Pis> loadPisUntilKeycloakFails(List<CacheKey> keys) {
+    Map<UUID, Pis> pisByExperiment = new LinkedHashMap<>();
+    Optional<Pis> earlierFailure = Optional.empty();
+    for (CacheKey key : keys) {
+      Pis pis = cachedOrLoadedPisOf(key, earlierFailure);
+      if (pis instanceof KeycloakUnavailable) {
+        earlierFailure = Optional.of(pis);
+      }
+      pisByExperiment.put(key.experimentId(), pis);
+    }
+    return pisByExperiment;
+  }
+
+  private Pis cachedOrLoadedPisOf(CacheKey key, Optional<Pis> earlierFailure) {
+    Optional<Pis> cached = cachedPisOf(key);
+    if (cached.isPresent()) {
+      return cached.get();
+    }
+    if (earlierFailure.isPresent()) {
+      return earlierFailure.get();
+    }
+    return loadPis(key);
   }
 
   private Optional<Pis> cachedPisOf(CacheKey key) {
     return Optional.ofNullable(cache.getIfPresent(key));
   }
 
-  private void cacheIfComplete(CacheKey key, Pis pis) {
+  private Pis loadPis(CacheKey key) {
+    Pis pis = fetchPisFromKeycloak(key.experimentId());
+    cacheKeycloakAnswer(key, pis);
+    return pis;
+  }
+
+  /** What Keycloak answered, failures to ask it are asked again next time. */
+  private void cacheKeycloakAnswer(CacheKey key, Pis pis) {
     if (pis instanceof Known || pis instanceof NoWriteGroup) {
       cache.put(key, pis);
     }

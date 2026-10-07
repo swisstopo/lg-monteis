@@ -65,7 +65,7 @@ class ExperimentOwnerAssignmentTest {
       given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known(ALICE));
 
       assertEquals(List.of(ALICE), assignment.ownerCandidates(EXPERIMENT_ID));
-      then(userDirectory).should(never()).pisForReading(any());
+      then(userDirectory).should(never()).pisForReading(any(UUID.class));
     }
 
     @Test

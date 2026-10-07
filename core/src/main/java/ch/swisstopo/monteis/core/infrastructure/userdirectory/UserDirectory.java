@@ -1,5 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.userdirectory;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -9,9 +12,16 @@ import java.util.UUID;
  */
 public interface UserDirectory {
 
-  /** The PIs of the experiment, possibly from a short lived cache. For anything that reads. */
-  Pis pisForReading(UUID experimentId);
+  /**
+   * The PIs of each experiment, possibly from a short lived cache. For anything that reads. Once
+   * the identity provider is unavailable it is not asked again within the same call.
+   */
+  Map<UUID, Pis> pisForReading(Collection<UUID> experimentIds);
 
-  /** Like {@link #pisForReading} but always asks the identity provider. For anything that writes. */
+  default Pis pisForReading(UUID experimentId) {
+    return pisForReading(List.of(experimentId)).get(experimentId);
+  }
+
+  /** Always asks the identity provider. For anything that writes. */
   Pis pisForWriting(UUID experimentId);
 }

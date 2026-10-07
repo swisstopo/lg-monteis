@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakAccessDeniedException;
@@ -14,6 +15,7 @@ import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakUser;
 import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -109,6 +111,18 @@ class KeycloakUserDirectoryTest {
     directory.pisForReading(EXPERIMENT_ID);
 
     then(keycloak).should(times(2)).groupMembers("rw");
+  }
+
+  @Test
+  void should_not_ask_keycloak_again_in_the_same_call_once_it_is_unavailable() {
+    UUID otherExperiment = UUID.randomUUID();
+    given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT))
+        .willThrow(new KeycloakUnavailableException("down", null));
+
+    Map<UUID, Pis> pis = directory.pisForReading(List.of(EXPERIMENT_ID, otherExperiment));
+
+    assertInstanceOf(Pis.KeycloakUnavailable.class, pis.get(otherExperiment));
+    then(keycloak).should(never()).findGroupsByAttribute(WRITE_IDS, otherExperiment.toString());
   }
 
   @Test
