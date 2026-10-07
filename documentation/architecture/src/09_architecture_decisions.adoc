@@ -232,29 +232,35 @@ Ein ausgeblendetes oder fehlendes Experiment ergibt 404 `object.not-found`, eine
 | Kriterium | Beschreibung
 
 | Titel
-| ADR: Benutzerdaten nur in Keycloak, in der DB nur die User-ID
+| ADR: Benutzerdaten nur in Keycloak, gelesen mit dem Token des Aufrufers
 
 | Datum
-| 02.10.2026
+| 07.10.2026
 
 | Status
-| entschieden (MON-177)
+| entschieden (MON-177), ersetzt "Benutzerdaten nur in Keycloak, in der DB nur die User-ID" vom 02.10.2026
 
 | Kontext & Problem
-| Experimente bekommen einen oder mehrere Owner, deren Kontaktdaten (Name, E-Mail) jeder Leser des Experiments sieht. Die Benutzer leben in Keycloak. Die Frage ist, ob wir Kontaktdaten zusätzlich in unserer DB halten, die Story und der Kommentar im Ticket wollen sensible Daten und doppelte Datenhaltung vermeiden.
+| Experimente bekommen einen oder mehrere Owner, deren Kontaktdaten (Vorname, Nachname, E-Mail) jeder Leser des Experiments sieht. Die Benutzer leben in Keycloak, die Story will keine doppelte Haltung von Personendaten in unserer DB. Die erste Version hat Keycloak über einen eigenen Service Account (`monteis-core`) gefragt. Damit sieht `core` alle Benutzer des Realms, egal wer fragt, und wir brauchen pro Umgebung ein Client Secret. Die Frage ist, mit wessen Rechten `core` die Admin API fragt.
 
 | Entscheidung
-| In der DB steht nur `experiment_owner(experiment_id, user_id)`. `core` liest Kandidaten und Kontaktdaten über die Keycloak Admin API mit einem eigenen Service Account (`monteis-core`) und cacht sie kurz im Speicher. Owner können nur PIs des Experiments sein, wer nicht mehr PI ist, wird beim Lesen ausgeblendet. Details in Kap. 8, <<Experiment-Owner und Benutzerdaten aus Keycloak (MON-177)>>.
+| In der DB steht weiterhin nur `experiment_owner(experiment_id, user_id)`. `core` fragt die Keycloak Admin API mit dem Token des Aufrufers, Keycloak entscheidet über Fine Grained Admin Permissions (v2), was der Aufrufer von anderen Benutzern sehen darf. Im Realm gilt:
+
+* eine Permission auf alle Gruppen mit den Scopes `view` und `view-members` für alle mit `monteis-client:experiment:read` oder `monteis-client:experiment:write:all` (Rollen-Policy `experiment-users`)
+* `/Experiments` gibt `realm-management` `query-users` und `query-groups`, ohne die geht die Gruppensuche nicht
+* `/Monteis Admin` gibt `view-users`, `query-users` und `query-groups`
+
+Es gibt keinen Service Account und kein Secret für `core`. Details in Kap. 8, <<Experiment-Owner und Benutzerdaten aus Keycloak (MON-177)>>.
 
 | Begründung
-| Keine Personendaten in unserer DB, also auch keine Synchronisation und keine veralteten Namen oder E-Mails. Die Wählbarkeit hängt direkt am bestehenden Rollenkonzept (PI = Gruppe `read + write`), es braucht keine zusätzliche Gruppe und keine eigene Rechteverwaltung.
+| Keycloak bleibt die Stelle, die über Benutzerdaten entscheidet, `core` kann nie mehr sehen als der Aufrufer selbst. Kein Secret, das pro Umgebung verteilt und rotiert werden muss. Owner sind PIs, also Mitglieder der Gruppe `read + write`, die Sichtbarkeit hängt so direkt am bestehenden Rollenkonzept.
 
 | Konsequenzen
-| Positiv: Änderungen in Keycloak (Name, Austritt aus der Gruppe, Löschung) sind nach spätestens der Cache-TTL überall sichtbar. Negativ: jede Anzeige braucht Keycloak, darum gibt es den Cache und das Fallback ohne Owner. Nach Ownernamen sortieren geht nicht, nur filtern. Der Cloud-Realm in `lg-monteis-infra` und das Secret in `lg-monteis-k8s` (`KC_CORE_CLIENT_SECRET`, `KC_TOKEN_URI`, `KC_ADMIN_API_URI`) müssen den Client `monteis-core` noch nachziehen.
+| Positiv: kein Secret, keine zweite Identität für `core`, Änderungen in Keycloak (Name, Austritt aus der Gruppe, Deaktivierung, Löschung) sind nach spätestens der Cache-TTL sichtbar. Negativ: jeder Experiment-Benutzer darf über die Admin API alle Gruppen und ihre Mitglieder lesen, auch die von Experimenten, die er in MONTEIS nicht sieht. Das ist bewusst grob gehalten, eine Permission pro Experiment wäre ein weiterer manueller Schritt pro neuem Experiment. Der Cache muss pro Aufrufer sein, sonst sieht ein Benutzer, was ein anderer lesen durfte. `KeycloakRealmImport` legt Realms nur an, die Permissions müssen auf bestehenden Realms von Hand nachgezogen werden. Nach Ownernamen sortieren geht nicht, nur filtern.
 
 | Verworfene Alternativen
-| *Kontaktdaten in der DB kopieren:* schnelle Anzeige und Sortierung, aber genau die doppelte Haltung von Personendaten, die wir vermeiden wollen, und sie veralten ohne Sync. +
-*Nur den Anzeigenamen als Cache in der DB:* würde Sortieren erlauben, ist aber auch eine Kopie personenbezogener Daten. +
-*Admin API mit dem Token des aufrufenden Admins:* braucht `realm-management`-Rollen für Admins, und Leser ohne diese Rollen könnten die Kontaktdaten nicht sehen. +
-*Eigene Gruppe "Experiment Owners":* unabhängig von den Rechten, aber eine zweite Pflegestelle neben den PI-Gruppen.
+| *Service Account `monteis-core` (erste Version):* einfach, aber `core` sieht alle Benutzer unabhängig vom Aufrufer und braucht ein Secret pro Umgebung. +
+*Token des Aufrufers mit `realm-management`-Rollen für alle:* `view-users` überspringt die Fine Grained Permissions, jeder Benutzer sähe den ganzen Realm. +
+*Fine Grained Permission pro Experiment:* bildet RLS genau nach, braucht aber pro Experiment eine dritte manuelle Pflegestelle neben den beiden Gruppen (ADR-009 aus MON-196). +
+*Kontaktdaten oder Anzeigenamen in der DB kopieren:* würde Sortieren erlauben, ist aber genau die doppelte Haltung von Personendaten, die wir vermeiden wollen.
 |===
