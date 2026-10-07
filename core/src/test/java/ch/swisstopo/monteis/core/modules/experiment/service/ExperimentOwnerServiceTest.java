@@ -12,6 +12,7 @@ import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidatio
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryAccessDeniedException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
@@ -51,29 +52,38 @@ class ExperimentOwnerServiceTest {
     UUID leftTheGroup = UUID.randomUUID();
     given(userDirectory.principalInvestigatorsOf(EXPERIMENT_ID)).willReturn(List.of(ALICE, BOB));
 
-    List<DirectoryUser> owners =
+    VisibleOwners owners =
         service.visibleOwners(experiment(EXPERIMENT_ID, Set.of(ALICE.id(), leftTheGroup)));
 
-    assertEquals(List.of(ALICE), owners);
+    assertEquals(new VisibleOwners(List.of(ALICE), false), owners);
   }
 
   @Test
   void should_not_ask_keycloak_for_an_experiment_without_owners() {
-    List<DirectoryUser> owners = service.visibleOwners(experiment(EXPERIMENT_ID, Set.of()));
+    VisibleOwners owners = service.visibleOwners(experiment(EXPERIMENT_ID, Set.of()));
 
-    assertEquals(List.of(), owners);
+    assertEquals(VisibleOwners.NONE, owners);
     then(userDirectory).shouldHaveNoInteractions();
   }
 
   @Test
-  void should_show_no_owners_instead_of_failing_when_keycloak_is_unavailable() {
+  void should_mark_owners_unavailable_instead_of_failing_when_keycloak_is_unavailable() {
     given(userDirectory.principalInvestigatorsOf(EXPERIMENT_ID))
         .willThrow(new UserDirectoryUnavailableException("down", null));
 
-    List<DirectoryUser> owners =
-        service.visibleOwners(experiment(EXPERIMENT_ID, Set.of(ALICE.id())));
+    VisibleOwners owners = service.visibleOwners(experiment(EXPERIMENT_ID, Set.of(ALICE.id())));
 
-    assertEquals(List.of(), owners);
+    assertEquals(VisibleOwners.UNAVAILABLE, owners);
+  }
+
+  @Test
+  void should_hide_owners_when_keycloak_denies_reading_them() {
+    given(userDirectory.principalInvestigatorsOf(EXPERIMENT_ID))
+        .willThrow(new UserDirectoryAccessDeniedException("forbidden", null));
+
+    VisibleOwners owners = service.visibleOwners(experiment(EXPERIMENT_ID, Set.of(ALICE.id())));
+
+    assertEquals(VisibleOwners.NONE, owners);
   }
 
   @Test
@@ -81,15 +91,15 @@ class ExperimentOwnerServiceTest {
     given(userDirectory.principalInvestigatorsOf(EXPERIMENT_ID)).willReturn(List.of(ALICE));
     given(userDirectory.principalInvestigatorsOf(OTHER_EXPERIMENT_ID)).willReturn(List.of(BOB));
 
-    Map<UUID, List<DirectoryUser>> owners =
+    Map<UUID, VisibleOwners> owners =
         service.visibleOwners(
             List.of(
                 experiment(EXPERIMENT_ID, Set.of(ALICE.id())),
                 experiment(OTHER_EXPERIMENT_ID, Set.of(BOB.id()))));
 
     assertEquals(List.of(EXPERIMENT_ID, OTHER_EXPERIMENT_ID), List.copyOf(owners.keySet()));
-    assertEquals(List.of(ALICE), owners.get(EXPERIMENT_ID));
-    assertEquals(List.of(BOB), owners.get(OTHER_EXPERIMENT_ID));
+    assertEquals(List.of(ALICE), owners.get(EXPERIMENT_ID).users());
+    assertEquals(List.of(BOB), owners.get(OTHER_EXPERIMENT_ID).users());
   }
 
   @Test
@@ -150,6 +160,54 @@ class ExperimentOwnerServiceTest {
         () -> service.replaceOwners(EXPERIMENT_ID, Set.of(ALICE.id())));
     then(repository).should().getById(EXPERIMENT_ID);
     then(repository).should(never()).replaceOwners(any(), any());
+  }
+
+  @Test
+  void should_drop_owners_that_are_no_longer_pis() {
+    UUID leftTheGroup = UUID.randomUUID();
+    Experiment saved = experiment(EXPERIMENT_ID, Set.of(ALICE.id(), leftTheGroup));
+    Experiment pruned = experiment(EXPERIMENT_ID, Set.of(ALICE.id()));
+    given(userDirectory.principalInvestigatorsOf(EXPERIMENT_ID)).willReturn(List.of(ALICE, BOB));
+    given(repository.replaceOwners(EXPERIMENT_ID, Set.of(ALICE.id()))).willReturn(pruned);
+
+    assertSame(pruned, service.dropFormerOwners(saved));
+  }
+
+  @Test
+  void should_not_write_when_every_owner_is_still_a_pi() {
+    Experiment saved = experiment(EXPERIMENT_ID, Set.of(ALICE.id()));
+    given(userDirectory.principalInvestigatorsOf(EXPERIMENT_ID)).willReturn(List.of(ALICE, BOB));
+
+    assertSame(saved, service.dropFormerOwners(saved));
+    then(repository).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_keep_the_owners_when_keycloak_is_unavailable() {
+    Experiment saved = experiment(EXPERIMENT_ID, Set.of(ALICE.id()));
+    given(userDirectory.principalInvestigatorsOf(EXPERIMENT_ID))
+        .willThrow(new UserDirectoryUnavailableException("down", null));
+
+    assertSame(saved, service.dropFormerOwners(saved));
+    then(repository).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_keep_the_owners_when_keycloak_denies_reading_the_pis() {
+    Experiment saved = experiment(EXPERIMENT_ID, Set.of(ALICE.id()));
+    given(userDirectory.principalInvestigatorsOf(EXPERIMENT_ID))
+        .willThrow(new UserDirectoryAccessDeniedException("forbidden", null));
+
+    assertSame(saved, service.dropFormerOwners(saved));
+    then(repository).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_not_ask_keycloak_when_dropping_owners_of_an_experiment_without_owners() {
+    Experiment saved = experiment(EXPERIMENT_ID, Set.of());
+
+    assertSame(saved, service.dropFormerOwners(saved));
+    then(userDirectory).shouldHaveNoInteractions();
   }
 
   private static Experiment experiment(UUID id, Set<UUID> ownerIds) {

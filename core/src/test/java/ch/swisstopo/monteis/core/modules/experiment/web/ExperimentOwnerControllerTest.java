@@ -20,6 +20,7 @@ import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
+import ch.swisstopo.monteis.core.modules.experiment.service.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import java.time.Clock;
@@ -109,10 +110,11 @@ class ExperimentOwnerControllerTest {
     Experiment updated = mock(Experiment.class);
     ExperimentResponseDto response =
         new ExperimentResponseDto(
-            ASSIGNED_EXPERIMENT, "EXP", null, null, null, 2, 0, List.of(ALICE_DTO));
+            ASSIGNED_EXPERIMENT, "EXP", null, null, null, 2, 0, List.of(ALICE_DTO), false);
     given(ownerService.replaceOwners(ASSIGNED_EXPERIMENT, Set.of(ALICE.id()))).willReturn(updated);
-    given(ownerService.visibleOwners(updated)).willReturn(List.of(ALICE));
-    given(mapper.toDto(eq(updated), eq(List.of(ALICE)), any())).willReturn(response);
+    given(ownerService.visibleOwners(updated)).willReturn(new VisibleOwners(List.of(ALICE), false));
+    given(mapper.toDto(eq(updated), eq(new VisibleOwners(List.of(ALICE), false)), any()))
+        .willReturn(response);
 
     mockMvc
         .perform(

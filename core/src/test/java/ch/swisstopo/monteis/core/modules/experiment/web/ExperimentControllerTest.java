@@ -33,6 +33,7 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
+import ch.swisstopo.monteis.core.modules.experiment.service.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
@@ -121,13 +122,19 @@ class ExperimentControllerTest {
             Status.ACTIVE,
             0,
             1,
-            List.of(OWNER_DTO));
+            List.of(OWNER_DTO),
+            false);
 
     expectedExperiment.getStatus(referenceToday);
 
     given(service.getById(EXPERIMENT_ID)).willReturn(expectedExperiment);
-    given(ownerService.visibleOwners(expectedExperiment)).willReturn(List.of(OWNER));
-    given(mapper.toDto(eq(expectedExperiment), eq(List.of(OWNER)), any(LocalDate.class)))
+    given(ownerService.visibleOwners(expectedExperiment))
+        .willReturn(new VisibleOwners(List.of(OWNER), false));
+    given(
+            mapper.toDto(
+                eq(expectedExperiment),
+                eq(new VisibleOwners(List.of(OWNER), false)),
+                any(LocalDate.class)))
         .willReturn(expectedResponseDto);
 
     // when / then
@@ -145,7 +152,12 @@ class ExperimentControllerTest {
         .andExpect(jsonPath("$.owners[0].email").value(OWNER.email()));
 
     then(service).should().getById(EXPERIMENT_ID);
-    then(mapper).should().toDto(eq(expectedExperiment), eq(List.of(OWNER)), any(LocalDate.class));
+    then(mapper)
+        .should()
+        .toDto(
+            eq(expectedExperiment),
+            eq(new VisibleOwners(List.of(OWNER), false)),
+            any(LocalDate.class));
   }
 
   @Test
@@ -176,12 +188,14 @@ class ExperimentControllerTest {
             Status.HISTORIC, // Example status
             2,
             1,
-            List.of());
+            List.of(),
+            false);
     PagedResult<ExperimentResponseDto> dtoResult = new PagedResult<>(List.of(responseDto), 1);
 
     given(pagedRequestParser.parse(any())).willReturn(parsedRequest);
     given(service.getExperiments(parsedRequest)).willReturn(domainResult);
-    Map<UUID, List<DirectoryUser>> owners = Map.of(EXPERIMENT_ID, List.of(OWNER));
+    Map<UUID, VisibleOwners> owners =
+        Map.of(EXPERIMENT_ID, new VisibleOwners(List.of(OWNER), false));
     given(ownerService.visibleOwners(List.of(experiment1))).willReturn(owners);
     given(mapper.toPagedDto(eq(domainResult), eq(owners), any(LocalDate.class)))
         .willReturn(dtoResult);
@@ -282,7 +296,8 @@ class ExperimentControllerTest {
             Status.HISTORIC,
             2,
             1,
-            List.of());
+            List.of(),
+            false);
 
     given(service.findAllExperiments()).willReturn(List.of(experiment1));
     given(mapper.toDto(eq(experiment1), any(), any(LocalDate.class))).willReturn(responseDto);
@@ -296,7 +311,7 @@ class ExperimentControllerTest {
         .andExpect(jsonPath("$[0].comment").value("A test experiment"));
 
     then(service).should().findAllExperiments();
-    then(mapper).should().toDto(eq(experiment1), any(LocalDate.class));
+    then(mapper).should().toDto(eq(experiment1), any(), any(LocalDate.class));
   }
 
   @Test
@@ -321,7 +336,8 @@ class ExperimentControllerTest {
             Status.ACTIVE,
             0,
             1,
-            List.of());
+            List.of(),
+            false);
 
     Experiment mockDomain = mock(Experiment.class);
 
@@ -351,7 +367,7 @@ class ExperimentControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteExperimentDto.class));
     then(service).should().createExperiment(mockDomain);
-    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
+    then(mapper).should().toDto(eq(mockDomain), any(), any(LocalDate.class));
   }
 
   @Test
@@ -376,7 +392,8 @@ class ExperimentControllerTest {
             Status.ACTIVE,
             3,
             2,
-            List.of());
+            List.of(),
+            false);
 
     Experiment mockDomain = mock(Experiment.class);
 
@@ -402,7 +419,7 @@ class ExperimentControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteExperimentDto.class));
     then(service).should().updateExperiment(mockDomain);
-    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
+    then(mapper).should().toDto(eq(mockDomain), any(), any(LocalDate.class));
   }
 
   @Test
