@@ -2,72 +2,77 @@ package ch.swisstopo.monteis.core.infrastructure.userdirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.springframework.test.web.client.ExpectedCount.once;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.times;
 
+import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakAccessDeniedException;
+import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakAdminClient;
+import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakGroup;
+import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakUnavailableException;
+import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakUser;
+import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestClient;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class KeycloakUserDirectoryTest {
 
-  private static final String ADMIN_URI = "http://keycloak/admin/realms/monteis";
   private static final UUID EXPERIMENT_ID = UUID.randomUUID();
-  private static final UUID ALICE_ID = UUID.randomUUID();
+  private static final String EXPERIMENT = EXPERIMENT_ID.toString();
   private static final UUID CALLER = UUID.randomUUID();
-  private static final UUID OTHER_CALLER = UUID.randomUUID();
+  private static final KeycloakGroup WRITE_GROUP =
+      new KeycloakGroup("rw", "/Experiments/Alpha/read + write", null, null);
+  private static final KeycloakUser ALICE =
+      new KeycloakUser(UUID.randomUUID(), "Alice", "Zimmer", "alice@example.test", true);
+  private static final KeycloakUser BOB =
+      new KeycloakUser(UUID.randomUUID(), "Bob", "Amman", "bob@example.test", true);
+  private static final KeycloakUser DISABLED =
+      new KeycloakUser(UUID.randomUUID(), "Dan", "Disabled", null, false);
 
-  private final AtomicReference<Optional<UUID>> caller = new AtomicReference<>(Optional.of(CALLER));
-  private MockRestServiceServer keycloak;
+  @Mock private KeycloakAdminClient keycloak;
+  @Mock private CurrentUserProvider currentUser;
   private KeycloakUserDirectory directory;
 
   @BeforeEach
   void setUp() {
-    RestClient.Builder builder = RestClient.builder().baseUrl(ADMIN_URI);
-    keycloak = MockRestServiceServer.bindTo(builder).build();
-    directory = new KeycloakUserDirectory(builder.build(), caller::get, Duration.ofMinutes(1));
+    directory = new KeycloakUserDirectory(keycloak, currentUser, Duration.ofMinutes(1));
+    Mockito.lenient().when(currentUser.currentSubject()).thenReturn(Optional.of(CALLER));
   }
 
   @Test
-  void should_read_the_enabled_members_of_the_write_group() {
-    expectPiLookup();
-
-    List<DirectoryUser> pis = directory.principalInvestigatorsOf(EXPERIMENT_ID);
+  void should_read_the_enabled_members_of_the_write_groups_sorted_by_name() {
+    givenWriteGroupWith(ALICE, DISABLED, BOB);
 
     assertEquals(
-        List.of(new DirectoryUser(ALICE_ID, "Alice", "Example", "alice@example.test")), pis);
-    keycloak.verify();
+        List.of(directoryUser(BOB), directoryUser(ALICE)),
+        directory.principalInvestigatorsOf(EXPERIMENT_ID));
   }
 
   @Test
-  void should_cache_per_caller_so_no_caller_sees_what_another_was_allowed_to_read() {
-    expectPiLookup();
-    expectPiLookup();
+  void should_cache_per_caller() {
+    givenWriteGroupWith(ALICE);
 
     directory.principalInvestigatorsOf(EXPERIMENT_ID);
     directory.principalInvestigatorsOf(EXPERIMENT_ID);
-    caller.set(Optional.of(OTHER_CALLER));
+    given(currentUser.currentSubject()).willReturn(Optional.of(UUID.randomUUID()));
     directory.principalInvestigatorsOf(EXPERIMENT_ID);
 
-    keycloak.verify();
+    then(keycloak).should(times(2)).groupMembers("rw");
   }
 
   @Test
   void should_report_a_denial_apart_from_an_unavailable_keycloak() {
-    keycloak
-        .expect(once(), requestTo(groupSearchUri()))
-        .andRespond(withStatus(HttpStatus.FORBIDDEN));
+    given(keycloak.findGroupsByAttribute(KeycloakUserDirectory.WRITE_EXPERIMENT_IDS, EXPERIMENT))
+        .willThrow(new KeycloakAccessDeniedException("forbidden", null));
 
     assertThrows(
         UserDirectoryAccessDeniedException.class,
@@ -75,8 +80,9 @@ class KeycloakUserDirectoryTest {
   }
 
   @Test
-  void should_report_keycloak_unavailable_on_a_server_error() {
-    keycloak.expect(once(), requestTo(groupSearchUri())).andRespond(withServerError());
+  void should_report_an_unavailable_keycloak() {
+    given(keycloak.findGroupsByAttribute(KeycloakUserDirectory.WRITE_EXPERIMENT_IDS, EXPERIMENT))
+        .willThrow(new KeycloakUnavailableException("down", null));
 
     UserDirectoryUnavailableException e =
         assertThrows(
@@ -87,50 +93,21 @@ class KeycloakUserDirectoryTest {
 
   @Test
   void should_not_ask_keycloak_without_a_caller() {
-    caller.set(Optional.empty());
+    given(currentUser.currentSubject()).willReturn(Optional.empty());
 
     assertThrows(
         UserDirectoryUnavailableException.class,
         () -> directory.principalInvestigatorsOf(EXPERIMENT_ID));
-    keycloak.verify();
+    then(keycloak).shouldHaveNoInteractions();
   }
 
-  private void expectPiLookup() {
-    String groupId = UUID.randomUUID().toString();
-    keycloak
-        .expect(once(), requestTo(groupSearchUri()))
-        .andRespond(
-            withSuccess(
-                """
-                [{"id":"top","path":"/Experiments","subGroups":[
-                  {"id":"%s","path":"/Experiments/Alpha/read + write",
-                   "attributes":{"write_experiment_ids":["%s"]}}]}]
-                """
-                    .formatted(groupId, EXPERIMENT_ID),
-                MediaType.APPLICATION_JSON));
-    keycloak
-        .expect(
-            once(),
-            requestTo(
-                ADMIN_URI
-                    + "/groups/"
-                    + groupId
-                    + "/members?first=0&max=100&briefRepresentation=false"))
-        .andRespond(
-            withSuccess(
-                """
-                [{"id":"%s","firstName":"Alice","lastName":"Example",
-                  "email":"alice@example.test","enabled":true},
-                 {"id":"%s","firstName":"Dan","lastName":"Disabled","enabled":false}]
-                """
-                    .formatted(ALICE_ID, UUID.randomUUID()),
-                MediaType.APPLICATION_JSON));
+  private void givenWriteGroupWith(KeycloakUser... members) {
+    given(keycloak.findGroupsByAttribute(KeycloakUserDirectory.WRITE_EXPERIMENT_IDS, EXPERIMENT))
+        .willReturn(List.of(WRITE_GROUP));
+    given(keycloak.groupMembers("rw")).willReturn(List.of(members));
   }
 
-  private static String groupSearchUri() {
-    return ADMIN_URI
-        + "/groups?q=write_experiment_ids:"
-        + EXPERIMENT_ID
-        + "&briefRepresentation=false";
+  private static DirectoryUser directoryUser(KeycloakUser user) {
+    return new DirectoryUser(user.id(), user.firstName(), user.lastName(), user.email());
   }
 }
