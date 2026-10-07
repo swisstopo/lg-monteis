@@ -8,7 +8,6 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
-import ch.swisstopo.monteis.core.modules.experiment.query.StoredOwners;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import java.io.IOException;
 import java.io.Writer;
@@ -16,8 +15,8 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jooq.DSLContext;
 import org.jooq.Record;
@@ -51,8 +50,7 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
   }
 
   @Override
-  public void streamCsv(
-      PagedRequest exportRequest, Writer writer, Function<StoredOwners, VisibleOwners> owners)
+  public void streamCsv(PagedRequest exportRequest, Writer writer, Map<UUID, VisibleOwners> owners)
       throws IOException {
     // Reuses JooqExperimentRepository's colId->Field map so the export honors exactly the same
     // filter/sort semantics as the grid.
@@ -73,7 +71,6 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
                 EXPERIMENTS.END,
                 JooqExperimentRepository.SENSOR_COUNT_FIELD.as(
                     JooqExperimentRepository.SENSOR_COUNT_FIELD_NAME),
-                JooqExperimentRepository.OWNER_IDS_FIELD,
                 EXPERIMENTS.COMMENT,
                 EXPERIMENTS.ID)
             .from(EXPERIMENTS)
@@ -88,10 +85,9 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
     }
   }
 
-  private static List<Object> rowOf(
-      Record r, LocalDate today, Function<StoredOwners, VisibleOwners> owners) {
+  private static List<Object> rowOf(Record r, LocalDate today, Map<UUID, VisibleOwners> owners) {
     Period period = new Period(r.get(EXPERIMENTS.START), r.get(EXPERIMENTS.END));
-    VisibleOwners visibleOwners = owners.apply(storedOwnersOf(r));
+    VisibleOwners visibleOwners = owners.getOrDefault(r.get(EXPERIMENTS.ID), VisibleOwners.NONE);
     return Arrays.asList(
         r.get(EXPERIMENTS.NAME),
         period.getStatus(today),
@@ -101,11 +97,6 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
         ownerNames(visibleOwners),
         r.get(EXPERIMENTS.COMMENT),
         r.get(EXPERIMENTS.ID));
-  }
-
-  private static StoredOwners storedOwnersOf(Record r) {
-    return new StoredOwners(
-        r.get(EXPERIMENTS.ID), Set.of(r.get(JooqExperimentRepository.OWNER_IDS_FIELD)));
   }
 
   private static String ownerNames(VisibleOwners owners) {

@@ -22,8 +22,7 @@ import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.query.OwnersStatus;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
-import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerAssignment;
-import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerQueries;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentWithOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
@@ -52,8 +51,7 @@ class ExperimentOwnerControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @MockitoBean private ExperimentOwnerQueries ownerQueries;
-  @MockitoBean private ExperimentOwnerAssignment ownerAssignment;
+  @MockitoBean private ExperimentOwnerService ownerService;
   @MockitoBean private ExperimentWebMapper mapper;
   @MockitoBean private Clock clock;
 
@@ -65,7 +63,7 @@ class ExperimentOwnerControllerTest {
 
   @Test
   void should_list_assigned_owners_for_every_reader() throws Exception {
-    given(ownerQueries.filterableOwners()).willReturn(List.of(ALICE));
+    given(ownerService.filterableOwners()).willReturn(List.of(ALICE));
     given(mapper.toOwnerDtos(List.of(ALICE))).willReturn(List.of(ALICE_DTO));
 
     mockMvc
@@ -80,7 +78,7 @@ class ExperimentOwnerControllerTest {
 
   @Test
   void should_list_candidates_for_an_admin() throws Exception {
-    given(ownerAssignment.ownerCandidates(ASSIGNED_EXPERIMENT)).willReturn(List.of(ALICE));
+    given(ownerService.ownerCandidates(ASSIGNED_EXPERIMENT)).willReturn(List.of(ALICE));
     given(mapper.toOwnerDtos(List.of(ALICE))).willReturn(List.of(ALICE_DTO));
 
     mockMvc
@@ -107,7 +105,7 @@ class ExperimentOwnerControllerTest {
                 .content(ownersBody(ALICE.id())))
         .andExpect(status().isForbidden());
 
-    then(ownerAssignment).shouldHaveNoInteractions();
+    then(ownerService).shouldHaveNoInteractions();
   }
 
   @Test
@@ -124,11 +122,10 @@ class ExperimentOwnerControllerTest {
             0,
             List.of(ALICE_DTO),
             OwnersStatus.SHOWN);
-    given(ownerAssignment.replaceOwners(ASSIGNED_EXPERIMENT, Set.of(ALICE.id())))
-        .willReturn(updated);
+    given(ownerService.replaceOwners(ASSIGNED_EXPERIMENT, Set.of(ALICE.id()))).willReturn(updated);
     ExperimentWithOwners withOwners =
         new ExperimentWithOwners(updated, VisibleOwners.of(List.of(ALICE)));
-    given(ownerQueries.withOwners(updated)).willReturn(withOwners);
+    given(ownerService.withOwners(updated)).willReturn(withOwners);
     given(mapper.toDto(eq(withOwners), any())).willReturn(response);
 
     mockMvc
@@ -153,17 +150,17 @@ class ExperimentOwnerControllerTest {
                 .content("{}"))
         .andExpect(status().is4xxClientError());
 
-    then(ownerAssignment).shouldHaveNoInteractions();
+    then(ownerService).shouldHaveNoInteractions();
   }
 
   @Test
   void should_answer_422_on_the_owner_ids_field_for_a_user_that_is_not_a_pi() throws Exception {
-    given(ownerAssignment.replaceOwners(any(), any()))
+    given(ownerService.replaceOwners(any(), any()))
         .willThrow(
             new FieldBusinessValidationException(
-                ExperimentOwnerAssignment.OWNER_IDS_FIELD,
+                ExperimentOwnerService.OWNER_IDS_FIELD,
                 Set.of(ALICE.id()),
-                ExperimentOwnerAssignment.NOT_ELIGIBLE_KEY,
+                ExperimentOwnerService.NOT_ELIGIBLE_KEY,
                 Map.of()));
 
     mockMvc
@@ -180,7 +177,7 @@ class ExperimentOwnerControllerTest {
 
   @Test
   void should_answer_503_when_keycloak_is_unavailable() throws Exception {
-    given(ownerAssignment.ownerCandidates(ASSIGNED_EXPERIMENT))
+    given(ownerService.ownerCandidates(ASSIGNED_EXPERIMENT))
         .willThrow(new UserDirectoryUnavailableException("down"));
 
     mockMvc
@@ -194,7 +191,7 @@ class ExperimentOwnerControllerTest {
 
   @Test
   void should_answer_502_when_keycloak_denies() throws Exception {
-    given(ownerAssignment.ownerCandidates(ASSIGNED_EXPERIMENT))
+    given(ownerService.ownerCandidates(ASSIGNED_EXPERIMENT))
         .willThrow(new UserDirectoryDeniedException("403"));
 
     mockMvc

@@ -11,19 +11,16 @@ import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
-import ch.swisstopo.monteis.core.modules.experiment.query.StoredOwners;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,8 +43,8 @@ class JooqExperimentCsvExportQueryRepositoryIT {
 
   @Autowired private JooqExperimentCsvExportQueryRepository exportRepository;
 
-  /** Stands in for ExperimentOwnerQueries.ownersForExport, the owner rule is tested there. */
-  private Function<StoredOwners, VisibleOwners> owners = _ -> VisibleOwners.NONE;
+  /** Stands in for ExperimentOwnerService.ownersForExport, the owner rule is tested there. */
+  private Map<UUID, VisibleOwners> owners = Map.of();
 
   private static final DirectoryUser ALICE =
       new DirectoryUser(UUID.randomUUID(), "Alice", "Example", "alice@example.test");
@@ -56,7 +53,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
 
   @Test
   @Transactional
-  void should_export_the_resolved_owner_names_for_the_stored_owners() {
+  void should_export_the_names_of_the_visible_owners() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           UUID experimentId =
@@ -66,17 +63,10 @@ class JooqExperimentCsvExportQueryRepositoryIT {
                   LocalDate.of(2024, 1, 1),
                   LocalDate.of(2024, 12, 31));
           addOwners(experimentId, ALICE.id(), BOB.id());
-          List<StoredOwners> asked = new ArrayList<>();
-          owners =
-              storedOwners -> {
-                asked.add(storedOwners);
-                return VisibleOwners.of(List.of(BOB, ALICE));
-              };
+          owners = Map.of(experimentId, VisibleOwners.of(List.of(BOB, ALICE)));
 
           String csv = streamToString(nameFilter("OwnerCsvExportExperiment"));
 
-          assertEquals(
-              List.of(new StoredOwners(experimentId, Set.of(ALICE.id(), BOB.id()))), asked);
           List<String> lines = List.of(csv.split("\r\n"));
           assertTrue(lines.get(1).contains(",0,Bob Builder; Alice Example,,"), csv);
         });
@@ -101,7 +91,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
                   VisibleOwners.NO_WRITE_GROUP, ",0,(no write group),");
           cells.forEach(
               (missing, cell) -> {
-                owners = _ -> missing;
+                owners = Map.of(experimentId, missing);
                 String csv = streamToString(nameFilter("OfflineCsvExportExperiment"));
                 assertTrue(List.of(csv.split("\r\n")).get(1).contains(cell), csv);
               });
@@ -119,7 +109,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           createExperiment(
               "FilteredCsvOther", null, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
           addOwners(owned, ALICE.id());
-          owners = _ -> VisibleOwners.of(List.of(ALICE));
+          owners = Map.of(owned, VisibleOwners.of(List.of(ALICE)));
 
           PagedRequest request =
               new PagedRequest(

@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -33,6 +35,8 @@ import org.springframework.stereotype.Component;
 class KeycloakUserDirectory implements UserDirectory {
 
   static final String WRITE_EXPERIMENT_IDS = "write_experiment_ids";
+
+  private static final Logger log = LoggerFactory.getLogger(KeycloakUserDirectory.class);
 
   private record CacheKey(UUID requestingUserId, UUID experimentId) {}
 
@@ -139,6 +143,7 @@ class KeycloakUserDirectory implements UserDirectory {
     } catch (KeycloakAccessDeniedException e) {
       return new AccessDenied(e.getMessage());
     } catch (KeycloakUnavailableException e) {
+      log.warn("Keycloak is unavailable, not asking it again in this call: {}", e.getMessage());
       return new KeycloakUnavailable(e.getMessage());
     }
   }
