@@ -11,8 +11,7 @@ import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
-import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerAssignment;
-import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerQueries;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
@@ -42,8 +41,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping(ApiPaths.EXPERIMENTS)
 public class ExperimentController {
   private final ExperimentService service;
-  private final ExperimentOwnerQueries ownerQueries;
-  private final ExperimentOwnerAssignment ownerAssignment;
+  private final ExperimentOwnerService ownerService;
   private final ExperimentWebMapper mapper;
   private final Clock clock;
   private final PagedRequestParser pagedRequestParser;
@@ -51,15 +49,13 @@ public class ExperimentController {
 
   public ExperimentController(
       ExperimentService service,
-      ExperimentOwnerQueries ownerQueries,
-      ExperimentOwnerAssignment ownerAssignment,
+      ExperimentOwnerService ownerService,
       ExperimentWebMapper mapper,
       Clock clock,
       PagedRequestParser pagedRequestParser,
       ExperimentCsvExportQueryRepository csvExportQueryRepository) {
     this.service = service;
-    this.ownerQueries = ownerQueries;
-    this.ownerAssignment = ownerAssignment;
+    this.ownerService = ownerService;
     this.mapper = mapper;
     this.clock = clock;
     this.pagedRequestParser = pagedRequestParser;
@@ -72,7 +68,7 @@ public class ExperimentController {
   public ResponseEntity<ExperimentResponseDto> getExperiment(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
     LocalDate today = LocalDate.now(clock);
-    return ResponseEntity.ok(mapper.toDto(ownerQueries.withOwners(service.getById(id)), today));
+    return ResponseEntity.ok(mapper.toDto(ownerService.withOwners(service.getById(id)), today));
   }
 
   @Operation(
@@ -91,7 +87,7 @@ public class ExperimentController {
 
     Experiment createdExperiment = service.createExperiment(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(mapper.toDto(ownerQueries.withOwners(createdExperiment), today));
+        .body(mapper.toDto(ownerService.withOwners(createdExperiment), today));
   }
 
   @Operation(
@@ -116,9 +112,9 @@ public class ExperimentController {
 
     // two steps, so the PI's change and the dropped owners get their own audit snapshot
     Experiment updated = service.updateExperiment(mapper.toDomain(dto));
-    Experiment withoutFormerOwners = ownerAssignment.dropFormerOwners(updated);
+    Experiment withoutFormerOwners = ownerService.dropFormerOwners(updated);
     return ResponseEntity.status(HttpStatus.OK)
-        .body(mapper.toDto(ownerQueries.withOwners(withoutFormerOwners), today));
+        .body(mapper.toDto(ownerService.withOwners(withoutFormerOwners), today));
   }
 
   @Operation(
@@ -132,7 +128,7 @@ public class ExperimentController {
   public ResponseEntity<List<ExperimentResponseDto>> getAllExperiments() {
     LocalDate today = LocalDate.now(clock);
     return ResponseEntity.ok(
-        ownerQueries.withOwners(service.findAllExperiments()).stream()
+        ownerService.withOwners(service.findAllExperiments()).stream()
             .map(experiment -> mapper.toDto(experiment, today))
             .toList());
   }
@@ -151,7 +147,7 @@ public class ExperimentController {
 
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
     PagedResult<Experiment> domainResult = service.getExperiments(pagedRequestParser.parse(raw));
-    return mapper.toPagedDto(ownerQueries.withOwners(domainResult), today);
+    return mapper.toPagedDto(ownerService.withOwners(domainResult), today);
   }
 
   @Operation(
@@ -185,7 +181,7 @@ public class ExperimentController {
     Writer writer =
         new BufferedWriter(
             new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
-    csvExportQueryRepository.streamCsv(exportRequest, writer, ownerQueries.ownersForExport());
+    csvExportQueryRepository.streamCsv(exportRequest, writer, ownerService.ownersForExport());
     writer.flush();
   }
 }

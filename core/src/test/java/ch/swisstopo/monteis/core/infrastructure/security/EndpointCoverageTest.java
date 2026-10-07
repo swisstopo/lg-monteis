@@ -7,8 +7,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentDocumentService;
-import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerAssignment;
-import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerQueries;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentDocumentWebMapper;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapper;
@@ -70,8 +69,7 @@ class EndpointCoverageTest {
   @Autowired private RequestMappingHandlerMapping handlerMapping;
 
   @MockitoBean private ExperimentService experimentService;
-  @MockitoBean private ExperimentOwnerQueries experimentOwnerQueries;
-  @MockitoBean private ExperimentOwnerAssignment experimentOwnerAssignment;
+  @MockitoBean private ExperimentOwnerService experimentOwnerService;
   @MockitoBean private ExperimentWebMapper experimentWebMapper;
   @MockitoBean private ExperimentCsvExportQueryRepository experimentCsvExportQueryRepository;
   @MockitoBean private ExperimentDocumentService experimentDocumentService;

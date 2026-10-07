@@ -2,7 +2,9 @@ package ch.swisstopo.monteis.core.modules.experiment.service;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.AccessDenied;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.KeycloakUnavailable;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.Known;
@@ -12,7 +14,11 @@ import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDenie
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
+import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentOwnerQueryRepository;
+import ch.swisstopo.monteis.core.modules.experiment.query.StoredOwners;
+import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,24 +29,110 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Who may be an owner and who is one. Owners are stored as Keycloak ids only and have to be PIs of
- * the experiment. Someone who stopped being a PI goes with the next save of the experiment or its
- * owners, and only a complete answer from Keycloak ({@link Known}) ever removes anyone.
+ * Owners are stored as Keycloak ids only and have to be PIs of the experiment. A caller sees an
+ * owner only as long as they are a PI, reading never fails because of Keycloak and the {@link
+ * VisibleOwners} say why owners are missing. Someone who stopped being a PI goes with the next
+ * save of the experiment or its owners, and only a complete answer from Keycloak ({@link Known})
+ * ever removes anyone.
  */
 @Service
-public class ExperimentOwnerAssignment {
+public class ExperimentOwnerService {
 
   public static final String OWNER_IDS_FIELD = "ownerIds";
   public static final String NOT_ELIGIBLE_KEY = "experiment.owner.not-eligible";
 
-  private static final Logger log = LoggerFactory.getLogger(ExperimentOwnerAssignment.class);
+  private static final Logger log = LoggerFactory.getLogger(ExperimentOwnerService.class);
 
   private final ExperimentRepository repository;
+  private final ExperimentOwnerQueryRepository ownerQueryRepository;
   private final UserDirectory userDirectory;
 
-  public ExperimentOwnerAssignment(ExperimentRepository repository, UserDirectory userDirectory) {
+  public ExperimentOwnerService(
+      ExperimentRepository repository,
+      ExperimentOwnerQueryRepository ownerQueryRepository,
+      UserDirectory userDirectory) {
     this.repository = repository;
+    this.ownerQueryRepository = ownerQueryRepository;
     this.userDirectory = userDirectory;
+  }
+
+  public ExperimentWithOwners withOwners(Experiment experiment) {
+    return withOwners(List.of(experiment)).getFirst();
+  }
+
+  public List<ExperimentWithOwners> withOwners(List<Experiment> experiments) {
+    Map<UUID, VisibleOwners> owners =
+        visibleOwnersOf(experiments.stream().map(ExperimentOwnerService::storedOwnersOf).toList());
+    return experiments.stream()
+        .map(experiment -> new ExperimentWithOwners(experiment, owners.get(experiment.getId())))
+        .toList();
+  }
+
+  public PagedResult<ExperimentWithOwners> withOwners(PagedResult<Experiment> page) {
+    return new PagedResult<>(withOwners(page.rows()), page.totalCount());
+  }
+
+  /** Every visible owner of a readable experiment, each once, sorted by name. */
+  public List<DirectoryUser> filterableOwners() {
+    return visibleOwnersOf(ownerQueryRepository.findStoredOwners()).values().stream()
+        .flatMap(owners -> owners.users().stream())
+        .distinct()
+        .sorted(DirectoryUser.BY_NAME)
+        .toList();
+  }
+
+  /**
+   * The visible owners of every readable experiment that has owners, resolved before a CSV export
+   * streams its rows. Experiments missing here have no owners.
+   */
+  public Map<UUID, VisibleOwners> ownersForExport() {
+    return visibleOwnersOf(ownerQueryRepository.findStoredOwners());
+  }
+
+  private Map<UUID, VisibleOwners> visibleOwnersOf(List<StoredOwners> storedOwners) {
+    Map<UUID, Pis> pisByExperiment =
+        userDirectory.pisForReading(experimentsWithOwners(storedOwners));
+    Map<UUID, VisibleOwners> visibleOwners = new LinkedHashMap<>();
+    for (StoredOwners owners : storedOwners) {
+      UUID experimentId = owners.experimentId();
+      visibleOwners.put(experimentId, visibleOwnersOf(owners, pisByExperiment.get(experimentId)));
+    }
+    return visibleOwners;
+  }
+
+  private static List<UUID> experimentsWithOwners(List<StoredOwners> storedOwners) {
+    return storedOwners.stream()
+        .filter(StoredOwners::hasOwners)
+        .map(StoredOwners::experimentId)
+        .toList();
+  }
+
+  private static VisibleOwners visibleOwnersOf(StoredOwners storedOwners, Pis pis) {
+    if (!storedOwners.hasOwners()) {
+      return VisibleOwners.NONE;
+    }
+    UUID experimentId = storedOwners.experimentId();
+    return switch (pis) {
+      case Known(var users) -> onlyOwnersAmong(users, storedOwners);
+      case NoWriteGroup() ->
+          hideOwners(experimentId, VisibleOwners.NO_WRITE_GROUP, "no write group");
+      case AccessDenied(var reason) ->
+          hideOwners(experimentId, VisibleOwners.ACCESS_DENIED, reason);
+      case KeycloakUnavailable(var _) -> VisibleOwners.KEYCLOAK_UNAVAILABLE;
+    };
+  }
+
+  private static VisibleOwners onlyOwnersAmong(List<DirectoryUser> pis, StoredOwners storedOwners) {
+    return VisibleOwners.of(pis.stream().filter(pi -> storedOwners.isOwner(pi.id())).toList());
+  }
+
+  private static VisibleOwners hideOwners(UUID experimentId, VisibleOwners hidden, String reason) {
+    log.warn("Hiding the owners of experiment {}: {}", experimentId, reason);
+    return hidden;
+  }
+
+  private static StoredOwners storedOwnersOf(Experiment experiment) {
+    return new StoredOwners(experiment.getId(), experiment.getOwnerIds());
   }
 
   /**
