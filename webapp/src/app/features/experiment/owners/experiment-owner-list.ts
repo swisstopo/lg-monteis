@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { ExperimentOwnerDto } from '@core/generated';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ownerDisplayName } from './owner-name';
+import { missingOwnersKey, OwnersStatus } from './owners-status';
 
 /** The owners of an experiment with their contact details, read only. */
 @Component({
@@ -13,7 +14,8 @@ import { ownerDisplayName } from './owner-name';
 })
 export class ExperimentOwnerList {
   readonly owners = input<ExperimentOwnerDto[]>([]);
-  readonly unavailable = input(false);
+  readonly status = input<OwnersStatus>();
 
+  protected readonly missingOwnersKey = computed(() => missingOwnersKey(this.status()));
   protected readonly displayName = ownerDisplayName;
 }

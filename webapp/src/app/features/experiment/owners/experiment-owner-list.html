@@ -1,7 +1,7 @@
 <section class="experiment-owner-list" data-testid="experiment-owner-list">
   <h3 class="experiment-owner-list_title">{{ 'experiment.owners.label' | translate }}</h3>
-  @if (unavailable()) {
-    <p data-testid="owners-unavailable">{{ 'experiment.owners.unavailable' | translate }}</p>
+  @if (missingOwnersKey(); as missingOwnersKey) {
+    <p data-testid="owners-missing">{{ missingOwnersKey | translate }}</p>
   } @else {
     @for (owner of owners(); track owner.id) {
       <p class="experiment-owner-list_owner" data-testid="experiment-owner">

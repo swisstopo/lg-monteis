@@ -105,9 +105,7 @@ export class ExperimentDialog {
     () => this.mode() === 'edit' && this.permissions.isAdmin(),
   );
   protected readonly owners = computed(() => this.experiment()?.owners ?? []);
-  protected readonly ownersUnavailable = computed(
-    () => this.experiment()?.ownersUnavailable ?? false,
-  );
+  protected readonly ownersStatus = computed(() => this.experiment()?.ownersStatus);
   // compared by content: a saved experiment with the same owners must not reset the selection
   private readonly storedOwnerIds = computed(() => this.owners().map((owner) => owner.id!), {
     equal: sameIds,

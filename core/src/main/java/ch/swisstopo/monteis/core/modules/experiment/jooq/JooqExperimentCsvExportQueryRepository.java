@@ -41,7 +41,6 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
       List.of(
           "name", "status", "period.start", "period.end", "sensorCount", "owners", "comment", "id");
   private static final String OWNER_SEPARATOR = "; ";
-  private static final String OWNERS_UNAVAILABLE = "(unavailable)";
 
   private final DSLContext dsl;
   private final Clock clock;
@@ -109,10 +108,16 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
   }
 
   private static String ownerNames(VisibleOwners owners) {
-    if (owners.unavailable()) {
-      return OWNERS_UNAVAILABLE;
-    }
-    return owners.users().stream()
+    return switch (owners.status()) {
+      case SHOWN -> namesOf(owners.users());
+      case KEYCLOAK_UNAVAILABLE -> "(unavailable)";
+      case ACCESS_DENIED -> "(access denied)";
+      case NO_WRITE_GROUP -> "(no write group)";
+    };
+  }
+
+  private static String namesOf(List<DirectoryUser> users) {
+    return users.stream()
         .map(DirectoryUser::displayName)
         .collect(Collectors.joining(OWNER_SEPARATOR));
   }

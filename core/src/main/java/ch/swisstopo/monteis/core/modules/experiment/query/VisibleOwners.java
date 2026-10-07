@@ -4,20 +4,24 @@ import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import java.util.List;
 
 /**
- * The owners of an experiment the caller gets to see. {@code unavailable} means Keycloak could
- * not be asked, so the owners are unknown right now, as opposed to an experiment that has none.
- * Build it with {@link #of}, {@link #NONE} or {@link #UNAVAILABLE}.
+ * The owners of an experiment the caller gets to see, and whether that is all of them. Build it
+ * with {@link #of} or one of the constants.
  */
-public record VisibleOwners(List<DirectoryUser> users, boolean unavailable) {
+public record VisibleOwners(List<DirectoryUser> users, OwnersStatus status) {
 
-  public static final VisibleOwners NONE = new VisibleOwners(List.of(), false);
-  public static final VisibleOwners UNAVAILABLE = new VisibleOwners(List.of(), true);
+  public static final VisibleOwners NONE = new VisibleOwners(List.of(), OwnersStatus.SHOWN);
+  public static final VisibleOwners KEYCLOAK_UNAVAILABLE =
+      new VisibleOwners(List.of(), OwnersStatus.KEYCLOAK_UNAVAILABLE);
+  public static final VisibleOwners ACCESS_DENIED =
+      new VisibleOwners(List.of(), OwnersStatus.ACCESS_DENIED);
+  public static final VisibleOwners NO_WRITE_GROUP =
+      new VisibleOwners(List.of(), OwnersStatus.NO_WRITE_GROUP);
 
   public VisibleOwners {
     users = List.copyOf(users);
   }
 
   public static VisibleOwners of(List<DirectoryUser> users) {
-    return users.isEmpty() ? NONE : new VisibleOwners(users, false);
+    return users.isEmpty() ? NONE : new VisibleOwners(users, OwnersStatus.SHOWN);
   }
 }

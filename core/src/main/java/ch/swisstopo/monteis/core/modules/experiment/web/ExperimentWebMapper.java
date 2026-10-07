@@ -24,7 +24,7 @@ public interface ExperimentWebMapper {
   // --- Outbound Domain -> API Serialization DTO Mappings ---
   @Mapping(target = "status", expression = "java(domain.getStatus(today))")
   @Mapping(target = "owners", source = "owners.users")
-  @Mapping(target = "ownersUnavailable", source = "owners.unavailable")
+  @Mapping(target = "ownersStatus", source = "owners.status")
   ExperimentResponseDto toDto(Experiment domain, VisibleOwners owners, @Context LocalDate today);
 
   /** For an experiment nested in another resource (a sensor's main experiment), without owners. */

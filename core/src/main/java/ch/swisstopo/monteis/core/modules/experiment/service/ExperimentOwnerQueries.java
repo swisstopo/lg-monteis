@@ -23,7 +23,8 @@ import org.springframework.stereotype.Service;
 /**
  * Which owners a caller gets to see. An owner counts as long as they are a PI of the experiment in
  * Keycloak, so someone who lost write access, was disabled or was deleted is not shown anymore.
- * Never fails because of Keycloak, the visible owners say why they are missing.
+ * Never fails because of Keycloak, the {@link
+ * ch.swisstopo.monteis.core.modules.experiment.query.OwnersStatus} says why owners are missing.
  */
 @Service
 public class ExperimentOwnerQueries {
@@ -86,13 +87,15 @@ public class ExperimentOwnerQueries {
         return VisibleOwners.NONE;
       }
       if (keycloakUnavailable) {
-        return VisibleOwners.UNAVAILABLE;
+        return VisibleOwners.KEYCLOAK_UNAVAILABLE;
       }
       UUID experimentId = storedOwners.experimentId();
       return switch (userDirectory.pisForReading(experimentId)) {
         case Known(var pis) -> onlyOwnersAmong(pis, storedOwners);
-        case NoWriteGroup() -> hideOwners(experimentId, "the experiment has no write group");
-        case AccessDenied(var reason) -> hideOwners(experimentId, reason);
+        case NoWriteGroup() ->
+            hideOwners(experimentId, VisibleOwners.NO_WRITE_GROUP, "no write group");
+        case AccessDenied(var reason) ->
+            hideOwners(experimentId, VisibleOwners.ACCESS_DENIED, reason);
         case KeycloakUnavailable(var reason) -> giveUpOnKeycloak(reason);
       };
     }
@@ -100,7 +103,7 @@ public class ExperimentOwnerQueries {
     private VisibleOwners giveUpOnKeycloak(String reason) {
       log.warn("Showing experiments without owners: {}", reason);
       keycloakUnavailable = true;
-      return VisibleOwners.UNAVAILABLE;
+      return VisibleOwners.KEYCLOAK_UNAVAILABLE;
     }
   }
 
@@ -108,9 +111,9 @@ public class ExperimentOwnerQueries {
     return VisibleOwners.of(pis.stream().filter(pi -> storedOwners.isOwner(pi.id())).toList());
   }
 
-  private static VisibleOwners hideOwners(UUID experimentId, String reason) {
+  private static VisibleOwners hideOwners(UUID experimentId, VisibleOwners hidden, String reason) {
     log.warn("Hiding the owners of experiment {}: {}", experimentId, reason);
-    return VisibleOwners.NONE;
+    return hidden;
   }
 
   private static StoredOwners storedOwnersOf(Experiment experiment) {
