@@ -8,10 +8,22 @@ import java.util.UUID;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
- * Reads the {@link KeycloakClaims} of a Keycloak-issued access token. Malformed claims degrade to
- * empty rather than throwing, so callers fail closed.
+ * Reads the claims of a Keycloak-issued access token, the only class that knows their names and the
+ * monteis-client role names (contract C1). Malformed claims degrade to empty rather than throwing,
+ * so callers fail closed.
  */
 final class KeycloakClaimExtractor {
+
+  private static final String MONTEIS_CLIENT = "monteis-client:";
+  static final String EXPERIMENT_READ_ROLE = MONTEIS_CLIENT + "experiment:read";
+  static final String EXPERIMENT_WRITE_ROLE = MONTEIS_CLIENT + "experiment:write";
+  static final String ADMIN_ROLE = MONTEIS_CLIENT + "admin";
+
+  private static final String USERNAME = "preferred_username";
+  private static final String CLIENT_ACCESS = "monteis_access";
+  private static final String CLIENT_ACCESS_ROLES = "roles";
+  private static final String READ_EXPERIMENTS = "read_experiment_ids";
+  private static final String WRITE_EXPERIMENTS = "write_experiment_ids";
 
   private final Jwt jwt;
 
@@ -28,7 +40,7 @@ final class KeycloakClaimExtractor {
   }
 
   String username() {
-    return jwt.getClaimAsString(KeycloakClaims.USERNAME);
+    return jwt.getClaimAsString(USERNAME);
   }
 
   List<String> roles() {
@@ -37,11 +49,11 @@ final class KeycloakClaimExtractor {
   }
 
   List<UUID> readExperimentIds() {
-    return experimentIds(KeycloakClaims.READ_EXPERIMENTS);
+    return experimentIds(READ_EXPERIMENTS);
   }
 
   List<UUID> writeExperimentIds() {
-    return experimentIds(KeycloakClaims.WRITE_EXPERIMENTS);
+    return experimentIds(WRITE_EXPERIMENTS);
   }
 
   private List<UUID> experimentIds(String claim) {
@@ -50,9 +62,9 @@ final class KeycloakClaimExtractor {
 
   private Optional<List<?>> clientAccessRoles() {
     // not getClaimAsMap: it throws for a claim that isn't an object instead of degrading to empty
-    return Optional.ofNullable(jwt.getClaim(KeycloakClaims.CLIENT_ACCESS))
+    return Optional.ofNullable(jwt.getClaim(CLIENT_ACCESS))
         .flatMap(this::asMap)
-        .map(clientAccess -> clientAccess.get(KeycloakClaims.CLIENT_ACCESS_ROLES))
+        .map(clientAccess -> clientAccess.get(CLIENT_ACCESS_ROLES))
         .flatMap(this::asList);
   }
 

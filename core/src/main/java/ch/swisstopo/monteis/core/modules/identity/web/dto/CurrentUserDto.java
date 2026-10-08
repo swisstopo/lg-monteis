@@ -11,15 +11,9 @@ import java.util.UUID;
 public record CurrentUserDto(
     @Schema(
             requiredMode = Schema.RequiredMode.REQUIRED,
-            description = "api:admin; gates Create Experiment, sensor writes, Sensor menu/route")
-        boolean isAdmin,
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "admin or write:all")
-        boolean canWriteAllExperiments,
-    @Schema(
-            requiredMode = Schema.RequiredMode.REQUIRED,
-            description = "empty when canWriteAllExperiments")
-        List<UUID> writeExperimentIds,
-    @Schema(
-            requiredMode = Schema.RequiredMode.REQUIRED,
-            description = "api:documents:read; for the future Dokumentenverzeichnis")
-        boolean canAccessDocuments) {}
+            description =
+                "admin role: write access to everything; gates Create Experiment, sensor writes,"
+                    + " Sensor menu/route")
+        boolean canWriteAll,
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "empty when canWriteAll")
+        List<UUID> writeExperimentIds) {}

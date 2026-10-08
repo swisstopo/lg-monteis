@@ -44,10 +44,8 @@ class JooqSensorRepositoryAccessIT {
   }
 
   @Test
-  void should_let_admins_and_global_editors_upload_documents_to_every_sensor() {
+  void should_let_admins_upload_documents_to_every_sensor() {
     assertThat(callAsAdmin(() -> repository.canWriteAnExperimentOf(betaSensor))).isTrue();
-    SecurityContextTestSupport.runAsGlobalEditor(
-        () -> assertThat(repository.canWriteAnExperimentOf(betaSensor)).isTrue());
   }
 
   @Test

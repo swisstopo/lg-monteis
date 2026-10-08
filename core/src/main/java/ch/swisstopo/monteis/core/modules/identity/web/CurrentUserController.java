@@ -1,12 +1,11 @@
 package ch.swisstopo.monteis.core.modules.identity.web;
 
-import ch.swisstopo.monteis.core.infrastructure.security.Capabilities;
+import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
 import ch.swisstopo.monteis.core.modules.identity.web.dto.CurrentUserDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,18 +18,15 @@ public class CurrentUserController {
       operationId = "getCurrentUser",
       summary = "Get the current caller's permissions",
       description =
-          "Projects the caller's Capabilities, for UI gating only; the backend"
+          "Projects the caller's permissions, for UI gating only; the backend"
               + " enforces every rule itself.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved current user info")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<CurrentUserDto> getCurrentUser(Authentication authentication) {
-    Capabilities capabilities = Capabilities.of(authentication);
+  public ResponseEntity<CurrentUserDto> getCurrentUser(MonteisAuthenticationToken authentication) {
     return ResponseEntity.ok(
         new CurrentUserDto(
-            capabilities.isAdmin(),
-            capabilities.canWriteAllExperiments(),
-            // empty when canWriteAllExperiments (BR4.10); sorted for a stable response
-            capabilities.writableExperimentIds().stream().sorted().toList(),
-            capabilities.canAccessDocuments()));
+            authentication.canWriteAll(),
+            // empty when canWriteAll (BR4.10); sorted for a stable response
+            authentication.writableExperimentIds().stream().sorted().toList()));
   }
 }

@@ -7,7 +7,6 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -104,7 +103,7 @@ class FulcrumDocumentControllerTest {
   }
 
   @Test
-  void should_stream_a_document_to_a_caller_with_document_access() throws Exception {
+  void should_stream_a_document_to_anyone_signed_in() throws Exception {
     // given
     given(documentService.getDocument(DOCUMENT.id())).willReturn(DOCUMENT);
     given(documentService.openFileContent(DOCUMENT)).willReturn(new ByteArrayInputStream(CONTENT));
@@ -113,7 +112,7 @@ class FulcrumDocumentControllerTest {
     mockMvc
         .perform(
             get(DOCUMENT_CONTENT, DOCUMENT.id())
-                .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication())))
+                .with(authentication(PrivilegeLevel.BASISROLLE.authentication())))
         .andExpect(status().isOk())
         .andExpect(header().string("Content-Type", "application/pdf"))
         .andExpect(header().string("Content-Disposition", containsString("attachment")))
@@ -189,31 +188,6 @@ class FulcrumDocumentControllerTest {
   }
 
   @Test
-  void should_forbid_a_document_to_a_caller_without_document_access() throws Exception {
-    // when / then
-    mockMvc
-        .perform(
-            get(DOCUMENT_CONTENT, DOCUMENT.id())
-                .with(authentication(PrivilegeLevel.GLOBAL_EDITOR.authentication())))
-        .andExpect(status().isForbidden())
-        .andExpect(jsonPath("$.messageKey").value("access.denied"));
-
-    then(documentService).shouldHaveNoInteractions();
-  }
-
-  @Test
-  void should_forbid_a_head_request_for_a_document_without_document_access() throws Exception {
-    // when / then
-    mockMvc
-        .perform(
-            head(DOCUMENT_CONTENT, DOCUMENT.id())
-                .with(authentication(PrivilegeLevel.BASISROLLE.authentication())))
-        .andExpect(status().isForbidden());
-
-    then(documentService).shouldHaveNoInteractions();
-  }
-
-  @Test
   void should_answer_404_for_an_unknown_document() throws Exception {
     // given
     UUID unknown = UUID.randomUUID();
@@ -243,8 +217,7 @@ class FulcrumDocumentControllerTest {
   }
 
   @Test
-  void should_start_a_sync_for_a_caller_with_document_access_and_report_it_running()
-      throws Exception {
+  void should_let_any_authenticated_caller_start_a_sync_and_report_it_running() throws Exception {
     // given
     given(syncRunner.currentStatus()).willReturn(new FulcrumSyncStatus(true, null));
 
@@ -253,24 +226,11 @@ class FulcrumDocumentControllerTest {
         .perform(
             post(SYNC)
                 .with(csrf())
-                .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication())))
+                .with(authentication(PrivilegeLevel.BASISROLLE.authentication())))
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.running").value(true));
 
     then(syncRunner).should().startInBackground();
-  }
-
-  @Test
-  void should_forbid_a_sync_to_a_caller_without_document_access() throws Exception {
-    // when / then
-    mockMvc
-        .perform(
-            post(SYNC)
-                .with(csrf())
-                .with(authentication(PrivilegeLevel.BASISROLLE.authentication())))
-        .andExpect(status().isForbidden());
-
-    then(syncRunner).shouldHaveNoInteractions();
   }
 
   @Test
