@@ -15,13 +15,11 @@
     }
   }
 </span>
-@if (permissions.canAccessDocuments()) {
-  <button matButton="text" type="button" [disabled]="starting()" (click)="onRefresh()">
-    @if (starting()) {
-      <mat-spinner diameter="16"></mat-spinner>
-    } @else {
-      <mat-icon fontIcon="sync"></mat-icon>
-    }
-    {{ 'fulcrumSync.refresh' | translate }}
-  </button>
-}
+<button matButton="text" type="button" [disabled]="starting()" (click)="onRefresh()">
+  @if (starting()) {
+    <mat-spinner diameter="16"></mat-spinner>
+  } @else {
+    <mat-icon fontIcon="sync"></mat-icon>
+  }
+  {{ 'fulcrumSync.refresh' | translate }}
+</button>
