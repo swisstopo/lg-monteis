@@ -74,7 +74,7 @@ Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Re
 | 17.07.2026
 
 | Status
-| abgelöst durch "ADR: Hybride Durchsetzung — Filterchain plus RLS mit zentralen Capabilities" (MON-196)
+| abgelöst durch "ADR: Hybride Durchsetzung — Filterchain plus RLS mit Regeln auf dem Token" (MON-196)
 
 | Kontext & Problem
 | Alle DB-Zugriffe laufen über dieselbe Rolle (`core_app`); DB-Grants können daher nicht zwischen einzelnen Nutzern unterscheiden — sie eignen sich für die RLS-Lesefilterung, nicht aber für nutzerspezifische Schreibrechte.
@@ -94,7 +94,7 @@ Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Re
 | Kriterium | Beschreibung
 
 | Titel
-| ADR: Hybride Durchsetzung — Filterchain plus RLS mit zentralen Capabilities
+| ADR: Hybride Durchsetzung — Filterchain plus RLS mit Regeln auf dem Token
 
 | Datum
 | 29.09.2026
@@ -103,22 +103,21 @@ Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Re
 | entschieden (MON-196); löst "ADR: Trennung von Lese- und Schreibautorisierung — RLS für Reads, RBAC für Writes" ab
 
 | Kontext & Problem
-| Die abgelöste ADR ordnet das Lesen der RLS und das Schreiben dem RBAC in der Filterchain zu. Seit der Migration V16 werden Experiment-Updates aber sowohl in der Filterchain als auch per RLS `WITH CHECK` geprüft, die ADR beschreibt den Code also nicht mehr. Zudem wurden dieselben Regeln an mehreren Stellen berechnet (`AuthorityChecks`, `ExperimentWriteAuthorizationManager`, `RlsConnectionProvider`, `CurrentUserController`), und diese Abweichungen führten zu inkonsistenten Rechten. Das Rollenkonzept aus MON-196 (fünf Rollen, globaler Editor, Sensorkatalog nur für Admins) verlangt, dass jede Berechtigungsstufe an allen Durchsetzungspunkten exakt dieselben Rechte erhält, und fordert Defence in Depth.
+| Die abgelöste ADR ordnet das Lesen der RLS und das Schreiben dem RBAC in der Filterchain zu. Seit der Migration V16 werden Experiment-Updates aber sowohl in der Filterchain als auch per RLS `WITH CHECK` geprüft, die ADR beschreibt den Code also nicht mehr. Zudem wurden dieselben Regeln an mehreren Stellen berechnet (`AuthorityChecks`, `ExperimentWriteAuthorizationManager`, `RlsConnectionProvider`, `CurrentUserController`), und diese Abweichungen führten zu inkonsistenten Rechten. Das Rollenkonzept aus MON-196 (drei Rollen, Sensorkatalog nur für Admins) verlangt, dass jede Berechtigungsstufe an allen Durchsetzungspunkten exakt dieselben Rechte erhält, und fordert Defence in Depth.
 
 | Entscheidung
-| Alle Berechtigungsregeln liegen in `Capabilities`; `Capabilities.of(authentication)` übersetzt die `Authentication` dafür in normalisierte Fakten (`Grant`-Enum und zugewiesene Experiment-IDs) und berechnet jede Antwort daraus. Kein Durchsetzungspunkt prüft Authorities selbst. Die Durchsetzung ist hybrid:
+| Alle Berechtigungsregeln liegen auf dem `MonteisAuthenticationToken`; `MonteisJwtAuthenticationConverter` ist die einzige Stelle, die Keycloak-Rollen auf `Permissions` abbildet. Die Admin-Rolle ergibt `api:write-all` und darf damit alles. Die Durchsetzung ist hybrid:
 
-* Lesen erzwingt die Datenbank: RLS filtert Zeilen anhand des transaktionslokalen Sitzungskontexts.
-* Schreiben erzwingt zuerst die Filterchain (`SecurityConfig`, via `Capabilities`) und für Experiment-Updates zusätzlich RLS `WITH CHECK`.
-* Admin-only-Endpunkte (Experiment anlegen, Sensoren schreiben, übrige Schreibzugriffe) erzwingt die Filterchain. Sensoren lesen darf jeder angemeldete Benutzer; welche Sensoren er sieht, filtert RLS.
+* Lesen und Experiment-Updates erzwingt die Datenbank: RLS filtert Zeilen anhand des transaktionslokalen Sitzungskontexts, Experiment-Updates prüft die Policy `experiments_update ... WITH CHECK`. Die Filterchain prüft hier nur die Authentifizierung, damit die Regel nicht doppelt existiert.
+* Alle übrigen Schreibzugriffe (Experiment anlegen, Sensoren schreiben usw.) erfordern in der Filterchain `hasAuthority(api:write-all)`. Sensoren lesen darf jeder angemeldete Benutzer; welche Sensoren er sieht, filtert RLS.
 
 Ein ausgeblendetes oder fehlendes Experiment ergibt 404 `object.not-found`, eine Ablehnung in der Filterchain oder per RLS 403 `access.denied`, beide als `ErrorDto` mit `target: GLOBAL`.
 
 | Begründung
-| Ein Fehler in einer Schicht legt keine Daten offen, und die Datenbank schützt auch Zugriffe ausserhalb von HTTP. Eine zentrale Policy ist die einzige Stelle, an der Regeln geändert und getestet werden, sodass Filterchain, `/api/me` und Sitzungskontext nicht mehr auseinanderlaufen können. Die Filterchain lehnt unberechtigte Schreibzugriffe ab, bevor die Datenbank überhaupt angefragt wird.
+| Ein Fehler in einer Schicht legt keine Daten offen, und die Datenbank schützt auch Zugriffe ausserhalb von HTTP. Die Regeln liegen an genau einer Stelle (Token bzw. für Experiment-Updates die SQL-Funktionen), sodass Filterchain, `/api/me` und Sitzungskontext nicht auseinanderlaufen können. Eine Änderung an Keycloak betrifft nur `KeycloakClaimExtractor` und den Converter, eine Änderung am Token nur Converter und Token.
 
 | Konsequenzen
-| Positiv: eine Stelle für Regeln und Tests; neue Regeln (z. B. Dokumentzugriff) haben einen klaren Platz; ein Test stellt sicher, dass jedes Endpunkt-Mapping einer Regel zugeordnet ist. Negativ: die Experiment-Bearbeitungsregel ist an zwei Stellen ausgedrückt (`Capabilities` und die SQL-Funktionen) und muss übereinstimmen; das sichern Integrationstests unter der Rolle `core_app`. Die Datenbank behält getrennte Flags für Lesen und Schreiben aller Experimente (`app.read_all_experiments`, `app.write_all_experiments`, Migration V17); `RlsConnectionProvider` setzt beide direkt aus `Capabilities`. Für Benutzerrollen sind sie immer gleich, der Systemkontext (Hintergrundjobs) liest aber alles und darf nichts schreiben. Er läuft ohne Filterchain, deshalb ist RLS für ihn die einzige Schreibsperre.
+| Positiv: eine Stelle für Regeln und Tests; die Filterchain nutzt Standard-Spring-Security (`hasAuthority`); ein Test stellt sicher, dass jedes Endpunkt-Mapping einer Regel zugeordnet ist. Negativ: ein Experiment-Update ohne Schreibrecht wird erst von der Datenbank abgelehnt (42501 → 403); dass die SQL-Funktionen die Rechte korrekt umsetzen, sichern Integrationstests unter der Rolle `core_app`. Die Datenbank behält getrennte Flags für Lesen und Schreiben aller Experimente (`app.read_all_experiments`, `app.write_all_experiments`, Migration V17); `RlsConnectionProvider` setzt heute beide aus `canWriteAll`. Der Systemkontext (Hintergrundjobs) trägt `api:write-all` und darf damit alles.
 
 | Verworfene Alternativen
 | *Nur RLS:* Ablehnungen würden erst spät als 42501 sichtbar, und Admin-Endpunkte liessen sich nicht sperren. +
@@ -246,7 +245,7 @@ Ein ausgeblendetes oder fehlendes Experiment ergibt 404 `object.not-found`, eine
 | Entscheidung
 | In der DB steht weiterhin nur `experiment_owner(experiment_id, user_id)`. `core` fragt die Keycloak Admin API mit dem Token des Aufrufers, Keycloak entscheidet über Fine Grained Admin Permissions (v2), was der Aufrufer von anderen Benutzern sehen darf. Im Realm gilt:
 
-* eine Permission auf alle Gruppen mit den Scopes `view` und `view-members` für alle mit `monteis-client:experiment:read` oder `monteis-client:experiment:write:all` (Rollen-Policy `experiment-users`)
+* eine Permission auf alle Gruppen mit den Scopes `view` und `view-members` für alle mit `monteis-client:experiment:read` oder `monteis-client:admin` (Rollen-Policy `experiment-users`)
 * `/Experiments` gibt `realm-management` `query-users` und `query-groups`, ohne die geht die Gruppensuche nicht
 * `/Monteis Admin` gibt `view-users`, `query-users` und `query-groups`
 
@@ -392,7 +391,7 @@ Wird die Unschärfe oder das Wachstum der Tabelle später ein Problem, ist C der
 
 Der Sync läuft nächtlich (`monteis.fulcrum.documents.sync-cron`, Default `0 0 2 * * *` Europe/Zurich) per `@Scheduled` und lässt sich über den Refresh-Button asynchron anstossen. Beides läuft mit `runAsSystem` und über ShedLock, damit bei mehreren `core`-Pods nur ein Lauf aktiv ist. Ein Refresh während eines laufenden Syncs gibt `409` mit `fulcrum.sync.alreadyRunning` zurück. Das Lock wird während des Laufs laufend verlängert (`KeepAliveLockProvider`), ein Lauf verliert es also nur, wenn sein Pod abstürzt, `lockAtMostFor` (2 min) sagt nur noch, wie lange ein abgestürzter Pod den nächsten Lauf blockiert. Ohne Keep-Alive könnte ein langsamer Download das Lock ablaufen lassen, und weil ShedLocks Unlock nur den Namen prüft, würde der erste Lauf am Ende auch das Lock des zweiten freigeben. Der nächtliche Lauf hält das Lock mindestens 1 min, sonst synchronisiert ein Pod mit leicht nachgehender Uhr gleich nochmals. Der Lauf hat ein Zeitbudget (`monteis.fulcrum.documents.time-budget`, 8 min): danach startet er keinen Download mehr, und ein laufender Download bekommt als Timeout nur die restliche Zeit, er wird also abgebrochen statt fertig geladen. Der nächste Lauf macht dort weiter. Fulcrum lässt sich pro Umgebung abschalten (`monteis.fulcrum.enabled=false`), dann läuft kein Sync, und Refresh sowie Sensoren mit Fulcrum-ID antworten `503` mit `fulcrum.disabled`. Ist Fulcrum eingeschaltet, startet `core` ohne `FULCRUM_API_TOKEN` gar nicht erst, kein Aufrufer muss den Token selbst prüfen. Läufe werden nicht protokolliert: "läuft" heisst, das ShedLock-Lock ist gehalten (`lock_until` in der Zukunft, nach einem Pod-Absturz höchstens 2 min zu lange), "zuletzt erfolgreich synchronisiert" ist der Start des letzten Laufs, der Fulcrum erreicht, alle Documents gespeichert und alle Dateien innerhalb seines Zeitbudgets importiert hat, in der einzeiligen Tabelle `fulcrum_document_sync`. Zu grosse und leere Dateien werden übersprungen und zählen nicht dagegen, sie würden sonst jeden Lauf scheitern lassen, bis jemand sie in Fulcrum korrigiert. Wie ein Lauf ausging, steht im Log (eine Zeile pro Lauf mit den Zahlen, Warnungen pro Document), Metriken gibt es keine, solange `core` keine exportiert.
 
-Schlägt die Query fehl, bleibt alles wie es ist und der letzte erfolgreiche Sync bleibt stehen, Details stehen im Log. Schlägt ein einzelner Download fehl, fehlt ein neuer Eintrag noch bzw. zeigt ein bestehender weiter auf die alte Datei, der nächste Lauf versucht es nochmals. Einträge, die Fulcrum nicht mehr liefert, bleiben als Backup erhalten (Vorgabe PO, die Daten dürfen nicht verloren gehen), sie bekommen `removed_at`, und die Übersicht markiert sie als in Fulcrum nicht mehr verfügbar. Einträge ohne Anhang holt der Sync gar nicht erst, verliert ein schon gespiegelter Eintrag in Fulcrum seine Datei, gilt er als in Fulcrum nicht mehr verfügbar, seine Datei bleibt in MONTEIS abrufbar. View und Download streamen wie bei den Experiment documents durch `core`, ohne Presigned URLs. Die Übersicht sieht jeder eingeloggte Benutzer, View, Download und Refresh brauchen `documents:read` (wie in MON-196, FR2.9).
+Schlägt die Query fehl, bleibt alles wie es ist und der letzte erfolgreiche Sync bleibt stehen, Details stehen im Log. Schlägt ein einzelner Download fehl, fehlt ein neuer Eintrag noch bzw. zeigt ein bestehender weiter auf die alte Datei, der nächste Lauf versucht es nochmals. Einträge, die Fulcrum nicht mehr liefert, bleiben als Backup erhalten (Vorgabe PO, die Daten dürfen nicht verloren gehen), sie bekommen `removed_at`, und die Übersicht markiert sie als in Fulcrum nicht mehr verfügbar. Einträge ohne Anhang holt der Sync gar nicht erst, verliert ein schon gespiegelter Eintrag in Fulcrum seine Datei, gilt er als in Fulcrum nicht mehr verfügbar, seine Datei bleibt in MONTEIS abrufbar. View und Download streamen wie bei den Experiment documents durch `core`, ohne Presigned URLs. Übersicht, View, Download und Refresh darf jeder eingeloggte Benutzer, für Dokumente gibt es keine eigene Rolle (MON-196).
 
 | Begründung
 | **Verfügbarkeit:** Übersicht, Suche und Download funktionieren auch, wenn Fulcrum langsam oder weg ist. Die Daten sind höchstens einen Tag alt, für Literatur reicht das, und wer es dringend braucht, drückt Refresh.
