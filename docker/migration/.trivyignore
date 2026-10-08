@@ -28,3 +28,12 @@ CVE-2026-54428
 CVE-2026-54512
 CVE-2026-54513
 GHSA-r7wm-3cxj-wff9
+# jackson SHADED inside databricks-jdbc (2.18.7), couchbase core-io (2.21.4) and
+# aws-secretsmanager-jdbc (2.22.2). flyway's own jackson in 13.9.0 (2.22.3 / 3.1.7)
+# is fixed, so these ids only hit the unused drivers
+CVE-2026-68494
+CVE-2026-68497
+CVE-2026-89407
+CVE-2026-89425
+CVE-2026-91776
+CVE-2026-91777
