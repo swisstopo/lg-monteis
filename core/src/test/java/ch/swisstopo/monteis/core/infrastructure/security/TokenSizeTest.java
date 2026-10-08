@@ -81,8 +81,6 @@ class TokenSizeTest {
                 List.of(
                     "monteis-client:experiment:read",
                     "monteis-client:experiment:write",
-                    "monteis-client:experiment:write:all",
-                    "monteis-client:documents:read",
                     "monteis-client:admin")))
         .claim("read_experiment_ids", readIds)
         .claim("write_experiment_ids", writeIds)

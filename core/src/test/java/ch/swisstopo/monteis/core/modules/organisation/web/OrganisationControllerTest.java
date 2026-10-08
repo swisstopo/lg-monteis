@@ -231,7 +231,7 @@ class OrganisationControllerTest {
         .perform(
             post("/api/organisations")
                 .with(csrf())
-                .with(authentication(PrivilegeLevel.GLOBAL_EDITOR.authentication()))
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Swisstopo\"}"))
         .andExpect(status().isForbidden());
@@ -269,7 +269,7 @@ class OrganisationControllerTest {
         .perform(
             put("/api/organisations/{id}", ORGANISATION_ID)
                 .with(csrf())
-                .with(authentication(PrivilegeLevel.GLOBAL_EDITOR.authentication()))
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Renamed\"}"))
         .andExpect(status().isForbidden());
