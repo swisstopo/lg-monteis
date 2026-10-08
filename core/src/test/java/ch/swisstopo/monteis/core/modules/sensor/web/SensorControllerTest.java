@@ -536,7 +536,7 @@ class SensorControllerTest {
   @ParameterizedTest
   @EnumSource(
       value = PrivilegeLevel.class,
-      names = {"BASISROLLE", "EXPERIMENT_USER", "EXPERIMENT_PI", "GLOBAL_EDITOR"})
+      names = {"BASISROLLE", "EXPERIMENT_USER", "EXPERIMENT_PI"})
   void should_forbid_sensor_writes_to_non_admins(PrivilegeLevel level) throws Exception {
     String body = objectMapper.writeValueAsString(defaultWriteDto(SENSOR_ID, 1, PARAMETER_ID, 1));
     List<MockHttpServletRequestBuilder> requests =

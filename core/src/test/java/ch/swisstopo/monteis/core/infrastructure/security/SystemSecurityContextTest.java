@@ -1,9 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -23,7 +22,7 @@ class SystemSecurityContextTest {
   }
 
   @Test
-  void should_bind_an_authentication_that_access_policy_answers_with_system_capabilities() {
+  void should_bind_an_authentication_that_may_write_everything() {
     // given
     AtomicReference<Authentication> captured = new AtomicReference<>();
 
@@ -31,18 +30,11 @@ class SystemSecurityContextTest {
     SystemSecurityContext.runAsSystem(
         () -> captured.set(SecurityContextHolder.getContext().getAuthentication()));
 
-    // then: all-experiment read and nothing else, without any authority of its own
-    assertSame(Capabilities.SYSTEM, Capabilities.of(captured.get()));
-    assertTrue(captured.get().getAuthorities().isEmpty());
-    assertTrue(SystemSecurityContext.isSystemAuthentication(captured.get()));
-  }
-
-  @Test
-  void should_not_recognise_other_authentications_as_system() {
-    assertFalse(SystemSecurityContext.isSystemAuthentication(null));
-    assertFalse(
-        SystemSecurityContext.isSystemAuthentication(
-            UsernamePasswordAuthenticationToken.authenticated("SYSTEM", null, List.of())));
+    // then
+    MonteisAuthenticationToken token =
+        assertInstanceOf(MonteisAuthenticationToken.class, captured.get());
+    assertTrue(token.canWriteAll());
+    assertNull(token.getCredentials());
   }
 
   @Test

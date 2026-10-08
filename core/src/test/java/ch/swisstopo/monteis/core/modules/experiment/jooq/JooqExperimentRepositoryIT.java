@@ -314,22 +314,6 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
-  void should_let_a_global_editor_read_and_update_any_experiment() {
-    // Arrange
-    Experiment[] any = new Experiment[1];
-    SecurityContextTestSupport.runAsAdmin(
-        () -> any[0] = repository.create(buildDummyDomainExperiment("ANY-EXP", "Owner")));
-    any[0].setComment("Edited by the global editor");
-
-    SecurityContextTestSupport.runAsGlobalEditor(
-        () -> {
-          assertEquals("ANY-EXP", repository.getById(any[0].getId()).getName());
-          assertEquals("Edited by the global editor", repository.update(any[0]).getComment());
-        });
-  }
-
-  @Test
-  @Transactional
   void should_stream_unaudited_experiments() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {

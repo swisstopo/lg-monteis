@@ -435,42 +435,7 @@ class ExperimentControllerTest {
   }
 
   @Test
-  void should_forbid_a_read_only_user_to_update_without_touching_the_service() throws Exception {
-    // given: ExperimentUser may read EXPERIMENT_ID but not edit it
-    WriteExperimentDto requestDto = updateDto(EXPERIMENT_ID);
-
-    // when / then
-    mockMvc
-        .perform(
-            put("/api/experiments/{id}", EXPERIMENT_ID)
-                .with(csrf())
-                .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication()))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestDto)))
-        .andExpect(status().isForbidden())
-        .andExpect(content().json(ACCESS_DENIED_BODY, JsonCompareMode.STRICT));
-
-    // the filter chain denied before any UPDATE could be issued (NFR2.1)
-    then(service).shouldHaveNoInteractions();
-    then(mapper).shouldHaveNoInteractions();
-  }
-
-  @Test
-  void should_forbid_a_pi_to_update_an_experiment_it_may_only_read() throws Exception {
-    mockMvc
-        .perform(
-            put("/api/experiments/{id}", OTHER_EXPERIMENT_ID)
-                .with(csrf())
-                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(updateDto(OTHER_EXPERIMENT_ID))))
-        .andExpect(status().isForbidden());
-
-    then(service).shouldHaveNoInteractions();
-  }
-
-  @Test
-  void should_let_a_global_editor_update_any_experiment() throws Exception {
+  void should_let_an_admin_update_any_experiment() throws Exception {
     // given
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
@@ -481,7 +446,7 @@ class ExperimentControllerTest {
         .perform(
             put("/api/experiments/{id}", OTHER_EXPERIMENT_ID)
                 .with(csrf())
-                .with(authentication(PrivilegeLevel.GLOBAL_EDITOR.authentication()))
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateDto(OTHER_EXPERIMENT_ID))))
         .andExpect(status().isOk());
@@ -507,8 +472,7 @@ class ExperimentControllerTest {
         List.of(
             PrivilegeLevel.BASISROLLE,
             PrivilegeLevel.EXPERIMENT_USER,
-            PrivilegeLevel.EXPERIMENT_PI,
-            PrivilegeLevel.GLOBAL_EDITOR)) {
+            PrivilegeLevel.EXPERIMENT_PI)) {
       mockMvc
           .perform(
               post("/api/experiments")
@@ -525,7 +489,7 @@ class ExperimentControllerTest {
   @Test
   void should_return_403_access_denied_when_row_level_security_refuses_the_update()
       throws Exception {
-    // given: the filter chain allowed it, but the RLS WITH CHECK rejected the row (42501)
+    // given: the RLS WITH CHECK rejected the row (42501)
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(service.updateExperiment(mockDomain))

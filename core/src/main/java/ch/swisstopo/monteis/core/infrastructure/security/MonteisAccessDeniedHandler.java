@@ -19,7 +19,7 @@ import tools.jackson.databind.ObjectMapper;
  * the RLS (42501) path produces in {@code GlobalErrorControllerAdvice} (contract C5). Without it,
  * Spring Security's default response has no {@code ErrorDto} body.
  *
- * <p>Logs one DEBUG line per denial with method, path and the caller's {@code sub} only - never the
+ * <p>Logs one WARN line per denial with method, path and the caller's {@code sub} only - never the
  * token, its claims or experiment id lists (NFR2.5).
  */
 class MonteisAccessDeniedHandler implements AccessDeniedHandler {
@@ -38,7 +38,7 @@ class MonteisAccessDeniedHandler implements AccessDeniedHandler {
       HttpServletResponse response,
       AccessDeniedException accessDeniedException)
       throws IOException {
-    log.debug(
+    log.warn(
         "Access denied: {} {} for sub {}",
         request.getMethod(),
         request.getRequestURI(),

@@ -1,18 +1,19 @@
 package ch.swisstopo.monteis.core.itconfig;
 
-import ch.swisstopo.monteis.core.infrastructure.security.Grant;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
+import ch.swisstopo.monteis.core.infrastructure.security.Permissions;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
- * The five MON-196 privilege levels, defined once for every test: their Keycloak client roles (as
+ * The four MON-196 privilege levels, defined once for every test: their Keycloak client roles (as
  * the realm groups grant them), the {@code api:*} authorities those map to, and the experiment ids
  * a token of that level carries.
  *
@@ -23,28 +24,13 @@ import org.springframework.security.oauth2.jwt.Jwt;
 public enum PrivilegeLevel {
   BASISROLLE(List.of(), List.of(), false, false),
   EXPERIMENT_USER(
-      List.of("monteis-client:experiment:read", "monteis-client:documents:read"),
-      List.of(Grant.EXPERIMENT_READ, Grant.DOCUMENTS_READ),
-      true,
-      false),
+      List.of("monteis-client:experiment:read"), List.of(Permissions.EXPERIMENT_READ), true, false),
   EXPERIMENT_PI(
-      List.of(
-          "monteis-client:experiment:read",
-          "monteis-client:experiment:write",
-          "monteis-client:documents:read"),
-      List.of(Grant.EXPERIMENT_READ, Grant.EXPERIMENT_WRITE, Grant.DOCUMENTS_READ),
+      List.of("monteis-client:experiment:read", "monteis-client:experiment:write"),
+      List.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE),
       true,
       true),
-  GLOBAL_EDITOR(
-      List.of("monteis-client:experiment:write:all"),
-      List.of(Grant.EXPERIMENT_WRITE_ALL),
-      false,
-      false),
-  MONTEIS_ADMIN(
-      List.of("monteis-client:admin", "monteis-client:documents:read"),
-      List.of(Grant.ADMIN, Grant.DOCUMENTS_READ),
-      false,
-      false);
+  MONTEIS_ADMIN(List.of("monteis-client:admin"), List.of(Permissions.WRITE_ALL), false, false);
 
   public static final UUID ASSIGNED_EXPERIMENT =
       UUID.fromString("00000000-0000-7000-8000-000000000301");
@@ -54,13 +40,13 @@ public enum PrivilegeLevel {
       UUID.fromString("00000000-0000-7000-8000-000000000302");
 
   private final List<String> roles;
-  private final List<Grant> authorities;
+  private final List<String> authorities;
   private final boolean carriesReadIds;
   private final boolean carriesWriteIds;
 
   PrivilegeLevel(
       List<String> roles,
-      List<Grant> authorities,
+      List<String> authorities,
       boolean carriesReadIds,
       boolean carriesWriteIds) {
     this.roles = roles;
@@ -75,7 +61,7 @@ public enum PrivilegeLevel {
   }
 
   public List<GrantedAuthority> grantedAuthorities() {
-    return List.copyOf(authorities);
+    return authorities.stream().<GrantedAuthority>map(SimpleGrantedAuthority::new).toList();
   }
 
   public List<UUID> readExperimentIds() {
