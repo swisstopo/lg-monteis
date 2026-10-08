@@ -30,18 +30,6 @@
           "clientRole": true
         },
         {
-          "name": "monteis-client:experiment:write:all",
-          "description": "Read + write access to all experiments, bypassing per-experiment scoping (write:all implies all-experiment read). Not granted by default; add it to a dedicated group for non-admins, never assign it directly to a user.",
-          "composite": false,
-          "clientRole": true
-        },
-        {
-          "name": "monteis-client:documents:read",
-          "description": "Open and download documents in the document directory. Granted via the 'Experiments' group (inherited by every experiment subgroup) or the 'Monteis Admin' group - never assign this directly to a user.",
-          "composite": false,
-          "clientRole": true
-        },
-        {
           "name": "monteis-client:admin",
           "description": "Admin functions, including sensors; implies read + write access to all experiments. Granted via the 'Monteis Admin' group - never assign this directly to a user.",
           "composite": false,
@@ -231,7 +219,7 @@
             "type": "role",
             "logic": "POSITIVE",
             "config": {
-              "roles": "[{\"id\":\"monteis-spa/monteis-client:experiment:read\",\"required\":false},{\"id\":\"monteis-spa/monteis-client:experiment:write:all\",\"required\":false}]"
+              "roles": "[{\"id\":\"monteis-spa/monteis-client:experiment:read\",\"required\":false},{\"id\":\"monteis-spa/monteis-client:admin\",\"required\":false}]"
             }
           },
           {
@@ -256,11 +244,11 @@
       "path": "/Monteis Admin",
       "attributes": {
         "description": [
-          "Full administrators: admin functions (which imply read + write access to every experiment) and document access. Members get monteis-client:admin and monteis-client:documents:read."
+          "Full administrators: admin functions, which imply read + write access to every experiment. Members get monteis-client:admin."
         ]
       },
       "clientRoles": {
-        "monteis-spa": ["monteis-client:admin", "monteis-client:documents:read"],
+        "monteis-spa": ["monteis-client:admin"],
         "realm-management": ["view-users", "query-users", "query-groups"]
       }
     },
@@ -269,11 +257,10 @@
       "path": "/Experiments",
       "attributes": {
         "description": [
-          "Per-experiment groups: <experiment>/read and <experiment>/read + write. Every member inherits documents:read from here. Keep roles and attributes off <experiment> itself - both subgroups inherit them. read + write gets both roles and ids."
+          "Per-experiment groups: <experiment>/read and <experiment>/read + write. Keep roles and attributes off <experiment> itself - both subgroups inherit them. read + write gets both roles and ids."
         ]
       },
       "clientRoles": {
-        "monteis-spa": ["monteis-client:documents:read"],
         "realm-management": ["query-users", "query-groups"]
       }
     }
