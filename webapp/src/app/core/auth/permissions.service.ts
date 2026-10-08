@@ -1,39 +1,50 @@
-import { Injectable, computed, inject, resource } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CurrentUserControllerService, CurrentUserDto } from '@core/generated';
-import { firstValueFrom } from 'rxjs';
+import { OAuthService } from 'angular-oauth2-oidc';
+import { Observable, catchError, defer, of, shareReplay } from 'rxjs';
+
+const NO_PERMISSIONS: CurrentUserDto = {
+  isAdmin: false,
+  canWriteAllExperiments: false,
+  writeExperimentIds: [],
+  canAccessDocuments: false,
+};
 
 /**
- * Single source for the cosmetic UI decisions (render a button or a menu entry).
+ * Single source for the cosmetic UI decisions (render a button or a menu entry, guard a route).
  * Loads `GET /api/me` once; the backend enforces every rule, this only mirrors it.
  *
- * Every signal fails closed: false or empty before the call resolves and after it fails.
+ * Every permission fails closed: {@link NO_PERMISSIONS} until the call answers and after it fails.
  */
 @Injectable({ providedIn: 'root' })
 export class PermissionsService {
   private readonly api = inject(CurrentUserControllerService);
+  private readonly oauthService = inject(OAuthService);
 
   /**
-   * A failed `/api/me` call resolves to `undefined`, so every permission stays closed; the HTTP
-   * error itself is already surfaced to the user by the restErrorInterceptor.
+   * no call without a token, it would only 401 and show the session expired toast while the login
+   * redirect is running. a failed call falls back to {@link NO_PERMISSIONS}, the http error itself
+   * is already shown by the restErrorInterceptor
    */
-  private readonly currentUser = resource({
-    loader: () =>
-      firstValueFrom(this.api.getCurrentUser()).catch((): CurrentUserDto | undefined => undefined),
-  });
-
-  readonly isAdmin = computed(() => this.currentUser.value()?.isAdmin ?? false);
-
-  readonly canWriteAllExperiments = computed(
-    () => this.currentUser.value()?.canWriteAllExperiments ?? false,
+  readonly currentUser$: Observable<CurrentUserDto> = defer(() =>
+    this.oauthService.hasValidAccessToken() ? this.api.getCurrentUser() : of(NO_PERMISSIONS),
+  ).pipe(
+    catchError(() => of(NO_PERMISSIONS)),
+    shareReplay(1),
   );
+
+  private readonly currentUser = toSignal(this.currentUser$, { initialValue: NO_PERMISSIONS });
+
+  readonly isAdmin = computed(() => this.currentUser().isAdmin);
+
+  readonly canWriteAllExperiments = computed(() => this.currentUser().canWriteAllExperiments);
 
   readonly writeExperimentIds = computed<readonly string[]>(
-    () => this.currentUser.value()?.writeExperimentIds ?? [],
+    () => this.currentUser().writeExperimentIds,
   );
 
-  readonly canAccessDocuments = computed(
-    () => this.currentUser.value()?.canAccessDocuments ?? false,
-  );
+  readonly canAccessDocuments = computed(() => this.currentUser().canAccessDocuments);
 
   /** Whether the caller can write at least one experiment - decides whether a scoped write action is shown at all. */
   readonly hasAnyExperimentWriteAccess = computed(
