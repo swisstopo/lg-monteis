@@ -37,6 +37,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -130,7 +131,11 @@ class ExperimentDocumentControllerTest {
   }
 
   @Test
-  void should_forbid_an_upload_to_an_experiment_the_caller_may_only_read() throws Exception {
+  void should_answer_403_when_row_level_security_refuses_the_upload() throws Exception {
+    // given: the experiment_documents_insert WITH CHECK rejected the row (42501)
+    given(service.upload(eq(OTHER_EXPERIMENT), any(), any(InputStream.class)))
+        .willThrow(new PermissionDeniedDataAccessException("42501", null));
+
     // when / then
     mockMvc
         .perform(
@@ -138,8 +143,6 @@ class ExperimentDocumentControllerTest {
                 .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.messageKey").value("access.denied"));
-
-    then(service).shouldHaveNoInteractions();
   }
 
   @Test
