@@ -343,6 +343,7 @@
       "empty": "No documents yet.",
       "error": {
         "upload": "The document could not be uploaded.",
+        "uploadAborted": "The upload failed. Files may be at most 50 MB.",
         "download": "The document could not be downloaded.",
         "load": "The documents could not be loaded."
       }

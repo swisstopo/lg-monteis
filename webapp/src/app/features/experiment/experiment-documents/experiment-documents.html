@@ -23,14 +23,17 @@
       @for (document of documents.value(); track document.id) {
         <li class="document">
           <div class="document-name">
-            <button
-              matIconButton
-              type="button"
-              [attr.aria-label]="'experiment.documents.view' | translate"
-              (click)="view(document)"
-            >
-              <mat-icon fontIcon="visibility" />
-            </button>
+            @if (document.viewable) {
+              <button
+                matIconButton
+                type="button"
+                class="view"
+                [attr.aria-label]="'experiment.documents.view' | translate"
+                (click)="view(document)"
+              >
+                <mat-icon fontIcon="visibility" />
+              </button>
+            }
             <button type="button" class="file-name" (click)="download(document)">
               {{ document.fileName }}
             </button>

@@ -2,7 +2,9 @@ package ch.swisstopo.monteis.core.modules.experiment.domain;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import org.junit.jupiter.api.Test;
@@ -81,5 +83,37 @@ class DocumentMetadataTest {
     // when / then
     assertThrows(
         IllegalArgumentException.class, () -> new DocumentMetadata("report.pdf", contentType, 42));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "image/webp",
+        "text/plain",
+        "Text/Plain; charset=utf-8",
+        "APPLICATION/PDF"
+      })
+  void should_let_a_type_the_browser_renders_without_scripts_be_viewed(String contentType) {
+    assertTrue(new DocumentMetadata("report", contentType, 42).isViewable());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "text/html",
+        "text/html; charset=utf-8",
+        "image/svg+xml",
+        "application/xhtml+xml",
+        "text/xml",
+        "application/xml",
+        "application/octet-stream",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      })
+  void should_only_let_a_type_that_can_run_scripts_be_downloaded(String contentType) {
+    assertFalse(new DocumentMetadata("report", contentType, 42).isViewable());
   }
 }

@@ -72,6 +72,7 @@ class ExperimentDocumentControllerTest {
         .andExpect(jsonPath("$[0].fileName").value("Bericht Mai.pdf"))
         .andExpect(jsonPath("$[0].contentType").value("application/pdf"))
         .andExpect(jsonPath("$[0].sizeBytes").value(CONTENT.length))
+        .andExpect(jsonPath("$[0].viewable").value(true))
         .andExpect(jsonPath("$[0].uploadedBy").value("experiment_pi"))
         .andExpect(jsonPath("$[0].uploadedAt").exists());
   }
@@ -151,6 +152,7 @@ class ExperimentDocumentControllerTest {
         .andExpect(header().string("Content-Type", "application/pdf"))
         .andExpect(header().longValue("Content-Length", CONTENT.length))
         .andExpect(header().string("Content-Disposition", containsString("attachment")))
+        .andExpect(header().string("X-Content-Type-Options", "nosniff"))
         .andExpect(
             header()
                 .string(

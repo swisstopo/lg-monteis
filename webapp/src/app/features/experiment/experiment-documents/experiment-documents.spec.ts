@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorDto, ExperimentDocumentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import { ExperimentDocumentService } from '@features/experiment/services/experiment-document.service';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExperimentDocuments } from './experiment-documents';
@@ -11,6 +11,7 @@ import { ExperimentDocuments } from './experiment-documents';
 const REPORT: ExperimentDocumentResponseDto = {
   id: 'document-1',
   fileName: 'report.pdf',
+  viewable: true,
   uploadedAt: '2026-02-13T09:03:26Z',
   uploadedBy: 'alice',
 };
@@ -151,7 +152,27 @@ describe('ExperimentDocuments', () => {
     ]);
   });
 
-  it('toasts the generic upload error when the response carries no message', async () => {
+  it('toasts the size limit of a too large upload', async () => {
+    documentService.uploadDocument.mockRejectedValue(
+      new HttpErrorResponse({
+        status: 413,
+        error: {
+          messageKey: 'document.validation.tooLarge',
+          params: { max: '50 MB' },
+          target: ErrorDto.TargetEnum.Form,
+        },
+      }),
+    );
+    const translate = vi.spyOn(TestBed.inject(TranslateService), 'translate');
+    const view = await render();
+
+    await selectFiles(view, new File(['x'], 'huge.pdf'));
+
+    expect(toast.error).toHaveBeenCalledWith('document.validation.tooLarge', 'huge.pdf');
+    expect(translate).toHaveBeenCalledWith('document.validation.tooLarge', { max: '50 MB' });
+  });
+
+  it('names the size limit when the connection of an upload is reset', async () => {
     documentService.uploadDocument.mockRejectedValue(
       new HttpErrorResponse({ status: 0, error: new ProgressEvent('error') }),
     );
@@ -159,7 +180,10 @@ describe('ExperimentDocuments', () => {
 
     await selectFiles(view, new File(['x'], 'report.pdf'));
 
-    expect(toast.error).toHaveBeenCalledWith('experiment.documents.error.upload', 'report.pdf');
+    expect(toast.error).toHaveBeenCalledWith(
+      'experiment.documents.error.uploadAborted',
+      'report.pdf',
+    );
   });
 
   it('toasts the generic upload error for an error without body', async () => {
@@ -184,10 +208,21 @@ describe('ExperimentDocuments', () => {
   it('opens a document in a new tab from the eye', async () => {
     const { element } = await render();
 
-    element.querySelector<HTMLButtonElement>('.document-name button')!.click();
+    element.querySelector<HTMLButtonElement>('.view')!.click();
 
     await vi.waitFor(() => expect(fileDownload.openInNewTab).toHaveBeenCalled());
     expect(documentService.getContent).toHaveBeenCalledWith('experiment-1', 'document-1');
+  });
+
+  it('offers only the download for a document the browser must not open', async () => {
+    documentService.getDocuments.mockResolvedValue([
+      { ...REPORT, fileName: 'page.html', viewable: false },
+    ]);
+
+    const { element } = await render();
+
+    expect(element.querySelector('.view')).toBeNull();
+    expect(element.querySelector('.file-name')?.textContent).toContain('page.html');
   });
 
   it('toasts a failed download', async () => {
@@ -206,7 +241,7 @@ describe('ExperimentDocuments', () => {
     fileDownload.openInNewTab.mockRejectedValue(new Error('404'));
     const { element } = await render();
 
-    element.querySelector<HTMLButtonElement>('.document-name button')!.click();
+    element.querySelector<HTMLButtonElement>('.view')!.click();
 
     await vi.waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith('experiment.documents.error.download'),

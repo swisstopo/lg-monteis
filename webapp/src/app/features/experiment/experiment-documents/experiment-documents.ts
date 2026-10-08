@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, input, resource, signal } from '@angular/core';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -70,16 +71,18 @@ export class ExperimentDocuments {
     }
   }
 
-  // a body without message key (network error, 500) still gets the generic toast
+  // a body without message key (network error, 500) still gets a generic toast. the server resets
+  // the connection of an upload far over the size limit, so a status 0 names the limit
   private toastUploadErrors(error: unknown, fileName: string): void {
+    const fallbackKey =
+      error instanceof HttpErrorResponse && error.status === 0
+        ? 'experiment.documents.error.uploadAborted'
+        : 'experiment.documents.error.upload';
     const messages = toErrorDtos(error).map((dto) =>
-      this.translateService.translate(
-        dto.messageKey ?? 'experiment.documents.error.upload',
-        dto.params,
-      )(),
+      this.translateService.translate(dto.messageKey ?? fallbackKey, dto.params)(),
     );
     if (messages.length === 0) {
-      messages.push(this.translateService.translate('experiment.documents.error.upload')());
+      messages.push(this.translateService.translate(fallbackKey)());
     }
     messages.forEach((message) => this.toastService.error(message, fileName));
   }

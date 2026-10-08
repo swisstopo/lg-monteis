@@ -1,4 +1,5 @@
 import { expect, Locator, Page, test } from '@playwright/test';
+import { writeFile } from 'node:fs/promises';
 import {
   createExperimentInDialog,
   editExperimentButton,
@@ -21,11 +22,32 @@ async function editNewExperiment(page: Page): Promise<Locator> {
   return dialog;
 }
 
-async function upload(dialog: Locator, name: string, content: string): Promise<void> {
+async function upload(
+  dialog: Locator,
+  name: string,
+  content: string,
+  mimeType = 'text/plain',
+): Promise<void> {
+  await chooseFile(dialog, { name, mimeType, buffer: Buffer.from(content) });
+}
+
+async function chooseFile(
+  dialog: Locator,
+  file: string | { name: string; mimeType: string; buffer: Buffer },
+): Promise<void> {
   const fileChooserOpened = dialog.page().waitForEvent('filechooser');
   await dialog.getByRole('button', { name: 'Add Document' }).click();
   const fileChooser = await fileChooserOpened;
-  await fileChooser.setFiles({ name, mimeType: 'text/plain', buffer: Buffer.from(content) });
+  await fileChooser.setFiles(file);
+}
+
+// a document's script would run on the app's origin, where it can read the viewer's session
+const SCRIPT_MARKER = 'monteis-e2e-document-script-ran';
+const HTML_WITH_SCRIPT = `<html><body><script>localStorage.setItem('${SCRIPT_MARKER}', '1')</script></body></html>`;
+const SVG_WITH_SCRIPT = `<svg xmlns="http://www.w3.org/2000/svg"><script>localStorage.setItem('${SCRIPT_MARKER}', '1')</script></svg>`;
+
+async function scriptRan(page: Page): Promise<boolean> {
+  return page.evaluate((marker) => localStorage.getItem(marker) !== null, SCRIPT_MARKER);
 }
 
 test('uploads a document to an experiment and downloads it', async ({ page }) => {
@@ -60,5 +82,55 @@ test('rejects an empty file with a toast and lists nothing', async ({ page }) =>
   await upload(dialog, 'empty.txt', '');
 
   await expect(page.getByText('The file is empty.')).toBeVisible();
+  await expect(dialog.getByText('No documents yet.')).toBeVisible();
+});
+
+for (const { name, content, mimeType } of [
+  { name: 'page.html', content: HTML_WITH_SCRIPT, mimeType: 'text/html' },
+  { name: 'drawing.svg', content: SVG_WITH_SCRIPT, mimeType: 'image/svg+xml' },
+]) {
+  test(`only downloads ${name}, its script never runs`, async ({ page }) => {
+    const dialog = await editNewExperiment(page);
+    await upload(dialog, name, content, mimeType);
+    const fileNameButton = dialog.getByRole('button', { name });
+    await expect(fileNameButton).toBeVisible();
+
+    await expect(dialog.getByRole('button', { name: 'View document' })).toHaveCount(0);
+    const tabs: Page[] = [];
+    page.context().on('page', (tab) => tabs.push(tab));
+    const download = page.waitForEvent('download');
+    await fileNameButton.click();
+    expect((await download).suggestedFilename()).toBe(name);
+
+    expect(tabs).toHaveLength(0);
+    expect(await scriptRan(page)).toBe(false);
+  });
+}
+
+test('runs no script of a document whose upload claims to be an image', async ({ page }) => {
+  const dialog = await editNewExperiment(page);
+  await upload(dialog, 'page.html', HTML_WITH_SCRIPT, 'image/png');
+  await expect(dialog.getByRole('button', { name: 'page.html' })).toBeVisible();
+
+  const tabOpened = page.context().waitForEvent('page');
+  await dialog.getByRole('button', { name: 'View document' }).click();
+  const tab = await tabOpened;
+  await expect(tab).toHaveURL(/^blob:/);
+  await tab.waitForLoadState();
+
+  expect(await scriptRan(page)).toBe(false);
+});
+
+// over playwright's 50 MB buffer limit for setFiles, so it goes through a file
+test('rejects a file over the size limit with a toast naming the limit', async ({
+  page,
+}, testInfo) => {
+  const dialog = await editNewExperiment(page);
+  const path = testInfo.outputPath('too-large.bin');
+  await writeFile(path, Buffer.alloc(60 * 1024 * 1024));
+
+  await chooseFile(dialog, path);
+
+  await expect(page.getByText('The file is larger than the allowed 50 MB.')).toBeVisible();
   await expect(dialog.getByText('No documents yet.')).toBeVisible();
 });

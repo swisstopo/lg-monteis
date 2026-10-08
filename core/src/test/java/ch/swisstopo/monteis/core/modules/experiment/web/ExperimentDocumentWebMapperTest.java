@@ -1,11 +1,15 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
+import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -72,6 +76,21 @@ class ExperimentDocumentWebMapperTest {
 
     // then
     assertEquals("application/octet-stream", metadata.contentType());
+  }
+
+  @Test
+  void should_not_let_an_html_document_be_viewed() {
+    // given
+    ExperimentDocument document =
+        new ExperimentDocument(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new DocumentMetadata("page.html", "text/html", CONTENT.length),
+            OffsetDateTime.now(),
+            "experiment_pi");
+
+    // when / then
+    assertFalse(mapper.toDto(document).viewable());
   }
 
   private static MockMultipartFile file(String originalFileName, String contentType) {

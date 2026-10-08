@@ -16,6 +16,7 @@ public interface ExperimentDocumentWebMapper {
   @Mapping(target = "fileName", source = "metadata.fileName")
   @Mapping(target = "contentType", source = "metadata.contentType")
   @Mapping(target = "sizeBytes", source = "metadata.sizeBytes")
+  @Mapping(target = "viewable", source = "metadata.viewable")
   ExperimentDocumentResponseDto toDto(ExperimentDocument domain);
 
   List<ExperimentDocumentResponseDto> toDtos(List<ExperimentDocument> domains);

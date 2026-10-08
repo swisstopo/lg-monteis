@@ -9,5 +9,6 @@ public record ExperimentDocumentResponseDto(
     String fileName,
     String contentType,
     long sizeBytes,
+    boolean viewable,
     OffsetDateTime uploadedAt,
     String uploadedBy) {}
