@@ -1,5 +1,4 @@
 import { DatePipe } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, input, resource, signal } from '@angular/core';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -10,6 +9,7 @@ import { ToastService } from '@core/notifications/toast.service';
 import { ExperimentDocumentService } from '@features/experiment/services/experiment-document.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
+import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_MB } from './max-document-size';
 
 @Component({
   selector: 'app-experiment-documents',
@@ -63,7 +63,17 @@ export class ExperimentDocuments {
     );
   }
 
+  // checked here as well, so a too large file is not sent in full just to be refused
   private async uploadFile(file: File): Promise<void> {
+    if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+      this.toastService.error(
+        this.translateService.translate('document.validation.tooLarge', {
+          max: `${MAX_DOCUMENT_SIZE_MB} MB`,
+        })(),
+        file.name,
+      );
+      return;
+    }
     try {
       await this.documentService.uploadDocument(this.experimentId(), file);
     } catch (error) {
@@ -71,18 +81,16 @@ export class ExperimentDocuments {
     }
   }
 
-  // a body without message key (network error, 500) still gets a generic toast. the server resets
-  // the connection of an upload far over the size limit, so a status 0 names the limit
+  // a body without message key (network error, 500) still gets the generic toast
   private toastUploadErrors(error: unknown, fileName: string): void {
-    const fallbackKey =
-      error instanceof HttpErrorResponse && error.status === 0
-        ? 'experiment.documents.error.uploadAborted'
-        : 'experiment.documents.error.upload';
     const messages = toErrorDtos(error).map((dto) =>
-      this.translateService.translate(dto.messageKey ?? fallbackKey, dto.params)(),
+      this.translateService.translate(
+        dto.messageKey ?? 'experiment.documents.error.upload',
+        dto.params,
+      )(),
     );
     if (messages.length === 0) {
-      messages.push(this.translateService.translate(fallbackKey)());
+      messages.push(this.translateService.translate('experiment.documents.error.upload')());
     }
     messages.forEach((message) => this.toastService.error(message, fileName));
   }

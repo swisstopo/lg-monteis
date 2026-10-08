@@ -1,5 +1,9 @@
 import { expect, Locator, Page, test } from '@playwright/test';
-import { writeFile } from 'node:fs/promises';
+import { truncate, writeFile } from 'node:fs/promises';
+import {
+  MAX_DOCUMENT_SIZE_BYTES,
+  MAX_DOCUMENT_SIZE_MB,
+} from '../../src/app/features/experiment/experiment-documents/max-document-size';
 import {
   createExperimentInDialog,
   editExperimentButton,
@@ -43,8 +47,9 @@ async function chooseFile(
 
 // a document's script would run on the app's origin, where it can read the viewer's session
 const SCRIPT_MARKER = 'monteis-e2e-document-script-ran';
-const HTML_WITH_SCRIPT = `<html><body><script>localStorage.setItem('${SCRIPT_MARKER}', '1')</script></body></html>`;
-const SVG_WITH_SCRIPT = `<svg xmlns="http://www.w3.org/2000/svg"><script>localStorage.setItem('${SCRIPT_MARKER}', '1')</script></svg>`;
+const MARKING_SCRIPT = `<script>localStorage.setItem('${SCRIPT_MARKER}', '1')</script>`;
+const HTML_WITH_SCRIPT = `<html><body>${MARKING_SCRIPT}</body></html>`;
+const SVG_WITH_SCRIPT = `<svg xmlns="http://www.w3.org/2000/svg">${MARKING_SCRIPT}</svg>`;
 
 async function scriptRan(page: Page): Promise<boolean> {
   return page.evaluate((marker) => localStorage.getItem(marker) !== null, SCRIPT_MARKER);
@@ -121,16 +126,19 @@ test('runs no script of a document whose upload claims to be an image', async ({
   expect(await scriptRan(page)).toBe(false);
 });
 
-// over playwright's 50 MB buffer limit for setFiles, so it goes through a file
+// through a file: setFiles takes no buffer over 50 MB
 test('rejects a file over the size limit with a toast naming the limit', async ({
   page,
 }, testInfo) => {
   const dialog = await editNewExperiment(page);
   const path = testInfo.outputPath('too-large.bin');
-  await writeFile(path, Buffer.alloc(60 * 1024 * 1024));
+  await writeFile(path, '');
+  await truncate(path, MAX_DOCUMENT_SIZE_BYTES + 1);
 
   await chooseFile(dialog, path);
 
-  await expect(page.getByText('The file is larger than the allowed 50 MB.')).toBeVisible();
+  await expect(
+    page.getByText(`The file is larger than the allowed ${MAX_DOCUMENT_SIZE_MB} MB.`),
+  ).toBeVisible();
   await expect(dialog.getByText('No documents yet.')).toBeVisible();
 });

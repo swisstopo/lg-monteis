@@ -95,7 +95,6 @@ public class ExperimentDocumentController {
     // opened last: if building the headers throws, no S3 connection is left open
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-        .header("X-Content-Type-Options", "nosniff")
         .contentType(contentType)
         .contentLength(metadata.sizeBytes())
         .body(new InputStreamResource(service.openContent(document)));

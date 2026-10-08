@@ -5,8 +5,9 @@ import { ToastService } from '@core/notifications/toast.service';
 import { ExperimentDocumentService } from '@features/experiment/services/experiment-document.service';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExperimentDocuments } from './experiment-documents';
+import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_MB } from './max-document-size';
 
 const REPORT: ExperimentDocumentResponseDto = {
   id: 'document-1',
@@ -45,6 +46,10 @@ describe('ExperimentDocuments', () => {
         { provide: ToastService, useValue: toast },
       ],
     });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   async function render(readOnly = false) {
@@ -172,7 +177,7 @@ describe('ExperimentDocuments', () => {
     expect(translate).toHaveBeenCalledWith('document.validation.tooLarge', { max: '50 MB' });
   });
 
-  it('names the size limit when the connection of an upload is reset', async () => {
+  it('toasts the generic upload error when the response carries no message', async () => {
     documentService.uploadDocument.mockRejectedValue(
       new HttpErrorResponse({ status: 0, error: new ProgressEvent('error') }),
     );
@@ -180,10 +185,21 @@ describe('ExperimentDocuments', () => {
 
     await selectFiles(view, new File(['x'], 'report.pdf'));
 
-    expect(toast.error).toHaveBeenCalledWith(
-      'experiment.documents.error.uploadAborted',
-      'report.pdf',
-    );
+    expect(toast.error).toHaveBeenCalledWith('experiment.documents.error.upload', 'report.pdf');
+  });
+
+  it('refuses a file over the size limit without uploading it', async () => {
+    vi.spyOn(Blob.prototype, 'size', 'get').mockReturnValue(MAX_DOCUMENT_SIZE_BYTES + 1);
+    const translate = vi.spyOn(TestBed.inject(TranslateService), 'translate');
+    const view = await render();
+
+    await selectFiles(view, new File(['x'], 'huge.pdf'));
+
+    expect(documentService.uploadDocument).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith('document.validation.tooLarge', 'huge.pdf');
+    expect(translate).toHaveBeenCalledWith('document.validation.tooLarge', {
+      max: `${MAX_DOCUMENT_SIZE_MB} MB`,
+    });
   });
 
   it('toasts the generic upload error for an error without body', async () => {

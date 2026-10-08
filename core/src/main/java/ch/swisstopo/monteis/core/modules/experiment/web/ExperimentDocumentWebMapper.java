@@ -10,13 +10,16 @@ import org.springframework.util.InvalidMimeTypeException;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = ViewableContentTypes.class)
 public interface ExperimentDocumentWebMapper {
 
   @Mapping(target = "fileName", source = "metadata.fileName")
   @Mapping(target = "contentType", source = "metadata.contentType")
   @Mapping(target = "sizeBytes", source = "metadata.sizeBytes")
-  @Mapping(target = "viewable", source = "metadata.viewable")
+  @Mapping(
+      target = "viewable",
+      source = "metadata.contentType",
+      qualifiedByName = ViewableContentTypes.VIEWABLE)
   ExperimentDocumentResponseDto toDto(ExperimentDocument domain);
 
   List<ExperimentDocumentResponseDto> toDtos(List<ExperimentDocument> domains);
