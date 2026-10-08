@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.organisation.domain;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface OrganisationRepository {
@@ -20,6 +21,9 @@ public interface OrganisationRepository {
    *     organisation does not exist
    */
   void delete(UUID id);
+
+  /** Retrieves an organisation by id, empty if it does not exist. */
+  Optional<Organisation> findById(UUID id);
 
   /** Retrieves all organisations, sorted alphabetically by name. */
   List<Organisation> findAll();

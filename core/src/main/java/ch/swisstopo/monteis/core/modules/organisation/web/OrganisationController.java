@@ -1,12 +1,20 @@
 package ch.swisstopo.monteis.core.modules.organisation.web;
 
+import ch.swisstopo.monteis.core.infrastructure.csv.CsvWriter;
 import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
 import ch.swisstopo.monteis.core.modules.organisation.service.OrganisationService;
 import ch.swisstopo.monteis.core.modules.organisation.web.dto.inbound.WriteOrganisationDto;
 import ch.swisstopo.monteis.core.modules.organisation.web.dto.outbound.OrganisationResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -38,6 +46,36 @@ public class OrganisationController {
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<OrganisationResponseDto>> getOrganisations() {
     return ResponseEntity.ok(service.findAllOrganisations().stream().map(mapper::toDto).toList());
+  }
+
+  @Operation(
+      summary = "Download organisations as CSV",
+      description = "Streams all organisations, sorted alphabetically by name, as a CSV file.")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Successfully streamed organisations as CSV",
+      content = @Content(mediaType = "text/csv"))
+  @GetMapping(value = "/csv", produces = "text/csv")
+  public void getOrganisationsCsv(HttpServletResponse response) throws IOException {
+    response.setContentType("text/csv");
+    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    response.setHeader("Content-Disposition", "attachment; filename=\"organisations.csv\"");
+
+    Writer writer =
+        new BufferedWriter(
+            new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
+    CsvWriter.writeRow(writer, List.of("id", "name"));
+    for (Organisation organisation : service.findAllOrganisations()) {
+      CsvWriter.writeRow(writer, List.of(organisation.getId(), organisation.getName()));
+    }
+    writer.flush();
+  }
+
+  @Operation(summary = "Get an organisation by id", description = "Retrieves an organisation by id")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved organisation")
+  @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<OrganisationResponseDto> getOrganisation(@PathVariable UUID id) {
+    return ResponseEntity.ok(mapper.toDto(service.getOrganisation(id)));
   }
 
   @Operation(

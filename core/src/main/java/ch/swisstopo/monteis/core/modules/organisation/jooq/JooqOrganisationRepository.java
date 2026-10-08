@@ -8,6 +8,7 @@ import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
 import ch.swisstopo.monteis.core.modules.organisation.domain.OrganisationRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.springframework.dao.DuplicateKeyException;
@@ -47,6 +48,14 @@ public class JooqOrganisationRepository implements OrganisationRepository {
     if (deleted == 0) {
       throw new ObjectNotFoundException(Organisation.class);
     }
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<Organisation> findById(UUID id) {
+    return dsl.selectFrom(ORGANISATIONS)
+        .where(ORGANISATIONS.ID.eq(id))
+        .fetchOptional(mapper::toDomain);
   }
 
   @Override
