@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, inject, resource, signal } from '@a
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
-import { PermissionsService } from '@core/auth/permissions.service';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
@@ -22,7 +21,6 @@ export class FulcrumSync {
   private readonly documentService = inject(FulcrumDocumentService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
-  protected readonly permissions = inject(PermissionsService);
 
   protected readonly status = resource({
     loader: () => this.documentService.getSyncStatus(),

@@ -8,7 +8,7 @@ export type AuthorizationCheck = (
 ) => boolean | Promise<boolean> | Observable<boolean>;
 
 export const ADMIN: AuthorizationCheck = (permissions) =>
-  permissions.currentUser$.pipe(map((currentUser) => currentUser.isAdmin));
+  permissions.currentUser$.pipe(map((currentUser) => currentUser.canWriteAll));
 
 export function authorizationGuard(check: AuthorizationCheck): CanActivateFn {
   return () => check(inject(PermissionsService));

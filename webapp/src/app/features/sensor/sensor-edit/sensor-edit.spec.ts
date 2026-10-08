@@ -31,11 +31,11 @@ const SENSOR: SensorResponseDto = {
 interface Setup {
   sensorId?: string;
   viewOnly?: boolean;
-  isAdmin?: boolean;
+  canWriteAll?: boolean;
   sensor?: SensorResponseDto;
 }
 
-async function setup({ sensorId, viewOnly = false, isAdmin = false, sensor = SENSOR }: Setup) {
+async function setup({ sensorId, viewOnly = false, canWriteAll = false, sensor = SENSOR }: Setup) {
   const emptyList = { value: () => [], reload: vi.fn() };
   TestBed.configureTestingModule({
     imports: [SensorEdit],
@@ -52,7 +52,7 @@ async function setup({ sensorId, viewOnly = false, isAdmin = false, sensor = SEN
         },
       },
       { provide: ExperimentService, useValue: { allExperiments: emptyList } },
-      { provide: PermissionsService, useValue: { isAdmin: () => isAdmin } },
+      { provide: PermissionsService, useValue: { canWriteAll: () => canWriteAll } },
       { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
       { provide: MatDialogRef, useValue: { close: vi.fn() } },
     ],
@@ -79,13 +79,13 @@ async function setup({ sensorId, viewOnly = false, isAdmin = false, sensor = SEN
 
 describe('SensorEdit', () => {
   it('shows no documents while a sensor is created', async () => {
-    const { documents } = await setup({ isAdmin: true });
+    const { documents } = await setup({ canWriteAll: true });
 
     expect(documents()).toBeUndefined();
   });
 
   it('lets an admin edit the sensor', async () => {
-    const { element, nameInput } = await setup({ sensorId: 'sensor-1', isAdmin: true });
+    const { element, nameInput } = await setup({ sensorId: 'sensor-1', canWriteAll: true });
 
     expect(nameInput()?.disabled).toBe(false);
     expect(element.textContent).toContain('sensor.parameter.addButton');
@@ -100,7 +100,7 @@ describe('SensorEdit', () => {
   });
 
   it('opens read-only for an admin who asked to view', async () => {
-    const { nameInput } = await setup({ sensorId: 'sensor-1', viewOnly: true, isAdmin: true });
+    const { nameInput } = await setup({ sensorId: 'sensor-1', viewOnly: true, canWriteAll: true });
 
     expect(nameInput()?.disabled).toBe(true);
   });

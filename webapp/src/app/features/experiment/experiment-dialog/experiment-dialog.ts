@@ -135,7 +135,7 @@ export class ExperimentDialog {
   protected readonly canManageOwners = computed(
     () =>
       this.mode() === 'edit' &&
-      this.permissions.isAdmin() &&
+      this.permissions.canWriteAll() &&
       this.ownersStatus() === ExperimentResponseDto.OwnersStatusEnum.Shown,
   );
   // compared by content: a saved experiment with the same owners must not reset the selection

@@ -5,10 +5,8 @@ import { OAuthService } from 'angular-oauth2-oidc';
 import { Observable, catchError, defer, of, shareReplay } from 'rxjs';
 
 const NO_PERMISSIONS: CurrentUserDto = {
-  isAdmin: false,
-  canWriteAllExperiments: false,
+  canWriteAll: false,
   writeExperimentIds: [],
-  canAccessDocuments: false,
 };
 
 /**
@@ -36,26 +34,20 @@ export class PermissionsService {
 
   private readonly currentUser = toSignal(this.currentUser$, { initialValue: NO_PERMISSIONS });
 
-  readonly isAdmin = computed(() => this.currentUser().isAdmin);
-
-  readonly canWriteAllExperiments = computed(() => this.currentUser().canWriteAllExperiments);
+  /** The admin role: write access to everything, including the admin-only actions and the Sensor menu. */
+  readonly canWriteAll = computed(() => this.currentUser().canWriteAll);
 
   readonly writeExperimentIds = computed<readonly string[]>(
     () => this.currentUser().writeExperimentIds,
   );
 
-  readonly canAccessDocuments = computed(() => this.currentUser().canAccessDocuments);
-
   /** Whether the caller can write at least one experiment - decides whether a scoped write action is shown at all. */
   readonly hasAnyExperimentWriteAccess = computed(
-    () => this.canWriteAllExperiments() || this.writeExperimentIds().length > 0,
+    () => this.canWriteAll() || this.writeExperimentIds().length > 0,
   );
 
-  /**
-   * Mirrors the backend Capabilities. `canWriteAllExperiments` already covers admins, so the admin
-   * rule lives in the backend only.
-   */
+  /** Mirrors the backend write rule on MonteisAuthenticationToken. */
   canWriteExperiment(experimentId: string): boolean {
-    return this.canWriteAllExperiments() || this.writeExperimentIds().includes(experimentId);
+    return this.canWriteAll() || this.writeExperimentIds().includes(experimentId);
   }
 }
