@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.organisation.web;
 
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
 import ch.swisstopo.monteis.core.modules.organisation.web.dto.inbound.WriteOrganisationDto;
 import ch.swisstopo.monteis.core.modules.organisation.web.dto.outbound.OrganisationResponseDto;
@@ -13,4 +14,6 @@ public interface OrganisationWebMapper {
   Organisation toDomain(WriteOrganisationDto dto);
 
   OrganisationResponseDto toDto(Organisation domain);
+
+  PagedResult<OrganisationResponseDto> toPagedDto(PagedResult<Organisation> pagedResult);
 }
