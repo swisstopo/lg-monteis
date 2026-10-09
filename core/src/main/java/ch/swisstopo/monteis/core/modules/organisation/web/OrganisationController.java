@@ -1,7 +1,8 @@
 package ch.swisstopo.monteis.core.modules.organisation.web;
 
-import ch.swisstopo.monteis.core.infrastructure.csv.CsvWriter;
+import ch.swisstopo.monteis.core.infrastructure.query.*;
 import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
+import ch.swisstopo.monteis.core.modules.organisation.query.OrganisationCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.organisation.service.OrganisationService;
 import ch.swisstopo.monteis.core.modules.organisation.web.dto.inbound.WriteOrganisationDto;
 import ch.swisstopo.monteis.core.modules.organisation.web.dto.outbound.OrganisationResponseDto;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -24,8 +26,10 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -33,19 +37,43 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrganisationController {
   private final OrganisationService service;
   private final OrganisationWebMapper mapper;
+  private final PagedRequestParser pagedRequestParser;
+  private final OrganisationCsvExportQueryRepository csvExportQueryRepository;
 
-  public OrganisationController(OrganisationService service, OrganisationWebMapper mapper) {
+  public OrganisationController(
+      OrganisationService service,
+      OrganisationWebMapper mapper,
+      PagedRequestParser pagedRequestParser,
+      OrganisationCsvExportQueryRepository csvExportQueryRepository) {
     this.service = service;
     this.mapper = mapper;
+    this.pagedRequestParser = pagedRequestParser;
+    this.csvExportQueryRepository = csvExportQueryRepository;
   }
 
   @Operation(
       summary = "Get all organisations",
-      description = "Retrieves the list of organisations, sorted alphabetically by name.")
+      description =
+          "Retrieves an unpaged list of all organisations, sorted alphabetically by name."
+              + " Intended for lightweight lookups (e.g. a dropdown).")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved organisations")
+  @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<OrganisationResponseDto>> getAllOrganisations() {
+    return ResponseEntity.ok(service.findAllOrganisations().stream().map(mapper::toDto).toList());
+  }
+
+  @Operation(
+      summary = "Get organisations",
+      description = "Retrieves a page of organisations with optional sorting/filtering.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved organisations")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<List<OrganisationResponseDto>> getOrganisations() {
-    return ResponseEntity.ok(service.findAllOrganisations().stream().map(mapper::toDto).toList());
+  public PagedResult<OrganisationResponseDto> getOrganisations(
+      @RequestParam @Min(0) int startRow,
+      @RequestParam @Min(0) int endRow,
+      @RequestParam(required = false) String sortModel,
+      @RequestParam(required = false) String filterModel) {
+    RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
+    return mapper.toPagedDto(service.getOrganisations(pagedRequestParser.parse(raw)));
   }
 
   @Operation(
@@ -56,18 +84,28 @@ public class OrganisationController {
       description = "Successfully streamed organisations as CSV",
       content = @Content(mediaType = "text/csv"))
   @GetMapping(value = "/csv", produces = "text/csv")
-  public void getOrganisationsCsv(HttpServletResponse response) throws IOException {
+  public void getOrganisationsCsv(
+      @RequestParam(required = false) String sortModel,
+      @RequestParam(required = false) String filterModel,
+      HttpServletResponse response)
+      throws IOException {
+    PagedRequest exportRequest =
+        pagedRequestParser.parseForExport(new RawExportRequest(sortModel, filterModel));
+
     response.setContentType("text/csv");
     response.setCharacterEncoding(StandardCharsets.UTF_8.name());
     response.setHeader("Content-Disposition", "attachment; filename=\"organisations.csv\"");
 
+    // Deliberately not try-with-resources: closing the writer commits the response (defaulting to
+    // 200) even if nothing was ever written to it, which would happen during the unwinding of a
+    // translate()-time InvalidPagedRequestException - before the response is committed, we want
+    // that exception to still reach GlobalErrorControllerAdvice as a normal 400. Only flush (not
+    // close) on the success path; the container closes the underlying stream once this request
+    // finishes.
     Writer writer =
         new BufferedWriter(
             new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
-    CsvWriter.writeRow(writer, List.of("id", "name"));
-    for (Organisation organisation : service.findAllOrganisations()) {
-      CsvWriter.writeRow(writer, List.of(organisation.getId(), organisation.getName()));
-    }
+    csvExportQueryRepository.streamCsv(exportRequest, writer);
     writer.flush();
   }
 
@@ -89,6 +127,21 @@ public class OrganisationController {
       @Valid @RequestBody WriteOrganisationDto dto) {
     Organisation created = service.createOrganisation(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDto(created));
+  }
+
+  @Operation(
+      summary = "Update an organisation",
+      description = "Renames the organisation. The name must be unique, ignoring case.")
+  @ApiResponse(responseCode = "200", description = "Organisation successfully updated")
+  @PutMapping(
+      path = "{id}",
+      consumes = MediaType.APPLICATION_JSON_VALUE,
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<OrganisationResponseDto> updateOrganisation(
+      @PathVariable UUID id, @Valid @RequestBody WriteOrganisationDto dto) {
+    Organisation organisation = mapper.toDomain(dto);
+    organisation.setId(id);
+    return ResponseEntity.ok(mapper.toDto(service.updateOrganisation(organisation)));
   }
 
   @Operation(

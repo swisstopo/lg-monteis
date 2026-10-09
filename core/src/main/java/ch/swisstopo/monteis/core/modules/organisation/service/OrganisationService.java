@@ -1,6 +1,8 @@
 package ch.swisstopo.monteis.core.modules.organisation.service;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
 import ch.swisstopo.monteis.core.modules.organisation.domain.OrganisationRepository;
 import java.util.List;
@@ -19,6 +21,10 @@ public class OrganisationService {
     return repository.create(organisation);
   }
 
+  public Organisation updateOrganisation(Organisation organisation) {
+    return repository.update(organisation);
+  }
+
   public void deleteOrganisation(UUID id) {
     repository.delete(id);
   }
@@ -27,6 +33,10 @@ public class OrganisationService {
     return repository
         .findById(id)
         .orElseThrow(() -> new ObjectNotFoundException(Organisation.class));
+  }
+
+  public PagedResult<Organisation> getOrganisations(PagedRequest pagedRequest) {
+    return repository.getOrganisations(pagedRequest);
   }
 
   public List<Organisation> findAllOrganisations() {
