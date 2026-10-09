@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.infrastructure.s3;
 
 import jakarta.validation.constraints.NotBlank;
 import java.net.URI;
+import java.time.Duration;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -17,4 +18,6 @@ public record DocumentStorageProperties(
     @NotBlank String bucket,
     @DefaultValue("eu-central-1") String region,
     @DefaultValue("experiment-documents/") String keyPrefix,
+    @DefaultValue("60s") Duration callTimeout,
+    @DefaultValue("30s") Duration attemptTimeout,
     @Nullable URI localEndpoint) {}

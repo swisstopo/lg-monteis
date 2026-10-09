@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
@@ -45,6 +46,8 @@ class S3DocumentStorageIT {
             S3TestcontainersConfiguration.BUCKET,
             "eu-central-1",
             KEY_PREFIX,
+            Duration.ofSeconds(60),
+            Duration.ofSeconds(30),
             URI.create(S3TestcontainersConfiguration.endpointOf(S3_MOCK)));
     s3 = new S3Config().s3Client(properties);
     storage = new S3DocumentStorage(s3, properties);
