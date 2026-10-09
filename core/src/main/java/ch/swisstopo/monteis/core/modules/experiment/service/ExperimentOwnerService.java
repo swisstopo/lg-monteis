@@ -49,37 +49,38 @@ public class ExperimentOwnerService {
     this.userDirectory = userDirectory;
   }
 
-  public ExperimentWithOwners withOwners(Experiment experiment) {
-    return withOwners(List.of(experiment)).getFirst();
+  public ExperimentWithOwners resolveOwnersOf(Experiment experiment) {
+    return resolveOwnersOf(List.of(experiment)).getFirst();
   }
 
-  public List<ExperimentWithOwners> withOwners(List<Experiment> experiments) {
+  public List<ExperimentWithOwners> resolveOwnersOf(List<Experiment> experiments) {
     Map<UUID, VisibleOwners> owners =
-        visibleOwnersOf(experiments.stream().map(ExperimentOwnerService::storedOwnersOf).toList());
+        visibleOwnersByExperiment(
+            experiments.stream().map(ExperimentOwnerService::storedOwnersOf).toList());
     return experiments.stream()
         .map(experiment -> new ExperimentWithOwners(experiment, owners.get(experiment.getId())))
         .toList();
   }
 
-  public PagedResult<ExperimentWithOwners> withOwners(PagedResult<Experiment> page) {
-    return new PagedResult<>(withOwners(page.rows()), page.totalCount());
+  public PagedResult<ExperimentWithOwners> resolveOwnersOf(PagedResult<Experiment> page) {
+    return new PagedResult<>(resolveOwnersOf(page.rows()), page.totalCount());
   }
 
-  public List<DirectoryUser> filterableOwners() {
-    return visibleOwnersOf(ownerQueryRepository.findStoredOwners()).values().stream()
+  public List<DirectoryUser> ownerColumnFilterValues() {
+    return visibleOwnersByExperiment(ownerQueryRepository.findStoredOwners()).values().stream()
         .flatMap(owners -> owners.users().stream())
         .distinct()
         .sorted(DirectoryUser.BY_NAME)
         .toList();
   }
 
-  public Map<UUID, VisibleOwners> ownersForExport() {
-    return visibleOwnersOf(ownerQueryRepository.findStoredOwners());
+  public Map<UUID, VisibleOwners> ownersByExperimentForExport() {
+    return visibleOwnersByExperiment(ownerQueryRepository.findStoredOwners());
   }
 
-  private Map<UUID, VisibleOwners> visibleOwnersOf(List<StoredOwners> storedOwners) {
+  private Map<UUID, VisibleOwners> visibleOwnersByExperiment(List<StoredOwners> storedOwners) {
     Map<UUID, Pis> pisByExperiment =
-        userDirectory.pisForReading(experimentsWithOwners(storedOwners));
+        userDirectory.pisForReading(idsOfExperimentsWithOwners(storedOwners));
     Map<UUID, VisibleOwners> visibleOwners = new LinkedHashMap<>();
     for (StoredOwners owners : storedOwners) {
       UUID experimentId = owners.experimentId();
@@ -88,7 +89,7 @@ public class ExperimentOwnerService {
     return visibleOwners;
   }
 
-  private static List<UUID> experimentsWithOwners(List<StoredOwners> storedOwners) {
+  private static List<UUID> idsOfExperimentsWithOwners(List<StoredOwners> storedOwners) {
     return storedOwners.stream()
         .filter(StoredOwners::hasOwners)
         .map(StoredOwners::experimentId)
@@ -101,7 +102,7 @@ public class ExperimentOwnerService {
     }
     UUID experimentId = storedOwners.experimentId();
     return switch (pis) {
-      case Known(var users) -> onlyOwnersAmong(users, storedOwners);
+      case Known(var users) -> ownersAmong(users, storedOwners);
       case NoWriteGroup() ->
           hideOwners(experimentId, VisibleOwners.NO_WRITE_GROUP, "no write group");
       case AccessDenied(var reason) ->
@@ -110,7 +111,7 @@ public class ExperimentOwnerService {
     };
   }
 
-  private static VisibleOwners onlyOwnersAmong(List<DirectoryUser> pis, StoredOwners storedOwners) {
+  private static VisibleOwners ownersAmong(List<DirectoryUser> pis, StoredOwners storedOwners) {
     return VisibleOwners.of(pis.stream().filter(pi -> storedOwners.isOwner(pi.id())).toList());
   }
 
@@ -130,7 +131,7 @@ public class ExperimentOwnerService {
 
   @AuditChanges
   public Experiment replaceOwners(UUID experimentId, Set<UUID> ownerIds) {
-    rejectOwnersWhoAreNoPis(ownerIds, ownerCandidates(experimentId));
+    rejectOwnersWhoAreNotPis(ownerIds, ownerCandidates(experimentId));
     return repository.replaceOwners(experimentId, ownerIds);
   }
 
@@ -152,11 +153,11 @@ public class ExperimentOwnerService {
     };
   }
 
-  private static void rejectOwnersWhoAreNoPis(Set<UUID> ownerIds, List<DirectoryUser> pis) {
-    Set<UUID> noPis = idsWithout(ownerIds, userIds(pis));
-    if (!noPis.isEmpty()) {
+  private static void rejectOwnersWhoAreNotPis(Set<UUID> ownerIds, List<DirectoryUser> pis) {
+    Set<UUID> notPis = idsWithout(ownerIds, userIds(pis));
+    if (!notPis.isEmpty()) {
       throw new FieldBusinessValidationException(
-          OWNER_IDS_FIELD, noPis, NOT_ELIGIBLE_KEY, Map.of());
+          OWNER_IDS_FIELD, notPis, NOT_ELIGIBLE_KEY, Map.of());
     }
   }
 

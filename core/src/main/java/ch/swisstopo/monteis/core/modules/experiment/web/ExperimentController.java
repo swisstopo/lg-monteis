@@ -68,7 +68,8 @@ public class ExperimentController {
   public ResponseEntity<ExperimentResponseDto> getExperiment(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
     LocalDate today = LocalDate.now(clock);
-    return ResponseEntity.ok(mapper.toDto(ownerService.withOwners(service.getById(id)), today));
+    return ResponseEntity.ok(
+        mapper.toDto(ownerService.resolveOwnersOf(service.getById(id)), today));
   }
 
   @Operation(
@@ -87,7 +88,7 @@ public class ExperimentController {
 
     Experiment createdExperiment = service.createExperiment(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(mapper.toDto(ownerService.withOwners(createdExperiment), today));
+        .body(mapper.toDto(ownerService.resolveOwnersOf(createdExperiment), today));
   }
 
   @Operation(
@@ -114,7 +115,7 @@ public class ExperimentController {
     Experiment updated = service.updateExperiment(mapper.toDomain(dto));
     Experiment withoutFormerOwners = ownerService.dropFormerOwners(updated);
     return ResponseEntity.status(HttpStatus.OK)
-        .body(mapper.toDto(ownerService.withOwners(withoutFormerOwners), today));
+        .body(mapper.toDto(ownerService.resolveOwnersOf(withoutFormerOwners), today));
   }
 
   @Operation(
@@ -128,7 +129,7 @@ public class ExperimentController {
   public ResponseEntity<List<ExperimentResponseDto>> getAllExperiments() {
     LocalDate today = LocalDate.now(clock);
     return ResponseEntity.ok(
-        ownerService.withOwners(service.findAllExperiments()).stream()
+        ownerService.resolveOwnersOf(service.findAllExperiments()).stream()
             .map(experiment -> mapper.toDto(experiment, today))
             .toList());
   }
@@ -147,7 +148,7 @@ public class ExperimentController {
 
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
     PagedResult<Experiment> domainResult = service.getExperiments(pagedRequestParser.parse(raw));
-    return mapper.toPagedDto(ownerService.withOwners(domainResult), today);
+    return mapper.toPagedDto(ownerService.resolveOwnersOf(domainResult), today);
   }
 
   @Operation(
@@ -181,7 +182,8 @@ public class ExperimentController {
     Writer writer =
         new BufferedWriter(
             new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
-    csvExportQueryRepository.streamCsv(exportRequest, writer, ownerService.ownersForExport());
+    csvExportQueryRepository.streamCsv(
+        exportRequest, writer, ownerService.ownersByExperimentForExport());
     writer.flush();
   }
 }

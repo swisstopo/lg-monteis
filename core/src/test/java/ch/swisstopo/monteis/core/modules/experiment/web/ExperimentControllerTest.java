@@ -103,9 +103,9 @@ class ExperimentControllerTest {
 
   @BeforeEach
   void experimentsComeWithoutOwners() {
-    given(ownerService.withOwners(any(Experiment.class)))
+    given(ownerService.resolveOwnersOf(any(Experiment.class)))
         .willAnswer(call -> withoutOwners(call.getArgument(0)));
-    given(ownerService.withOwners(anyList()))
+    given(ownerService.resolveOwnersOf(anyList()))
         .willAnswer(
             call ->
                 call.<List<Experiment>>getArgument(0).stream()
@@ -149,7 +149,7 @@ class ExperimentControllerTest {
     given(service.getById(EXPERIMENT_ID)).willReturn(expectedExperiment);
     ExperimentWithOwners withOwners =
         new ExperimentWithOwners(expectedExperiment, VisibleOwners.of(List.of(OWNER)));
-    given(ownerService.withOwners(expectedExperiment)).willReturn(withOwners);
+    given(ownerService.resolveOwnersOf(expectedExperiment)).willReturn(withOwners);
     given(mapper.toDto(eq(withOwners), any(LocalDate.class))).willReturn(expectedResponseDto);
 
     // when / then
@@ -206,7 +206,7 @@ class ExperimentControllerTest {
     given(service.getExperiments(parsedRequest)).willReturn(domainResult);
     PagedResult<ExperimentWithOwners> withOwners =
         new PagedResult<>(List.of(withoutOwners(experiment1)), 1);
-    given(ownerService.withOwners(domainResult)).willReturn(withOwners);
+    given(ownerService.resolveOwnersOf(domainResult)).willReturn(withOwners);
     given(mapper.toPagedDto(eq(withOwners), any(LocalDate.class))).willReturn(dtoResult);
 
     // when / then
