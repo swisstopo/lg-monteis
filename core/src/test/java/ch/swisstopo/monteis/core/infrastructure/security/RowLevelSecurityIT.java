@@ -146,17 +146,6 @@ class RowLevelSecurityIT {
 
   @Test
   @Transactional
-  void global_editor_sees_every_sensor_and_experiment() {
-    SecurityContextTestSupport.runAsGlobalEditor(
-        () -> {
-          assertEquals(15, dsl.fetchCount(SENSORS), "Global editor should see all seeded sensors");
-          assertEquals(
-              9, dsl.fetchCount(EXPERIMENTS), "Global editor should see all seeded experiments");
-        });
-  }
-
-  @Test
-  @Transactional
   void scoped_editor_may_update_only_the_experiments_it_may_write() {
     SecurityContextTestSupport.runAsUser(
         List.of(EXPERIMENT_ALPHA, EXPERIMENT_BETA),

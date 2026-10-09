@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIMENT;
-import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.OTHER_EXPERIMENT;
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.UNASSIGNED_EXPERIMENT;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -43,11 +42,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * End-to-end verification of {@link SecurityConfig}'s request rules (BR4.8) for all five privilege
+ * End-to-end verification of {@link SecurityConfig}'s request rules (BR4.8) for all four privilege
  * levels (NFR1.2): a real {@code Authorization: Bearer} header, decoded by the (mocked) {@link
  * JwtDecoder}, run through the actually-configured {@link MonteisJwtAuthenticationConverter} bean
- * and {@link Capabilities} - not Spring Security Test's {@code jwt()} shortcut, which bypasses that
- * wiring entirely. The dummy controller mirrors the real paths, so these are the rules as matched.
+ * - not Spring Security Test's {@code jwt()} shortcut, which bypasses that wiring entirely. The dummy
+ * controller mirrors the real paths, so these are the rules as matched. Which experiments may be
+ * updated is decided by row-level security, not here ({@code RowLevelSecurityIT}).
  */
 @ControllerTest
 @ContextConfiguration(classes = {SecurityConfigAuthorizationTest.DummyController.class})
@@ -65,22 +65,12 @@ class SecurityConfigAuthorizationTest {
   static Stream<Arguments> rules() {
     PrivilegeLevel[] adminOnly = {PrivilegeLevel.MONTEIS_ADMIN};
     PrivilegeLevel[] everyone = PrivilegeLevel.values();
-    PrivilegeLevel[] allExperiments = {PrivilegeLevel.GLOBAL_EDITOR, PrivilegeLevel.MONTEIS_ADMIN};
     String sensor = "/api/sensors/" + UUID.randomUUID();
     return Stream.of(
         Arguments.of(HttpMethod.GET, "/api/experiments", everyone),
         Arguments.of(HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT, everyone),
-        Arguments.of(
-            HttpMethod.PUT,
-            "/api/experiments/" + ASSIGNED_EXPERIMENT,
-            new PrivilegeLevel[] {
-              PrivilegeLevel.EXPERIMENT_PI,
-              PrivilegeLevel.GLOBAL_EDITOR,
-              PrivilegeLevel.MONTEIS_ADMIN
-            }),
-        Arguments.of(HttpMethod.PUT, "/api/experiments/" + OTHER_EXPERIMENT, allExperiments),
-        Arguments.of(HttpMethod.PUT, "/api/experiments/" + UNASSIGNED_EXPERIMENT, allExperiments),
-        Arguments.of(HttpMethod.PUT, "/api/experiments/not-a-uuid", new PrivilegeLevel[] {}),
+        Arguments.of(HttpMethod.PUT, "/api/experiments/" + ASSIGNED_EXPERIMENT, everyone),
+        Arguments.of(HttpMethod.PUT, "/api/experiments/" + UNASSIGNED_EXPERIMENT, everyone),
         Arguments.of(HttpMethod.POST, "/api/experiments", adminOnly),
         Arguments.of(HttpMethod.GET, "/api/sensors", everyone),
         Arguments.of(HttpMethod.GET, sensor, everyone),
@@ -156,7 +146,7 @@ class SecurityConfigAuthorizationTest {
         .perform(withBearer(post("/api/experiments"), "legacy-token"))
         .andExpect(status().isForbidden());
     mockMvc
-        .perform(withBearer(put("/api/experiments/{id}", ASSIGNED_EXPERIMENT), "legacy-token"))
+        .perform(withBearer(put("/api/sensors/{id}", UUID.randomUUID()), "legacy-token"))
         .andExpect(status().isForbidden());
   }
 
