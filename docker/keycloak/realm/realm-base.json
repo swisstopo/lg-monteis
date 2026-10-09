@@ -122,6 +122,27 @@
       ]
     },
     {
+      "name": "monteis-user-directory",
+      "description": "Adds the user's realm-management client roles to resource_access.realm-management.roles. With fine grained admin permissions the Admin API reads them from the token, without this claim core gets a 403 when it looks up PIs with the caller's token.",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "realm-management-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "realm-management",
+            "claim.name": "resource_access.${client_id}.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
       "name": "monteis-experiment-access",
       "description": "Adds read_experiment_ids / write_experiment_ids to access tokens, aggregated from the caller's groups. write implies read: write_experiment_ids is mapped into both claims, so a write group only sets write_experiment_ids.",
       "protocol": "openid-connect",
@@ -185,7 +206,7 @@
       "attributes": { "pkce.code.challenge.method": "S256", "post.logout.redirect.uris": "+", "login_theme": "monteis" },
       "redirectUris": [],
       "webOrigins": [],
-      "defaultClientScopes": ["monteis-oidc-basic", "monteis-backend-audience", "monteis-roles", "monteis-experiment-access"]
+      "defaultClientScopes": ["monteis-oidc-basic", "monteis-backend-audience", "monteis-roles", "monteis-experiment-access", "monteis-user-directory"]
     },
     {
       "clientId": "monteis-backend",
@@ -265,7 +286,7 @@
         "subComponents": {},
         "config": {
           "kc.user.profile.config": [
-            "{\"unmanagedAttributePolicy\":\"ADMIN_EDIT\"}"
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false}],\"unmanagedAttributePolicy\":\"ADMIN_EDIT\"}"
           ]
         }
       }
