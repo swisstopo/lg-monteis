@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
@@ -653,9 +654,22 @@ class SensorControllerTest {
 
     // when / then
     mockMvc
-        .perform(get("/api/sensors/detail/{id}", SENSOR_ID).with(jwt()))
+        .perform(get("/api/sensors/{id}/detail", SENSOR_ID).with(jwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(SENSOR_ID.toString()))
         .andExpect(jsonPath("$.parameters").isEmpty());
+  }
+
+  @Test
+  void should_return_404_for_unknown_sensor_detail() throws Exception {
+    // given
+    given(service.findDetailById(SENSOR_ID, LocalDate.of(2024, 1, 1)))
+        .willThrow(new ObjectNotFoundException(Sensor.class));
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors/{id}/detail", SENSOR_ID).with(jwt()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.messageKey").value("object.not-found"));
   }
 }

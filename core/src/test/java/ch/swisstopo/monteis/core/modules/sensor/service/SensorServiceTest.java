@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
+import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
@@ -338,7 +339,9 @@ class SensorServiceTest {
     // given
     UUID sensorId = UUID.randomUUID();
     LocalDate today = LocalDate.of(2024, 1, 1);
-    SensorDetailResponseDto detail = mock(SensorDetailResponseDto.class);
+    SensorDetailResponseDto detail =
+        new SensorDetailResponseDto(
+            sensorId, "Test", "ALIAS", Das.SOL_EXPERTS, null, null, null, true, null, 1, List.of());
     given(detailQueryRepository.findById(sensorId, today)).willReturn(Optional.of(detail));
 
     // when / then
@@ -354,7 +357,6 @@ class SensorServiceTest {
     given(detailQueryRepository.findById(sensorId, today)).willReturn(Optional.empty());
 
     // when / then
-    assertThrows(
-        ObjectBusinessValidationException.class, () -> service.findDetailById(sensorId, today));
+    assertThrows(ObjectNotFoundException.class, () -> service.findDetailById(sensorId, today));
   }
 }

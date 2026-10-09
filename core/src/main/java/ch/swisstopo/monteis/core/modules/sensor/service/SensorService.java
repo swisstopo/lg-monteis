@@ -6,7 +6,12 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
-import ch.swisstopo.monteis.core.modules.sensor.domain.*;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorDetailQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
 import java.time.LocalDate;
@@ -139,6 +144,6 @@ public class SensorService {
   public SensorDetailResponseDto findDetailById(UUID id, LocalDate today) {
     return detailQueryRepository
         .findById(id, today)
-        .orElseThrow(() -> new ObjectBusinessValidationException("object.deleted", Map.of()));
+        .orElseThrow(() -> new ObjectNotFoundException(Sensor.class));
   }
 }

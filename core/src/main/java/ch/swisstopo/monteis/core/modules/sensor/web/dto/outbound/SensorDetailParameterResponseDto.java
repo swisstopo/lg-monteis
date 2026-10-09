@@ -14,5 +14,6 @@ public record SensorDetailParameterResponseDto(
     AlarmLimitsDto alarmLimits,
     Boolean active,
     String comment,
-    SensorParameterReadingResponseDto sensorParameterReading,
-    Integer version) {}
+    Integer version,
+    SensorParameterReadingResponseDto latestParameterReadingValue)
+    implements SensorParameterBaseResponseDto {}
