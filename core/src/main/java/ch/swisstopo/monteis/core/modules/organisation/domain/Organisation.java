@@ -11,21 +11,24 @@ public class Organisation {
 
   @Id private UUID id;
   private String name;
+  private String comment;
 
   /**
    * Constructor for creating a NEW Organisation from a web request.
    */
   @Default
-  public Organisation(String name) {
+  public Organisation(String name, String comment) {
     this.name = name;
+    this.comment = comment;
   }
 
   /**
    * Constructor for REBUILDING an existing Organisation from the database (jOOQ).
    */
-  public Organisation(UUID id, String name) {
+  public Organisation(UUID id, String name, String comment) {
     this.id = id;
     this.name = name;
+    this.comment = comment;
   }
 
   public UUID getId() {
@@ -42,5 +45,13 @@ public class Organisation {
 
   public void setName(String name) {
     this.name = name;
+  }
+
+  public String getComment() {
+    return comment;
+  }
+
+  public void setComment(String comment) {
+    this.comment = comment;
   }
 }

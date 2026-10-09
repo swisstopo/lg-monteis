@@ -27,8 +27,8 @@ class OrganisationServiceTest {
 
   @Test
   void should_create_through_the_repository() {
-    Organisation toCreate = new Organisation("Swisstopo");
-    Organisation created = new Organisation(UUID.randomUUID(), "Swisstopo");
+    Organisation toCreate = new Organisation("Swisstopo", null);
+    Organisation created = new Organisation(UUID.randomUUID(), "Swisstopo", null);
     given(repository.create(toCreate)).willReturn(created);
 
     assertThat(service.createOrganisation(toCreate)).isEqualTo(created);
@@ -36,7 +36,7 @@ class OrganisationServiceTest {
 
   @Test
   void should_update_through_the_repository() {
-    Organisation toUpdate = new Organisation(UUID.randomUUID(), "Renamed");
+    Organisation toUpdate = new Organisation(UUID.randomUUID(), "Renamed", null);
     given(repository.update(toUpdate)).willReturn(toUpdate);
 
     assertThat(service.updateOrganisation(toUpdate)).isEqualTo(toUpdate);
@@ -44,7 +44,7 @@ class OrganisationServiceTest {
 
   @Test
   void should_list_through_the_repository() {
-    List<Organisation> all = List.of(new Organisation(UUID.randomUUID(), "Swisstopo"));
+    List<Organisation> all = List.of(new Organisation(UUID.randomUUID(), "Swisstopo", null));
     given(repository.findAll()).willReturn(all);
 
     assertThat(service.findAllOrganisations()).isEqualTo(all);
@@ -53,7 +53,7 @@ class OrganisationServiceTest {
   @Test
   void should_get_an_organisation_by_id() {
     UUID id = UUID.randomUUID();
-    Organisation organisation = new Organisation(id, "Swisstopo");
+    Organisation organisation = new Organisation(id, "Swisstopo", null);
     given(repository.findById(id)).willReturn(Optional.of(organisation));
 
     assertThat(service.getOrganisation(id)).isEqualTo(organisation);
@@ -72,7 +72,7 @@ class OrganisationServiceTest {
   void should_page_through_the_repository() {
     PagedRequest request = new PagedRequest(0, 10, List.of(), Map.of());
     PagedResult<Organisation> page =
-        new PagedResult<>(List.of(new Organisation(UUID.randomUUID(), "Swisstopo")), 1);
+        new PagedResult<>(List.of(new Organisation(UUID.randomUUID(), "Swisstopo", null)), 1);
     given(repository.getOrganisations(request)).willReturn(page);
 
     assertThat(service.getOrganisations(request)).isEqualTo(page);

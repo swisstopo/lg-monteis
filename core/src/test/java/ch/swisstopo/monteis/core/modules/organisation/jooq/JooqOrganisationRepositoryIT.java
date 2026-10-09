@@ -28,7 +28,7 @@ class JooqOrganisationRepositoryIT {
 
   @Test
   void should_create_an_organisation_with_a_generated_id() {
-    Organisation created = repository.create(new Organisation("Swisstopo IT"));
+    Organisation created = repository.create(new Organisation("Swisstopo IT", null));
 
     assertThat(created.getId()).isNotNull();
     assertThat(created.getName()).isEqualTo("Swisstopo IT");
@@ -36,17 +36,18 @@ class JooqOrganisationRepositoryIT {
 
   @Test
   void should_reject_a_name_that_exists_ignoring_case() {
-    repository.create(new Organisation("ETH Zürich IT"));
+    repository.create(new Organisation("ETH Zürich IT", null));
 
-    assertThatThrownBy(() -> repository.create(new Organisation("eth zürich it")))
+    assertThatThrownBy(() -> repository.create(new Organisation("eth zürich it", null)))
         .isInstanceOf(FieldBusinessValidationException.class);
   }
 
   @Test
   void should_rename_an_organisation() {
-    Organisation created = repository.create(new Organisation("Before rename IT"));
+    Organisation created = repository.create(new Organisation("Before rename IT", null));
 
-    Organisation updated = repository.update(new Organisation(created.getId(), "After rename IT"));
+    Organisation updated =
+        repository.update(new Organisation(created.getId(), "After rename IT", null));
 
     assertThat(updated.getId()).isEqualTo(created.getId());
     assertThat(repository.findById(created.getId()).orElseThrow().getName())
@@ -55,23 +56,24 @@ class JooqOrganisationRepositoryIT {
 
   @Test
   void should_reject_a_rename_to_a_name_that_exists_ignoring_case() {
-    repository.create(new Organisation("Taken IT"));
-    Organisation other = repository.create(new Organisation("Other IT"));
+    repository.create(new Organisation("Taken IT", null));
+    Organisation other = repository.create(new Organisation("Other IT", null));
 
-    assertThatThrownBy(() -> repository.update(new Organisation(other.getId(), "taken it")))
+    assertThatThrownBy(() -> repository.update(new Organisation(other.getId(), "taken it", null)))
         .isInstanceOf(FieldBusinessValidationException.class);
   }
 
   @Test
   void should_answer_not_found_when_updating_an_unknown_organisation() {
-    assertThatThrownBy(() -> repository.update(new Organisation(UUID.randomUUID(), "Nobody IT")))
+    assertThatThrownBy(
+            () -> repository.update(new Organisation(UUID.randomUUID(), "Nobody IT", null)))
         .isInstanceOf(ObjectNotFoundException.class);
   }
 
   @Test
   void should_list_organisations_sorted_by_name() {
-    repository.create(new Organisation("ZZZ sort IT"));
-    repository.create(new Organisation("AAA sort IT"));
+    repository.create(new Organisation("ZZZ sort IT", null));
+    repository.create(new Organisation("AAA sort IT", null));
 
     var names = repository.findAll().stream().map(Organisation::getName).toList();
 
@@ -80,9 +82,9 @@ class JooqOrganisationRepositoryIT {
 
   @Test
   void should_page_filter_and_sort_organisations() {
-    repository.create(new Organisation("Page IT B"));
-    repository.create(new Organisation("Page IT A"));
-    repository.create(new Organisation("Page IT C"));
+    repository.create(new Organisation("Page IT B", null));
+    repository.create(new Organisation("Page IT A", null));
+    repository.create(new Organisation("Page IT C", null));
 
     var request =
         new PagedRequest(
@@ -100,8 +102,19 @@ class JooqOrganisationRepositoryIT {
   }
 
   @Test
+  void should_persist_and_update_the_comment() {
+    Organisation created = repository.create(new Organisation("Comment IT", "first"));
+    assertThat(created.getComment()).isEqualTo("first");
+
+    Organisation updated =
+        repository.update(new Organisation(created.getId(), "Comment IT", "second"));
+
+    assertThat(updated.getComment()).isEqualTo("second");
+  }
+
+  @Test
   void should_find_an_organisation_by_id() {
-    Organisation created = repository.create(new Organisation("Find me IT"));
+    Organisation created = repository.create(new Organisation("Find me IT", null));
 
     assertThat(repository.findById(created.getId()))
         .hasValueSatisfying(found -> assertThat(found.getName()).isEqualTo("Find me IT"));

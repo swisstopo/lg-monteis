@@ -12,7 +12,8 @@
 
 CREATE TABLE organisations (
     id   UUID PRIMARY KEY DEFAULT uuidv7(),
-    name VARCHAR(100) NOT NULL
+    name VARCHAR(100) NOT NULL,
+    "comment" VARCHAR(4096)
 );
 
 CREATE UNIQUE INDEX organisations_name_lower_idx ON organisations (lower(name));

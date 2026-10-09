@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class JooqOrganisationCsvExportQueryRepository
     implements OrganisationCsvExportQueryRepository {
 
-  private static final List<String> HEADER = List.of("name", "id");
+  private static final List<String> HEADER = List.of("name", "comment", "id");
 
   private final DSLContext dsl;
 
@@ -42,14 +42,17 @@ public class JooqOrganisationCsvExportQueryRepository
     CsvWriter.writeRow(writer, HEADER);
 
     try (var cursor =
-        dsl.select(ORGANISATIONS.NAME, ORGANISATIONS.ID)
+        dsl.select(ORGANISATIONS.NAME, ORGANISATIONS.COMMENT, ORGANISATIONS.ID)
             .from(ORGANISATIONS)
             .where(criteria.condition())
             .orderBy(criteria.sortFields())
             .limit(exportRequest.limit())
             .fetchLazy()) {
       for (Record r : cursor) {
-        CsvWriter.writeRow(writer, List.of(r.get(ORGANISATIONS.NAME), r.get(ORGANISATIONS.ID)));
+        CsvWriter.writeRow(
+            writer,
+            List.of(
+                r.get(ORGANISATIONS.NAME), r.get(ORGANISATIONS.COMMENT), r.get(ORGANISATIONS.ID)));
         writer.flush();
       }
     }

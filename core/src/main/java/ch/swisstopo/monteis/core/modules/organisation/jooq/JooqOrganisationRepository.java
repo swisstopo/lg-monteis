@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class JooqOrganisationRepository implements OrganisationRepository {
 
   static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
-      Map.of("id", ORGANISATIONS.ID, "name", ORGANISATIONS.NAME);
+      Map.of("id", ORGANISATIONS.ID, "name", ORGANISATIONS.NAME, "comment", ORGANISATIONS.COMMENT);
 
   private final DSLContext dsl;
   private final OrganisationJooqMapper mapper;
@@ -40,6 +40,7 @@ public class JooqOrganisationRepository implements OrganisationRepository {
       return mapper.toDomain(
           dsl.insertInto(ORGANISATIONS)
               .set(ORGANISATIONS.NAME, organisation.getName())
+              .set(ORGANISATIONS.COMMENT, organisation.getComment())
               .returning()
               .fetchSingle());
     } catch (DuplicateKeyException _) {
@@ -54,6 +55,7 @@ public class JooqOrganisationRepository implements OrganisationRepository {
     try {
       return dsl.update(ORGANISATIONS)
           .set(ORGANISATIONS.NAME, organisation.getName())
+          .set(ORGANISATIONS.COMMENT, organisation.getComment())
           .where(ORGANISATIONS.ID.eq(organisation.getId()))
           .returning()
           .fetchOptional()

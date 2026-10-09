@@ -28,10 +28,10 @@ VALUES
 
 
 -- 2b. Insert organisations (pick list for experiments)
-INSERT INTO organisations (id, name)
+INSERT INTO organisations (id, name, comment)
 VALUES
-    ('00000000-0000-7000-8000-000000000501', 'swisstopo'),
-    ('00000000-0000-7000-8000-000000000502', 'ETH Zurich');
+    ('00000000-0000-7000-8000-000000000501', 'swisstopo', 'Federal Office of Topography, operator of the Mont Terri rock laboratory'),
+    ('00000000-0000-7000-8000-000000000502', 'ETH Zurich', 'Swiss Federal Institute of Technology, research partner');
 
 
 -- 3. Insert Experiments

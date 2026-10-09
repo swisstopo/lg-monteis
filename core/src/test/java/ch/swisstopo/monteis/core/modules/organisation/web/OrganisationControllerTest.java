@@ -53,14 +53,15 @@ class OrganisationControllerTest {
 
   @Test
   void should_return_a_page_of_organisations() throws Exception {
-    Organisation organisation = new Organisation(ORGANISATION_ID, "Swisstopo");
+    Organisation organisation = new Organisation(ORGANISATION_ID, "Swisstopo", null);
     PagedResult<Organisation> domainResult = new PagedResult<>(List.of(organisation), 1);
     given(pagedRequestParser.parse(any())).willReturn(new PagedRequest(0, 10, null, null));
     given(service.getOrganisations(any())).willReturn(domainResult);
     given(mapper.toPagedDto(domainResult))
         .willReturn(
             new PagedResult<>(
-                List.of(new OrganisationResponseDto(ORGANISATION_ID, "Swisstopo")), 1));
+                List.of(new OrganisationResponseDto(ORGANISATION_ID, "Swisstopo", "A comment")),
+                1));
 
     mockMvc
         .perform(
@@ -76,10 +77,10 @@ class OrganisationControllerTest {
 
   @Test
   void should_return_all_organisations() throws Exception {
-    Organisation organisation = new Organisation(ORGANISATION_ID, "Swisstopo");
+    Organisation organisation = new Organisation(ORGANISATION_ID, "Swisstopo", null);
     given(service.findAllOrganisations()).willReturn(List.of(organisation));
     given(mapper.toDto(organisation))
-        .willReturn(new OrganisationResponseDto(ORGANISATION_ID, "Swisstopo"));
+        .willReturn(new OrganisationResponseDto(ORGANISATION_ID, "Swisstopo", "A comment"));
 
     mockMvc
         .perform(
@@ -92,10 +93,10 @@ class OrganisationControllerTest {
 
   @Test
   void should_return_an_organisation_by_id() throws Exception {
-    Organisation organisation = new Organisation(ORGANISATION_ID, "Swisstopo");
+    Organisation organisation = new Organisation(ORGANISATION_ID, "Swisstopo", null);
     given(service.getOrganisation(ORGANISATION_ID)).willReturn(organisation);
     given(mapper.toDto(organisation))
-        .willReturn(new OrganisationResponseDto(ORGANISATION_ID, "Swisstopo"));
+        .willReturn(new OrganisationResponseDto(ORGANISATION_ID, "Swisstopo", "A comment"));
 
     mockMvc
         .perform(
@@ -162,12 +163,12 @@ class OrganisationControllerTest {
 
   @Test
   void should_create_an_organisation() throws Exception {
-    Organisation toCreate = new Organisation("Swisstopo");
-    Organisation created = new Organisation(ORGANISATION_ID, "Swisstopo");
+    Organisation toCreate = new Organisation("Swisstopo", null);
+    Organisation created = new Organisation(ORGANISATION_ID, "Swisstopo", null);
     given(mapper.toDomain(any())).willReturn(toCreate);
     given(service.createOrganisation(toCreate)).willReturn(created);
     given(mapper.toDto(created))
-        .willReturn(new OrganisationResponseDto(ORGANISATION_ID, "Swisstopo"));
+        .willReturn(new OrganisationResponseDto(ORGANISATION_ID, "Swisstopo", "A comment"));
 
     mockMvc
         .perform(
@@ -175,9 +176,24 @@ class OrganisationControllerTest {
                 .with(csrf())
                 .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Swisstopo\"}"))
+                .content("{\"name\":\"Swisstopo\",\"comment\":\"A comment\"}"))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.id").value(ORGANISATION_ID.toString()));
+        .andExpect(jsonPath("$.id").value(ORGANISATION_ID.toString()))
+        .andExpect(jsonPath("$.comment").value("A comment"));
+  }
+
+  @Test
+  void should_reject_a_blank_comment() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/organisations")
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Swisstopo\",\"comment\":\" \"}"))
+        .andExpect(status().isBadRequest());
+
+    then(service).shouldHaveNoInteractions();
   }
 
   @Test
@@ -210,12 +226,12 @@ class OrganisationControllerTest {
 
   @Test
   void should_update_an_organisation() throws Exception {
-    Organisation toUpdate = new Organisation("Renamed");
-    Organisation updated = new Organisation(ORGANISATION_ID, "Renamed");
+    Organisation toUpdate = new Organisation("Renamed", null);
+    Organisation updated = new Organisation(ORGANISATION_ID, "Renamed", null);
     given(mapper.toDomain(any())).willReturn(toUpdate);
     given(service.updateOrganisation(toUpdate)).willReturn(updated);
     given(mapper.toDto(updated))
-        .willReturn(new OrganisationResponseDto(ORGANISATION_ID, "Renamed"));
+        .willReturn(new OrganisationResponseDto(ORGANISATION_ID, "Renamed", "A comment"));
 
     mockMvc
         .perform(
