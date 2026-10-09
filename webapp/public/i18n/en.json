@@ -334,7 +334,8 @@
         "ACCESS_DENIED": "Owners hidden, Keycloak permissions misconfigured",
         "NO_WRITE_GROUP": "Owners hidden, the experiment has no PI group"
       },
-      "createHint": "Owners can be assigned once the PI group of this experiment exists in Keycloak."
+      "createPlaceholder": "Not available for a new experiment",
+      "createHint": "Nobody has write access to a new experiment yet. Save it first, owners can be assigned once people have write access."
     },
     "success": "Experiment saved successfully.",
     "error": {

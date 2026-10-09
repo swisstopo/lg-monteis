@@ -34,9 +34,18 @@
 
     @switch (true) {
       @case (mode() === 'create') {
-        <p class="full-width" data-testid="owners-create-hint">
-          {{ 'experiment.owners.createHint' | translate }}
-        </p>
+        <mat-form-field class="full-width" appearance="outline" data-testid="owners-create">
+          <mat-label>{{ 'experiment.owners.label' | translate }}</mat-label>
+          <mat-icon matPrefix fontIcon="lock" />
+          <input
+            matInput
+            disabled
+            [placeholder]="'experiment.owners.createPlaceholder' | translate"
+          />
+          <mat-hint data-testid="owners-create-hint">{{
+            'experiment.owners.createHint' | translate
+          }}</mat-hint>
+        </mat-form-field>
       }
       @case (canManageOwners()) {
         <app-experiment-owner-picker

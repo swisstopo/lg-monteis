@@ -24,7 +24,16 @@ import {
   MatDatepickerToggle,
 } from '@angular/material/datepicker';
 import { MatDialogRef } from '@angular/material/dialog';
-import { MatError, MatFormField, MatInput, MatLabel, MatSuffix } from '@angular/material/input';
+import { MatIcon } from '@angular/material/icon';
+import {
+  MatError,
+  MatFormField,
+  MatHint,
+  MatInput,
+  MatLabel,
+  MatPrefix,
+  MatSuffix,
+} from '@angular/material/input';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
@@ -51,6 +60,9 @@ import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
     MatLabel,
     MatInput,
     MatError,
+    MatHint,
+    MatIcon,
+    MatPrefix,
     MatSuffix,
     MatDatepicker,
     MatDatepickerInput,
