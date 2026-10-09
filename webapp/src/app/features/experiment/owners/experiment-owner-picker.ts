@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
 import { ExperimentOwnerDto } from '@core/generated';
+import { toErrorDtos } from '@core/http/api-error.model';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ownerDisplayName } from './owner-name';
@@ -46,6 +47,13 @@ export class ExperimentOwnerPicker {
   private readonly loadedCandidates = computed(() =>
     this.candidates.hasValue() ? this.candidates.value() : [],
   );
+
+  // denied and unavailable ask for different things, a misconfigured Keycloak needs an admin
+  protected readonly candidatesErrorKey = computed(() => {
+    const error = this.candidates.error();
+    if (!error) return undefined;
+    return toErrorDtos(error)[0]?.messageKey ?? 'error.user-directory.unavailable';
+  });
 
   protected readonly selectedOwners = computed(() => {
     const byId = new Map(this.loadedCandidates().map((owner) => [owner.id, owner]));

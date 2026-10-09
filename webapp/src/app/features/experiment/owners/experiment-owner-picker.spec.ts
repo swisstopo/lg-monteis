@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { ExperimentOwnerDto } from '@core/generated';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
@@ -159,6 +160,20 @@ describe('ExperimentOwnerPicker', () => {
 
     expect(view.input().disabled).toBe(true);
     expect(view.hint()).toBe('error.user-directory.unavailable');
+  });
+
+  it('tells a Keycloak that refuses the lookup apart from one that is down', async () => {
+    experimentService.getOwnerCandidates.mockRejectedValue(
+      new HttpErrorResponse({
+        status: 502,
+        error: { messageKey: 'error.user-directory.denied', target: 'GLOBAL' },
+      }),
+    );
+
+    const view = await render();
+
+    expect(view.input().disabled).toBe(true);
+    expect(view.hint()).toBe('error.user-directory.denied');
   });
 
   it('shows the error of a failed save instead of the hint', async () => {

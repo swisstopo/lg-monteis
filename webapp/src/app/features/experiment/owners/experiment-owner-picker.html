@@ -1,4 +1,4 @@
-<mat-form-field class="full-width" appearance="outline">
+<mat-form-field class="experiment-owner-picker_field" appearance="outline">
   <mat-label>{{ 'experiment.owners.label' | translate }}</mat-label>
   <mat-chip-grid #ownerChips [attr.aria-label]="'experiment.owners.label' | translate">
     @for (owner of selectedOwners(); track owner.id) {
@@ -37,8 +37,10 @@
     <mat-hint class="experiment-owner-picker_error" data-testid="owner-error">{{
       error | translate
     }}</mat-hint>
-  } @else if (candidates.error()) {
-    <mat-hint>{{ 'error.user-directory.unavailable' | translate }}</mat-hint>
+  } @else if (candidatesErrorKey(); as candidatesErrorKey) {
+    <mat-hint class="experiment-owner-picker_error" data-testid="owner-candidates-error">{{
+      candidatesErrorKey | translate
+    }}</mat-hint>
   } @else if (candidates.hasValue() && candidates.value().length === 0) {
     <mat-hint>{{ 'experiment.owners.noCandidates' | translate }}</mat-hint>
   } @else {
