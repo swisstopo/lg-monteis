@@ -67,6 +67,7 @@ class SecurityConfigAuthorizationTest {
     PrivilegeLevel[] everyone = PrivilegeLevel.values();
     PrivilegeLevel[] allExperiments = {PrivilegeLevel.GLOBAL_EDITOR, PrivilegeLevel.MONTEIS_ADMIN};
     String sensor = "/api/sensors/" + UUID.randomUUID();
+    String organisation = "/api/organisations/" + UUID.randomUUID();
     return Stream.of(
         Arguments.of(HttpMethod.GET, "/api/experiments", everyone),
         Arguments.of(HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT, everyone),
@@ -86,6 +87,12 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.GET, sensor, everyone),
         Arguments.of(HttpMethod.POST, "/api/sensors", adminOnly),
         Arguments.of(HttpMethod.PUT, sensor, adminOnly),
+        Arguments.of(HttpMethod.GET, "/api/organisations", everyone),
+        Arguments.of(HttpMethod.GET, "/api/organisations/all", everyone),
+        Arguments.of(HttpMethod.GET, "/api/organisations/csv", everyone),
+        Arguments.of(HttpMethod.GET, organisation, everyone),
+        Arguments.of(HttpMethod.POST, "/api/organisations", adminOnly),
+        Arguments.of(HttpMethod.PUT, organisation, adminOnly),
         Arguments.of(HttpMethod.POST, "/api/other", adminOnly),
         Arguments.of(HttpMethod.PUT, "/api/other", adminOnly),
         Arguments.of(HttpMethod.PATCH, "/api/other", adminOnly),
@@ -191,22 +198,28 @@ class SecurityConfigAuthorizationTest {
   @RestController
   static class DummyController {
 
-    @GetMapping({"/api/experiments", "/api/measurements", "/api/me", "/api/sensors"})
+    @GetMapping({
+      "/api/experiments",
+      "/api/measurements",
+      "/api/me",
+      "/api/organisations",
+      "/api/sensors"
+    })
     public String read() {
       return "ok";
     }
 
-    @GetMapping({"/api/experiments/{id}", "/api/sensors/{id}"})
+    @GetMapping({"/api/experiments/{id}", "/api/organisations/{id}", "/api/sensors/{id}"})
     public String readOne(@PathVariable String id) {
       return "ok";
     }
 
-    @PutMapping({"/api/experiments/{id}", "/api/sensors/{id}"})
+    @PutMapping({"/api/experiments/{id}", "/api/organisations/{id}", "/api/sensors/{id}"})
     public String update(@PathVariable String id) {
       return "ok";
     }
 
-    @PostMapping({"/api/experiments", "/api/sensors", "/api/other"})
+    @PostMapping({"/api/experiments", "/api/organisations", "/api/sensors", "/api/other"})
     public String create() {
       return "ok";
     }
