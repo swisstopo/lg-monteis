@@ -215,7 +215,12 @@ class SecurityConfigAuthorizationTest {
       return "ok";
     }
 
-    @GetMapping({"/api/experiments/{id}", "/api/experiments/{id}/documents", "/api/organisations/{id}", "/api/sensors/{id}"})
+    @GetMapping({
+      "/api/experiments/{id}",
+      "/api/experiments/{id}/documents",
+      "/api/organisations/{id}",
+      "/api/sensors/{id}"
+    })
     public String readOne(@PathVariable String id) {
       return "ok";
     }
