@@ -113,12 +113,16 @@ describe('ExperimentDialog', () => {
       expect(experimentService.getExperiment).not.toHaveBeenCalled();
     });
 
-    it('explains that owners come later', async () => {
+    it('shows the owners disabled and explains that they come later', async () => {
       isAdmin = true;
 
       const view = await render();
 
-      expect(view.element.querySelector('[data-testid="owners-create-hint"]')).not.toBeNull();
+      const owners = view.element.querySelector('[data-testid="owners-create"]')!;
+      expect(owners.querySelector('input')?.disabled).toBe(true);
+      expect(owners.querySelector('[data-testid="owners-create-hint"]')?.textContent).toContain(
+        'experiment.owners.createHint',
+      );
       expect(view.ownerPicker()).toBeNull();
       expect(view.ownerList()).toBeNull();
     });
