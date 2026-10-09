@@ -9,6 +9,9 @@ import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQue
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapper;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
+import ch.swisstopo.monteis.core.modules.organisation.query.OrganisationCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.organisation.service.OrganisationService;
+import ch.swisstopo.monteis.core.modules.organisation.web.OrganisationWebMapper;
 import ch.swisstopo.monteis.core.modules.overview.service.OverviewService;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
@@ -44,6 +47,13 @@ class EndpointCoverageTest {
           "GET /api/experiments/{id}",
           "PUT /api/experiments/{id}",
           "POST /api/experiments",
+          "GET /api/organisations",
+          "GET /api/organisations/all",
+          "GET /api/organisations/csv",
+          "GET /api/organisations/{id}",
+          "POST /api/organisations",
+          "PUT /api/organisations/{id}",
+          "DELETE /api/organisations/{id}",
           "GET /api/sensors",
           "GET /api/sensors/{id}",
           "GET /api/sensors/csv",
@@ -62,6 +72,9 @@ class EndpointCoverageTest {
   @MockitoBean private ExperimentService experimentService;
   @MockitoBean private ExperimentWebMapper experimentWebMapper;
   @MockitoBean private ExperimentCsvExportQueryRepository experimentCsvExportQueryRepository;
+  @MockitoBean private OrganisationService organisationService;
+  @MockitoBean private OrganisationWebMapper organisationWebMapper;
+  @MockitoBean private OrganisationCsvExportQueryRepository organisationCsvExportQueryRepository;
   @MockitoBean private SensorService sensorService;
   @MockitoBean private SensorWebMapper sensorWebMapper;
   @MockitoBean private SensorCsvExportQueryRepository sensorCsvExportQueryRepository;
