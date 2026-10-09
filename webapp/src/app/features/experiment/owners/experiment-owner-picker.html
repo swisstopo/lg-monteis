@@ -25,7 +25,12 @@
     (optionSelected)="onSelected($event, ownerInput)"
   >
     @for (owner of selectableOwners(); track owner.id) {
-      <mat-option [value]="owner.id">{{ displayName(owner) }} ({{ owner.email }})</mat-option>
+      <mat-option [value]="owner.id"
+        >{{ displayName(owner) }}
+        @if (owner.email) {
+          ({{ owner.email }})
+        }
+      </mat-option>
     }
   </mat-autocomplete>
   @if (error(); as error) {
@@ -34,7 +39,7 @@
     }}</mat-hint>
   } @else if (candidates.error()) {
     <mat-hint>{{ 'error.user-directory.unavailable' | translate }}</mat-hint>
-  } @else if (!candidates.isLoading() && candidates.value()?.length === 0) {
+  } @else if (candidates.hasValue() && candidates.value().length === 0) {
     <mat-hint>{{ 'experiment.owners.noCandidates' | translate }}</mat-hint>
   } @else {
     <mat-hint>{{ 'experiment.owners.hint' | translate }}</mat-hint>

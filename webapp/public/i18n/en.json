@@ -326,8 +326,8 @@
       "label": "Experiment Owners",
       "none": "No owner",
       "placeholder": "Search by name or email",
-      "hint": "Only PIs of this experiment can be owners.",
-      "noCandidates": "This experiment has no PIs in Keycloak yet.",
+      "hint": "Only people with write access to this experiment can be owners.",
+      "noCandidates": "Nobody has write access to this experiment yet.",
       "remove": "Remove owner",
       "status": {
         "KEYCLOAK_UNAVAILABLE": "Contact details currently unavailable",

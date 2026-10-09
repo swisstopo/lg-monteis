@@ -42,8 +42,13 @@ export class ExperimentOwnerPicker {
     loader: ({ params }) => this.experimentService.getOwnerCandidates(params.id),
   });
 
+  // value() throws while the resource is in its error state
+  private readonly loadedCandidates = computed(() =>
+    this.candidates.hasValue() ? this.candidates.value() : [],
+  );
+
   protected readonly selectedOwners = computed(() => {
-    const byId = new Map((this.candidates.value() ?? []).map((owner) => [owner.id, owner]));
+    const byId = new Map(this.loadedCandidates().map((owner) => [owner.id, owner]));
     return this.selectedOwnerIds()
       .map((id) => byId.get(id))
       .filter((owner): owner is ExperimentOwnerDto => owner !== undefined);
@@ -52,7 +57,7 @@ export class ExperimentOwnerPicker {
   protected readonly selectableOwners = computed(() => {
     const selected = new Set(this.selectedOwnerIds());
     const search = this.searchText().trim().toLowerCase();
-    return (this.candidates.value() ?? []).filter(
+    return this.loadedCandidates().filter(
       (owner) =>
         !selected.has(owner.id!) &&
         (!search ||
