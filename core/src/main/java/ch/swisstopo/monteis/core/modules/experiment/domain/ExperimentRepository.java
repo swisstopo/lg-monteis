@@ -54,6 +54,18 @@ public interface ExperimentRepository {
    */
   Experiment getById(UUID id);
 
+  /**
+   * Checks that an experiment exists and is visible to the caller, without loading it.
+   *
+   * <p>For anything that hangs off an experiment, e.g. its documents. Row-level security filters
+   * the reads of those rows instead of failing them, so an unknown or hidden experiment would
+   * answer with an empty list, and an insert for an unknown one fails on its foreign key as a 500.
+   * This turns both into the 404 that {@link #getById} gives, a hidden experiment has to look
+   * exactly like one that does not exist (BR4.11).
+   *
+   * @throws ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException if the
+   *     experiment does not exist or is hidden from the caller
+   */
   void requireVisible(UUID id);
 
   /**
