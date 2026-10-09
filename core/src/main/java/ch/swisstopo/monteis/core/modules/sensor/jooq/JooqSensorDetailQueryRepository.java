@@ -8,7 +8,7 @@ import ch.swisstopo.monteis.core.modules.experiment.jooq.ExperimentJooqMapper;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
-import ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementStatus;
+import ch.swisstopo.monteis.core.modules.sensor.domain.MeasurementStatus;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorDetailQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;

@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-class MeasurementStatusTest {
+class MeasurementStateTest {
 
   @ParameterizedTest
   @CsvSource({"TOO_LOW, too_low", "CORRECT, correct", "TOO_HIGH, too_high"})
