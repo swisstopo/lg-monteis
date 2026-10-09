@@ -264,7 +264,6 @@ class JooqExperimentDocumentRepositoryIT {
                 .set(EXPERIMENTS.NAME, "documents-it-" + UUID.randomUUID())
                 .set(EXPERIMENTS.START, LocalDate.of(2030, 1, 1))
                 .set(EXPERIMENTS.END, LocalDate.of(2030, 12, 31))
-                .set(EXPERIMENTS.OWNER, "owner")
                 .returning(EXPERIMENTS.ID)
                 .fetchSingle()
                 .getId());
