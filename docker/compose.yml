@@ -198,5 +198,31 @@ services:
       retries: 10
       start_period: 30s
 
+  # ── local S3 for experiment documents (MON-171) ────────────────────────────
+  # stands in for the hot-storage bucket of the environments, under a name of its own so it
+  # is never mistaken for the real dev bucket. Adobe S3Mock (Apache 2.0),
+  # MinIO is AGPL and LocalStack needs an account. host port 9010, because 9090
+  # is taken by the openapi profile of core. S3TestcontainersConfiguration runs the
+  # same image for the e2e tests, bump both together
+  s3:
+    image: adobe/s3mock:5.2.3
+    container_name: monteis-s3
+    profiles: [ core ]
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: monteis-local-documents
+      COM_ADOBE_TESTING_S3MOCK_STORE_REGION: eu-central-1
+      COM_ADOBE_TESTING_S3MOCK_STORE_ROOT: /s3mockroot
+      COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT: "true"
+    ports:
+      - "9010:9090"
+    volumes:
+      - s3_data:/s3mockroot
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:9090/favicon.ico" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   kc_realm_out:
+  s3_data:

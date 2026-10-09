@@ -42,6 +42,7 @@
     <jacoco.version>0.8.15</jacoco.version>
     <testcontainers-keycloak.version>4.4.0</testcontainers-keycloak.version>
     <aws-msk-iam-auth.version>2.3.9</aws-msk-iam-auth.version>
+    <awssdk.version>2.51.2</awssdk.version>
 
     <!-- Override the Spring Boot BOM's managed flyway.version so the test-scoped
          flyway-core + flyway-database-postgresql (Testcontainers validation) and the
@@ -76,6 +77,14 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bom</artifactId>
+        <version>${awssdk.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>contracts</artifactId>

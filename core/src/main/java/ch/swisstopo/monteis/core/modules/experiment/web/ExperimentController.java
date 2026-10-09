@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
+import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
@@ -36,7 +37,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/experiments")
+@RequestMapping(ApiPaths.EXPERIMENTS)
 public class ExperimentController {
   private final ExperimentService service;
   private final ExperimentWebMapper mapper;
@@ -59,8 +60,9 @@ public class ExperimentController {
 
   @Operation(summary = "Get a experiment by id", description = "Retrieves a experiment by id")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved formulas")
-  @GetMapping(path = "{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ExperimentResponseDto> getExperiment(@PathVariable UUID id) {
+  @GetMapping(path = ApiPaths.EXPERIMENT_ID_SEGMENT, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<ExperimentResponseDto> getExperiment(
+      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
     LocalDate today = LocalDate.now(clock);
     return ResponseEntity.ok(mapper.toDto(service.getById(id), today));
   }
@@ -91,11 +93,12 @@ public class ExperimentController {
   @ApiResponses(
       value = {@ApiResponse(responseCode = "200", description = "Experiment successfully updated")})
   @PutMapping(
-      path = "{id}",
+      path = ApiPaths.EXPERIMENT_ID_SEGMENT,
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExperimentResponseDto> updateExperiment(
-      @PathVariable UUID id, @Validated(Update.class) @RequestBody WriteExperimentDto dto) {
+      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id,
+      @Validated(Update.class) @RequestBody WriteExperimentDto dto) {
     if (!id.equals(dto.id())) {
       throw new ObjectBusinessValidationException(
           "id.validation.mismatch", Map.of("pathId", id, "id", dto.id()));

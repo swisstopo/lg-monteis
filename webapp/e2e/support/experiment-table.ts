@@ -1,30 +1,24 @@
-import { expect, Locator, Page, Response } from '@playwright/test';
-import { hasPath } from './responses';
+import { expect, Locator, Page } from '@playwright/test';
+import { waitForAutofocus } from './dialog';
+import { E2E_EXPERIMENT_DIALOG_PERIOD } from './experiments';
+import { expectGridPage, filterGrid, gridCell } from './grid';
+
+const EXPERIMENTS = '/api/experiments';
 
 /** Opens the experiment table and waits until the backend answered its first page. */
 export async function openExperimentTable(page: Page): Promise<void> {
-  const firstPage = expectExperimentPage(page);
+  const firstPage = expectGridPage(page, EXPERIMENTS);
   await page.getByRole('link', { name: 'Experiment' }).click();
   await firstPage;
 }
 
-/**
- * Filters the table by experiment name, then waits for the filtered response so a missing row
- * can't pass on a request that never came back. A row the caller may not read never shows up, so
- * a missing row can't be left over from an earlier render either.
- */
+/** Filters the table by experiment name and waits for the filtered page. */
 export async function filterExperimentsByName(page: Page, name: string): Promise<void> {
-  const filtered = expectExperimentPage(page, name);
-  await page.getByRole('textbox', { name: 'Experiment Name Filter Input' }).fill(name);
-  await filtered;
+  await filterGrid(page, EXPERIMENTS, 'Experiment Name Filter Input', name);
 }
 
-/**
- * The name cell of experiment `name`. Matched exactly: the floating-filter cell holds the same
- * text, and a substring match would find it too.
- */
 export function experimentNameCell(page: Page, name: string): Locator {
-  return page.getByRole('gridcell', { name, exact: true });
+  return gridCell(page, name);
 }
 
 /** Filters the table down to experiment `name` and selects its row. */
@@ -33,29 +27,37 @@ export async function selectExperiment(page: Page, name: string): Promise<void> 
   await experimentNameCell(page, name).click();
 }
 
+/** Opens the Create Experiment dialog, ready to be filled. */
+export async function openCreateExperimentDialog(page: Page): Promise<Locator> {
+  await page.getByRole('button', { name: 'Create Experiment' }).click();
+  await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
+  const dialog = page.getByRole('dialog');
+  await waitForAutofocus(dialog);
+  return dialog;
+}
+
+/** Fills name and the e2e period, what a new experiment needs. */
+export async function fillRequiredExperimentFields(dialog: Locator, name: string): Promise<void> {
+  await dialog.getByLabel('Experiment Name').fill(name);
+  await dialog.getByLabel('Start Date').fill(E2E_EXPERIMENT_DIALOG_PERIOD.start);
+  await dialog.getByLabel('End Date').fill(E2E_EXPERIMENT_DIALOG_PERIOD.end);
+}
+
+/**
+ * Creates experiment `name` through the Create Experiment dialog, which needs an admin. Tests
+ * that change an experiment change their own: a seeded one is shared with every other test.
+ */
+export async function createExperimentInDialog(page: Page, name: string): Promise<void> {
+  const dialog = await openCreateExperimentDialog(page);
+  await fillRequiredExperimentFields(dialog, name);
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
 export function editExperimentButton(page: Page): Locator {
   return page.getByRole('button', { name: 'Edit Experiment' });
 }
 
-/**
- * Waits for a page of the experiment table, filtered to `nameFilter` if given, and checks only
- * its status: Chromium may already have dropped the body of these grid requests.
- */
-async function expectExperimentPage(page: Page, nameFilter?: string): Promise<void> {
-  const response = await page.waitForResponse((candidate) =>
-    isExperimentPage(candidate, nameFilter),
-  );
-  expect(response.ok()).toBe(true);
-}
-
-function isExperimentPage(response: Response, nameFilter?: string): boolean {
-  return (
-    hasPath(response, '/api/experiments') &&
-    (nameFilter === undefined || filterModelOf(response).includes(nameFilter))
-  );
-}
-
-/** The filter model the grid serialises into the request's query string. */
-function filterModelOf(response: Response): string {
-  return new URL(response.url()).searchParams.get('filterModel') ?? '';
+export function viewExperimentButton(page: Page): Locator {
+  return page.getByRole('button', { name: 'View', exact: true });
 }

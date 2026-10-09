@@ -1,0 +1,108 @@
+.documents {
+  container-type: inline-size;
+  padding-top: 1rem;
+}
+
+.documents-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  h3 {
+    margin: 0;
+  }
+
+  // matButton only lays out a mat-icon, the spinner needs the same spacing to take its place.
+  // currentColor since the default primary is the color of the filled button itself
+  mat-spinner {
+    --mat-progress-spinner-active-indicator-color: currentColor;
+    display: inline-block;
+    vertical-align: top;
+    margin-inline-start: var(--mat-button-filled-icon-offset, -8px);
+    margin-inline-end: var(--mat-button-filled-icon-spacing, 8px);
+  }
+}
+
+// one grid for the whole list with subgrid rows, otherwise the meta column differs per row and the
+// eye buttons don't line up
+.document-list {
+  --view-size: var(--mat-icon-button-state-layer-size, 48px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--view-size) auto;
+  column-gap: 1rem;
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+
+  > li {
+    grid-column: 1 / -1;
+  }
+}
+
+// the button column stays on rows without a view button, otherwise those rows are lower
+.document {
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  min-height: var(--view-size);
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  .view {
+    grid-column: 2;
+    color: var(--mat-sys-primary);
+  }
+
+  .document-meta {
+    grid-column: 3;
+  }
+}
+
+// the meta goes below the name on narrow dialogs, like the second variant in figma
+@container (width < 36rem) {
+  .document-list {
+    grid-template-columns: var(--view-size) minmax(0, 1fr);
+    column-gap: 0;
+  }
+
+  .document {
+    grid-template-rows: auto var(--view-size);
+
+    .file-name {
+      grid-column: 1 / -1;
+    }
+
+    .view {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .document-meta {
+      grid-column: 2;
+      grid-row: 2;
+    }
+  }
+}
+
+// a button that reads as a link, it starts a download and goes nowhere
+.file-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: start;
+  font: var(--mat-sys-body-large);
+  color: var(--mat-sys-primary);
+  overflow-wrap: anywhere;
+}
+
+.document-meta {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+}
+
+.hint {
+  padding: 0.75rem 0;
+  color: var(--mat-sys-on-surface-variant);
+}

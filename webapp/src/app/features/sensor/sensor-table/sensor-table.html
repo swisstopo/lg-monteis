@@ -14,7 +14,7 @@
       {{ 'sensor.tableHeader.create' | translate }}
     </button>
 
-    <button write-action matButton="filled" [disabled]="!selectedSensorId()" (click)="onEdit()">
+    <button write-action matButton="tonal" [disabled]="!selectedSensorId()" (click)="onEdit()">
       <mat-icon fontIcon="edit"></mat-icon>
       {{ 'sensor.tableHeader.edit' | translate }}
     </button>
@@ -34,7 +34,6 @@
         autoSizeStrategy: { type: 'fitCellContents' },
       }"
       [getRowId]="getSensorParameterRowId"
-      (rowClicked)="onWrappedRow($event)"
       (selectionChanged)="onSelectionChanged($event)"
       (gridReady)="onGridReady($event)"
     >

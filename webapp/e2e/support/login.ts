@@ -32,10 +32,6 @@ export async function login(page: Page, user: SeedUser): Promise<void> {
   await page.locator('#kc-login').click();
 }
 
-export async function loginAsAdmin(page: Page): Promise<void> {
-  await login(page, SEED_USERS.admin);
-}
-
 /**
  * Opens the app, logs in as `user`, and waits for the `/api/me` answer, so assertions that
  * something is absent cannot pass on the not-yet-loaded (fail-closed) state.

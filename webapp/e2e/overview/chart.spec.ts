@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
-import { format } from 'date-fns';
-import { loginAsAdmin } from '../support/login';
+import { format, subMinutes } from 'date-fns';
+import { openAppAs, SEED_USERS } from '../support/login';
 
 // Both time fields use the same 'HH:mm' placeholder, so locate all four range fields by their
 // label instead (matching the convention in e2e/sensor/sensor-form.spec.ts).
@@ -27,8 +27,7 @@ async function selectFirstRow(page: Page): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('http://localhost:4200/');
-  await loginAsAdmin(page);
+  await openAppAs(page, SEED_USERS.admin);
 
   await page.getByTitle('Measurements').click();
   await page.getByRole('link', { name: 'Table' }).click();
@@ -59,7 +58,11 @@ test('should require a date range before plotting', async ({ page }) => {
 test('should default the time fields to a full 24h day in HH:mm format', async ({ page }) => {
   await expect(startTime(page)).toHaveValue('00:00');
 
-  await expect(endTime(page)).toHaveValue(format(new Date(), 'HH:mm'));
+  // the page took "now" when it opened, the clock may have passed a minute since
+  const now = new Date();
+  const current = format(now, 'HH:mm');
+  const previous = format(subMinutes(now, 1), 'HH:mm');
+  await expect(endTime(page)).toHaveValue(new RegExp(`^(${previous}|${current})$`));
 });
 
 test('should keep typed times in 24h format instead of converting them to AM/PM', async ({

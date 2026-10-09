@@ -1,9 +1,16 @@
-import { Browser, Page } from '@playwright/test';
+import { Browser } from '@playwright/test';
+import { createExperimentInDialog, openExperimentTable } from '../support/experiment-table';
 import { uniqueExperimentName } from '../support/experiments';
 import { expect, test } from '../support/fixtures';
 import { addUserToGroup, createExperimentAccessGroups } from '../support/keycloak';
 import { openAppAs, SEED_USERS, SeedUser } from '../support/login';
 import { findExperimentIdByName } from '../support/monteis-api';
+import {
+  createSensorInDialog,
+  filterSensorsByAlias,
+  openSensorTable,
+  sensorAliasCell,
+} from '../support/sensor-table';
 import { dataRows } from '../support/table';
 
 /**
@@ -24,9 +31,12 @@ test('shows a new sensor only to members of its experiment group', async ({
 
   await openAppAs(page, SEED_USERS.admin);
 
-  const experimentName = await createExperimentThroughUi(page);
+  const experimentName = uniqueExperimentName();
+  await openExperimentTable(page);
+  await createExperimentInDialog(page, experimentName);
   const dasSensorAlias = `SN-ACCESS-${crypto.randomUUID()}`;
-  await createSensor(page, dasSensorAlias, experimentName);
+  await openSensorTable(page);
+  await createSensorInDialog(page, dasSensorAlias, experimentName);
 
   const experiment = {
     name: experimentName,
@@ -39,75 +49,6 @@ test('shows a new sensor only to members of its experiment group', async ({
   await expectSensorVisibility(browser, SEED_USERS.bob, dasSensorAlias, true);
   await expectSensorVisibility(browser, SEED_USERS.alice, dasSensorAlias, false);
 });
-
-/** Creates an experiment with a fresh name through the UI and returns that name. */
-async function createExperimentThroughUi(page: Page): Promise<string> {
-  await page.getByRole('link', { name: 'Experiment' }).click();
-  await page.getByRole('button', { name: 'Create Experiment' }).click();
-  await expect(page.getByRole('heading', { name: 'Setup new Experiment', level: 2 })).toBeVisible();
-
-  const dialog = page.getByRole('dialog');
-  const experimentName = uniqueExperimentName();
-
-  await dialog.getByLabel('Experiment Name').fill(experimentName);
-  // Using dates like 01/01 and 05/05 prevents locale formatting parsing errors in Playwright
-  await dialog.getByLabel('Start Date').fill('01/01/2030');
-  await dialog.getByLabel('End Date').fill('05/05/2030');
-  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-
-  await expect(page.getByText('Experiment saved successfully.')).toBeVisible();
-
-  return experimentName;
-}
-
-async function createSensor(
-  page: Page,
-  dasSensorAlias: string,
-  experimentName: string,
-): Promise<void> {
-  await page.getByRole('link', { name: 'Sensor' }).click();
-  await page.getByRole('button', { name: 'Create Sensor' }).click();
-  await expect(page.getByRole('heading', { name: 'Setup new Sensor', level: 2 })).toBeVisible();
-
-  // Several sensor table column headers reuse the same text as the dialog's field labels (e.g.
-  // "DAS Sensor Alias", "Unit", "X (Local)"), so the table's filter inputs, now visible behind the
-  // dialog, also match the generic page.getByLabel(...) substring match. Scope to the dialog.
-  const dialog = page.getByRole('dialog');
-
-  await dialog.getByLabel('DAS Sensor Alias').fill(dasSensorAlias);
-  await dialog.getByLabel('Sensor Name').fill('E2E ACCESS TEST');
-
-  // 'DAS' alone substring-matches 'DAS Sensor Alias' and 'DAS Parameter Alias' too - scope exactly.
-  await dialog.getByLabel('DAS', { exact: true }).click();
-  await page.getByRole('option', { name: 'SolExperts' }).click();
-
-  // The CDK overlay is position: fixed and can render outside the actual viewport (WebKit gives
-  // it a zero-overlap bounding box), so no click - mouse or forced - has coordinates to land on.
-  // Typing the exact name narrows the autocomplete to this one option and Enter selects it via the
-  // keyboard instead, which is independent of the overlay's on-screen position. Selecting the
-  // option is what binds the experiment: the form only sends mainExperimentId for a picked option.
-  const experimentInput = dialog.getByRole('combobox', { name: 'Main Experiment' });
-  await experimentInput.fill(experimentName);
-  await expect(page.getByRole('option', { name: experimentName, exact: true })).toBeVisible();
-  await experimentInput.press('ArrowDown');
-  await experimentInput.press('Enter');
-
-  const firstParameter = dialog.getByTestId('parameter-block-0');
-  await firstParameter.getByLabel('Parameter Name').fill('Temperature Reading');
-  await firstParameter.getByLabel('Unit').click();
-  await page.getByRole('option', { name: 'Ampere (A)' }).click();
-  await firstParameter.getByLabel('Sensor Type').fill('Temperature');
-  await page.getByRole('option', { name: 'Temperature' }).click();
-  await firstParameter.getByLabel('Alarm Limit From').fill('10');
-  await firstParameter.getByLabel('Alarm Limit To').fill('100');
-
-  await dialog.getByLabel('X (Local)').fill('100');
-  await dialog.getByLabel('Y (Local)').fill('200');
-  await dialog.getByLabel('Z (Local)').fill('300');
-
-  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.getByText('Sensor saved successfully.')).toBeVisible();
-}
 
 /**
  * Logs in as one user in a fresh browser context - a new Keycloak login, so the access token
@@ -124,7 +65,7 @@ async function expectSensorVisibility(
   try {
     const page = await context.newPage();
     await openAppAs(page, user);
-    await page.getByRole('link', { name: 'Sensor' }).click();
+    await openSensorTable(page);
 
     const rows = dataRows(page);
     // Both users see the sensors of the experiments they were already in, so rows here prove the
@@ -132,11 +73,11 @@ async function expectSensorVisibility(
     // table that never rendered.
     await expect(rows.first()).toBeVisible();
 
-    await page.getByRole('textbox', { name: 'DAS Sensor Alias Filter Input' }).fill(dasSensorAlias);
+    // waits for the filtered page, an empty grid in the middle of reloading would pass too
+    await filterSensorsByAlias(page, dasSensorAlias);
 
     if (shouldSeeSensor) {
-      // Exact: the floating-filter cell now holds the same text and would match a substring.
-      await expect(page.getByRole('gridcell', { name: dasSensorAlias, exact: true })).toBeVisible();
+      await expect(sensorAliasCell(page, dasSensorAlias)).toBeVisible();
       await expect(rows).toHaveCount(1);
     } else {
       await expect(rows).toHaveCount(0);

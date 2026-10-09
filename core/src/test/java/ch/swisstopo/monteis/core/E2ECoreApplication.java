@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core;
 import ch.swisstopo.monteis.core.itconfig.FulcrumStubConfiguration;
 import ch.swisstopo.monteis.core.itconfig.KafkaTestcontainersConfiguration;
 import ch.swisstopo.monteis.core.itconfig.KeycloakTestcontainersConfiguration;
+import ch.swisstopo.monteis.core.itconfig.S3TestcontainersConfiguration;
 import ch.swisstopo.monteis.core.itconfig.TestcontainersConfiguration;
 import org.springframework.boot.SpringApplication;
 
@@ -13,6 +14,7 @@ public class E2ECoreApplication {
             TestcontainersConfiguration.class,
             KeycloakTestcontainersConfiguration.class,
             KafkaTestcontainersConfiguration.class,
+            S3TestcontainersConfiguration.class,
             FulcrumStubConfiguration.class)
         .run(args);
   }

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { scrollToTableColumn } from '../support/ag-grid';
-import { loginAsAdmin } from '../support/login';
+import { openAppAs, SEED_USERS } from '../support/login';
 
 // The color rules from the design spec, as the browser reports them via getComputedStyle.
 const ALARM_COLOR = 'rgb(194, 0, 9)'; // #c20009
@@ -90,8 +90,7 @@ test.beforeEach(async ({ page }) => {
     }),
   );
 
-  await page.goto('http://localhost:4200/');
-  await loginAsAdmin(page);
+  await openAppAs(page, SEED_USERS.admin);
 
   await page.getByTitle('Measurements').click();
   await page.getByRole('link', { name: 'Table' }).click();

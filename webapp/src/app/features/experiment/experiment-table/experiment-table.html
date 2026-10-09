@@ -19,12 +19,22 @@
 
     <button
       conditional-write-action
-      matButton="filled"
+      matButton="tonal"
       [disabled]="!canEditSelected()"
       (click)="onEdit()"
     >
       <mat-icon fontIcon="edit"></mat-icon>
       {{ 'experiment.tableHeader.edit' | translate }}
+    </button>
+
+    <button
+      primary-action
+      matButton="filled"
+      [disabled]="selectedExperimentId() === undefined"
+      (click)="onView()"
+    >
+      <mat-icon fontIcon="visibility"></mat-icon>
+      {{ 'experiment.tableHeader.view' | translate }}
     </button>
   </app-table-header>
   @if (loadError()) {
@@ -39,7 +49,6 @@
       [datasource]="datasource"
       [gridOptions]="gridOptions"
       [getRowId]="getExperimentRowId"
-      (rowClicked)="onWrappedRow($event)"
       (selectionChanged)="onSelectionChanged($event)"
       (gridReady)="onGridReady($event)"
     >

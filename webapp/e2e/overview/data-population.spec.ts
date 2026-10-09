@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { loginAsAdmin } from '../support/login';
+import { openAppAs, SEED_USERS } from '../support/login';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('http://localhost:4200/');
-  await loginAsAdmin(page);
+  await openAppAs(page, SEED_USERS.admin);
 
   await page.getByTitle('Measurements').click();
 });

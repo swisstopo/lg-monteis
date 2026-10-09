@@ -107,6 +107,14 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
   @Override
   @Transactional(readOnly = true)
+  public void requireVisible(UUID experimentId) {
+    if (!dsl.fetchExists(EXPERIMENTS, EXPERIMENTS.ID.eq(experimentId))) {
+      throw new ObjectNotFoundException(Experiment.class);
+    }
+  }
+
+  @Override
+  @Transactional(readOnly = true)
   public PagedResult<Experiment> getExperiments(PagedRequest request) {
 
     // Default to a deterministic order so offset-based paging stays stable across separate

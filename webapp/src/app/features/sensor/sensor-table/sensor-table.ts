@@ -1,6 +1,5 @@
-import { Component, effect, inject, inputBinding, signal } from '@angular/core';
+import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { MatButton } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { SensorParameterRowResponseDto } from '@core/generated';
@@ -9,9 +8,10 @@ import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { FormDialogService } from '@ui/dialog/form-dialog.service';
+import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
-import { CsvDownloadService } from '@ui/table/csv-download.service';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
@@ -25,10 +25,10 @@ import { createColumns } from './columns';
   styleUrl: './sensor-table.scss',
 })
 export default class SensorTable {
-  private readonly dialog = inject(MatDialog);
+  private readonly formDialog = inject(FormDialogService);
   protected sensorService = inject(SensorService);
   private readonly translateService = inject(TranslateService);
-  private readonly csvDownloadService = inject(CsvDownloadService);
+  private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
 
   readonly searchTerm = signal<string>('');
@@ -52,13 +52,11 @@ export default class SensorTable {
       view.title = this.translateService.translate('tab.sensor')();
     });
 
-    // Re-fetch the currently visible pages whenever a sensor is created/updated elsewhere
-    // (e.g. via the edit dialog) - the infinite row model otherwise has no way to know.
+    // the infinite row model has no way to notice a save in the dialog, so the visible pages are
+    // fetched again on every one
     effect(() => {
-      if (this.sensorService.sensorsChanged()) {
-        this.gridApi()?.refreshInfiniteCache();
-        this.sensorService.sensorsChanged.set(false);
-      }
+      this.sensorService.sensorsSaved();
+      untracked(() => this.gridApi()?.refreshInfiniteCache());
     });
   }
 
@@ -66,28 +64,19 @@ export default class SensorTable {
     this.gridApi.set(api);
   }
 
-  onWrappedRow(row: SensorParameterRowResponseDto) {
-    console.log(row);
-  }
-
   onSelectionChanged(rows: SensorParameterRowResponseDto[]): void {
     this.selectedSensorId.set(rows[0]?.sensorId);
   }
 
   onCreate(): void {
-    this.dialog.open(SensorEdit, { width: '60vw', maxWidth: '1200px', autoFocus: true });
+    this.formDialog.open(SensorEdit);
   }
 
   onEdit(): void {
     const sensorId = this.selectedSensorId();
-    if (sensorId === undefined) return;
-
-    this.dialog.open(SensorEdit, {
-      width: '60vw',
-      maxWidth: '1200px',
-      autoFocus: true,
-      bindings: [inputBinding('sensorId', () => sensorId)],
-    });
+    if (sensorId !== undefined) {
+      this.formDialog.open(SensorEdit, { sensorId });
+    }
   }
 
   async onDownload(): Promise<void> {
@@ -98,7 +87,7 @@ export default class SensorTable {
     try {
       const { sortModel, filterModel } = toGridFilterSortParams(api);
       const blob = await this.sensorService.getSensorsCsv(sortModel, filterModel);
-      this.csvDownloadService.download(blob, 'sensors.csv');
+      this.fileDownloadService.download(blob, 'sensors.csv');
     } catch {
       this.toastService.error(this.translateService.translate('sensor.error.downloadFailed')());
     } finally {

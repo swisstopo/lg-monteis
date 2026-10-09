@@ -135,6 +135,49 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
+  void should_accept_a_visible_experiment_without_loading_it() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID experimentId =
+              createExperimentWithDsl(
+                  "Visible Experiment",
+                  null,
+                  LocalDate.of(2024, Month.JANUARY, 1),
+                  LocalDate.of(2024, Month.DECEMBER, 31));
+
+          assertDoesNotThrow(() -> repository.requireVisible(experimentId));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_not_accept_an_unknown_experiment_as_visible() {
+    SecurityContextTestSupport.runAsAdmin(
+        () ->
+            assertThrows(
+                ObjectNotFoundException.class, () -> repository.requireVisible(UUID.randomUUID())));
+  }
+
+  @Test
+  @Transactional
+  void should_not_accept_an_experiment_hidden_by_row_level_security_as_visible() {
+    UUID hiddenId =
+        SecurityContextTestSupport.callAsAdmin(
+            () ->
+                createExperimentWithDsl(
+                    "Hidden From Visibility Check",
+                    null,
+                    LocalDate.of(2024, Month.JANUARY, 1),
+                    LocalDate.of(2024, Month.DECEMBER, 31)));
+
+    SecurityContextTestSupport.runAsUser(
+        List.of(),
+        () ->
+            assertThrows(ObjectNotFoundException.class, () -> repository.requireVisible(hiddenId)));
+  }
+
+  @Test
+  @Transactional
   void should_find_all_experiments_sorted_by_name() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {

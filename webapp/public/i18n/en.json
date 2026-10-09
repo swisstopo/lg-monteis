@@ -243,7 +243,6 @@
       "removeButton": "Remove Parameter"
     },
     "button": {
-      "cancel": "Cancel",
       "saveAndCreate": "Save and create new",
       "save": "Save"
     },
@@ -261,10 +260,11 @@
     }
   },
   "experiment": {
-    "edit": {
+    "dialog": {
       "title": {
         "create": "Setup new Experiment",
-        "edit": "Edit Experiment"
+        "edit": "Edit Experiment",
+        "view": "View Experiment"
       }
     },
     "id": {
@@ -275,8 +275,8 @@
       "placeholder": "e.g., Mont Terri Alpha",
       "validation": {
         "required": "Experiment name is required",
-        "minLength": "Name must be at least 2 characters long",
-        "maxLength": "Name must be at most 50 characters long"
+        "minLength": "Name must be at least {{min}} characters long",
+        "maxLength": "Name must be at most {{max}} characters long"
       }
     },
     "status": {
@@ -296,20 +296,22 @@
     "comment": {
       "label": "Comment",
       "validation": {
-        "maxLength": "Comment must be at most 4096 characters long"
+        "maxLength": "Comment must be at most {{max}} characters long"
       }
     },
     "period": {
       "start": {
         "label": "Start Date",
         "validation": {
-          "required": "Experiment start date is required"
+          "required": "Experiment start date is required",
+          "bounds": "Start date must not be after end date"
         }
       },
       "end": {
         "label": "End Date",
         "validation": {
-          "required": "Experiment end date is required"
+          "required": "Experiment end date is required",
+          "bounds": "End date must not be before start date"
         }
       }
     },
@@ -319,34 +321,31 @@
     "success": "Experiment saved successfully.",
     "error": {
       "unspecified": {
-        "title": "Error",
         "message": "An unspecified error occurred while saving the experiment."
       },
-      "noId": "No experiment id provided",
       "connection": "Failed to connect to the backend server.",
       "downloadFailed": "Failed to download experiments as CSV."
     },
     "tableHeader": {
       "download": "Download",
       "create": "Create Experiment",
-      "edit": "Edit Experiment"
-    },
-    "experimentDate": {
-      "to": {
-        "validation": {
-          "bounds": "End date must be after start date"
-        }
-      },
-      "from": {
-        "validation": {
-          "bounds": "Start date must be before end date"
-        }
-      }
+      "edit": "Edit Experiment",
+      "view": "View"
     },
     "button": {
-      "cancel": "Cancel",
       "saveAndCreate": "Save and create new",
       "save": "Save"
+    },
+    "documents": {
+      "title": "Documents",
+      "add": "Add Document",
+      "view": "View document",
+      "empty": "No documents yet.",
+      "error": {
+        "upload": "The document could not be uploaded.",
+        "download": "The document could not be downloaded.",
+        "load": "The documents could not be loaded."
+      }
     }
   },
   "measurements-table": {
@@ -436,5 +435,16 @@
   },
   "tableHeader": {
     "search": "Search"
+  },
+  "document": {
+    "validation": {
+      "empty": "The file is empty.",
+      "fileName": "The file name must be between 1 and {{max}} characters long.",
+      "tooLarge": "The file is larger than the allowed {{max}}."
+    }
+  },
+  "button": {
+    "cancel": "Cancel",
+    "close": "Close"
   }
 }

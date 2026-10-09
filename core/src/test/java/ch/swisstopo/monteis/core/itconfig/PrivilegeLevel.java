@@ -46,12 +46,9 @@ public enum PrivilegeLevel {
       false,
       false);
 
-  public static final UUID ASSIGNED_EXPERIMENT =
-      UUID.fromString("00000000-0000-7000-8000-000000000301");
-  public static final UUID OTHER_EXPERIMENT =
-      UUID.fromString("00000000-0000-7000-8000-000000000303");
-  public static final UUID UNASSIGNED_EXPERIMENT =
-      UUID.fromString("00000000-0000-7000-8000-000000000302");
+  public static final UUID ASSIGNED_EXPERIMENT = SeedData.EXPERIMENT_ALPHA;
+  public static final UUID OTHER_EXPERIMENT = SeedData.EXPERIMENT_GAMMA;
+  public static final UUID UNASSIGNED_EXPERIMENT = SeedData.EXPERIMENT_BETA;
 
   private final List<String> roles;
   private final List<Grant> authorities;

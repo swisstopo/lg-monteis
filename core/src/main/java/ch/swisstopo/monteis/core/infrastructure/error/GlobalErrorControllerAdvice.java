@@ -21,12 +21,14 @@ import org.jooq.exception.DataChangedException;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.unit.DataSize;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.validation.method.ParameterValidationResult;
@@ -37,6 +39,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
@@ -71,6 +74,16 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(GlobalErrorControllerAdvice.class);
+
+  private final DataSize maxFileSize;
+
+  // the exception mostly carries -1, tomcat does not tell which limit it hit, so the user gets the
+  // configured one
+  public GlobalErrorControllerAdvice(
+      @Value("${spring.servlet.multipart.max-file-size}") DataSize maxFileSize) {
+    this.maxFileSize = maxFileSize;
+  }
+
   private static final Set<String> INTERNAL_ANNOTATION_KEYS =
       Set.of("message", "groups", "payload");
   public static final String ERROR_ID = "errorId";
@@ -211,6 +224,22 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
         e.getMessage());
     ErrorDto payload = ErrorDto.global("error.paging.invalid", Map.of(ERROR_ID, ctx.errorId()));
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(payload);
+  }
+
+  @ApiResponse(
+      responseCode = "413",
+      description = "Uploaded file exceeds the configured maximum size.",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  @Override
+  protected ResponseEntity<@NonNull Object> handleMaxUploadSizeExceededException(
+      MaxUploadSizeExceededException ex,
+      @NonNull HttpHeaders headers,
+      @NonNull HttpStatusCode status,
+      @NonNull WebRequest request) {
+    ErrorDto payload =
+        ErrorDto.form(
+            "document.validation.tooLarge", Map.of("max", maxFileSize.toMegabytes() + " MB"));
+    return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(payload);
   }
 
   @Override

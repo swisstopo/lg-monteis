@@ -1,0 +1,49 @@
+<app-dialog-layout [title]="'experiment.dialog.title.' + mode() | translate" [mode]="mode()">
+  <form id="experimentForm" class="form-layout" [formRoot]="experimentForm">
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'experiment.name.label' | translate }}</mat-label>
+      <input
+        matInput
+        [formField]="experimentForm.name"
+        [placeholder]="'experiment.name.placeholder' | translate"
+      />
+      <mat-error [appFieldErrors]="experimentForm.name" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'experiment.period.start.label' | translate }}</mat-label>
+      <input matInput [matDatepicker]="startPicker" [formField]="experimentForm.period.start" />
+      <mat-datepicker-toggle matSuffix [for]="startPicker" [disabled]="readOnly()" />
+      <mat-datepicker #startPicker />
+      <mat-error [appFieldErrors]="experimentForm.period.start" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'experiment.period.end.label' | translate }}</mat-label>
+      <input matInput [matDatepicker]="endPicker" [formField]="experimentForm.period.end" />
+      <mat-datepicker-toggle matSuffix [for]="endPicker" [disabled]="readOnly()" />
+      <mat-datepicker #endPicker />
+      <mat-error [appFieldErrors]="experimentForm.period.end" />
+    </mat-form-field>
+
+    <mat-form-field class="full-width" appearance="outline">
+      <mat-label>{{ 'experiment.comment.label' | translate }}</mat-label>
+      <textarea matInput [formField]="experimentForm.comment" rows="3"></textarea>
+      <mat-error [appFieldErrors]="experimentForm.comment" />
+    </mat-form-field>
+  </form>
+
+  @if (experimentId(); as experimentId) {
+    <app-experiment-documents [experimentId]="experimentId" [readOnly]="readOnly()" />
+  }
+
+  <app-dismiss-button dialog-action-dismiss [kind]="readOnly() ? 'close' : 'cancel'" />
+  <ng-container ngProjectAs="[dialog-action-submit]">
+    <app-submit-button [form]="experimentForm" variant="secondary" (pressed)="saveAndCreateNew()">
+      {{ 'experiment.button.saveAndCreate' | translate }}
+    </app-submit-button>
+    <app-submit-button [form]="experimentForm" formId="experimentForm">
+      {{ 'experiment.button.save' | translate }}
+    </app-submit-button>
+  </ng-container>
+</app-dialog-layout>

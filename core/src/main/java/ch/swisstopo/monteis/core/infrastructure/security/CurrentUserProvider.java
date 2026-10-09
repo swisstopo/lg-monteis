@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -7,11 +8,27 @@ import org.springframework.stereotype.Component;
 @Component
 public class CurrentUserProvider {
   public String getCurrentUserHandle() {
+    return currentPrincipal().map(principal -> principal.getSubject().toString()).orElse(null);
+  }
+
+  /**
+   * Returns the username of the authenticated caller, for records that show who made them.
+   *
+   * @throws IllegalStateException without an authenticated {@link MonteisPrincipal}. the filter
+   *     chain authenticates every write, so getting here without one is a bug, not a user error
+   */
+  public String requireCurrentUsername() {
+    return currentPrincipal()
+        .map(MonteisPrincipal::getName)
+        .orElseThrow(() -> new IllegalStateException("No authenticated MonteisPrincipal"));
+  }
+
+  private static Optional<MonteisPrincipal> currentPrincipal() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication != null
         && authentication.getPrincipal() instanceof MonteisPrincipal principal) {
-      return principal.getSubject().toString();
+      return Optional.of(principal);
     }
-    return null;
+    return Optional.empty();
   }
 }

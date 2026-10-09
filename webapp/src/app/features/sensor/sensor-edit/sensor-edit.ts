@@ -5,16 +5,18 @@ import {
   FieldTree,
   form,
   FormField,
+  FormRoot,
   maxLength,
   minLength,
   required,
   submit,
+  TreeValidationResult,
   validate,
 } from '@angular/forms/signals';
 import { MatAutocomplete, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatButton } from '@angular/material/button';
 import { MatOption } from '@angular/material/core';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
@@ -35,6 +37,9 @@ import { ExperimentService } from '@features/experiment/services/experiment.serv
 import { Das, getDasMetadata, getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { DialogLayout, DialogMode } from '@ui/dialog/dialog-layout';
+import { SubmitButton } from '@ui/dialog/submit-button';
+import { DismissButton } from '@ui/dismiss-button/dismiss-button';
 
 // Canonical 8-4-4-4-12 form, the only shape java.util.UUID round-trips. Deliberately not
 // version-restricted: the backend accepts any UUID here, and Fulcrum owns the ids we store.
@@ -159,7 +164,10 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
     MatSelect,
     MatOption,
     FormField,
-    MatDialogModule,
+    FormRoot,
+    DialogLayout,
+    SubmitButton,
+    DismissButton,
     MatIcon,
     MatAutocomplete,
     MatAutocompleteTrigger,
@@ -191,6 +199,8 @@ export default class SensorEdit {
 
   readonly saveError = this.sensorService.error;
   sensor = signal<SensorResponseDto | undefined>(undefined);
+  // no view mode yet, sensors have no read-only dialog
+  protected readonly mode = computed<DialogMode>(() => (this.sensorId() ? 'edit' : 'create'));
   title = computed(() =>
     this.sensorId()
       ? this.translateService.translate('sensor.edit.title.edit')()
@@ -245,113 +255,121 @@ export default class SensorEdit {
     };
   }
 
-  readonly sensorForm = form(this.formModel, (schema) => {
-    required(schema.dasSensorAlias, {
-      message: translate('sensor.dasSensorAlias.validation.required')(),
-    });
-    maxLength(schema.dasSensorAlias, 255, {
-      message: translate('sensor.dasSensorAlias.validation.maxLength')(),
-    });
-    required(schema.name, { message: translate('sensor.name.validation.required')() });
-    minLength(schema.name, 2, { message: translate('sensor.name.validation.minLength')() });
-    maxLength(schema.name, 50, { message: translate('sensor.name.validation.maxLength')() });
-    required(schema.das, { message: translate('sensor.das.validation.required')() });
-    validate(schema.fulcrumId, ({ value }) => {
-      const fulcrumId = value().trim();
-      if (!fulcrumId || UUID_PATTERN.test(fulcrumId)) return undefined;
-      return {
-        kind: 'invalidUuid',
-        message: this.translateService.translate('sensor.fulcrumId.validation.invalid')(),
-      };
-    });
-    maxLength(schema.comment, 4096, {
-      message: translate('sensor.comment.validation.maxLength')(),
-    });
-    disabled(schema.coordinates, {
-      when: ({ valueOf }) => valueOf(schema.fulcrumId).trim().length > 0,
-    });
-    required(schema.coordinates.x, {
-      message: translate('sensor.coordinate.xLocal.validation.required')(),
-    });
-    required(schema.coordinates.y, {
-      message: translate('sensor.coordinate.yLocal.validation.required')(),
-    });
-    required(schema.coordinates.z, {
-      message: translate('sensor.coordinate.zLocal.validation.required')(),
-    });
-    validate(schema.mainExperiment.name, ({ value }) => {
-      const name = value();
-      if (!name) return undefined;
-      if (this.selectedExperiment()?.name !== name) {
+  readonly sensorForm = form(
+    this.formModel,
+    (schema) => {
+      required(schema.dasSensorAlias, {
+        message: translate('sensor.dasSensorAlias.validation.required')(),
+      });
+      maxLength(schema.dasSensorAlias, 255, {
+        message: translate('sensor.dasSensorAlias.validation.maxLength')(),
+      });
+      required(schema.name, { message: translate('sensor.name.validation.required')() });
+      minLength(schema.name, 2, { message: translate('sensor.name.validation.minLength')() });
+      maxLength(schema.name, 50, { message: translate('sensor.name.validation.maxLength')() });
+      required(schema.das, { message: translate('sensor.das.validation.required')() });
+      validate(schema.fulcrumId, ({ value }) => {
+        const fulcrumId = value().trim();
+        if (!fulcrumId || UUID_PATTERN.test(fulcrumId)) return undefined;
         return {
-          kind: 'notSelected',
-          message: this.translateService.translate(
-            'sensor.mainExperiment.validation.notSelected',
-          )(),
+          kind: 'invalidUuid',
+          message: this.translateService.translate('sensor.fulcrumId.validation.invalid')(),
         };
-      }
-      return undefined;
-    });
+      });
+      maxLength(schema.comment, 4096, {
+        message: translate('sensor.comment.validation.maxLength')(),
+      });
+      disabled(schema.coordinates, {
+        when: ({ valueOf }) => valueOf(schema.fulcrumId).trim().length > 0,
+      });
+      required(schema.coordinates.x, {
+        message: translate('sensor.coordinate.xLocal.validation.required')(),
+      });
+      required(schema.coordinates.y, {
+        message: translate('sensor.coordinate.yLocal.validation.required')(),
+      });
+      required(schema.coordinates.z, {
+        message: translate('sensor.coordinate.zLocal.validation.required')(),
+      });
+      validate(schema.mainExperiment.name, ({ value }) => {
+        const name = value();
+        if (!name) return undefined;
+        if (this.selectedExperiment()?.name !== name) {
+          return {
+            kind: 'notSelected',
+            message: this.translateService.translate(
+              'sensor.mainExperiment.validation.notSelected',
+            )(),
+          };
+        }
+        return undefined;
+      });
 
-    applyEach(schema.parameters, (parameter) => {
-      required(parameter.name, {
-        message: translate('sensor.parameter.name.validation.required')(),
+      applyEach(schema.parameters, (parameter) => {
+        required(parameter.name, {
+          message: translate('sensor.parameter.name.validation.required')(),
+        });
+        minLength(parameter.name, 2, {
+          message: translate('sensor.parameter.name.validation.minLength')(),
+        });
+        maxLength(parameter.name, 255, {
+          message: translate('sensor.parameter.name.validation.maxLength')(),
+        });
+        maxLength(parameter.dasParameterAlias, 255, {
+          message: translate('sensor.parameter.dasParameterAlias.validation.maxLength')(),
+        });
+        maxLength(parameter.comment, 4096, {
+          message: translate('sensor.parameter.comment.validation.maxLength')(),
+        });
+        required(parameter.unit);
+        required(parameter.type.name, {
+          message: translate('sensor.type.validation.required')(),
+        });
+        minLength(parameter.type.name, 2, {
+          message: translate('sensor.type.validation.minLength')(),
+        });
+        maxLength(parameter.type.name, 100, {
+          message: translate('sensor.type.validation.maxLength')(),
+        });
+        maxLength(parameter.formula.expression, 1024, {
+          message: translate('sensor.formula.validation.maxLength')(),
+        });
+        required(parameter.alarmLimits.lower, {
+          message: translate('sensor.alarmLimit.from.validation.required')(),
+        });
+        required(parameter.alarmLimits.upper, {
+          message: translate('sensor.alarmLimit.to.validation.required')(),
+        });
+        validate(parameter.alarmLimits.lower, ({ value, valueOf }) => {
+          const lower = value();
+          const upper = valueOf(parameter.alarmLimits.upper);
+          if (lower > upper) {
+            return {
+              kind: 'bounds',
+              message: this.translateService.translate(
+                'sensor.alarmLimit.from.validation.bounds',
+              )(),
+            };
+          }
+          return undefined;
+        });
+        validate(parameter.alarmLimits.upper, ({ value, valueOf }) => {
+          const upper = value();
+          const lower = valueOf(parameter.alarmLimits.lower);
+          if (upper < lower) {
+            return {
+              kind: 'bounds',
+              message: this.translateService.translate('sensor.alarmLimit.to.validation.bounds')(),
+            };
+          }
+          return undefined;
+        });
       });
-      minLength(parameter.name, 2, {
-        message: translate('sensor.parameter.name.validation.minLength')(),
-      });
-      maxLength(parameter.name, 255, {
-        message: translate('sensor.parameter.name.validation.maxLength')(),
-      });
-      maxLength(parameter.dasParameterAlias, 255, {
-        message: translate('sensor.parameter.dasParameterAlias.validation.maxLength')(),
-      });
-      maxLength(parameter.comment, 4096, {
-        message: translate('sensor.parameter.comment.validation.maxLength')(),
-      });
-      required(parameter.unit);
-      required(parameter.type.name, {
-        message: translate('sensor.type.validation.required')(),
-      });
-      minLength(parameter.type.name, 2, {
-        message: translate('sensor.type.validation.minLength')(),
-      });
-      maxLength(parameter.type.name, 100, {
-        message: translate('sensor.type.validation.maxLength')(),
-      });
-      maxLength(parameter.formula.expression, 1024, {
-        message: translate('sensor.formula.validation.maxLength')(),
-      });
-      required(parameter.alarmLimits.lower, {
-        message: translate('sensor.alarmLimit.from.validation.required')(),
-      });
-      required(parameter.alarmLimits.upper, {
-        message: translate('sensor.alarmLimit.to.validation.required')(),
-      });
-      validate(parameter.alarmLimits.lower, ({ value, valueOf }) => {
-        const lower = value();
-        const upper = valueOf(parameter.alarmLimits.upper);
-        if (lower > upper) {
-          return {
-            kind: 'bounds',
-            message: this.translateService.translate('sensor.alarmLimit.from.validation.bounds')(),
-          };
-        }
-        return undefined;
-      });
-      validate(parameter.alarmLimits.upper, ({ value, valueOf }) => {
-        const upper = value();
-        const lower = valueOf(parameter.alarmLimits.lower);
-        if (upper < lower) {
-          return {
-            kind: 'bounds',
-            message: this.translateService.translate('sensor.alarmLimit.to.validation.bounds')(),
-          };
-        }
-        return undefined;
-      });
-    });
-  });
+    },
+    {
+      submission: { action: () => this.save(() => this.dialogRef?.close()) },
+    },
+  );
 
   filteredTypesFor(parameter: FieldTree<SensorParameterFormData>): SensorTypeResponseDto[] {
     const search = parameter.type.name().value();
@@ -420,40 +438,25 @@ export default class SensorEdit {
     return this.formModel().parameters.map((parameter) => parameter.clientKey);
   }
 
-  async onSubmit(event: SubmitEvent) {
-    event.preventDefault();
-    const submitter = event.submitter as HTMLButtonElement | null;
-    const resetAfter = submitter?.dataset['action'] === 'saveAndCreate';
+  saveAndCreateNew(): Promise<boolean> {
+    return submit(this.sensorForm, () => this.save(() => this.resetForm()));
+  }
 
-    if (this.sensorForm().invalid()) {
-      this.sensorForm().markAsTouched();
-      return;
+  private async save(afterSave: () => void): Promise<TreeValidationResult> {
+    try {
+      await this.saveSensor(this.buildPayload(this.formModel()));
+    } catch {
+      return this.formErrorService.mapApiErrorsToFormErrors(
+        this.saveError(),
+        this.sensorForm,
+        'sensor.error.unspecified.message',
+      );
     }
-    await submit(this.sensorForm, async (field) => {
-      const sensor = this.buildPayload(this.formModel());
-
-      try {
-        await this.saveSensor(sensor);
-
-        this.allFormulas.reload();
-        this.allTypes.reload();
-
-        this.toastService.success(this.translateService.translate('sensor.success')());
-
-        if (resetAfter) {
-          this.resetForm();
-        } else {
-          this.dialogRef?.close();
-        }
-        return;
-      } catch {
-        return this.formErrorService.mapApiErrorsToFormErrors(
-          this.saveError(),
-          this.sensorForm,
-          'sensor.error.unspecified.message',
-        );
-      }
-    });
+    this.allFormulas.reload();
+    this.allTypes.reload();
+    this.toastService.success(this.translateService.translate('sensor.success')());
+    afterSave();
+    return undefined;
   }
 
   private resetForm(): void {

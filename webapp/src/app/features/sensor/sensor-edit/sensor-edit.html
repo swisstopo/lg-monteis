@@ -1,7 +1,5 @@
-<h2 mat-dialog-title>{{ title() }}</h2>
-
-<mat-dialog-content>
-  <form id="sensorCreateForm" class="form-layout" (submit)="onSubmit($event)" novalidate>
+<app-dialog-layout [title]="title()" [mode]="mode()">
+  <form id="sensorCreateForm" class="form-layout" [formRoot]="sensorForm">
     <div class="form-column">
       <mat-form-field appearance="outline">
         <mat-label>{{ 'sensor.das.label' | translate }}</mat-label>
@@ -319,31 +317,15 @@
     }
   </form>
 
-  <mat-dialog-actions align="end">
-    <button matButton mat-dialog-close>
-      <mat-icon fontIcon="cancel"></mat-icon>
-      {{ 'sensor.button.cancel' | translate }}
-    </button>
-    @if (!this.sensorId()) {
-      <button
-        matButton="tonal"
-        [disabled]="sensorForm().submitting() || sensorForm().invalid()"
-        type="submit"
-        form="sensorCreateForm"
-        data-action="saveAndCreate"
-      >
-        <mat-icon fontIcon="save"></mat-icon>
+  <app-dismiss-button dialog-action-dismiss />
+  <ng-container ngProjectAs="[dialog-action-submit]">
+    @if (mode() === 'create') {
+      <app-submit-button [form]="sensorForm" variant="secondary" (pressed)="saveAndCreateNew()">
         {{ 'sensor.button.saveAndCreate' | translate }}
-      </button>
+      </app-submit-button>
     }
-    <button
-      matButton="filled"
-      [disabled]="sensorForm().submitting() || sensorForm().invalid()"
-      type="submit"
-      form="sensorCreateForm"
-    >
-      <mat-icon fontIcon="save"></mat-icon>
+    <app-submit-button [form]="sensorForm" formId="sensorCreateForm">
       {{ 'sensor.button.save' | translate }}
-    </button>
-  </mat-dialog-actions>
-</mat-dialog-content>
+    </app-submit-button>
+  </ng-container>
+</app-dialog-layout>

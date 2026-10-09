@@ -1,19 +1,27 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, inputBinding, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { MatButton } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
-import ExperimentEdit from '@features/experiment/experiment-edit/experiment-edit';
+import { ExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { FormDialogService } from '@ui/dialog/form-dialog.service';
+import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
-import { CsvDownloadService } from '@ui/table/csv-download.service';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
@@ -26,30 +34,31 @@ import { createColumns } from './columns';
   providers: [DatePipe],
   templateUrl: './experiment-table.html',
   styleUrl: './experiment-table.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ExperimentTable {
   private readonly datePipe = inject(DatePipe);
-  private readonly dialog = inject(MatDialog);
-  protected experimentService = inject(ExperimentService);
+  private readonly formDialog = inject(FormDialogService);
+  private readonly experimentService = inject(ExperimentService);
   private readonly translateService = inject(TranslateService);
-  private readonly csvDownloadService = inject(CsvDownloadService);
+  private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   protected readonly permissions = inject(PermissionsService);
 
   readonly searchTerm = signal<string>('');
 
-  protected wrappedCols = createColumns(this.datePipe);
-  protected selectedExperimentId = signal<string | undefined>(undefined);
-  protected canEditSelected = computed(() => {
+  protected readonly wrappedCols = createColumns(this.datePipe);
+  protected readonly selectedExperimentId = signal<string | undefined>(undefined);
+  protected readonly canEditSelected = computed(() => {
     const experimentId = this.selectedExperimentId();
     return experimentId !== undefined && this.permissions.canWriteExperiment(experimentId);
   });
-  protected totalCount = signal<number | undefined>(undefined);
-  protected loadError = signal(false);
-  protected downloading = signal(false);
+  protected readonly totalCount = signal<number | undefined>(undefined);
+  protected readonly loadError = signal(false);
+  protected readonly downloading = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
 
-  protected gridOptions: GridOptions<ExperimentResponseDto> = {
+  protected readonly gridOptions: GridOptions<ExperimentResponseDto> = {
     domLayout: 'normal',
     autoSizeStrategy: {
       type: 'fitCellContents',
@@ -62,7 +71,7 @@ export default class ExperimentTable {
     },
   };
 
-  protected datasource = createPagedDatasource(
+  protected readonly datasource = createPagedDatasource(
     (params) => this.experimentService.getExperiments(params),
     this.totalCount,
     this.loadError,
@@ -74,13 +83,11 @@ export default class ExperimentTable {
       view.title = this.translateService.translate('tab.experiment')();
     });
 
-    // Re-fetch the currently visible pages whenever a experiment is created/updated elsewhere
-    // (e.g. via the edit dialog) - the infinite row model otherwise has no way to know.
+    // the infinite row model has no way to notice a save in the dialog, so the visible pages are
+    // fetched again on every one
     effect(() => {
-      if (this.experimentService.experimentsChanged()) {
-        this.gridApi()?.refreshInfiniteCache();
-        this.experimentService.experimentsChanged.set(false);
-      }
+      this.experimentService.experimentsSaved();
+      untracked(() => this.gridApi()?.refreshInfiniteCache());
     });
   }
 
@@ -88,28 +95,27 @@ export default class ExperimentTable {
     this.gridApi.set(api);
   }
 
-  onWrappedRow(row: ExperimentResponseDto) {
-    console.log(row);
-  }
-
   onSelectionChanged(rows: ExperimentResponseDto[]): void {
     this.selectedExperimentId.set(rows[0]?.id);
   }
 
   onCreate(): void {
-    this.dialog.open(ExperimentEdit, { width: '60vw', maxWidth: '1200px', autoFocus: true });
+    this.formDialog.open(ExperimentDialog);
+  }
+
+  onView(): void {
+    this.openSelected(true);
   }
 
   onEdit(): void {
-    const experimentId = this.selectedExperimentId();
-    if (experimentId === undefined) return;
+    this.openSelected(false);
+  }
 
-    this.dialog.open(ExperimentEdit, {
-      width: '60vw',
-      maxWidth: '1200px',
-      autoFocus: true,
-      bindings: [inputBinding('experimentId', () => experimentId)],
-    });
+  private openSelected(viewOnly: boolean): void {
+    const experimentId = this.selectedExperimentId();
+    if (experimentId !== undefined) {
+      this.formDialog.open(ExperimentDialog, { experimentId, viewOnly });
+    }
   }
 
   async onDownload(): Promise<void> {
@@ -120,7 +126,7 @@ export default class ExperimentTable {
     try {
       const { sortModel, filterModel } = toGridFilterSortParams(api);
       const blob = await this.experimentService.getExperimentsCsv(sortModel, filterModel);
-      this.csvDownloadService.download(blob, 'experiments.csv');
+      this.fileDownloadService.download(blob, 'experiments.csv');
     } catch {
       this.toastService.error(this.translateService.translate('experiment.error.downloadFailed')());
     } finally {
