@@ -13,8 +13,8 @@
     margin: 0;
   }
 
-  // takes the place of the upload icon while uploading, matButton only lays out a mat-icon.
-  // drawn in the label color, the default primary is the color of the filled button itself
+  // matButton only lays out a mat-icon, the spinner needs the same spacing to take its place.
+  // currentColor since the default primary is the color of the filled button itself
   mat-spinner {
     --mat-progress-spinner-active-indicator-color: currentColor;
     display: inline-block;
@@ -24,8 +24,8 @@
   }
 }
 
-// one grid for the whole list, the rows are subgrids of it, so the meta column is as wide as its
-// widest entry and the eye buttons in front of it line up on every row
+// one grid for the whole list with subgrid rows, otherwise the meta column differs per row and the
+// eye buttons don't line up
 .document-list {
   --view-size: var(--mat-icon-button-state-layer-size, 48px);
   display: grid;
@@ -40,7 +40,7 @@
   }
 }
 
-// the button column is kept on rows without a viewable document, so all rows get the same height
+// the button column stays on rows without a view button, otherwise those rows are lower
 .document {
   display: grid;
   grid-template-columns: subgrid;
