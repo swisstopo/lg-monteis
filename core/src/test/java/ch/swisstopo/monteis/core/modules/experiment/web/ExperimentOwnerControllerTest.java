@@ -63,7 +63,7 @@ class ExperimentOwnerControllerTest {
 
   @Test
   void should_list_assigned_owners_for_every_reader() throws Exception {
-    given(ownerService.filterableOwners()).willReturn(List.of(ALICE));
+    given(ownerService.ownerColumnFilterValues()).willReturn(List.of(ALICE));
     given(mapper.toOwnerDtos(List.of(ALICE))).willReturn(List.of(ALICE_DTO));
 
     mockMvc
@@ -125,7 +125,7 @@ class ExperimentOwnerControllerTest {
     given(ownerService.replaceOwners(ASSIGNED_EXPERIMENT, Set.of(ALICE.id()))).willReturn(updated);
     ExperimentWithOwners withOwners =
         new ExperimentWithOwners(updated, VisibleOwners.of(List.of(ALICE)));
-    given(ownerService.withOwners(updated)).willReturn(withOwners);
+    given(ownerService.resolveOwnersOf(updated)).willReturn(withOwners);
     given(mapper.toDto(eq(withOwners), any())).willReturn(response);
 
     mockMvc

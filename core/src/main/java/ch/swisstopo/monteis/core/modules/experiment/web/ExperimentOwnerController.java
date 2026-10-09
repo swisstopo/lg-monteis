@@ -44,7 +44,7 @@ public class ExperimentOwnerController {
   @ApiResponse(responseCode = "200", description = "Successfully retrieved owners")
   @GetMapping(path = ApiPaths.ALL_EXPERIMENT_OWNERS, produces = MediaType.APPLICATION_JSON_VALUE)
   public List<ExperimentOwnerDto> getAssignedOwners() {
-    return mapper.toOwnerDtos(ownerService.filterableOwners());
+    return mapper.toOwnerDtos(ownerService.ownerColumnFilterValues());
   }
 
   @Operation(
@@ -73,6 +73,7 @@ public class ExperimentOwnerController {
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id,
       @Valid @RequestBody WriteExperimentOwnersDto dto) {
     Experiment updated = ownerService.replaceOwners(id, Set.copyOf(dto.ownerIds()));
-    return ResponseEntity.ok(mapper.toDto(ownerService.withOwners(updated), LocalDate.now(clock)));
+    return ResponseEntity.ok(
+        mapper.toDto(ownerService.resolveOwnersOf(updated), LocalDate.now(clock)));
   }
 }

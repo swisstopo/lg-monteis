@@ -78,7 +78,7 @@ class ExperimentOwnerServiceTest {
   }
 
   private VisibleOwners ownersOf(Experiment experiment) {
-    return service.withOwners(experiment).owners();
+    return service.resolveOwnersOf(experiment).owners();
   }
 
   @Nested
@@ -132,7 +132,7 @@ class ExperimentOwnerServiceTest {
       givenPis(OTHER_EXPERIMENT_ID, known(BOB));
 
       List<ExperimentWithOwners> owners =
-          service.withOwners(
+          service.resolveOwnersOf(
               List.of(
                   experiment(EXPERIMENT_ID, ALICE.id()),
                   experiment(OTHER_EXPERIMENT_ID, BOB.id())));
@@ -147,7 +147,7 @@ class ExperimentOwnerServiceTest {
       givenPis(OTHER_EXPERIMENT_ID, new Pis.KeycloakUnavailable("down"));
 
       List<ExperimentWithOwners> owners =
-          service.withOwners(
+          service.resolveOwnersOf(
               List.of(
                   experiment(EXPERIMENT_ID, ALICE.id()),
                   experiment(OTHER_EXPERIMENT_ID, BOB.id())));
@@ -158,7 +158,7 @@ class ExperimentOwnerServiceTest {
   }
 
   @Test
-  void should_list_every_filterable_owner_once_sorted_by_name() {
+  void should_list_every_owner_column_filter_value_once_sorted_by_name() {
     given(ownerQueryRepository.findStoredOwners())
         .willReturn(
             List.of(
@@ -167,7 +167,7 @@ class ExperimentOwnerServiceTest {
     givenPis(EXPERIMENT_ID, known(ALICE, CAROL));
     givenPis(OTHER_EXPERIMENT_ID, known(ALICE, BOB));
 
-    assertEquals(List.of(BOB, ALICE, CAROL), service.filterableOwners());
+    assertEquals(List.of(BOB, ALICE, CAROL), service.ownerColumnFilterValues());
   }
 
   @Nested
