@@ -1,15 +1,24 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, input } from '@angular/core';
+import { Component, input, model } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialogRef } from '@angular/material/dialog';
 import { PermissionsService } from '@core/auth/permissions.service';
-import { ErrorDto, ExperimentResponseDto } from '@core/generated';
+import { ErrorDto, ExperimentOwnerDto, ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
+import { ExperimentOwnerList } from '@features/experiment/owners/experiment-owner-list';
+import { ExperimentOwnerPicker } from '@features/experiment/owners/experiment-owner-picker';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExperimentDialog } from './experiment-dialog';
+
+const ALICE: ExperimentOwnerDto = {
+  id: 'alice',
+  firstName: 'Alice',
+  lastName: 'Example',
+  email: 'alice@example.test',
+};
 
 const EXPERIMENT: ExperimentResponseDto = {
   id: 'experiment-1',
@@ -17,6 +26,8 @@ const EXPERIMENT: ExperimentResponseDto = {
   name: 'Mont Terri Alpha',
   comment: 'borehole',
   period: { start: '2030-01-01', end: '2030-05-05' },
+  owners: [ALICE],
+  ownersStatus: 'SHOWN',
 };
 
 /** Stands in for the documents section, which has its own spec. */
@@ -26,12 +37,28 @@ class ExperimentDocumentsStub {
   readOnly = input(false);
 }
 
+/** stands in for the owner picker, it loads the candidates itself */
+@Component({ selector: 'app-experiment-owner-picker', template: '' })
+class ExperimentOwnerPickerStub {
+  experimentId = input.required<string>();
+  selectedOwnerIds = model<string[]>([]);
+  error = input<string>();
+}
+
+@Component({ selector: 'app-experiment-owner-list', template: '' })
+class ExperimentOwnerListStub {
+  owners = input<ExperimentOwnerDto[]>([]);
+  status = input<string>();
+}
+
 describe('ExperimentDialog', () => {
   let experimentService: {
     getExperiment: ReturnType<typeof vi.fn>;
     saveExperiment: ReturnType<typeof vi.fn>;
+    replaceOwners: ReturnType<typeof vi.fn>;
   };
   let canWrite: boolean;
+  let isAdmin: boolean;
   let dialogRef: { close: ReturnType<typeof vi.fn> };
   let toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
 
@@ -39,8 +66,10 @@ describe('ExperimentDialog', () => {
     experimentService = {
       getExperiment: vi.fn().mockResolvedValue(EXPERIMENT),
       saveExperiment: vi.fn().mockResolvedValue(EXPERIMENT),
+      replaceOwners: vi.fn().mockResolvedValue(EXPERIMENT),
     };
     canWrite = true;
+    isAdmin = false;
     dialogRef = { close: vi.fn() };
     toast = { success: vi.fn(), error: vi.fn() };
     TestBed.configureTestingModule({
@@ -48,14 +77,19 @@ describe('ExperimentDialog', () => {
       providers: [
         provideTranslateService(),
         { provide: ExperimentService, useValue: experimentService },
-        { provide: PermissionsService, useValue: { canWriteExperiment: () => canWrite } },
+        {
+          provide: PermissionsService,
+          useValue: { canWriteExperiment: () => canWrite, isAdmin: () => isAdmin },
+        },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: ToastService, useValue: toast },
       ],
     });
     TestBed.overrideComponent(ExperimentDialog, {
-      remove: { imports: [ExperimentDocuments] },
-      add: { imports: [ExperimentDocumentsStub] },
+      remove: { imports: [ExperimentDocuments, ExperimentOwnerPicker, ExperimentOwnerList] },
+      add: {
+        imports: [ExperimentDocumentsStub, ExperimentOwnerPickerStub, ExperimentOwnerListStub],
+      },
     });
   });
 
@@ -77,6 +111,20 @@ describe('ExperimentDialog', () => {
       expect(view.input('name').value).toBe('');
       expect(view.documents()).toBeNull();
       expect(experimentService.getExperiment).not.toHaveBeenCalled();
+    });
+
+    it('shows the owners disabled and explains that they come later', async () => {
+      isAdmin = true;
+
+      const view = await render();
+
+      const owners = view.element.querySelector('[data-testid="owners-create"]')!;
+      expect(owners.querySelector('input')?.disabled).toBe(true);
+      expect(owners.querySelector('[data-testid="owners-create-hint"]')?.textContent).toContain(
+        'experiment.owners.createHint',
+      );
+      expect(view.ownerPicker()).toBeNull();
+      expect(view.ownerList()).toBeNull();
     });
 
     it('cannot be saved while the form is invalid', async () => {
@@ -196,6 +244,86 @@ describe('ExperimentDialog', () => {
     });
   });
 
+  describe('owners', () => {
+    beforeEach(() => {
+      isAdmin = true;
+    });
+
+    it('lets an admin pick the owners, starting with the stored ones', async () => {
+      const view = await render('experiment-1');
+
+      await vi.waitFor(() => expect(view.ownerPicker()?.selectedOwnerIds()).toEqual(['alice']));
+      expect(view.ownerList()).toBeNull();
+    });
+
+    it('saves changed owners after the experiment', async () => {
+      const view = await render('experiment-1');
+      await vi.waitFor(() => expect(view.ownerPicker()?.selectedOwnerIds()).toEqual(['alice']));
+      view.ownerPicker()!.selectedOwnerIds.set(['alice', 'bob']);
+
+      await view.click('experiment.button.save');
+
+      await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
+      expect(experimentService.replaceOwners).toHaveBeenCalledWith('experiment-1', [
+        'alice',
+        'bob',
+      ]);
+    });
+
+    it('does not save unchanged owners', async () => {
+      const view = await render('experiment-1');
+      await vi.waitFor(() => expect(view.input('name').value).toBe('Mont Terri Alpha'));
+
+      await view.click('experiment.button.save');
+
+      await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
+      expect(experimentService.replaceOwners).not.toHaveBeenCalled();
+    });
+
+    it('stays open with the error at the owners when saving them fails', async () => {
+      experimentService.replaceOwners.mockRejectedValue(
+        new HttpErrorResponse({
+          status: 503,
+          error: { messageKey: 'error.user-directory.unavailable', target: 'GLOBAL' },
+        }),
+      );
+      const view = await render('experiment-1');
+      await vi.waitFor(() => expect(view.ownerPicker()?.selectedOwnerIds()).toEqual(['alice']));
+      view.ownerPicker()!.selectedOwnerIds.set([]);
+
+      await view.click('experiment.button.save');
+
+      await vi.waitFor(() =>
+        expect(view.ownerPicker()?.error()).toBe('error.user-directory.unavailable'),
+      );
+      expect(view.ownerPicker()?.selectedOwnerIds()).toEqual([]);
+      expect(dialogRef.close).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('shows a PI who is no admin the owners read-only', async () => {
+      isAdmin = false;
+
+      const view = await render('experiment-1');
+
+      await vi.waitFor(() => expect(view.ownerList()?.owners()).toEqual([ALICE]));
+      expect(view.ownerPicker()).toBeNull();
+    });
+
+    it('tells why the owners are missing', async () => {
+      canWrite = false;
+      experimentService.getExperiment.mockResolvedValue({
+        ...EXPERIMENT,
+        owners: [],
+        ownersStatus: 'KEYCLOAK_UNAVAILABLE',
+      });
+
+      const view = await render('experiment-1');
+
+      await vi.waitFor(() => expect(view.ownerList()?.status()).toBe('KEYCLOAK_UNAVAILABLE'));
+    });
+  });
+
   describe('view', () => {
     beforeEach(() => {
       canWrite = false;
@@ -269,6 +397,19 @@ class DialogView {
       (node) => node.componentInstance instanceof ExperimentDocumentsStub,
     );
     return debug?.componentInstance ?? null;
+  }
+
+  ownerPicker(): ExperimentOwnerPickerStub | null {
+    return this.componentOf(ExperimentOwnerPickerStub);
+  }
+
+  ownerList(): ExperimentOwnerListStub | null {
+    return this.componentOf(ExperimentOwnerListStub);
+  }
+
+  private componentOf<T>(type: new (...args: never[]) => T): T | null {
+    const debug = this.fixture.debugElement.query((node) => node.componentInstance instanceof type);
+    return (debug?.componentInstance as T | undefined) ?? null;
   }
 
   buttonLabels(): string[] {

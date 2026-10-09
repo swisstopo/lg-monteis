@@ -701,7 +701,6 @@ class JooqSensorRepositoryIT {
     UUID id =
         dsl.insertInto(EXPERIMENTS)
             .set(EXPERIMENTS.NAME, name)
-            .set(EXPERIMENTS.OWNER, "Test Owner")
             .set(EXPERIMENTS.START, LocalDate.now().minusDays(1))
             .set(EXPERIMENTS.END, LocalDate.now().plusDays(1))
             .returningResult(EXPERIMENTS.ID)
@@ -710,10 +709,7 @@ class JooqSensorRepositoryIT {
 
     Experiment experiment =
         new Experiment(
-            name,
-            "Test Owner",
-            new Period(LocalDate.now().minusDays(1), LocalDate.now().plusDays(1)),
-            null);
+            name, new Period(LocalDate.now().minusDays(1), LocalDate.now().plusDays(1)), null);
     experiment.setId(id);
     return experiment;
   }

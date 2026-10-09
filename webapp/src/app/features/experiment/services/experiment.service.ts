@@ -1,6 +1,7 @@
 import { Injectable, inject, resource, signal } from '@angular/core';
 import {
   ExperimentControllerService,
+  ExperimentOwnerControllerService,
   ExperimentResponseDto,
   WriteExperimentDto,
 } from '@core/generated';
@@ -12,6 +13,7 @@ import { firstValueFrom } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class ExperimentService {
   private readonly api = inject(ExperimentControllerService);
+  private readonly ownerApi = inject(ExperimentOwnerControllerService);
   private readonly saveCount = signal(0);
   /**
    * Grows with every saved experiment. The experiment table refreshes its rows on each change, its
@@ -38,6 +40,28 @@ export class ExperimentService {
     this.saveCount.update((count) => count + 1);
     this.allExperiments.reload();
     return saved;
+  }
+
+  async replaceOwners(id: string, ownerIds: string[]): Promise<ExperimentResponseDto> {
+    // the dialog shows the failure at the owner field
+    const saved = await firstValueFrom(
+      this.ownerApi.replaceOwners(id, { ownerIds }, 'body', false, {
+        context: skipGlobalErrorToast(),
+      }),
+    );
+    this.saveCount.update((count) => count + 1);
+    return saved;
+  }
+
+  getOwnerCandidates(id: string) {
+    // the owner picker shows the failure itself
+    return firstValueFrom(
+      this.ownerApi.getOwnerCandidates(id, 'body', false, { context: skipGlobalErrorToast() }),
+    );
+  }
+
+  getAssignedOwners() {
+    return firstValueFrom(this.ownerApi.getAssignedOwners());
   }
 
   getExperiments(params: IGetRowsParams) {

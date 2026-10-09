@@ -1,13 +1,17 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
+import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOwner.EXPERIMENT_OWNER;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.SetFilterModel;
 import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
@@ -15,6 +19,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
@@ -37,6 +42,128 @@ class JooqExperimentCsvExportQueryRepositoryIT {
   @Autowired private DSLContext dsl;
 
   @Autowired private JooqExperimentCsvExportQueryRepository exportRepository;
+
+  private Map<UUID, VisibleOwners> owners = Map.of();
+
+  private static final DirectoryUser ALICE =
+      new DirectoryUser(UUID.randomUUID(), "Alice", "Example", "alice@example.test");
+  private static final DirectoryUser BOB =
+      new DirectoryUser(UUID.randomUUID(), "Bob", "Builder", "bob@example.test");
+
+  @Test
+  @Transactional
+  void should_export_the_names_of_the_visible_owners() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID experimentId =
+              createExperiment(
+                  "OwnerCsvExportExperiment",
+                  null,
+                  LocalDate.of(2024, 1, 1),
+                  LocalDate.of(2024, 12, 31));
+          addOwners(experimentId, ALICE.id(), BOB.id());
+          owners = Map.of(experimentId, VisibleOwners.of(List.of(BOB, ALICE)));
+
+          String csv = streamToString(nameFilter("OwnerCsvExportExperiment"));
+
+          List<String> lines = List.of(csv.split("\r\n"));
+          assertTrue(lines.get(1).contains(",0,Bob Builder; Alice Example,,"), csv);
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_drop_the_separator_from_owner_names() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID experimentId =
+              createExperiment(
+                  "SemicolonOwnerCsvExportExperiment",
+                  null,
+                  LocalDate.of(2024, 1, 1),
+                  LocalDate.of(2024, 12, 31));
+          DirectoryUser semicolon =
+              new DirectoryUser(UUID.randomUUID(), "Ca;rl", "Sem; i", "carl@example.test");
+          addOwners(experimentId, semicolon.id(), ALICE.id());
+          owners = Map.of(experimentId, VisibleOwners.of(List.of(semicolon, ALICE)));
+
+          String csv = streamToString(nameFilter("SemicolonOwnerCsvExportExperiment"));
+
+          List<String> lines = List.of(csv.split("\r\n"));
+          assertTrue(lines.get(1).contains(",0,Carl Sem i; Alice Example,,"), csv);
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_write_why_the_owners_are_missing() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID experimentId =
+              createExperiment(
+                  "OfflineCsvExportExperiment",
+                  null,
+                  LocalDate.of(2024, 1, 1),
+                  LocalDate.of(2024, 12, 31));
+          addOwners(experimentId, ALICE.id());
+          Map<VisibleOwners, String> cells =
+              Map.of(
+                  VisibleOwners.KEYCLOAK_UNAVAILABLE, ",0,(unavailable),",
+                  VisibleOwners.ACCESS_DENIED, ",0,(access denied),",
+                  VisibleOwners.NO_WRITE_GROUP, ",0,(no write group),");
+          cells.forEach(
+              (missing, cell) -> {
+                owners = Map.of(experimentId, missing);
+                String csv = streamToString(nameFilter("OfflineCsvExportExperiment"));
+                assertTrue(List.of(csv.split("\r\n")).get(1).contains(cell), csv);
+              });
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_apply_the_owner_filter_to_the_export() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID owned =
+              createExperiment(
+                  "FilteredCsvOwned", null, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+          createExperiment(
+              "FilteredCsvOther", null, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+          addOwners(owned, ALICE.id());
+          owners = Map.of(owned, VisibleOwners.of(List.of(ALICE)));
+
+          PagedRequest request =
+              new PagedRequest(
+                  0,
+                  10,
+                  List.of(),
+                  Map.of(
+                      "name",
+                      new TextFilterModel("contains", "FilteredCsv", null),
+                      "owners",
+                      new SetFilterModel("set", Set.of(ALICE.id().toString()))));
+
+          List<String> lines = List.of(streamToString(request).split("\r\n"));
+
+          assertEquals(2, lines.size());
+          assertTrue(lines.get(1).startsWith("FilteredCsvOwned,"));
+        });
+  }
+
+  private static PagedRequest nameFilter(String name) {
+    return new PagedRequest(
+        0, 10, List.of(), Map.of("name", new TextFilterModel("contains", name, null)));
+  }
+
+  private void addOwners(UUID experimentId, UUID... ownerIds) {
+    for (UUID ownerId : ownerIds) {
+      dsl.insertInto(EXPERIMENT_OWNER)
+          .set(EXPERIMENT_OWNER.EXPERIMENT_ID, experimentId)
+          .set(EXPERIMENT_OWNER.USER_ID, ownerId)
+          .execute();
+    }
+  }
 
   @Test
   @Transactional
@@ -62,7 +189,8 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           // then
           List<String> lines = List.of(csv.split("\r\n"));
           assertEquals(
-              "name,status,period.start,period.end,sensorCount,comment,id", lines.getFirst());
+              "name,status,period.start,period.end,sensorCount,owners,comment,id",
+              lines.getFirst());
           assertEquals(2, lines.size(), "Header plus exactly one matching row");
           assertTrue(
               lines
@@ -167,7 +295,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
   private String streamToString(PagedRequest request) {
     StringWriter writer = new StringWriter();
     try {
-      exportRepository.streamCsv(request, writer);
+      exportRepository.streamCsv(request, writer, owners);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -181,7 +309,6 @@ class JooqExperimentCsvExportQueryRepositoryIT {
                 .set(EXPERIMENTS.COMMENT, comment)
                 .set(EXPERIMENTS.START, start)
                 .set(EXPERIMENTS.END, end)
-                .set(EXPERIMENTS.OWNER, "owner")
                 .returning(EXPERIMENTS.ID)
                 .fetchOne())
         .getId();

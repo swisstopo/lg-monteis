@@ -1,0 +1,10 @@
+:host {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owners-cell-renderer_owner {
+  color: inherit;
+}

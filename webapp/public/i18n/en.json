@@ -30,6 +30,10 @@
       "sessionExpired": "Your session has expired.",
       "logInAgain": "Log in again",
       "forbidden": "You don't have permission for this action."
+    },
+    "user-directory": {
+      "unavailable": "User data could not be loaded from Keycloak. Please try again later.",
+      "denied": "Keycloak refused to show the users, its permissions for MONTEIS are misconfigured. Please contact an administrator."
     }
   },
   "optimistic.locking": "Database record has been changed or doesn't exist any longer.",
@@ -318,6 +322,21 @@
     "sensorCount": {
       "label": "Amount of sensors"
     },
+    "owners": {
+      "label": "Experiment Owners",
+      "none": "No owner",
+      "placeholder": "Search by name or email",
+      "hint": "Only people with write access to this experiment can be owners.",
+      "noCandidates": "Nobody has write access to this experiment yet.",
+      "remove": "Remove owner",
+      "status": {
+        "KEYCLOAK_UNAVAILABLE": "Contact details currently unavailable",
+        "ACCESS_DENIED": "Owners hidden, Keycloak permissions misconfigured",
+        "NO_WRITE_GROUP": "Owners hidden, the experiment has no PI group"
+      },
+      "createPlaceholder": "Not available for a new experiment",
+      "createHint": "Nobody has write access to a new experiment yet. Save it first, owners can be assigned once people have write access."
+    },
     "success": "Experiment saved successfully.",
     "error": {
       "unspecified": {
@@ -335,6 +354,9 @@
     "button": {
       "saveAndCreate": "Save and create new",
       "save": "Save"
+    },
+    "owner": {
+      "not-eligible": "At least one selected owner is no longer a PI of this experiment."
     },
     "documents": {
       "title": "Documents",

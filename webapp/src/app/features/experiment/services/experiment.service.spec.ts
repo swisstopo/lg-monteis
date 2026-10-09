@@ -1,6 +1,10 @@
 import { HttpContext } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { ExperimentControllerService, WriteExperimentDto } from '@core/generated';
+import {
+  ExperimentControllerService,
+  ExperimentOwnerControllerService,
+  WriteExperimentDto,
+} from '@core/generated';
 import { SKIP_GLOBAL_ERROR_TOAST } from '@core/http/http-context';
 import { IGetRowsParams } from 'ag-grid-community';
 import { of, throwError } from 'rxjs';
@@ -15,6 +19,7 @@ const SAVED = { id: 'experiment-1', name: 'Mont Terri Alpha', version: 1 };
 
 describe('ExperimentService', () => {
   let api: Record<string, ReturnType<typeof vi.fn>>;
+  let ownerApi: Record<string, ReturnType<typeof vi.fn>>;
   let service: ExperimentService;
 
   beforeEach(() => {
@@ -26,8 +31,16 @@ describe('ExperimentService', () => {
       getExperiments: vi.fn(() => of({ rows: [SAVED], totalCount: 1 })),
       getExperimentsCsv: vi.fn(() => of(new Blob(['name']))),
     };
+    ownerApi = {
+      replaceOwners: vi.fn(() => of(SAVED)),
+      getOwnerCandidates: vi.fn(() => of([{ id: 'alice' }])),
+      getAssignedOwners: vi.fn(() => of([{ id: 'bob' }])),
+    };
     TestBed.configureTestingModule({
-      providers: [{ provide: ExperimentControllerService, useValue: api }],
+      providers: [
+        { provide: ExperimentControllerService, useValue: api },
+        { provide: ExperimentOwnerControllerService, useValue: ownerApi },
+      ],
     });
     service = TestBed.inject(ExperimentService);
   });
@@ -106,5 +119,34 @@ describe('ExperimentService', () => {
     const [sortModel, filterModel, , , options] = api['getExperimentsCsv'].mock.calls[0];
     expect([sortModel, filterModel]).toEqual(['[]', '{}']);
     expect((options.context as HttpContext).get(SKIP_GLOBAL_ERROR_TOAST)).toBe(true);
+  });
+
+  it('replaces the owners without the global error toast and counts it as a save', async () => {
+    await expect(service.replaceOwners('experiment-1', ['alice'])).resolves.toEqual(SAVED);
+
+    const [id, body, , , options] = ownerApi['replaceOwners'].mock.calls[0];
+    expect([id, body]).toEqual(['experiment-1', { ownerIds: ['alice'] }]);
+    expect((options.context as HttpContext).get(SKIP_GLOBAL_ERROR_TOAST)).toBe(true);
+    expect(service.experimentsSaved()).toBe(1);
+  });
+
+  it('rethrows failed owners and leaves the table alone', async () => {
+    const failure = new Error('503');
+    ownerApi['replaceOwners'].mockReturnValue(throwError(() => failure));
+
+    await expect(service.replaceOwners('experiment-1', [])).rejects.toBe(failure);
+    expect(service.experimentsSaved()).toBe(0);
+  });
+
+  it('loads the owner candidates without the global error toast, the picker shows it', async () => {
+    await expect(service.getOwnerCandidates('experiment-1')).resolves.toEqual([{ id: 'alice' }]);
+
+    const [id, , , options] = ownerApi['getOwnerCandidates'].mock.calls[0];
+    expect(id).toBe('experiment-1');
+    expect((options.context as HttpContext).get(SKIP_GLOBAL_ERROR_TOAST)).toBe(true);
+  });
+
+  it('loads the assigned owners for the owner filter', async () => {
+    await expect(service.getAssignedOwners()).resolves.toEqual([{ id: 'bob' }]);
   });
 });

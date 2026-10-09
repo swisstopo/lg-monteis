@@ -226,3 +226,147 @@ Ein ausgeblendetes oder fehlendes Experiment ergibt 404 `object.not-found`, eine
 | Konsequenzen
 | Wenn der Sync-Check failed, ist ein manueller Schritt auf dem Renovate-Branch nötig (Skript ausführen, Ergebnis committen); bis dahin bleibt der PR blockiert, was gewollt ist, da genau dann die generierten Klassen ihre Grundlage wechseln. Der Renovate-`customManager` muss auf `contracts/pom.xml` zeigen, sonst wird der Digest-Bump nicht mehr erzeugt und der Pin altert stillschweigend. Das `download-maven-plugin` bleibt in `contracts` nur verwaltet (`pluginManagement`), ohne Phasenbindung, damit kein Build versehentlich doch ins Netz geht. Da die Spec als Ressource auch im `contracts`-Jar landet, kann `FulcrumSpecTest` in `core` genau das Dokument prüfen, aus dem generiert wurde: Der Test sichert die Stellen ab, die der Client hart kodiert (den `X-ApiToken`-Header, die Basis-URL und die Response-Formen von `/v2/query`) und die kein generiertes Modell abdeckt. Er ist die Bedingung dafür, dass die Digest-Bumps automatisch mergen dürfen.
 |===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: Benutzerdaten nur in Keycloak, gelesen mit dem Token des Aufrufers
+
+| Datum
+| 07.10.2026
+
+| Status
+| entschieden (MON-177), ersetzt "Benutzerdaten nur in Keycloak, in der DB nur die User-ID" vom 02.10.2026
+
+| Kontext & Problem
+| Experimente bekommen einen oder mehrere Owner, deren Kontaktdaten (Vorname, Nachname, E-Mail) jeder Leser des Experiments sieht. Die Benutzer leben in Keycloak, die Story will keine doppelte Haltung von Personendaten in unserer DB. Die erste Version hat Keycloak über einen eigenen Service Account (`monteis-core`) gefragt. Damit sieht `core` alle Benutzer des Realms, egal wer fragt, und wir brauchen pro Umgebung ein Client Secret. Die Frage ist, mit wessen Rechten `core` die Admin API fragt.
+
+| Entscheidung
+| In der DB steht weiterhin nur `experiment_owner(experiment_id, user_id)`. `core` fragt die Keycloak Admin API mit dem Token des Aufrufers, Keycloak entscheidet über Fine Grained Admin Permissions (v2), was der Aufrufer von anderen Benutzern sehen darf. Im Realm gilt:
+
+* eine Permission auf alle Gruppen mit den Scopes `view` und `view-members` für alle mit `monteis-client:experiment:read` oder `monteis-client:experiment:write:all` (Rollen-Policy `experiment-users`)
+* `/Experiments` gibt `realm-management` `query-users` und `query-groups`, ohne die geht die Gruppensuche nicht
+* `/Monteis Admin` gibt `view-users`, `query-users` und `query-groups`
+
+Es gibt keinen Service Account und kein Secret für `core`. Details in Kap. 8, <<Experiment-Owner und Benutzerdaten aus Keycloak (MON-177)>>.
+
+| Begründung
+| Keycloak bleibt die Stelle, die über Benutzerdaten entscheidet, `core` kann nie mehr sehen als der Aufrufer selbst. Kein Secret, das pro Umgebung verteilt und rotiert werden muss. Owner sind PIs, also Mitglieder der Gruppe `read + write`, die Sichtbarkeit hängt so direkt am bestehenden Rollenkonzept.
+
+| Konsequenzen
+| Positiv: kein Secret, keine zweite Identität für `core`, Änderungen in Keycloak (Name, Austritt aus der Gruppe, Deaktivierung, Löschung) sind nach spätestens der Cache-TTL sichtbar. Negativ: jeder Experiment-Benutzer darf über die Admin API alle Gruppen und ihre Mitglieder lesen, auch die von Experimenten, die er in MONTEIS nicht sieht. Das ist bewusst grob gehalten, eine Permission pro Experiment wäre ein weiterer manueller Schritt pro neuem Experiment. Der Cache muss pro Aufrufer sein, sonst sieht ein Benutzer, was ein anderer lesen durfte. `KeycloakRealmImport` legt Realms nur an, die Permissions müssen auf bestehenden Realms von Hand nachgezogen werden. Nach Ownernamen sortieren geht nicht, nur filtern.
+
+| Verworfene Alternativen
+| *Service Account `monteis-core` (erste Version):* einfach, aber `core` sieht alle Benutzer unabhängig vom Aufrufer und braucht ein Secret pro Umgebung. +
+*Token des Aufrufers mit `realm-management`-Rollen für alle:* `view-users` überspringt die Fine Grained Permissions, jeder Benutzer sähe den ganzen Realm. +
+*Fine Grained Permission pro Experiment:* bildet RLS genau nach, braucht aber pro Experiment eine dritte manuelle Pflegestelle neben den beiden Gruppen (ADR-009 aus MON-196). +
+*Kontaktdaten oder Anzeigenamen in der DB kopieren:* würde Sortieren erlauben, ist aber genau die doppelte Haltung von Personendaten, die wir vermeiden wollen.
+|===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: Sichtbare Owner, und warum welche fehlen
+
+| Datum
+| 07.10.2026
+
+| Status
+| entschieden (MON-177)
+
+| Kontext & Problem
+| Owner stehen als Keycloak User-ID in der DB, Name und E-Mail kommen aus Keycloak (siehe ADR "Benutzerdaten nur in Keycloak, gelesen mit dem Token des Aufrufers"). Zwei Fragen blieben offen. Erstens: wer gilt als Owner, den man anzeigt? Ein Benutzer, der die Gruppe verlassen hat, deaktiviert oder gelöscht wurde, ist kein PI mehr, seine Zeile in `experiment_owner` steht aber noch. Zweitens: was passiert, wenn Keycloak nicht antwortet? Der erste Wurf hatte ein boolsches `ownersUnavailable`, damit liess sich ein Ausfall nicht von einem 403 oder einer fehlenden Schreibgruppe unterscheiden, und für den Benutzer ist das nicht dasselbe (warten vs. Setup kaputt). Dazu kommt, dass Listen, Owner-Filter und CSV viele Experimente auf einmal auflösen, bei einem langsamen Keycloak würde jede Zeile einzeln in den Timeout laufen.
+
+| Entscheidung
+| Gespeichert werden nur User-IDs. Angezeigt werden die "sichtbaren" Owner (`VisibleOwners`): gespeicherte Owner-IDs geschnitten mit den aktuellen PIs des Experiments (aktive Mitglieder der Schreibgruppe, Gruppe gefunden über das Attribut `write_experiment_ids`). Ehemalige PIs sind sofort überall weg (Tabelle, Dialog, CSV, Filterwerte), ihre DB-Zeile wird erst beim nächsten Speichern der Stammdaten oder der Owner des Experiments entfernt.
+
+Keycloak antwortet mit einem von vier Fällen (`Pis`): `Known(users)`, `NoWriteGroup`, `AccessDenied` (403) oder `KeycloakUnavailable`. Nur `Known` ist eine vollständige Antwort. Aus den anderen drei wird nichts gelöscht und nichts geschlossen, ein Owner verschwindet nie, nur weil Keycloak es nicht sagen konnte.
+
+Die API liefert `ownersStatus` (`OwnersStatus`: `SHOWN`, `KEYCLOAK_UNAVAILABLE`, `ACCESS_DENIED`, `NO_WRITE_GROUP`) statt `ownersUnavailable`. Die UI zeigt "–" mit dem Grund als Tooltip, das CSV schreibt `(unavailable)`, `(access denied)` oder `(no write group)`. Lesen schlägt nie wegen Keycloak fehl.
+
+Fail fast: werden viele Experimente auf einmal aufgelöst (eine Tabellenseite, die Filterwerte, ein CSV-Export), wird Keycloak nach dem ersten `KeycloakUnavailable` nicht mehr gefragt, der Rest bekommt `KEYCLOAK_UNAVAILABLE`. Ein langsames Keycloak kostet so einen Timeout pro Request, nicht einen pro Zeile.
+
+Lesen darf einen Cache benutzen, Schreiben fragt immer Keycloak (Kandidaten für Owner, Owner ersetzen, ehemalige Owner entfernen). Der Cache gilt pro Aufrufer und Experiment, 60 s TTL, maximal 10'000 Einträge, und nur definitive Antworten (`Known`, `NoWriteGroup`) werden gespeichert. Fehler werden beim nächsten Mal wieder gefragt.
+
+403 und fehlende Schreibgruppe werden als WARN geloggt (Setup-Problem). Die Admin-Endpunkte antworten bei 403 mit 502 `error.user-directory.denied`, bei `KeycloakUnavailable` mit 503 `error.user-directory.unavailable`. Konzept in Kap. 8, <<Experiment-Owner und Benutzerdaten aus Keycloak (MON-177)>>.
+
+| Begründung
+| **Schneiden mit den PIs:** wer nicht mehr in der Gruppe ist, soll nicht weiter als Owner auftreten, und zwar sofort, nicht erst nach einem Cleanup. Die DB-Zeile ist dafür nur Erinnerung, welche PIs das Experiment als Owner markiert hat.
+
+**Vier Fälle statt eines Booleans:** Ausfall, 403 und fehlende Gruppe haben verschiedene Ursachen und verschiedene Abhilfe. Nur `Known` darf etwas entfernen, sonst würde ein PI, dessen Token die Gruppe nicht sieht, beim Speichern alle Owner löschen.
+
+**Fail fast:** der Timeout ist das teure an einem toten Keycloak. Ihn einmal pro Request zu zahlen hält Tabelle und Export benutzbar.
+
+**Cache pro Aufrufer:** Keycloak antwortet mit den Rechten des Aufrufers, die Antwort des einen darf nie an einen anderen gehen. Schreibzugriffe umgehen den Cache, damit ein Admin Gruppenänderungen sofort sieht und die Validierung nie auf alten Daten läuft.
+
+**`NoWriteGroup` wird mitgecacht:** es ist ebenfalls eine definitive Antwort (die Gruppe gibt es für diesen Benutzer nicht). Ohne das würde jeder Seitenaufruf für Experimente mit Ownern aber ohne Gruppe wieder suchen.
+
+| Konsequenzen
+| Eine neu angelegte Schreibgruppe erscheint in Lesezugriffen nach höchstens 60 s, Schreibzugriffe sehen sie sofort. Bei Ausfall zeigt die Liste "–" statt Owner, der Rest der Antwort bleibt intakt. Fehlende Gruppe oder 403 tauchen als WARN im Log auf und müssen im Realm behoben werden.
+
+Bekannte Einschränkung: der Owner-Filter arbeitet auf den gespeicherten IDs, die Anzeige auf den aktuellen PIs. Bis zum nächsten Speichern findet der Filter deshalb noch einen Ex-PI, und "(no owner)" verpasst Experimente, deren gespeicherte Owner alle Ex-PIs sind. Keycloak-Daten in den SQL-Filter zu holen war zu teuer, das nehmen wir in Kauf.
+
+| Verworfene Alternativen
+| *Boolsches `ownersUnavailable`:* kann Ausfall, 403 und fehlende Schreibgruppe nicht unterscheiden. +
+*Ganze Antwort fehlschlagen lassen, wenn Keycloak down ist:* eine Liste von Experimenten soll nicht wegen Kontaktdaten unlesbar werden. +
+*Owner bei jeder Antwort ausser `Known` entfernen:* ein PI, dessen Token die Gruppe nicht sieht, würde beim Speichern alle Owner löschen. +
+*Nächtlicher Cleanup-Job:* bräuchte einen technischen Account, den wir bewusst abgeschafft haben. +
+*Fehler mitcachen oder ein Cache für alle Benutzer:* würde Ausfälle länger sichtbar halten und die Rechte eines Benutzers an einen anderen ausliefern.
+|===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: Ehemalige Owner aufräumen, und was "sichtbar" heisst
+
+| Datum
+| 09.10.2026
+
+| Status
+| entschieden (MON-177)
+
+| Kontext & Problem
+| In `experiment_owner` stehen nur Keycloak User-IDs. Verlässt ein PI die Schreibgruppe, wird er deaktiviert oder in Keycloak gelöscht, bleibt seine Zeile stehen, Keycloak sagt uns das nicht. Die ADR "Sichtbare Owner, und warum welche fehlen" legt fest, dass so jemand sofort nirgends mehr als Owner erscheint. Offen blieb, wann die verwaiste Zeile selbst verschwindet, und der Begriff "sichtbar" ist im Code nicht eindeutig.
+
+**Begriff "sichtbar":** ein sichtbarer Owner (`VisibleOwners`) ist eine gespeicherte Owner-ID, die laut Keycloak im Moment ein PI des Experiments ist (gespeicherte IDs geschnitten mit den aktiven Mitgliedern der Schreibgruppe). Das hat nichts mit RLS zu tun. `ExperimentRepository.requireVisible` meint dagegen "der Aufrufer darf das Experiment lesen", das sind zwei verschiedene Bedeutungen desselben Worts. Ein ehemaliger Owner ist eine gespeicherte ID, die bei einer vollständigen Antwort von Keycloak (`Known`) kein PI mehr ist.
+
+| Betrachtete Optionen
+| *A. Nur beim Lesen filtern, nie löschen.* Die Zeile bleibt für immer. Einfachster Code, aber `experiment_owner` wächst mit jedem Gruppenwechsel, die Unschärfe des Owner-Filters (Filter auf gespeicherten IDs, Anzeige auf PIs) bleibt dauerhaft, und wer wieder in die Gruppe kommt, ist automatisch wieder Owner, auch Jahre später.
+
+*B. Beim Lesen filtern, beim nächsten Schreiben aufräumen (gewählt).* Lesen zeigt nur sichtbare Owner. Die Zeile fällt weg, wenn jemand die Owner ersetzt (die Validierung lässt nur PIs zu) oder die Stammdaten speichert (`dropFormerOwners`, eigener Schritt mit eigenem Audit-Snapshot, best effort). Geschrieben wird nur mit einer frischen `Known`-Antwort und mit dem Token des Benutzers, der sowieso gerade schreibt. Kein neuer Account, keine neue Infrastruktur. Dafür bleiben Zeilen von Experimenten, die niemand mehr bearbeitet, stehen, und bis zum nächsten Speichern gilt dieselbe Filter-Unschärfe und dasselbe Wiederauftauchen wie bei A.
+
+*C. Geplanter Cleanup-Job (Spring `@Scheduled` oder Kubernetes CronJob).* Ein Job geht regelmässig alle Experimente mit Ownern durch und löscht, was kein PI mehr ist. Hält die Tabelle sauber, auch für nie bearbeitete Experimente, und macht den Filter nach jedem Lauf wieder genau. Aber: ein Job hat keinen Aufrufer und damit kein Token, er braucht einen Service Account mit `view-users` über alle Experimente plus Secret, genau das, was wir mit der ADR "Benutzerdaten nur in Keycloak, gelesen mit dem Token des Aufrufers" abgeschafft haben. Dazu kommen Locking bei mehreren `core`-Pods (wir haben heute weder `@Scheduled` noch ShedLock), RLS, die für einen technischen Benutzer eine eigene Regel braucht, ein Audit-Snapshot ohne echten Autor, und Last auf Keycloak pro Lauf. Zwischen zwei Läufen braucht es den Lesefilter aus B trotzdem, der Job ersetzt ihn also nicht, er kommt dazu.
+
+*D. Keycloak Event Listener.* Ein eigener Event Listener (SPI) in Keycloak oder die Admin Events melden Gruppenaustritte, Deaktivierungen und Löschungen an `core`, das räumt sofort auf. Am genausten, aber wir müssten ein eigenes JAR in Keycloak deployen und pflegen (Image in `lg-monteis-infra`, Upgrade bei jedem Keycloak-Update), Keycloak bräuchte einen Weg zu `core` mit eigener Authentifizierung, und verpasste Events (Deploy, Netzwerk) bleiben unbemerkt liegen. Ohne Lesefilter wäre ein verpasstes Event direkt ein falscher Owner in der Anzeige.
+
+*E. Beim Lesen aufräumen.* Jeder GET, der einen ehemaligen Owner sieht, löscht ihn gleich. Kein Job, Tabelle sauber sobald jemand hinschaut. Aber GETs würden schreiben (Lese-Transaktionen sind `readOnly` für RLS), jede Anzeige könnte einen Audit-Snapshot erzeugen, und geschrieben würde auf Basis von `pisForReading`, das aus dem 60 s Cache kommen darf. Das bricht die Regel, dass Schreiben immer Keycloak fragt. Zudem dürfen nicht alle Leser schreiben.
+
+| Entscheidung
+| Option B. Angezeigt werden immer nur sichtbare Owner, verwaiste Zeilen werden beim nächsten Schreiben auf das Experiment entfernt, nur bei `Known`, nur mit dem Token des schreibenden Benutzers, und ein Fehler dabei lässt das Speichern der Stammdaten nie scheitern. Kein Job, kein Event Listener, kein Schreiben beim Lesen. Im Code bleibt der Name `VisibleOwners`, mit der Bedeutung aus dem Kontext oben.
+
+| Begründung
+| Die Anzeige ist ab dem Gruppenaustritt korrekt, egal ob die Zeile noch steht, die Zeile ist danach nur noch Erinnerung. Ein Cleanup lohnt sich deshalb nur dort, wo er nichts Neues braucht, und beim Schreiben haben wir alles schon: einen Benutzer mit Token, eine frische Antwort von Keycloak und einen Audit-Snapshot mit echtem Autor. C und D kaufen eine sauberere Tabelle mit einem Service Account oder einem Keycloak-Plugin, beide brauchen den Lesefilter trotzdem.
+
+| Konsequenzen
+| `experiment_owner` kann Zeilen ehemaliger PIs enthalten, solange niemand das Experiment speichert. Wer die DB direkt abfragt (Reports, Support), muss das wissen, die Wahrheit über aktuelle Owner kommt nur über `core`.
+
+Der Owner-Filter bleibt unscharf bis zum nächsten Speichern (siehe ADR "Sichtbare Owner"): er findet ein Experiment noch über einen ehemaligen PI, und "(no owner)" verpasst Experimente, deren gespeicherte Owner alle ehemalig sind.
+
+Wer die Gruppe verlässt und vor dem nächsten Speichern zurückkommt, ist wieder Owner. Das ist so gewollt (ein Gruppenwechsel aus Versehen soll nichts kaputt machen), muss aber bekannt sein.
+
+Das Aufräumen beim Speichern erzeugt einen zweiten Audit-Snapshot, der Owner entfernt, die der Benutzer gar nicht angefasst hat. Im Verlauf sieht das aus wie eine Änderung durch ihn.
+
+Wird die Unschärfe oder das Wachstum der Tabelle später ein Problem, ist C der nächste Schritt, dann zusammen mit einem bewusst eingeführten Service Account.
+
+| Verworfene Alternativen
+| *A, nie löschen:* Tabelle wächst und die Filter-Unschärfe wird dauerhaft. +
+*C, Cleanup-Job:* braucht einen Service Account, Locking und eine RLS-Regel für einen technischen Benutzer, und ersetzt den Lesefilter nicht. +
+*D, Keycloak Event Listener:* eigenes Keycloak-Plugin, Zustellung nicht garantiert. +
+*E, beim Lesen aufräumen:* GETs würden schreiben, auf Basis von Cache-Daten, und Leser ohne Schreibrecht müssten löschen dürfen.
+|===

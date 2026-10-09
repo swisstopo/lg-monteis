@@ -42,7 +42,7 @@ public interface SensorWebMapper {
       // Experiment separately via ExperimentJooqMapper, so a bare id-holding shell is
       // sufficient and correct here.
       sensor.setMainExperiment(
-          new Experiment(dto.mainExperimentId(), null, null, null, null, null));
+          new Experiment(dto.mainExperimentId(), null, null, null, null, null, null));
     }
   }
 

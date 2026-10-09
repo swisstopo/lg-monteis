@@ -1,0 +1,17 @@
+<section class="experiment-owner-list" data-testid="experiment-owner-list">
+  <h3 class="experiment-owner-list_title">{{ 'experiment.owners.label' | translate }}</h3>
+  @if (missingOwnersKey(); as missingOwnersKey) {
+    <p data-testid="owners-missing">{{ missingOwnersKey | translate }}</p>
+  } @else {
+    @for (owner of owners(); track owner.id) {
+      <p class="experiment-owner-list_owner" data-testid="experiment-owner">
+        <span>{{ displayName(owner) }}</span>
+        @if (owner.email) {
+          <a [href]="'mailto:' + owner.email">{{ owner.email }}</a>
+        }
+      </p>
+    } @empty {
+      <p data-testid="no-owners">{{ 'experiment.owners.none' | translate }}</p>
+    }
+  }
+</section>

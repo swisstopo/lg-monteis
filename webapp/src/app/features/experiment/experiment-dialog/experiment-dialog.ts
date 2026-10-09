@@ -6,6 +6,7 @@ import {
   input,
   linkedSignal,
   resource,
+  signal,
 } from '@angular/core';
 import {
   apply,
@@ -23,12 +24,23 @@ import {
   MatDatepickerToggle,
 } from '@angular/material/datepicker';
 import { MatDialogRef } from '@angular/material/dialog';
-import { MatError, MatFormField, MatInput, MatLabel, MatSuffix } from '@angular/material/input';
+import { MatIcon } from '@angular/material/icon';
+import {
+  MatError,
+  MatFormField,
+  MatHint,
+  MatInput,
+  MatLabel,
+  MatPrefix,
+  MatSuffix,
+} from '@angular/material/input';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
+import { ExperimentOwnerList } from '@features/experiment/owners/experiment-owner-list';
+import { ExperimentOwnerPicker } from '@features/experiment/owners/experiment-owner-picker';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DialogLayout, DialogMode } from '@ui/dialog/dialog-layout';
@@ -48,6 +60,9 @@ import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
     MatLabel,
     MatInput,
     MatError,
+    MatHint,
+    MatIcon,
+    MatPrefix,
     MatSuffix,
     MatDatepicker,
     MatDatepickerInput,
@@ -56,6 +71,8 @@ import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
     FormRoot,
     TranslatePipe,
     ExperimentDocuments,
+    ExperimentOwnerList,
+    ExperimentOwnerPicker,
     FieldErrors,
   ],
   templateUrl: './experiment-dialog.html',
@@ -95,6 +112,19 @@ export class ExperimentDialog {
 
   private readonly formModel = linkedSignal(() => toFormModel(this.experiment()));
 
+  // owners are picked from the PIs, and a new experiment gets its PI group in Keycloak only later
+  protected readonly canManageOwners = computed(
+    () => this.mode() === 'edit' && this.permissions.isAdmin(),
+  );
+  protected readonly owners = computed(() => this.experiment()?.owners ?? []);
+  protected readonly ownersStatus = computed(() => this.experiment()?.ownersStatus);
+  // compared by content: a saved experiment with the same owners must not reset the selection
+  private readonly storedOwnerIds = computed(() => this.owners().map((owner) => owner.id!), {
+    equal: sameIds,
+  });
+  protected readonly ownerIds = linkedSignal(() => this.storedOwnerIds());
+  protected readonly ownerError = signal<string | undefined>(undefined);
+
   protected readonly experimentForm = form(
     this.formModel,
     (path) => {
@@ -110,7 +140,11 @@ export class ExperimentDialog {
 
   private async save(afterSave: () => void): Promise<TreeValidationResult> {
     try {
-      await this.experimentService.saveExperiment(toWriteDto(this.formModel(), this.experiment()));
+      const saved = await this.experimentService.saveExperiment(
+        toWriteDto(this.formModel(), this.experiment()),
+      );
+      // keeps the new version, a retry after a failed owner save would conflict otherwise
+      this.experiment.set(saved);
     } catch (error) {
       return this.formErrorService.mapApiErrorsToFormErrors(
         toErrorDtos(error),
@@ -118,16 +152,44 @@ export class ExperimentDialog {
         'experiment.error.unspecified.message',
       );
     }
+    if (!(await this.saveOwners())) return undefined;
     this.toastService.success(this.translateService.translate('experiment.success')());
     afterSave();
     return undefined;
+  }
+
+  /** false when saving the owners failed, the dialog then stays open with the error */
+  private async saveOwners(): Promise<boolean> {
+    const experiment = this.experiment();
+    this.ownerError.set(undefined);
+    if (
+      !experiment?.id ||
+      !this.canManageOwners() ||
+      sameIds(this.storedOwnerIds(), this.ownerIds())
+    )
+      return true;
+    try {
+      this.experiment.set(
+        await this.experimentService.replaceOwners(experiment.id, this.ownerIds()),
+      );
+      return true;
+    } catch (error) {
+      this.ownerError.set(toErrorDtos(error)[0]?.messageKey ?? 'error.user-directory.unavailable');
+      return false;
+    }
   }
 
   // the form model is set as well: in create mode experiment already is undefined, setting it
   // again would not recompute the form model
   private startNextExperiment(): void {
     this.experiment.set(undefined);
+    this.ownerError.set(undefined);
     this.formModel.set(toFormModel(undefined));
     this.experimentForm().reset();
   }
+}
+
+function sameIds(a: string[], b: string[]): boolean {
+  const set = new Set(a);
+  return set.size === b.length && b.every((id) => set.has(id));
 }

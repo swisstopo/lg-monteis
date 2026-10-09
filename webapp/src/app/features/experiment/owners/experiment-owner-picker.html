@@ -1,0 +1,49 @@
+<mat-form-field class="experiment-owner-picker_field" appearance="outline">
+  <mat-label>{{ 'experiment.owners.label' | translate }}</mat-label>
+  <mat-chip-grid #ownerChips [attr.aria-label]="'experiment.owners.label' | translate">
+    @for (owner of selectedOwners(); track owner.id) {
+      <mat-chip-row data-testid="selected-owner" (removed)="remove(owner)">
+        {{ displayName(owner) }}
+        <button matChipRemove [attr.aria-label]="'experiment.owners.remove' | translate">
+          <mat-icon fontIcon="cancel"></mat-icon>
+        </button>
+      </mat-chip-row>
+    }
+    <input
+      #ownerInput
+      matInput
+      data-testid="owner-input"
+      [placeholder]="'experiment.owners.placeholder' | translate"
+      [matChipInputFor]="ownerChips"
+      [matAutocomplete]="ownerOptions"
+      [disabled]="candidates.isLoading() || candidates.error() !== undefined"
+      (input)="searchText.set(ownerInput.value)"
+    />
+  </mat-chip-grid>
+  <mat-autocomplete
+    #ownerOptions="matAutocomplete"
+    (optionSelected)="onSelected($event, ownerInput)"
+  >
+    @for (owner of selectableOwners(); track owner.id) {
+      <mat-option [value]="owner.id"
+        >{{ displayName(owner) }}
+        @if (owner.email) {
+          ({{ owner.email }})
+        }
+      </mat-option>
+    }
+  </mat-autocomplete>
+  @if (error(); as error) {
+    <mat-hint class="experiment-owner-picker_error" data-testid="owner-error">{{
+      error | translate
+    }}</mat-hint>
+  } @else if (candidatesErrorKey(); as candidatesErrorKey) {
+    <mat-hint class="experiment-owner-picker_error" data-testid="owner-candidates-error">{{
+      candidatesErrorKey | translate
+    }}</mat-hint>
+  } @else if (candidates.hasValue() && candidates.value().length === 0) {
+    <mat-hint>{{ 'experiment.owners.noCandidates' | translate }}</mat-hint>
+  } @else {
+    <mat-hint>{{ 'experiment.owners.hint' | translate }}</mat-hint>
+  }
+</mat-form-field>

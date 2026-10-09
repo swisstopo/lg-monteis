@@ -51,6 +51,9 @@ public class SecurityConfig {
                     .permitAll()
                     // first match wins, the per-experiment writes have to come before the
                     // admin-only write rule below
+                    .requestMatchers(
+                        ApiPaths.EXPERIMENT_OWNER_CANDIDATES, ApiPaths.EXPERIMENT_OWNERS)
+                    .access(allowIf(Capabilities::canManageExperimentOwners))
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)

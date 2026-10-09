@@ -1,0 +1,15 @@
+@if (missingOwnersKey(); as missingOwnersKey) {
+  <span data-testid="owners-missing" [matTooltip]="missingOwnersKey | translate">–</span>
+} @else {
+  @for (owner of owners(); track owner.id; let last = $last) {
+    <span
+      class="owners-cell-renderer_owner"
+      data-testid="experiment-owner"
+      [matTooltip]="owner.email ?? ''"
+      >{{ displayName(owner) }}</span
+    >
+    @if (!last) {
+      <span>, </span>
+    }
+  }
+}
