@@ -8,9 +8,9 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
+import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
-import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
@@ -24,6 +24,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorDetailQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -338,7 +339,7 @@ class SensorServiceTest {
   void should_return_sensor_detail_from_query_repository() {
     // given
     UUID sensorId = UUID.randomUUID();
-    LocalDate today = LocalDate.of(2024, 1, 1);
+    LocalDate today = LocalDate.of(2024, Month.JANUARY, 1);
     SensorDetailResponseDto detail =
         new SensorDetailResponseDto(
             sensorId, "Test", "ALIAS", Das.SOL_EXPERTS, null, null, null, true, null, 1, List.of());
@@ -353,7 +354,7 @@ class SensorServiceTest {
   void should_throw_when_sensor_detail_does_not_exist() {
     // given
     UUID sensorId = UUID.randomUUID();
-    LocalDate today = LocalDate.of(2024, 1, 1);
+    LocalDate today = LocalDate.of(2024, Month.JANUARY, 1);
     given(detailQueryRepository.findById(sensorId, today)).willReturn(Optional.empty());
 
     // when / then
