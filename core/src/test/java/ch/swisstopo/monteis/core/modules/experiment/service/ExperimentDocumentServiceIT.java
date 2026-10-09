@@ -26,6 +26,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+/**
+ * The upload: a failed store or insert must not leave a document row without content. The test
+ * is not {@code @Transactional} itself, every step of the upload commits on its own.
+ */
 @IT
 class ExperimentDocumentServiceIT {
 

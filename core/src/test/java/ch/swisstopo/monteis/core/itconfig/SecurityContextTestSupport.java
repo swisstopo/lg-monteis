@@ -17,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
  */
 public final class SecurityContextTestSupport {
 
+  /** The username every bound principal carries, to assert who a row was created by. */
   public static final String USERNAME = "test";
 
   private SecurityContextTestSupport() {}
@@ -49,6 +50,7 @@ public final class SecurityContextTestSupport {
         action);
   }
 
+  /** {@link #runAsAdmin} for an action with a result. */
   public static <T> T callAsAdmin(Supplier<T> action) {
     return callAs(List.of(Grant.ADMIN), List.of(), List.of(), action);
   }

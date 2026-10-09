@@ -13,6 +13,12 @@ public class CurrentUserProvider {
     return currentPrincipal().map(principal -> principal.getSubject().toString()).orElse(null);
   }
 
+  /**
+   * Returns the username of the authenticated caller, for records that show who made them.
+   *
+   * @throws IllegalStateException without an authenticated {@link MonteisPrincipal}. the filter
+   *     chain authenticates every write, so getting here without one is a bug, not a user error
+   */
   public String requireCurrentUsername() {
     return currentPrincipal()
         .map(MonteisPrincipal::getName)
