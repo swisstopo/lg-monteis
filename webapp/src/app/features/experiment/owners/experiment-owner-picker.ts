@@ -12,7 +12,7 @@ import { ExperimentService } from '@features/experiment/services/experiment.serv
 import { TranslatePipe } from '@ngx-translate/core';
 import { ownerDisplayName } from './owner-name';
 
-/** Picks the owners of an experiment out of its PIs in Keycloak. */
+/** picks the owners of an experiment out of its PIs in Keycloak */
 @Component({
   selector: 'app-experiment-owner-picker',
   imports: [
@@ -31,7 +31,7 @@ export class ExperimentOwnerPicker {
 
   readonly experimentId = input.required<string>();
   readonly selectedOwnerIds = model<string[]>([]);
-  /** Message key of a failed save. */
+  /** message key of a failed save */
   readonly error = input<string>();
 
   protected readonly displayName = ownerDisplayName;

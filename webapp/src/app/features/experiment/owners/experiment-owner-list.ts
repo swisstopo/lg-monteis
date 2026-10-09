@@ -4,7 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ownerDisplayName } from './owner-name';
 import { missingOwnersKey, OwnersStatus } from './owners-status';
 
-/** The owners of an experiment with their contact details, read only. */
+/** the owners of an experiment with their contact details, read only */
 @Component({
   selector: 'app-experiment-owner-list',
   imports: [TranslatePipe],

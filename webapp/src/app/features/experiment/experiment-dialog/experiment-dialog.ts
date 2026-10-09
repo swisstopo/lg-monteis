@@ -146,7 +146,7 @@ export class ExperimentDialog {
     return undefined;
   }
 
-  /** False when saving the owners failed, the dialog then stays open with the error. */
+  /** false when saving the owners failed, the dialog then stays open with the error */
   private async saveOwners(): Promise<boolean> {
     const experiment = this.experiment();
     this.ownerError.set(undefined);

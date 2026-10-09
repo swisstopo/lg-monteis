@@ -37,7 +37,7 @@ class ExperimentDocumentsStub {
   readOnly = input(false);
 }
 
-/** Stands in for the owner picker, it loads the candidates itself. */
+/** stands in for the owner picker, it loads the candidates itself */
 @Component({ selector: 'app-experiment-owner-picker', template: '' })
 class ExperimentOwnerPickerStub {
   experimentId = input.required<string>();
