@@ -1,4 +1,5 @@
 .documents {
+  container-type: inline-size;
   padding-top: 1rem;
 }
 
@@ -11,50 +12,92 @@
   h3 {
     margin: 0;
   }
+
+  // takes the place of the upload icon while uploading, matButton only lays out a mat-icon.
+  // drawn in the label color, the default primary is the color of the filled button itself
+  mat-spinner {
+    --mat-progress-spinner-active-indicator-color: currentColor;
+    display: inline-block;
+    vertical-align: top;
+    margin-inline-start: var(--mat-button-filled-icon-offset, -8px);
+    margin-inline-end: var(--mat-button-filled-icon-spacing, 8px);
+  }
 }
 
+// one grid for the whole list, the rows are subgrids of it, so the meta column is as wide as its
+// widest entry and the eye buttons in front of it line up on every row
 .document-list {
+  --view-size: var(--mat-icon-button-state-layer-size, 48px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--view-size) auto;
+  column-gap: 1rem;
   list-style: none;
   margin: 0.5rem 0 0;
   padding: 0;
+
+  > li {
+    grid-column: 1 / -1;
+  }
 }
 
-// wraps the meta below the name on narrow dialogs, like the second variant in figma
+// the button column is kept on rows without a viewable document, so all rows get the same height
 .document {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: subgrid;
   align-items: center;
-  justify-content: space-between;
-  column-gap: 1rem;
+  min-height: var(--view-size);
   padding: 0.25rem 0;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  .view {
+    grid-column: 2;
+    color: var(--mat-sys-primary);
+  }
+
+  .document-meta {
+    grid-column: 3;
+  }
 }
 
-.document-name {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-
-  mat-icon {
-    color: var(--mat-sys-primary);
+// the meta goes below the name on narrow dialogs, like the second variant in figma
+@container (width < 36rem) {
+  .document-list {
+    grid-template-columns: var(--view-size) minmax(0, 1fr);
+    column-gap: 0;
   }
 
-  // a button that reads as a link, it starts a download and goes nowhere
-  .file-name {
-    padding: 0;
-    border: 0;
-    background: none;
-    cursor: pointer;
-    text-align: start;
-    font: var(--mat-sys-body-large);
-    color: var(--mat-sys-primary);
-    overflow-wrap: anywhere;
+  .document {
+    grid-template-rows: auto var(--view-size);
+
+    .file-name {
+      grid-column: 1 / -1;
+    }
+
+    .view {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .document-meta {
+      grid-column: 2;
+      grid-row: 2;
+    }
   }
+}
+
+// a button that reads as a link, it starts a download and goes nowhere
+.file-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: start;
+  font: var(--mat-sys-body-large);
+  color: var(--mat-sys-primary);
+  overflow-wrap: anywhere;
 }
 
 .document-meta {
-  // below the file name, past the eye button in front of it
-  padding-left: var(--mat-icon-button-state-layer-size, 48px);
   font: var(--mat-sys-body-medium);
   color: var(--mat-sys-on-surface);
 }

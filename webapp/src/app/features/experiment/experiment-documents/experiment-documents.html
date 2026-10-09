@@ -5,7 +5,7 @@
       <input #fileInput type="file" multiple hidden (change)="upload(fileInput)" />
       <button matButton="filled" type="button" [disabled]="uploading()" (click)="fileInput.click()">
         @if (uploading()) {
-          <mat-spinner diameter="16" />
+          <mat-spinner diameter="18" />
         } @else {
           <mat-icon fontIcon="upload" />
         }
@@ -22,22 +22,20 @@
     <ul class="document-list">
       @for (document of documents.value(); track document.id) {
         <li class="document">
-          <div class="document-name">
-            @if (document.viewable) {
-              <button
-                matIconButton
-                type="button"
-                class="view"
-                [attr.aria-label]="'experiment.documents.view' | translate"
-                (click)="view(document)"
-              >
-                <mat-icon fontIcon="visibility" />
-              </button>
-            }
-            <button type="button" class="file-name" (click)="download(document)">
-              {{ document.fileName }}
+          <button type="button" class="file-name" (click)="download(document)">
+            {{ document.fileName }}
+          </button>
+          @if (document.viewable) {
+            <button
+              matIconButton
+              type="button"
+              class="view"
+              [attr.aria-label]="'experiment.documents.view' | translate"
+              (click)="view(document)"
+            >
+              <mat-icon fontIcon="visibility" />
             </button>
-          </div>
+          }
           <span class="document-meta">
             {{ document.uploadedAt | date: 'dd.MM.yyyy; HH:mm:ss' }}, {{ document.uploadedBy }}
           </span>
