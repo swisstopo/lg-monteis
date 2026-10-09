@@ -8,8 +8,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -18,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
@@ -37,16 +37,14 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeD
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.Writer;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -631,5 +629,45 @@ class SensorControllerTest {
         null,
         sensorVersion,
         List.of(defaultResponseParameterDto(paramVersion)));
+  }
+
+  @Test
+  void should_route_get_sensor_detail_with_today_from_clock() throws Exception {
+    // given
+    SensorDetailResponseDto detail =
+        new SensorDetailResponseDto(
+            SENSOR_ID,
+            "Test",
+            "ALIAS",
+            Das.SOL_EXPERTS,
+            null,
+            null,
+            null,
+            true,
+            null,
+            1,
+            List.of());
+    given(service.findDetailById(SENSOR_ID, LocalDate.of(2024, Month.JANUARY, 1)))
+        .willReturn(detail);
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors/{id}/detail", SENSOR_ID).with(jwt()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(SENSOR_ID.toString()))
+        .andExpect(jsonPath("$.parameters").isEmpty());
+  }
+
+  @Test
+  void should_return_404_for_unknown_sensor_detail() throws Exception {
+    // given
+    given(service.findDetailById(SENSOR_ID, LocalDate.of(2024, Month.JANUARY, 1)))
+        .willThrow(new ObjectNotFoundException(Sensor.class));
+
+    // when / then
+    mockMvc
+        .perform(get("/api/sensors/{id}/detail", SENSOR_ID).with(jwt()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.messageKey").value("object.not-found"));
   }
 }

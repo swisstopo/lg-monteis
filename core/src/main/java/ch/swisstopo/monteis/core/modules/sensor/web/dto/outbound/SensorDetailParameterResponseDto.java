@@ -4,7 +4,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import java.util.UUID;
 
-public record SensorParameterResponseDto(
+public record SensorDetailParameterResponseDto(
     UUID id,
     String name,
     String dasParameterAlias,
@@ -14,5 +14,6 @@ public record SensorParameterResponseDto(
     AlarmLimitsDto alarmLimits,
     Boolean active,
     String comment,
-    Integer version)
+    Integer version,
+    SensorParameterReadingResponseDto latestParameterReadingValue)
     implements SensorParameterBaseResponseDto {}

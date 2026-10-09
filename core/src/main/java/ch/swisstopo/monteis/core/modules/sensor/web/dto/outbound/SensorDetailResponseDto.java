@@ -6,7 +6,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import java.util.List;
 import java.util.UUID;
 
-public record SensorResponseDto(
+public record SensorDetailResponseDto(
     UUID id,
     String name,
     String dasSensorAlias,
@@ -17,5 +17,5 @@ public record SensorResponseDto(
     Boolean active,
     String comment,
     Integer version,
-    List<SensorParameterResponseDto> parameters)
+    List<SensorDetailParameterResponseDto> parameters)
     implements SensorBaseResponseDto {}

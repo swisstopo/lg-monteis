@@ -12,6 +12,9 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
+import ch.swisstopo.monteis.core.modules.sensor.query.SensorDetailQueryRepository;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,14 +27,17 @@ public class SensorService {
   private final SensorRepository repository;
   private final SensorConfigPublisher configPublisher;
   private final FulcrumService fulcrumService;
+  private final SensorDetailQueryRepository detailQueryRepository;
 
   public SensorService(
       SensorRepository repository,
       SensorConfigPublisher configPublisher,
-      FulcrumService fulcrumService) {
+      FulcrumService fulcrumService,
+      SensorDetailQueryRepository detailQueryRepository) {
     this.repository = repository;
     this.configPublisher = configPublisher;
     this.fulcrumService = fulcrumService;
+    this.detailQueryRepository = detailQueryRepository;
   }
 
   @AuditChanges
@@ -133,5 +139,11 @@ public class SensorService {
       sensors.forEach(
           sensor -> sensor.getParameters().forEach(p -> configPublisher.publish(sensor, p)));
     }
+  }
+
+  public SensorDetailResponseDto findDetailById(UUID id, LocalDate today) {
+    return detailQueryRepository
+        .findById(id, today)
+        .orElseThrow(() -> new ObjectNotFoundException(Sensor.class));
   }
 }

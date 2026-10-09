@@ -2,7 +2,12 @@ package ch.swisstopo.monteis.core.modules.sensor.web;
 
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapper;
-import ch.swisstopo.monteis.core.modules.sensor.domain.*;
+import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParameterDto;
