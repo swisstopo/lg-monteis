@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.infrastructure.error;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jayway.jsonpath.JsonPath;
@@ -95,12 +94,17 @@ class UploadSizeLimitTest {
   }
 
   // tomcat refuses it by its content length and reads only 2 MB of the rest before closing the
-  // connection, so no client can make it read a huge body
+  // connection, so no client can make it read a huge body. whether the client still reads the 413
+  // or fails on the closed connection first is a race, both mean refused
   @Test
-  void should_close_the_connection_for_a_request_over_the_request_limit() {
+  void should_refuse_a_request_over_the_request_limit() throws InterruptedException {
     DataSize overRequestLimit = DataSize.ofBytes(maxRequestSize.toBytes() + 1);
 
-    assertThrows(IOException.class, () -> upload(overRequestLimit));
+    try {
+      assertEquals(413, upload(overRequestLimit).statusCode());
+    } catch (IOException _) {
+      // closed while still sending
+    }
   }
 
   @Test
