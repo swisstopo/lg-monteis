@@ -28,13 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-/**
- * Owners are stored as Keycloak ids only and have to be PIs of the experiment. A caller sees an
- * owner only as long as they are a PI, reading never fails because of Keycloak and the {@link
- * VisibleOwners} say why owners are missing. Someone who stopped being a PI goes with the next
- * save of the experiment or its owners, and only a complete answer from Keycloak ({@link Known})
- * ever removes anyone.
- */
 @Service
 public class ExperimentOwnerService {
 
@@ -72,7 +65,6 @@ public class ExperimentOwnerService {
     return new PagedResult<>(withOwners(page.rows()), page.totalCount());
   }
 
-  /** Every visible owner of a readable experiment, each once, sorted by name. */
   public List<DirectoryUser> filterableOwners() {
     return visibleOwnersOf(ownerQueryRepository.findStoredOwners()).values().stream()
         .flatMap(owners -> owners.users().stream())
@@ -81,10 +73,6 @@ public class ExperimentOwnerService {
         .toList();
   }
 
-  /**
-   * The visible owners of every readable experiment that has owners, resolved before a CSV export
-   * streams its rows. Experiments missing here have no owners.
-   */
   public Map<UUID, VisibleOwners> ownersForExport() {
     return visibleOwnersOf(ownerQueryRepository.findStoredOwners());
   }
@@ -135,29 +123,17 @@ public class ExperimentOwnerService {
     return new StoredOwners(experiment.getId(), experiment.getOwnerIds());
   }
 
-  /**
-   * The current PIs. Without a write group there is no one to pick yet.
-   *
-   * @throws UserDirectoryDeniedException if Keycloak refuses
-   * @throws UserDirectoryUnavailableException if Keycloak cannot be asked
-   */
   public List<DirectoryUser> ownerCandidates(UUID experimentId) {
     repository.requireVisible(experimentId);
     return currentPisOrFail(experimentId);
   }
 
-  /**
-   * @throws FieldBusinessValidationException if one of the ids is not a PI of the experiment
-   * @throws UserDirectoryDeniedException if Keycloak refuses
-   * @throws UserDirectoryUnavailableException if Keycloak cannot be asked
-   */
   @AuditChanges
   public Experiment replaceOwners(UUID experimentId, Set<UUID> ownerIds) {
     rejectOwnersWhoAreNoPis(ownerIds, ownerCandidates(experimentId));
     return repository.replaceOwners(experimentId, ownerIds);
   }
 
-  /** Best effort after a save, never fails and keeps every owner if Keycloak can't tell. */
   @AuditChanges
   public Experiment dropFormerOwners(Experiment experiment) {
     Set<UUID> formerOwners = formerOwnersOf(experiment);
@@ -184,7 +160,6 @@ public class ExperimentOwnerService {
     }
   }
 
-  /** Empty unless Keycloak knows the PIs, an owner never goes because Keycloak can't tell. */
   private Set<UUID> formerOwnersOf(Experiment experiment) {
     if (experiment.getOwnerIds().isEmpty()) {
       return Set.of();

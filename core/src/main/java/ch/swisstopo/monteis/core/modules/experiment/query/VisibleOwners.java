@@ -3,10 +3,6 @@ package ch.swisstopo.monteis.core.modules.experiment.query;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import java.util.List;
 
-/**
- * The owners of an experiment the caller gets to see, and whether that is all of them. Build it
- * with {@link #of} or one of the constants.
- */
 public record VisibleOwners(List<DirectoryUser> users, OwnersStatus status) {
 
   public static final VisibleOwners NONE = new VisibleOwners(List.of(), OwnersStatus.SHOWN);

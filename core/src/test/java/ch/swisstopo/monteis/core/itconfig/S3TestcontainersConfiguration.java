@@ -10,11 +10,6 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
-/**
- * Only active for the {@code e2e-test} profile, which uploads and downloads documents against the
- * same S3Mock that docker/compose.yml runs for dev. JUnit ITs that need S3 start {@link
- * #s3Mock()} themselves.
- */
 @TestConfiguration(proxyBeanMethods = false)
 @Profile("e2e-test")
 public class S3TestcontainersConfiguration {
@@ -23,7 +18,6 @@ public class S3TestcontainersConfiguration {
   private static final int PORT = 9090;
   private static final Logger log = LoggerFactory.getLogger(S3TestcontainersConfiguration.class);
 
-  /** An S3Mock that already holds {@link #BUCKET}. */
   public static GenericContainer<?> s3Mock() {
     // the same version as the s3 service of docker/compose.yml, bump both together
     return new GenericContainer<>("adobe/s3mock:5.2.3")

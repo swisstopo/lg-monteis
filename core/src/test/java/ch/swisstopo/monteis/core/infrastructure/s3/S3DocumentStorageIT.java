@@ -24,10 +24,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
-/**
- * {@link S3DocumentStorage} against an S3Mock, through the client {@link S3Config} builds. That way
- * the endpoint switch and path-style access are covered too, not only the storage.
- */
 @Testcontainers
 class S3DocumentStorageIT {
 

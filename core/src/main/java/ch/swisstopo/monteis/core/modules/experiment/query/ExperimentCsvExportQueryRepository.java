@@ -13,10 +13,6 @@ import java.util.UUID;
  * records.
  */
 public interface ExperimentCsvExportQueryRepository {
-  /**
-   * @param owners the visible owners per experiment, resolved before streaming; an experiment
-   *     missing here has none
-   */
   void streamCsv(PagedRequest exportRequest, Writer writer, Map<UUID, VisibleOwners> owners)
       throws IOException;
 }

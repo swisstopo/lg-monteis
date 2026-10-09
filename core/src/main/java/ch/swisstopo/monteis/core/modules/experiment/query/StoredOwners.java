@@ -3,7 +3,6 @@ package ch.swisstopo.monteis.core.modules.experiment.query;
 import java.util.Set;
 import java.util.UUID;
 
-/** The stored owner ids of an experiment, whether or not they are still PIs. */
 public record StoredOwners(UUID experimentId, Set<UUID> ownerIds) {
 
   public StoredOwners {

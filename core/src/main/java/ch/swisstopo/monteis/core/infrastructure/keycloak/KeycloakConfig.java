@@ -28,10 +28,6 @@ public class KeycloakConfig {
             .build());
   }
 
-  /**
-   * Keycloak decides with the caller's own token what they may see of other users (fine grained
-   * admin permissions), so core needs no account of its own on the admin API.
-   */
   private static ClientHttpRequestInterceptor callerToken(CurrentUserProvider currentUser) {
     return (request, body, execution) -> {
       String token =

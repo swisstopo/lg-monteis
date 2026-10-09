@@ -9,13 +9,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriBuilder;
 
-/**
- * Keycloak's admin REST API for the realm, asked with the caller's token. Knows Keycloak's paths
- * and representations, nothing about MONTEIS.
- */
 public class KeycloakClient {
 
-  /** Keycloak's members endpoint returns 100 users unless asked otherwise, -1 lifts the limit. */
   static final int ALL_MEMBERS = -1;
 
   private static final ParameterizedTypeReference<List<KeycloakGroup>> GROUPS =
@@ -29,13 +24,6 @@ public class KeycloakClient {
     this.restClient = restClient;
   }
 
-  /**
-   * Every group, at any depth, whose attribute {@code attributeName} contains {@code
-   * attributeValue}.
-   *
-   * @throws KeycloakAccessDeniedException if the caller may not search groups
-   * @throws KeycloakUnavailableException if Keycloak cannot be asked
-   */
   public List<KeycloakGroup> findGroupsByAttribute(String attributeName, String attributeValue) {
     // the search answers with the top level groups and the path down to each hit, so the hit
     // itself can be any level deep
@@ -45,12 +33,6 @@ public class KeycloakClient {
         .toList();
   }
 
-  /**
-   * All members of the group, disabled ones included.
-   *
-   * @throws KeycloakAccessDeniedException if the caller may not view the members
-   * @throws KeycloakUnavailableException if Keycloak cannot be asked
-   */
   public List<KeycloakUser> groupMembers(String groupId) {
     return getList(
         uri ->
