@@ -1,27 +1,26 @@
- package ch.swisstopo.monteis.core.modules.organisation.service;
+package ch.swisstopo.monteis.core.modules.organisation.service;
 
- import static org.assertj.core.api.Assertions.assertThat;
- import static org.assertj.core.api.Assertions.assertThatThrownBy;
- import static org.mockito.BDDMockito.given;
- import static org.mockito.BDDMockito.then;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.given;
 
- import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
- import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
- import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
- import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
- import ch.swisstopo.monteis.core.modules.organisation.domain.OrganisationRepository;
- import java.util.List;
- import java.util.Map;
- import java.util.Optional;
- import java.util.UUID;
- import org.junit.jupiter.api.Test;
- import org.junit.jupiter.api.extension.ExtendWith;
- import org.mockito.InjectMocks;
- import org.mockito.Mock;
- import org.mockito.junit.jupiter.MockitoExtension;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
+import ch.swisstopo.monteis.core.modules.organisation.domain.OrganisationRepository;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
- @ExtendWith(MockitoExtension.class)
- class OrganisationServiceTest {
+@ExtendWith(MockitoExtension.class)
+class OrganisationServiceTest {
 
   @Mock private OrganisationRepository repository;
   @InjectMocks private OrganisationService service;
@@ -41,15 +40,6 @@
     given(repository.update(toUpdate)).willReturn(toUpdate);
 
     assertThat(service.updateOrganisation(toUpdate)).isEqualTo(toUpdate);
-  }
-
-  @Test
-  void should_delete_through_the_repository() {
-    UUID id = UUID.randomUUID();
-
-    service.deleteOrganisation(id);
-
-    then(repository).should().delete(id);
   }
 
   @Test
@@ -87,4 +77,4 @@
 
     assertThat(service.getOrganisations(request)).isEqualTo(page);
   }
- }
+}

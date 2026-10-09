@@ -25,10 +25,6 @@ public class OrganisationService {
     return repository.update(organisation);
   }
 
-  public void deleteOrganisation(UUID id) {
-    repository.delete(id);
-  }
-
   public Organisation getOrganisation(UUID id) {
     return repository
         .findById(id)

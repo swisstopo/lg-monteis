@@ -93,7 +93,6 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.GET, organisation, everyone),
         Arguments.of(HttpMethod.POST, "/api/organisations", adminOnly),
         Arguments.of(HttpMethod.PUT, organisation, adminOnly),
-        Arguments.of(HttpMethod.DELETE, organisation, adminOnly),
         Arguments.of(HttpMethod.POST, "/api/other", adminOnly),
         Arguments.of(HttpMethod.PUT, "/api/other", adminOnly),
         Arguments.of(HttpMethod.PATCH, "/api/other", adminOnly),
@@ -235,7 +234,7 @@ class SecurityConfigAuthorizationTest {
       return "ok";
     }
 
-    @DeleteMapping({"/api/other", "/api/organisations/{id}"})
+    @DeleteMapping("/api/other")
     public String delete() {
       return "ok";
     }

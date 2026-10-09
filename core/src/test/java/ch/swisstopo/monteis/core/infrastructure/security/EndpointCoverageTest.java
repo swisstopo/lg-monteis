@@ -53,7 +53,6 @@ class EndpointCoverageTest {
           "GET /api/organisations/{id}",
           "POST /api/organisations",
           "PUT /api/organisations/{id}",
-          "DELETE /api/organisations/{id}",
           "GET /api/sensors",
           "GET /api/sensors/{id}",
           "GET /api/sensors/csv",

@@ -27,14 +27,6 @@ public interface OrganisationRepository {
    */
   Organisation update(Organisation organisation);
 
-  /**
-   * Deletes an organisation. Experiments lose it as well, the database cascades the link rows.
-   *
-   * @throws ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException if the
-   *     organisation does not exist
-   */
-  void delete(UUID id);
-
   /** Retrieves an organisation by id, empty if it does not exist. */
   Optional<Organisation> findById(UUID id);
 
