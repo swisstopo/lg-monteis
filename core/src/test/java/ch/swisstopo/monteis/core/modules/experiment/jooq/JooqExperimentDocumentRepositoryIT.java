@@ -23,11 +23,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Every test creates the experiments it needs, other ITs commit documents to the seeded ones. The
- * experiment_documents RLS policies follow the experiment: readable documents for whoever may read
- * it, inserts for whoever may update it.
- */
 @IT
 class JooqExperimentDocumentRepositoryIT {
 

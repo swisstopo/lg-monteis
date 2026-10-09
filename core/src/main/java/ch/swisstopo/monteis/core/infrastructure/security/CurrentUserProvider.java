@@ -13,24 +13,16 @@ public class CurrentUserProvider {
     return currentPrincipal().map(principal -> principal.getSubject().toString()).orElse(null);
   }
 
-  /**
-   * Returns the username of the authenticated caller, for records that show who made them.
-   *
-   * @throws IllegalStateException without an authenticated {@link MonteisPrincipal}. the filter
-   *     chain authenticates every write, so getting here without one is a bug, not a user error
-   */
   public String requireCurrentUsername() {
     return currentPrincipal()
         .map(MonteisPrincipal::getName)
         .orElseThrow(() -> new IllegalStateException("No authenticated MonteisPrincipal"));
   }
 
-  /** The Keycloak user id of the caller, empty for the system context. */
   public Optional<UUID> currentSubject() {
     return currentPrincipal().map(MonteisPrincipal::getSubject);
   }
 
-  /** The caller's access token as received, empty for the system context. */
   public Optional<String> currentAccessToken() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication != null && authentication.getCredentials() instanceof Jwt jwt) {

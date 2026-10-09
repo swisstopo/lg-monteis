@@ -8,10 +8,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-/**
- * @param localEndpoint the S3Mock that dev (docker/compose.yml) and the e2e tests (a testcontainer)
- *     run against. unset in every deployed environment, the client then talks to AWS
- */
 @Validated
 @ConfigurationProperties("monteis.documents.s3")
 public record DocumentStorageProperties(

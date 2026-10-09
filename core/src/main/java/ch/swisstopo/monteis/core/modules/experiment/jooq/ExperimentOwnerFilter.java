@@ -18,19 +18,10 @@ import org.jooq.Record1;
 import org.jooq.SelectConditionStep;
 import org.jooq.impl.DSL;
 
-/**
- * The {@code owners} column filters on the experiment_owner join table, which a single column
- * field in {@code COLUMNS_BY_COL_ID} cannot express. It is filter only, the names to sort by live
- * in Keycloak.
- */
 final class ExperimentOwnerFilter {
 
   static final String OWNERS_COLUMN = "owners";
 
-  /**
-   * @param requestWithoutOwnersColumn for the generic translator, which does not know the column
-   * @param ownerCondition to add to the query the translator's criteria go into
-   */
   record Split(PagedRequest requestWithoutOwnersColumn, Condition ownerCondition) {}
 
   private ExperimentOwnerFilter() {}
@@ -47,7 +38,6 @@ final class ExperimentOwnerFilter {
         request.startRow(), request.endRow(), request.sortModel(), otherColumns);
   }
 
-  /** A null value in the set is "(no owner)", same convention as the other set filters. */
   private static Condition ownerCondition(FilterModelItem ownersFilter) {
     if (ownersFilter == null) {
       return DSL.noCondition();

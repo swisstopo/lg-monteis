@@ -6,11 +6,6 @@ import org.springframework.util.InvalidMimeTypeException;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 
-/**
- * The content types the webapp may open in the browser, every other document is download only. a
- * viewed document opens from a blob url on the webapp's origin, html or svg would run its scripts
- * there with the viewer's session.
- */
 final class ViewableContentTypes {
 
   static final String VIEWABLE = "viewable";

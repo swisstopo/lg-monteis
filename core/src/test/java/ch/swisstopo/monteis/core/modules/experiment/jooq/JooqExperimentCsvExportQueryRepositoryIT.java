@@ -43,7 +43,6 @@ class JooqExperimentCsvExportQueryRepositoryIT {
 
   @Autowired private JooqExperimentCsvExportQueryRepository exportRepository;
 
-  /** Stands in for ExperimentOwnerService.ownersForExport, the owner rule is tested there. */
   private Map<UUID, VisibleOwners> owners = Map.of();
 
   private static final DirectoryUser ALICE =

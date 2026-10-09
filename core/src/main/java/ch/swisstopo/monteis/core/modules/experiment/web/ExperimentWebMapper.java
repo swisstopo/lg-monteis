@@ -27,7 +27,6 @@ public interface ExperimentWebMapper {
   @Mapping(target = "ownersStatus", source = "owners.status")
   ExperimentResponseDto toDto(Experiment domain, VisibleOwners owners, @Context LocalDate today);
 
-  /** For an experiment nested in another resource (a sensor's main experiment), without owners. */
   default ExperimentResponseDto toDto(Experiment domain, @Context LocalDate today) {
     return toDto(domain, VisibleOwners.NONE, today);
   }

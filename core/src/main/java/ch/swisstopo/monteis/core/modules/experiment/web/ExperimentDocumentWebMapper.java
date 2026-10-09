@@ -24,7 +24,6 @@ public interface ExperimentDocumentWebMapper {
 
   List<ExperimentDocumentResponseDto> toDtos(List<ExperimentDocument> domains);
 
-  /** Maps an uploaded file to its metadata, cleaned of what browsers add to its name and type. */
   default DocumentMetadata toMetadata(MultipartFile file) {
     return DocumentMetadata.of(
         fileNameOf(file.getOriginalFilename()),

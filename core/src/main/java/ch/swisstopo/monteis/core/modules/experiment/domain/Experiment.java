@@ -102,7 +102,6 @@ public class Experiment implements Auditable {
     this.sensorCount = sensorCount;
   }
 
-  /** The Keycloak user ids of the owners, as stored. Whether they are still eligible is not checked here. */
   public Set<UUID> getOwnerIds() {
     return ownerIds;
   }

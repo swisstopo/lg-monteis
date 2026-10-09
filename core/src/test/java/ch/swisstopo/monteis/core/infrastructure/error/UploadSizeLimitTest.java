@@ -40,10 +40,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-/**
- * The upload limits from application.properties on a real tomcat. mockMvc has no connection to
- * close, so only here does it show what a client gets back.
- */
 @SpringBootTest(
     classes = UploadSizeLimitTest.UploadApp.class,
     webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -136,10 +132,6 @@ class UploadSizeLimitTest {
     return file;
   }
 
-  /**
-   * A multipart body with one file part. it has a content length, as a browser's has, tomcat
-   * refuses a request over the request limit by it before reading any of it.
-   */
   private static final class MultipartFileBody {
 
     private static final String BOUNDARY = "upload-size-limit-test";
