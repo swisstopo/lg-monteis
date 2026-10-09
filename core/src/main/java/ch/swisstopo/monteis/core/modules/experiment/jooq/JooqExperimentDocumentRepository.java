@@ -10,6 +10,7 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentRep
 import java.util.List;
 import java.util.UUID;
 import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +23,19 @@ public class JooqExperimentDocumentRepository implements ExperimentDocumentRepos
     this.dsl = dsl;
   }
 
+  // the upload needs the id for the S3 key before the insert, the db still generates it
+  @Override
+  @Transactional(readOnly = true)
+  public UUID nextId() {
+    return dsl.select(DSL.function("uuidv7", UUID.class)).fetchSingle().value1();
+  }
+
   @Override
   @Transactional
   public ExperimentDocument create(
-      UUID experimentId, DocumentMetadata metadata, String uploadedBy) {
+      UUID id, UUID experimentId, DocumentMetadata metadata, String uploadedBy) {
     return dsl.insertInto(EXPERIMENT_DOCUMENTS)
+        .set(EXPERIMENT_DOCUMENTS.ID, id)
         .set(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID, experimentId)
         .set(EXPERIMENT_DOCUMENTS.FILE_NAME, metadata.fileName())
         .set(EXPERIMENT_DOCUMENTS.CONTENT_TYPE, metadata.contentType())

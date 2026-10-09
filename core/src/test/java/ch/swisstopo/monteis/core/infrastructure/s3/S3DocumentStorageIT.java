@@ -62,7 +62,7 @@ class S3DocumentStorageIT {
     ExperimentDocument document = document(content.length);
 
     // when
-    storage.store(document, new ByteArrayInputStream(content));
+    store(document, new ByteArrayInputStream(content));
 
     // then
     try (InputStream loaded = storage.load(document)) {
@@ -77,7 +77,7 @@ class S3DocumentStorageIT {
     ExperimentDocument document = document(content.length);
 
     // when
-    storage.store(document, new ByteArrayInputStream(content));
+    store(document, new ByteArrayInputStream(content));
 
     // then
     HeadObjectResponse head =
@@ -91,9 +91,27 @@ class S3DocumentStorageIT {
   }
 
   @Test
+  void should_not_load_a_deleted_document() {
+    // given
+    byte[] content = "%PDF".getBytes(StandardCharsets.UTF_8);
+    ExperimentDocument document = document(content.length);
+    store(document, new ByteArrayInputStream(content));
+
+    // when
+    storage.delete(document.experimentId(), document.id());
+
+    // then
+    assertThrows(NoSuchKeyException.class, () -> storage.load(document));
+  }
+
+  @Test
   void should_fail_to_load_a_document_that_was_never_stored() {
     // when / then
     assertThrows(NoSuchKeyException.class, () -> storage.load(document(1)));
+  }
+
+  private static void store(ExperimentDocument document, InputStream content) {
+    storage.store(document.experimentId(), document.id(), document.metadata(), content);
   }
 
   private static ExperimentDocument document(long sizeBytes) {

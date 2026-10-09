@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,11 +36,11 @@ import org.springframework.dao.PermissionDeniedDataAccessException;
 class ExperimentDocumentServiceTest {
 
   private static final UUID EXPERIMENT_ID = UUID.randomUUID();
+  private static final UUID DOCUMENT_ID = UUID.randomUUID();
   private static final DocumentMetadata METADATA =
       new DocumentMetadata("report.pdf", "application/pdf", 4);
   private static final ExperimentDocument DOCUMENT =
-      new ExperimentDocument(
-          UUID.randomUUID(), EXPERIMENT_ID, METADATA, OffsetDateTime.now(), "alice");
+      new ExperimentDocument(DOCUMENT_ID, EXPERIMENT_ID, METADATA, OffsetDateTime.now(), "alice");
 
   @Mock private ExperimentRepository experimentRepository;
   @Mock private ExperimentDocumentRepository documentRepository;
@@ -49,11 +50,13 @@ class ExperimentDocumentServiceTest {
   @InjectMocks private ExperimentDocumentService service;
 
   @Test
-  void should_record_the_upload_before_storing_its_content() {
+  void should_store_the_content_before_recording_the_upload() {
     // given
     InputStream content = new ByteArrayInputStream(new byte[4]);
     given(currentUserProvider.requireCurrentUsername()).willReturn("alice");
-    given(documentRepository.create(EXPERIMENT_ID, METADATA, "alice")).willReturn(DOCUMENT);
+    given(documentRepository.nextId()).willReturn(DOCUMENT_ID);
+    given(documentRepository.create(DOCUMENT_ID, EXPERIMENT_ID, METADATA, "alice"))
+        .willReturn(DOCUMENT);
 
     // when
     ExperimentDocument uploaded = service.upload(EXPERIMENT_ID, METADATA, content);
@@ -62,8 +65,10 @@ class ExperimentDocumentServiceTest {
     assertSame(DOCUMENT, uploaded);
     InOrder order = inOrder(experimentRepository, documentRepository, storage);
     order.verify(experimentRepository).requireVisible(EXPERIMENT_ID);
-    order.verify(documentRepository).create(EXPERIMENT_ID, METADATA, "alice");
-    order.verify(storage).store(DOCUMENT, content);
+    order.verify(documentRepository).nextId();
+    order.verify(storage).store(EXPERIMENT_ID, DOCUMENT_ID, METADATA, content);
+    order.verify(documentRepository).create(DOCUMENT_ID, EXPERIMENT_ID, METADATA, "alice");
+    then(storage).should(never()).delete(any(), any());
   }
 
   @Test
@@ -82,17 +87,63 @@ class ExperimentDocumentServiceTest {
   }
 
   @Test
-  void should_store_nothing_when_row_level_security_rejects_the_upload() {
+  void should_record_nothing_when_storing_the_content_fails() {
     // given
-    given(currentUserProvider.requireCurrentUsername()).willReturn("alice");
-    given(documentRepository.create(EXPERIMENT_ID, METADATA, "alice"))
-        .willThrow(new PermissionDeniedDataAccessException("rls", null));
+    given(documentRepository.nextId()).willReturn(DOCUMENT_ID);
+    willThrow(new IllegalStateException("S3 unavailable"))
+        .given(storage)
+        .store(any(), any(), any(), any());
 
     // when / then
     assertThrows(
-        PermissionDeniedDataAccessException.class,
+        IllegalStateException.class,
         () -> service.upload(EXPERIMENT_ID, METADATA, InputStream.nullInputStream()));
-    then(storage).should(never()).store(any(), any());
+    then(documentRepository).should(never()).create(any(), any(), any(), any());
+    then(storage).should(never()).delete(any(), any());
+  }
+
+  @Test
+  void should_delete_the_stored_content_when_row_level_security_rejects_the_upload() {
+    // given
+    PermissionDeniedDataAccessException rejection =
+        new PermissionDeniedDataAccessException("rls", null);
+    given(currentUserProvider.requireCurrentUsername()).willReturn("alice");
+    given(documentRepository.nextId()).willReturn(DOCUMENT_ID);
+    given(documentRepository.create(DOCUMENT_ID, EXPERIMENT_ID, METADATA, "alice"))
+        .willThrow(rejection);
+
+    // when
+    PermissionDeniedDataAccessException thrown =
+        assertThrows(
+            PermissionDeniedDataAccessException.class,
+            () -> service.upload(EXPERIMENT_ID, METADATA, InputStream.nullInputStream()));
+
+    // then
+    assertSame(rejection, thrown);
+    then(storage).should().delete(EXPERIMENT_ID, DOCUMENT_ID);
+  }
+
+  @Test
+  void should_keep_the_insert_failure_when_deleting_the_stored_content_fails_too() {
+    // given
+    PermissionDeniedDataAccessException rejection =
+        new PermissionDeniedDataAccessException("rls", null);
+    IllegalStateException deleteFailure = new IllegalStateException("S3 unavailable");
+    given(currentUserProvider.requireCurrentUsername()).willReturn("alice");
+    given(documentRepository.nextId()).willReturn(DOCUMENT_ID);
+    given(documentRepository.create(DOCUMENT_ID, EXPERIMENT_ID, METADATA, "alice"))
+        .willThrow(rejection);
+    willThrow(deleteFailure).given(storage).delete(EXPERIMENT_ID, DOCUMENT_ID);
+
+    // when
+    PermissionDeniedDataAccessException thrown =
+        assertThrows(
+            PermissionDeniedDataAccessException.class,
+            () -> service.upload(EXPERIMENT_ID, METADATA, InputStream.nullInputStream()));
+
+    // then
+    assertSame(rejection, thrown);
+    assertThat(thrown.getSuppressed()).containsExactly(deleteFailure);
   }
 
   @Test

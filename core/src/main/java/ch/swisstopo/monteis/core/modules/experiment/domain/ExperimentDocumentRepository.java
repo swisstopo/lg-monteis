@@ -10,14 +10,17 @@ import java.util.UUID;
  * experiment. Nobody may update or delete a document.
  */
 public interface ExperimentDocumentRepository {
+  UUID nextId();
+
   /**
-   * Persists the metadata of a new document, uploaded now by {@code uploadedBy}.
+   * Persists the metadata of a new document under {@code id}, uploaded now by {@code uploadedBy}.
    *
-   * @return the persisted document including its generated id and upload timestamp
+   * @return the persisted document including its upload timestamp
    * @throws org.springframework.dao.PermissionDeniedDataAccessException if the caller may not
    *     write the experiment
    */
-  ExperimentDocument create(UUID experimentId, DocumentMetadata metadata, String uploadedBy);
+  ExperimentDocument create(
+      UUID id, UUID experimentId, DocumentMetadata metadata, String uploadedBy);
 
   /**
    * Retrieves the documents of an experiment, newest first.

@@ -39,17 +39,20 @@ class JooqExperimentDocumentRepositoryIT {
 
   @Test
   @Transactional
-  void should_create_a_document_uploaded_now_by_the_given_user() {
+  void should_create_a_document_under_the_given_id_uploaded_now_by_the_given_user() {
     // given
     UUID experimentId = newExperiment();
+    UUID documentId = callAsAdmin(repository::nextId);
 
     // when
     ExperimentDocument document =
         callAsAdmin(
-            () -> repository.create(experimentId, REPORT, SecurityContextTestSupport.USERNAME));
+            () ->
+                repository.create(
+                    documentId, experimentId, REPORT, SecurityContextTestSupport.USERNAME));
 
     // then
-    assertThat(document.id()).isNotNull();
+    assertThat(document.id()).isEqualTo(documentId);
     assertThat(document.experimentId()).isEqualTo(experimentId);
     assertThat(document.metadata()).isEqualTo(REPORT);
     assertThat(document.uploadedAt())
@@ -60,6 +63,17 @@ class JooqExperimentDocumentRepositoryIT {
   }
 
   @Test
+  void should_hand_out_a_new_id_on_every_call() {
+    // when
+    UUID first = callAsAdmin(repository::nextId);
+    UUID second = callAsAdmin(repository::nextId);
+
+    // then
+    assertThat(first).isNotEqualTo(second);
+    assertThat(first.version()).isEqualTo(7);
+  }
+
+  @Test
   @Transactional
   void should_list_the_documents_of_an_experiment_newest_first() {
     // given: the older one is inserted last, so it has the higher id, the order must come from
@@ -67,10 +81,17 @@ class JooqExperimentDocumentRepositoryIT {
     UUID experimentId = newExperiment();
     ExperimentDocument newer =
         callAsAdmin(
-            () -> repository.create(experimentId, REPORT, SecurityContextTestSupport.USERNAME));
+            () ->
+                repository.create(
+                    repository.nextId(),
+                    experimentId,
+                    REPORT,
+                    SecurityContextTestSupport.USERNAME));
     UUID older = insertDocumentUploadedAt(experimentId, OffsetDateTime.now().minusDays(1));
     callAsAdmin(
-        () -> repository.create(newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
+        () ->
+            repository.create(
+                repository.nextId(), newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
 
     // when
     List<ExperimentDocument> documents =
@@ -87,7 +108,12 @@ class JooqExperimentDocumentRepositoryIT {
     UUID otherExperimentId = newExperiment();
     ExperimentDocument document =
         callAsAdmin(
-            () -> repository.create(newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
+            () ->
+                repository.create(
+                    repository.nextId(),
+                    newExperiment(),
+                    REPORT,
+                    SecurityContextTestSupport.USERNAME));
 
     // when / then
     assertThrows(
@@ -114,9 +140,15 @@ class JooqExperimentDocumentRepositoryIT {
     UUID readable = newExperiment();
     UUID hidden = newExperiment();
     ExperimentDocument readableDocument =
-        callAsAdmin(() -> repository.create(readable, REPORT, SecurityContextTestSupport.USERNAME));
+        callAsAdmin(
+            () ->
+                repository.create(
+                    repository.nextId(), readable, REPORT, SecurityContextTestSupport.USERNAME));
     ExperimentDocument hiddenDocument =
-        callAsAdmin(() -> repository.create(hidden, REPORT, SecurityContextTestSupport.USERNAME));
+        callAsAdmin(
+            () ->
+                repository.create(
+                    repository.nextId(), hidden, REPORT, SecurityContextTestSupport.USERNAME));
 
     // when / then
     SecurityContextTestSupport.runAsUser(
@@ -144,7 +176,11 @@ class JooqExperimentDocumentRepositoryIT {
         () ->
             assertThat(
                     repository
-                        .create(experimentId, REPORT, SecurityContextTestSupport.USERNAME)
+                        .create(
+                            repository.nextId(),
+                            experimentId,
+                            REPORT,
+                            SecurityContextTestSupport.USERNAME)
                         .id())
                 .isNotNull());
   }
@@ -163,7 +199,11 @@ class JooqExperimentDocumentRepositoryIT {
             assertThrows(
                 PermissionDeniedDataAccessException.class,
                 () ->
-                    repository.create(experimentId, REPORT, SecurityContextTestSupport.USERNAME)));
+                    repository.create(
+                        repository.nextId(),
+                        experimentId,
+                        REPORT,
+                        SecurityContextTestSupport.USERNAME)));
   }
 
   @Test
@@ -172,7 +212,12 @@ class JooqExperimentDocumentRepositoryIT {
     // given
     ExperimentDocument document =
         callAsAdmin(
-            () -> repository.create(newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
+            () ->
+                repository.create(
+                    repository.nextId(),
+                    newExperiment(),
+                    REPORT,
+                    SecurityContextTestSupport.USERNAME));
 
     // when: no UPDATE policy, RLS filters every row out
     int updated =
@@ -193,7 +238,12 @@ class JooqExperimentDocumentRepositoryIT {
     // given
     ExperimentDocument document =
         callAsAdmin(
-            () -> repository.create(newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
+            () ->
+                repository.create(
+                    repository.nextId(),
+                    newExperiment(),
+                    REPORT,
+                    SecurityContextTestSupport.USERNAME));
 
     // when: no DELETE policy, RLS filters every row out
     int deleted =
