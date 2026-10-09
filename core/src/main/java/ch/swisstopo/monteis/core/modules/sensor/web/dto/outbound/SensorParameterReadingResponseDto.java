@@ -1,11 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound;
 
-import java.time.Instant;
+import ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementStatus;
+import java.time.OffsetDateTime;
 
 public record SensorParameterReadingResponseDto(
-    String parameter,
-    Double value,
-    Double rawValue,
-    Integer statusCode,
-    String status,
-    Instant timestamp) {}
+    Double value, Double rawValue, MeasurementStatus status, OffsetDateTime timestamp) {}

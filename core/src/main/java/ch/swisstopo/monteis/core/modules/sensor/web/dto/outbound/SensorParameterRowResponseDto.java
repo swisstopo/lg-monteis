@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound;
 
 import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import java.util.UUID;
 

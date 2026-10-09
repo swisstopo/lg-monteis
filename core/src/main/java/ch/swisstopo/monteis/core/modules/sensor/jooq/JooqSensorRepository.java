@@ -249,8 +249,6 @@ public class JooqSensorRepository implements SensorRepository {
     return sensorOpt;
   }
 
-  // --- Private Helpers ---
-
   /**
    * Mirrors {@code sensors.main_experiment} into the {@code experiment_sensor} join table, which is
    * what {@code can_access_sensor()} (row-level security) and the experiments grid's sensor count

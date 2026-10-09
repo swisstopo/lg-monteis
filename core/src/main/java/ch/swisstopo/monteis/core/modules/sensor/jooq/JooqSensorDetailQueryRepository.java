@@ -4,9 +4,11 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
 
 import ch.swisstopo.monteis.contracts.Das;
-import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
+import ch.swisstopo.monteis.core.modules.experiment.jooq.ExperimentJooqMapper;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementStatus;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorDetailQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
@@ -18,7 +20,6 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameter
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,9 +58,12 @@ public class JooqSensorDetailQueryRepository implements SensorDetailQueryReposit
           .as("latest_reading");
 
   private final DSLContext dsl;
+  private final ExperimentJooqMapper experimentJooqMapper;
 
-  public JooqSensorDetailQueryRepository(DSLContext dsl) {
+  public JooqSensorDetailQueryRepository(
+      DSLContext dsl, ExperimentJooqMapper experimentJooqMapper) {
     this.dsl = dsl;
+    this.experimentJooqMapper = experimentJooqMapper;
   }
 
   @Override
@@ -91,16 +95,16 @@ public class JooqSensorDetailQueryRepository implements SensorDetailQueryReposit
       return Optional.empty();
     }
 
-    List<SensorDetailParameterResponseDto> parameters = new ArrayList<>(rows.size());
-    for (Record r : rows) {
-      if (r.get(SENSOR_PARAMETER.ID) != null) {
-        parameters.add(toParameter(r));
-      }
-    }
+    List<SensorDetailParameterResponseDto> parameters =
+        rows.stream()
+            .filter(r -> r.get(SENSOR_PARAMETER.ID) != null)
+            .map(JooqSensorDetailQueryRepository::toParameter)
+            .toList();
+
     return Optional.of(toSensor(rows.get(0), parameters, today));
   }
 
-  private static SensorDetailResponseDto toSensor(
+  private SensorDetailResponseDto toSensor(
       Record r, List<SensorDetailParameterResponseDto> parameters, LocalDate today) {
     return new SensorDetailResponseDto(
         r.get(SENSORS.ID),
@@ -116,22 +120,19 @@ public class JooqSensorDetailQueryRepository implements SensorDetailQueryReposit
         parameters);
   }
 
-  private static ExperimentResponseDto toExperiment(Record r, LocalDate today) {
-    UUID experimentId = r.get(EXPERIMENTS.ID);
-    if (experimentId == null) {
+  private ExperimentResponseDto toExperiment(Record r, LocalDate today) {
+    if (r.get(EXPERIMENTS.ID) == null) {
       return null;
     }
-    LocalDate start = r.get(EXPERIMENTS.START, LocalDate.class);
-    LocalDate end = r.get(EXPERIMENTS.END, LocalDate.class);
-    boolean hasPeriod = start != null && end != null;
+    Experiment experiment = experimentJooqMapper.toDomain(r.into(EXPERIMENTS));
     return new ExperimentResponseDto(
-        experimentId,
-        r.get(EXPERIMENTS.NAME),
-        r.get(EXPERIMENTS.COMMENT),
-        hasPeriod ? new PeriodDto(start, end) : null,
-        hasPeriod ? new Period(start, end).getStatus(today) : null,
-        r.get(EXPERIMENTS.VERSION),
-        null);
+        experiment.getId(),
+        experiment.getName(),
+        experiment.getComment(),
+        new PeriodDto(experiment.getPeriod().start(), experiment.getPeriod().end()),
+        experiment.getStatus(today),
+        experiment.getVersion(),
+        experiment.getSensorCount());
   }
 
   private static CoordinatesDto toCoordinates(Record r) {
@@ -142,27 +143,21 @@ public class JooqSensorDetailQueryRepository implements SensorDetailQueryReposit
   }
 
   private static SensorDetailParameterResponseDto toParameter(Record r) {
-    Double lower = r.get(SENSOR_PARAMETER.LOWER_ALARM_LIMIT);
-    Double upper = r.get(SENSOR_PARAMETER.UPPER_ALARM_LIMIT);
-    // jOOQ generates its own Unit enum (native Postgres enum column), distinct from the domain
-    // Unit - convert by name, as JooqSensorParameterRowQueryRepository does.
-    var unit = r.get(SENSOR_PARAMETER.UNIT);
     return new SensorDetailParameterResponseDto(
         r.get(SENSOR_PARAMETER.ID),
         r.get(SENSOR_PARAMETER.NAME),
         r.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
-        r.get(SENSOR_TYPES.ID) == null
-            ? null
-            : new SensorTypeResponseDto(
-                r.get(SENSOR_TYPES.ID), r.get(SENSOR_TYPES.NAME), r.get(SENSOR_TYPES.VERSION)),
-        unit == null ? null : Unit.valueOf(unit.name()),
+        new SensorTypeResponseDto(
+            r.get(SENSOR_TYPES.ID), r.get(SENSOR_TYPES.NAME), r.get(SENSOR_TYPES.VERSION)),
+        Unit.valueOf(r.get(SENSOR_PARAMETER.UNIT).name()),
         new FormulaResponseDto(
             r.get(FORMULAS.ID), r.get(FORMULAS.EXPRESSION), r.get(FORMULAS.VERSION)),
-        lower == null || upper == null ? null : new AlarmLimitsDto(lower, upper),
+        new AlarmLimitsDto(
+            r.get(SENSOR_PARAMETER.LOWER_ALARM_LIMIT), r.get(SENSOR_PARAMETER.UPPER_ALARM_LIMIT)),
         r.get(SENSOR_PARAMETER.ACTIVE),
         r.get(SENSOR_PARAMETER.COMMENT),
-        toReading(r),
-        r.get(SENSOR_PARAMETER.VERSION));
+        r.get(SENSOR_PARAMETER.VERSION),
+        toReading(r));
   }
 
   private static SensorParameterReadingResponseDto toReading(Record r) {
@@ -172,11 +167,10 @@ public class JooqSensorDetailQueryRepository implements SensorDetailQueryReposit
       return null;
     }
     return new SensorParameterReadingResponseDto(
-        r.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
         r.get(LATEST_READING.field(SENSOR_READING_SECURED.NORM_VALUE)),
         r.get(LATEST_READING.field(SENSOR_READING_SECURED.RAW_VALUE)),
-        null,
-        r.get(LATEST_READING.field(SENSOR_READING_SECURED.STATUS), String.class),
-        timestamp.toInstant());
+        MeasurementStatus.fromDbValue(
+            r.get(LATEST_READING.field(SENSOR_READING_SECURED.STATUS), String.class)),
+        timestamp);
   }
 }
