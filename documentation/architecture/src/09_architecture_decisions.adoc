@@ -317,3 +317,56 @@ Bekannte Einschränkung: der Owner-Filter arbeitet auf den gespeicherten IDs, di
 *Nächtlicher Cleanup-Job:* bräuchte einen technischen Account, den wir bewusst abgeschafft haben. +
 *Fehler mitcachen oder ein Cache für alle Benutzer:* würde Ausfälle länger sichtbar halten und die Rechte eines Benutzers an einen anderen ausliefern.
 |===
+
+[cols="2,5", options="header"]
+|===
+| Kriterium | Beschreibung
+
+| Titel
+| ADR: Ehemalige Owner aufräumen, und was "sichtbar" heisst
+
+| Datum
+| 09.10.2026
+
+| Status
+| entschieden (MON-177)
+
+| Kontext & Problem
+| In `experiment_owner` stehen nur Keycloak User-IDs. Verlässt ein PI die Schreibgruppe, wird er deaktiviert oder in Keycloak gelöscht, bleibt seine Zeile stehen, Keycloak sagt uns das nicht. Die ADR "Sichtbare Owner, und warum welche fehlen" legt fest, dass so jemand sofort nirgends mehr als Owner erscheint. Offen blieb, wann die verwaiste Zeile selbst verschwindet, und der Begriff "sichtbar" ist im Code nicht eindeutig.
+
+**Begriff "sichtbar":** ein sichtbarer Owner (`VisibleOwners`) ist eine gespeicherte Owner-ID, die laut Keycloak im Moment ein PI des Experiments ist (gespeicherte IDs geschnitten mit den aktiven Mitgliedern der Schreibgruppe). Das hat nichts mit RLS zu tun. `ExperimentRepository.requireVisible` meint dagegen "der Aufrufer darf das Experiment lesen", das sind zwei verschiedene Bedeutungen desselben Worts. Ein ehemaliger Owner ist eine gespeicherte ID, die bei einer vollständigen Antwort von Keycloak (`Known`) kein PI mehr ist.
+
+| Betrachtete Optionen
+| *A. Nur beim Lesen filtern, nie löschen.* Die Zeile bleibt für immer. Einfachster Code, aber `experiment_owner` wächst mit jedem Gruppenwechsel, die Unschärfe des Owner-Filters (Filter auf gespeicherten IDs, Anzeige auf PIs) bleibt dauerhaft, und wer wieder in die Gruppe kommt, ist automatisch wieder Owner, auch Jahre später.
+
+*B. Beim Lesen filtern, beim nächsten Schreiben aufräumen (gewählt).* Lesen zeigt nur sichtbare Owner. Die Zeile fällt weg, wenn jemand die Owner ersetzt (die Validierung lässt nur PIs zu) oder die Stammdaten speichert (`dropFormerOwners`, eigener Schritt mit eigenem Audit-Snapshot, best effort). Geschrieben wird nur mit einer frischen `Known`-Antwort und mit dem Token des Benutzers, der sowieso gerade schreibt. Kein neuer Account, keine neue Infrastruktur. Dafür bleiben Zeilen von Experimenten, die niemand mehr bearbeitet, stehen, und bis zum nächsten Speichern gilt dieselbe Filter-Unschärfe und dasselbe Wiederauftauchen wie bei A.
+
+*C. Geplanter Cleanup-Job (Spring `@Scheduled` oder Kubernetes CronJob).* Ein Job geht regelmässig alle Experimente mit Ownern durch und löscht, was kein PI mehr ist. Hält die Tabelle sauber, auch für nie bearbeitete Experimente, und macht den Filter nach jedem Lauf wieder genau. Aber: ein Job hat keinen Aufrufer und damit kein Token, er braucht einen Service Account mit `view-users` über alle Experimente plus Secret, genau das, was wir mit der ADR "Benutzerdaten nur in Keycloak, gelesen mit dem Token des Aufrufers" abgeschafft haben. Dazu kommen Locking bei mehreren `core`-Pods (wir haben heute weder `@Scheduled` noch ShedLock), RLS, die für einen technischen Benutzer eine eigene Regel braucht, ein Audit-Snapshot ohne echten Autor, und Last auf Keycloak pro Lauf. Zwischen zwei Läufen braucht es den Lesefilter aus B trotzdem, der Job ersetzt ihn also nicht, er kommt dazu.
+
+*D. Keycloak Event Listener.* Ein eigener Event Listener (SPI) in Keycloak oder die Admin Events melden Gruppenaustritte, Deaktivierungen und Löschungen an `core`, das räumt sofort auf. Am genausten, aber wir müssten ein eigenes JAR in Keycloak deployen und pflegen (Image in `lg-monteis-infra`, Upgrade bei jedem Keycloak-Update), Keycloak bräuchte einen Weg zu `core` mit eigener Authentifizierung, und verpasste Events (Deploy, Netzwerk) bleiben unbemerkt liegen. Ohne Lesefilter wäre ein verpasstes Event direkt ein falscher Owner in der Anzeige.
+
+*E. Beim Lesen aufräumen.* Jeder GET, der einen ehemaligen Owner sieht, löscht ihn gleich. Kein Job, Tabelle sauber sobald jemand hinschaut. Aber GETs würden schreiben (Lese-Transaktionen sind `readOnly` für RLS), jede Anzeige könnte einen Audit-Snapshot erzeugen, und geschrieben würde auf Basis von `pisForReading`, das aus dem 60 s Cache kommen darf. Das bricht die Regel, dass Schreiben immer Keycloak fragt. Zudem dürfen nicht alle Leser schreiben.
+
+| Entscheidung
+| Option B. Angezeigt werden immer nur sichtbare Owner, verwaiste Zeilen werden beim nächsten Schreiben auf das Experiment entfernt, nur bei `Known`, nur mit dem Token des schreibenden Benutzers, und ein Fehler dabei lässt das Speichern der Stammdaten nie scheitern. Kein Job, kein Event Listener, kein Schreiben beim Lesen. Im Code bleibt der Name `VisibleOwners`, mit der Bedeutung aus dem Kontext oben.
+
+| Begründung
+| Die Anzeige ist ab dem Gruppenaustritt korrekt, egal ob die Zeile noch steht, die Zeile ist danach nur noch Erinnerung. Ein Cleanup lohnt sich deshalb nur dort, wo er nichts Neues braucht, und beim Schreiben haben wir alles schon: einen Benutzer mit Token, eine frische Antwort von Keycloak und einen Audit-Snapshot mit echtem Autor. C und D kaufen eine sauberere Tabelle mit einem Service Account oder einem Keycloak-Plugin, beide brauchen den Lesefilter trotzdem.
+
+| Konsequenzen
+| `experiment_owner` kann Zeilen ehemaliger PIs enthalten, solange niemand das Experiment speichert. Wer die DB direkt abfragt (Reports, Support), muss das wissen, die Wahrheit über aktuelle Owner kommt nur über `core`.
+
+Der Owner-Filter bleibt unscharf bis zum nächsten Speichern (siehe ADR "Sichtbare Owner"): er findet ein Experiment noch über einen ehemaligen PI, und "(no owner)" verpasst Experimente, deren gespeicherte Owner alle ehemalig sind.
+
+Wer die Gruppe verlässt und vor dem nächsten Speichern zurückkommt, ist wieder Owner. Das ist so gewollt (ein Gruppenwechsel aus Versehen soll nichts kaputt machen), muss aber bekannt sein.
+
+Das Aufräumen beim Speichern erzeugt einen zweiten Audit-Snapshot, der Owner entfernt, die der Benutzer gar nicht angefasst hat. Im Verlauf sieht das aus wie eine Änderung durch ihn.
+
+Wird die Unschärfe oder das Wachstum der Tabelle später ein Problem, ist C der nächste Schritt, dann zusammen mit einem bewusst eingeführten Service Account.
+
+| Verworfene Alternativen
+| *A, nie löschen:* Tabelle wächst und die Filter-Unschärfe wird dauerhaft. +
+*C, Cleanup-Job:* braucht einen Service Account, Locking und eine RLS-Regel für einen technischen Benutzer, und ersetzt den Lesefilter nicht. +
+*D, Keycloak Event Listener:* eigenes Keycloak-Plugin, Zustellung nicht garantiert. +
+*E, beim Lesen aufräumen:* GETs würden schreiben, auf Basis von Cache-Daten, und Leser ohne Schreibrecht müssten löschen dürfen.
+|===
