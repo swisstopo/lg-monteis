@@ -28,6 +28,10 @@ public interface ExperimentWebMapper {
   ExperimentResponseDto toDto(Experiment domain, VisibleOwners owners, @Context LocalDate today);
 
   default ExperimentResponseDto toDto(Experiment domain, @Context LocalDate today) {
+    // a sensor without main experiment, mapstruct only returns null when every source is null
+    if (domain == null) {
+      return null;
+    }
     return toDto(domain, VisibleOwners.NONE, today);
   }
 
