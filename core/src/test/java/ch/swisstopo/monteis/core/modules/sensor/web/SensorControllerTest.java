@@ -44,10 +44,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseD
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.Writer;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -650,7 +647,8 @@ class SensorControllerTest {
             null,
             1,
             List.of());
-    given(service.findDetailById(SENSOR_ID, LocalDate.of(2024, 1, 1))).willReturn(detail);
+    given(service.findDetailById(SENSOR_ID, LocalDate.of(2024, Month.JANUARY, 1)))
+        .willReturn(detail);
 
     // when / then
     mockMvc
@@ -663,7 +661,7 @@ class SensorControllerTest {
   @Test
   void should_return_404_for_unknown_sensor_detail() throws Exception {
     // given
-    given(service.findDetailById(SENSOR_ID, LocalDate.of(2024, 1, 1)))
+    given(service.findDetailById(SENSOR_ID, LocalDate.of(2024, Month.JANUARY, 1)))
         .willThrow(new ObjectNotFoundException(Sensor.class));
 
     // when / then
