@@ -22,15 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/**
- * The PIs of an experiment are the enabled members of the groups whose {@code
- * write_experiment_ids} attribute holds the experiment id (see the realm in {@code
- * docker/keycloak/realm}). We search by that attribute, never by the group name.
- *
- * <p>Keycloak answers with the requesting user's permissions, so the cache is per user: what one
- * user was allowed to read must never be served to another. Only complete answers are cached, a
- * failed lookup is asked again next time.
- */
 @Component
 class KeycloakUserDirectory implements UserDirectory {
 
@@ -88,26 +79,19 @@ class KeycloakUserDirectory implements UserDirectory {
     return pisByExperiment;
   }
 
-  /**
-   * Once Keycloak is unavailable it is not asked again, the remaining experiments get the same
-   * answer instead of waiting for another timeout each. Cached answers are still used.
-   */
   private Map<UUID, Pis> loadPisUntilKeycloakFails(List<CacheKey> keys) {
     Map<UUID, Pis> pisByExperiment = new LinkedHashMap<>();
-    Optional<Pis> earlierFailure = Optional.empty();
+    Optional<KeycloakUnavailable> outage = Optional.empty();
     for (CacheKey key : keys) {
-      Pis pis = cachedOrLoadedPisOf(key, earlierFailure);
-      if (pis instanceof KeycloakUnavailable) {
-        earlierFailure = Optional.of(pis);
+      // the lambda below can't capture outage since it gets reassigned in the loop
+      Optional<KeycloakUnavailable> finalOutage = outage;
+      Pis pis = cachedPisOf(key).or(() -> finalOutage).orElseGet(() -> loadPis(key));
+      if (pis instanceof KeycloakUnavailable unavailable) {
+        outage = Optional.of(unavailable);
       }
       pisByExperiment.put(key.experimentId(), pis);
     }
     return pisByExperiment;
-  }
-
-  private Pis cachedOrLoadedPisOf(CacheKey key, Optional<Pis> earlierFailure) {
-    Optional<Pis> cached = cachedPisOf(key);
-    return cached.orElseGet(() -> earlierFailure.orElseGet(() -> loadPis(key)));
   }
 
   private Optional<Pis> cachedPisOf(CacheKey key) {
@@ -120,7 +104,6 @@ class KeycloakUserDirectory implements UserDirectory {
     return pis;
   }
 
-  /** What Keycloak answered, failures to ask it are asked again next time. */
   private void cacheKeycloakAnswer(CacheKey key, Pis pis) {
     if (pis instanceof Known || pis instanceof NoWriteGroup) {
       cache.put(key, pis);
@@ -146,7 +129,6 @@ class KeycloakUserDirectory implements UserDirectory {
     return keycloak.findGroupsByAttribute(WRITE_EXPERIMENT_IDS, experimentId.toString());
   }
 
-  /** Someone in two write groups is listed once. */
   private List<DirectoryUser> enabledMembersOf(List<KeycloakGroup> groups) {
     return groups.stream()
         .flatMap(group -> keycloak.groupMembers(group.id()).stream())

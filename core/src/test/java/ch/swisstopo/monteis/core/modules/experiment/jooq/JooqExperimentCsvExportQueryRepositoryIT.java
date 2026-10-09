@@ -74,6 +74,29 @@ class JooqExperimentCsvExportQueryRepositoryIT {
 
   @Test
   @Transactional
+  void should_drop_the_separator_from_owner_names() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID experimentId =
+              createExperiment(
+                  "SemicolonOwnerCsvExportExperiment",
+                  null,
+                  LocalDate.of(2024, 1, 1),
+                  LocalDate.of(2024, 12, 31));
+          DirectoryUser semicolon =
+              new DirectoryUser(UUID.randomUUID(), "Ca;rl", "Sem; i", "carl@example.test");
+          addOwners(experimentId, semicolon.id(), ALICE.id());
+          owners = Map.of(experimentId, VisibleOwners.of(List.of(semicolon, ALICE)));
+
+          String csv = streamToString(nameFilter("SemicolonOwnerCsvExportExperiment"));
+
+          List<String> lines = List.of(csv.split("\r\n"));
+          assertTrue(lines.get(1).contains(",0,Carl Sem i; Alice Example,,"), csv);
+        });
+  }
+
+  @Test
+  @Transactional
   void should_write_why_the_owners_are_missing() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
