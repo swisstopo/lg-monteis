@@ -213,7 +213,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
         .from(EXPERIMENTS)
         .where(EXPERIMENTS.ID.eq(experimentId))
         .fetchOptional(JooqExperimentRepository::toExperiment)
-        // RLS hides rows the caller may not read, so hidden and missing look the same (BR4.11)
+        // RLS hides rows the caller may not read, so hidden and missing look the same
         .orElseThrow(() -> new ObjectNotFoundException(Experiment.class));
   }
 

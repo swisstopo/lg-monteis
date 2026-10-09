@@ -111,6 +111,8 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
   private static String namesOf(List<DirectoryUser> users) {
     return users.stream()
         .map(DirectoryUser::displayName)
+        // a ; in a name would break splitting the cell on the separator, csv has no escape for it
+        .map(name -> name.replace(";", ""))
         .collect(Collectors.joining(OWNER_SEPARATOR));
   }
 }
