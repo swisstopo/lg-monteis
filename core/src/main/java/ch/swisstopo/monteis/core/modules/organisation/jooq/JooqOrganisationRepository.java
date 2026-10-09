@@ -66,15 +66,6 @@ public class JooqOrganisationRepository implements OrganisationRepository {
   }
 
   @Override
-  @Transactional
-  public void delete(UUID id) {
-    int deleted = dsl.deleteFrom(ORGANISATIONS).where(ORGANISATIONS.ID.eq(id)).execute();
-    if (deleted == 0) {
-      throw new ObjectNotFoundException(Organisation.class);
-    }
-  }
-
-  @Override
   @Transactional(readOnly = true)
   public Optional<Organisation> findById(UUID id) {
     return dsl.selectFrom(ORGANISATIONS)

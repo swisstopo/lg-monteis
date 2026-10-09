@@ -1,48 +1,45 @@
- package ch.swisstopo.monteis.core.modules.organisation.web;
+package ch.swisstopo.monteis.core.modules.organisation.web;
 
- import static org.assertj.core.api.Assertions.assertThat;
- import static org.mockito.ArgumentMatchers.any;
- import static org.mockito.ArgumentMatchers.eq;
- import static org.mockito.BDDMockito.given;
- import static org.mockito.BDDMockito.then;
- import static org.mockito.BDDMockito.willAnswer;
- import static org.mockito.BDDMockito.willThrow;
- import static
- org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
- import static
- org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
- import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
- import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
- import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
- import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
- import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
- import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
- import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
- import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willAnswer;
+import static org.mockito.BDDMockito.willThrow;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
- import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
- import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
- import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
- import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
- import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
- import ch.swisstopo.monteis.core.itconfig.ControllerTest;
- import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
- import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
- import ch.swisstopo.monteis.core.modules.organisation.query.OrganisationCsvExportQueryRepository;
- import ch.swisstopo.monteis.core.modules.organisation.service.OrganisationService;
- import ch.swisstopo.monteis.core.modules.organisation.web.dto.outbound.OrganisationResponseDto;
- import java.io.Writer;
- import java.util.List;
- import java.util.Map;
- import java.util.UUID;
- import org.junit.jupiter.api.Test;
- import org.springframework.beans.factory.annotation.Autowired;
- import org.springframework.http.MediaType;
- import org.springframework.test.context.bean.override.mockito.MockitoBean;
- import org.springframework.test.web.servlet.MockMvc;
+import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
+import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
+import ch.swisstopo.monteis.core.modules.organisation.query.OrganisationCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.organisation.service.OrganisationService;
+import ch.swisstopo.monteis.core.modules.organisation.web.dto.outbound.OrganisationResponseDto;
+import java.io.Writer;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
- @ControllerTest(OrganisationController.class)
- class OrganisationControllerTest {
+@ControllerTest(OrganisationController.class)
+class OrganisationControllerTest {
 
   private static final UUID ORGANISATION_ID =
       UUID.fromString("0198f3a0-0000-7000-8000-00000000000a");
@@ -217,8 +214,8 @@
     Organisation updated = new Organisation(ORGANISATION_ID, "Renamed");
     given(mapper.toDomain(any())).willReturn(toUpdate);
     given(service.updateOrganisation(toUpdate)).willReturn(updated);
-    given(mapper.toDto(updated)).willReturn(new OrganisationResponseDto(ORGANISATION_ID,
- "Renamed"));
+    given(mapper.toDto(updated))
+        .willReturn(new OrganisationResponseDto(ORGANISATION_ID, "Renamed"));
 
     mockMvc
         .perform(
@@ -248,30 +245,4 @@
 
     then(service).shouldHaveNoInteractions();
   }
-
-  @Test
-  void should_delete_an_organisation() throws Exception {
-    mockMvc
-        .perform(
-            delete("/api/organisations/{id}", ORGANISATION_ID)
-                .with(csrf())
-                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication())))
-        .andExpect(status().isNoContent());
-
-    then(service).should().deleteOrganisation(ORGANISATION_ID);
-  }
-
-  @Test
-  void should_answer_404_when_deleting_an_unknown_organisation() throws Exception {
-    willThrow(new ObjectNotFoundException(Organisation.class))
-        .given(service)
-        .deleteOrganisation(ORGANISATION_ID);
-
-    mockMvc
-        .perform(
-            delete("/api/organisations/{id}", ORGANISATION_ID)
-                .with(csrf())
-                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication())))
-        .andExpect(status().isNotFound());
-  }
- }
+}

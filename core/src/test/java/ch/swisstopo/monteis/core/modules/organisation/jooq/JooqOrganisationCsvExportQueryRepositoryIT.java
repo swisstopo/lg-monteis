@@ -1,29 +1,29 @@
- package ch.swisstopo.monteis.core.modules.organisation.jooq;
+package ch.swisstopo.monteis.core.modules.organisation.jooq;
 
- import static ch.swisstopo.monteis.core.jooq.generated.Tables.ORGANISATIONS;
- import static org.assertj.core.api.Assertions.assertThat;
- import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.ORGANISATIONS;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
- import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
- import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
- import ch.swisstopo.monteis.core.infrastructure.query.SortDirection;
- import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
- import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
- import ch.swisstopo.monteis.core.itconfig.IT;
- import java.io.IOException;
- import java.io.StringWriter;
- import java.io.UncheckedIOException;
- import java.util.List;
- import java.util.Map;
- import java.util.UUID;
- import org.jooq.DSLContext;
- import org.junit.jupiter.api.Test;
- import org.springframework.beans.factory.annotation.Autowired;
- import org.springframework.transaction.annotation.Transactional;
+import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.SortDirection;
+import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
+import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
+import ch.swisstopo.monteis.core.itconfig.IT;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.UncheckedIOException;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.jooq.DSLContext;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
- @IT
- @Transactional
- class JooqOrganisationCsvExportQueryRepositoryIT {
+@IT
+@Transactional
+class JooqOrganisationCsvExportQueryRepositoryIT {
 
   private static final String HEADER = "name,id";
 
@@ -65,8 +65,7 @@
 
     List<String> lines =
         lines(
-            filterByName(
-                "Csv sorted", List.of(new SortModelItem("name", SortDirection.DESC)), 10));
+            filterByName("Csv sorted", List.of(new SortModelItem("name", SortDirection.DESC)), 10));
 
     assertThat(lines.get(1)).startsWith("Csv sorted B,");
     assertThat(lines.get(2)).startsWith("Csv sorted A,");
@@ -133,4 +132,4 @@
         .fetchSingle()
         .getId();
   }
- }
+}

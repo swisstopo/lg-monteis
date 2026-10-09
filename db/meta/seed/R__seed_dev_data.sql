@@ -3,7 +3,7 @@
 -- Delete-then-insert so the script is the single source of truth.
 
 -- 0. Truncate tables (added sensor_parameter to the list)
-TRUNCATE TABLE experiment_sensor, experiments, sensor_parameter, sensors, sensor_types, formulas CASCADE;
+TRUNCATE TABLE experiment_sensor, experiment_organisation, organisations, experiments, sensor_parameter, sensors, sensor_types, formulas CASCADE;
 
 -- 1. Insert formulas (Parsington-compatible expressions using 'x')
 INSERT INTO formulas (id, expression, version)
@@ -25,6 +25,13 @@ VALUES
     ('00000000-0000-7000-8000-000000000102', 'Stress Radial', 1),
     ('00000000-0000-7000-8000-000000000103', 'Other', 1),
     ('00000000-0000-7000-8000-000000000104', 'Volume', 1);
+
+
+-- 2b. Insert organisations (pick list for experiments)
+INSERT INTO organisations (id, name)
+VALUES
+    ('00000000-0000-7000-8000-000000000501', 'swisstopo'),
+    ('00000000-0000-7000-8000-000000000502', 'ETH Zurich');
 
 
 -- 3. Insert Experiments
