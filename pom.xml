@@ -30,7 +30,7 @@
     <springdoc-plugin.version>1.5</springdoc-plugin.version>
     <spotless.version>3.10.3</spotless.version>
     <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
-    <openapi-generator-plugin.version>7.25.0</openapi-generator-plugin.version>
+    <openapi-generator-plugin.version>7.26.0</openapi-generator-plugin.version>
     <swagger-annotations.version>2.2.55</swagger-annotations.version>
     <jackson-databind-nullable.version>0.2.12</jackson-databind-nullable.version>
     <parsington.version>3.3.0</parsington.version>
@@ -42,7 +42,7 @@
     <jacoco.version>0.8.15</jacoco.version>
     <testcontainers-keycloak.version>4.4.0</testcontainers-keycloak.version>
     <aws-msk-iam-auth.version>2.3.9</aws-msk-iam-auth.version>
-    <awssdk.version>2.51.2</awssdk.version>
+    <awssdk.version>2.55.12</awssdk.version>
 
     <!-- Override the Spring Boot BOM's managed flyway.version so the test-scoped
          flyway-core + flyway-database-postgresql (Testcontainers validation) and the
@@ -69,7 +69,7 @@
     <!-- Pin lz4-java (transitive via kafka-clients, not managed by the Spring Boot BOM) to
          1.11.4 to fix CVE-2026-106451 (TOCTOU on the native library in the shared tmp dir).
          Drop this pin and the dependencyManagement entry once kafka-clients pulls >= 1.11.4. -->
-    <lz4-java.version>1.11.4</lz4-java.version>
+    <lz4-java.version>1.12.0</lz4-java.version>
 
     <jooq.codegen.skip>false</jooq.codegen.skip>
 
