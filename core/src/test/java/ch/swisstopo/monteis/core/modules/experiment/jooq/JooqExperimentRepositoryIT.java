@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.jooq.DSLContext;
+import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -549,6 +550,25 @@ class JooqExperimentRepositoryIT {
           created.setOrganisationIds(List.of());
           repository.update(created);
           assertEquals(List.of(), repository.getById(created.getId()).getOrganisationIds());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_reject_a_stale_version_when_only_the_organisations_change() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID first = createOrganisationWithDsl("Org stale A");
+          UUID second = createOrganisationWithDsl("Org stale B");
+          Experiment created =
+              repository.create(buildDummyDomainExperiment("Org stale IT", "owner"));
+
+          created.setOrganisationIds(List.of(first));
+          Experiment updated = repository.update(created);
+
+          assertEquals(created.getVersion() + 1, updated.getVersion());
+          created.setOrganisationIds(List.of(second));
+          assertThrows(DataChangedException.class, () -> repository.update(created));
         });
   }
 

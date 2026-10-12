@@ -19,6 +19,7 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
@@ -236,6 +237,11 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
     // map new properties to existing
     mapper.updateRecordFromDomain(experiment, updatedRecord);
+    if (organisationsChange(experiment)) {
+      // a links only change leaves no column dirty, jOOQ then skips the update and with it the
+      // version check and the experiments_update policy
+      updatedRecord.touched(EXPERIMENTS.VERSION, true);
+    }
 
     try {
       updatedRecord.update();
@@ -291,6 +297,15 @@ public class JooqExperimentRepository implements ExperimentRepository {
       experiment.setOrganisationIds(organisationIds.getOrDefault(experiment.getId(), List.of()));
     }
     return experiments;
+  }
+
+  private boolean organisationsChange(Experiment experiment) {
+    Set<UUID> linked =
+        dsl.select(EXPERIMENT_ORGANISATION.ORGANISATION_ID)
+            .from(EXPERIMENT_ORGANISATION)
+            .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.eq(experiment.getId()))
+            .fetchSet(EXPERIMENT_ORGANISATION.ORGANISATION_ID);
+    return !linked.equals(Set.copyOf(experiment.getOrganisationIds()));
   }
 
   private static Collection<UUID> idsOf(List<Experiment> experiments) {
