@@ -401,6 +401,28 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
+  void should_stream_unaudited_experiments_with_their_organisations() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID organisationId = createOrganisationWithDsl("Org unaudited");
+          Experiment experiment = buildDummyDomainExperiment("UNAUDITED-ORG-EXP", "Test Owner");
+          experiment.setOrganisationIds(List.of(organisationId));
+          repository.create(experiment);
+
+          try (Stream<Experiment> stream = repository.streamUnauditedExperiments()) {
+            Experiment streamed =
+                stream
+                    .filter(e -> e.getName().equals("UNAUDITED-ORG-EXP"))
+                    .findFirst()
+                    .orElseThrow();
+
+            assertEquals(List.of(organisationId), streamed.getOrganisationIds());
+          }
+        });
+  }
+
+  @Test
+  @Transactional
   void should_exclude_audited_experiments() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {

@@ -273,12 +273,8 @@ public class JooqExperimentRepository implements ExperimentRepository {
                 // Ensure this matches your JaVers @TypeName or class name!
                 .and(DSL.field("type_name").eq(Experiment.JAVERS_TYPE)))
         .fetchStream()
-        .map(
-            r -> {
-              ExperimentsRecord experimentsRecord = r.into(EXPERIMENTS);
-
-              return mapper.toDomain(experimentsRecord);
-            });
+        // one query per experiment for its links, fine for a backfill that runs once
+        .map(r -> withOrganisations(List.of(mapper.toDomain(r.into(EXPERIMENTS)))).getFirst());
   }
 
   /** Sets the organisation ids of each experiment, with one query for all of them. */
