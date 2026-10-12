@@ -18,15 +18,22 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
+import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
+import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorDetailParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorDetailResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorParameterReadingResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -405,6 +412,103 @@ class MeasurementControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(SENSOR_ID.toString()))
         .andExpect(jsonPath("$.parameters").isEmpty());
+  }
+
+  @Test
+  void should_return_full_sensor_detail_with_all_fields() throws Exception {
+    // given
+    UUID experimentId = UUID.fromString("20000000-0000-0000-0000-000000000001");
+    UUID parameterId = UUID.fromString("30000000-0000-0000-0000-000000000001");
+    UUID typeId = UUID.fromString("40000000-0000-0000-0000-000000000001");
+    UUID formulaId = UUID.fromString("50000000-0000-0000-0000-000000000001");
+    UUID fulcrumId = UUID.fromString("60000000-0000-0000-0000-000000000001");
+    OffsetDateTime readingTime = OffsetDateTime.parse("2023-12-31T10:15:30Z");
+
+    SensorDetailResponseDto detail =
+        new SensorDetailResponseDto(
+            SENSOR_ID,
+            "monteis-001",
+            "TEMP-1",
+            Das.SOL_EXPERTS,
+            fulcrumId,
+            new ExperimentResponseDto(
+                experimentId,
+                "Mont Terri Alpha",
+                "experiment comment",
+                new PeriodDto(LocalDate.of(2023, 1, 1), LocalDate.of(2024, 12, 31)),
+                Status.ACTIVE,
+                3,
+                5),
+            new CoordinatesDto(1.5, 2.5, 3.5),
+            true,
+            "sensor comment",
+            7,
+            List.of(
+                new SensorDetailParameterResponseDto(
+                    parameterId,
+                    "temperature",
+                    "temperature-alias",
+                    new SensorTypeResponseDto(typeId, "Thermometer", 2),
+                    Unit.KELVIN,
+                    new FormulaResponseDto(formulaId, "x * 2", 4),
+                    new AlarmLimitsDto(-10.0, 40.0),
+                    true,
+                    "parameter comment",
+                    9,
+                    new SensorParameterReadingResponseDto(
+                        12.5, 6.25, MeasurementStatus.TOO_HIGH, readingTime))));
+    given(measurementService.getSensorDetail(SENSOR_ID, LocalDate.of(2024, 1, 1)))
+        .willReturn(detail);
+
+    // when / then
+    mockMvc
+        .perform(get("/api/measurements/sensors/{id}", SENSOR_ID).with(jwt()))
+        .andExpect(status().isOk())
+        // sensor
+        .andExpect(jsonPath("$.id").value(SENSOR_ID.toString()))
+        .andExpect(jsonPath("$.name").value("monteis-001"))
+        .andExpect(jsonPath("$.dasSensorAlias").value("TEMP-1"))
+        .andExpect(jsonPath("$.das").value("SOL_EXPERTS"))
+        .andExpect(jsonPath("$.fulcrumId").value(fulcrumId.toString()))
+        .andExpect(jsonPath("$.active").value(true))
+        .andExpect(jsonPath("$.comment").value("sensor comment"))
+        .andExpect(jsonPath("$.version").value(7))
+        .andExpect(jsonPath("$.coordinates.x").value(1.5))
+        .andExpect(jsonPath("$.coordinates.y").value(2.5))
+        .andExpect(jsonPath("$.coordinates.z").value(3.5))
+        // main experiment
+        .andExpect(jsonPath("$.mainExperiment.id").value(experimentId.toString()))
+        .andExpect(jsonPath("$.mainExperiment.name").value("Mont Terri Alpha"))
+        .andExpect(jsonPath("$.mainExperiment.comment").value("experiment comment"))
+        .andExpect(jsonPath("$.mainExperiment.period.start").value("2023-01-01"))
+        .andExpect(jsonPath("$.mainExperiment.period.end").value("2024-12-31"))
+        .andExpect(jsonPath("$.mainExperiment.status").value("ACTIVE"))
+        .andExpect(jsonPath("$.mainExperiment.version").value(3))
+        .andExpect(jsonPath("$.mainExperiment.sensorCount").value(5))
+        // parameter
+        .andExpect(jsonPath("$.parameters.length()").value(1))
+        .andExpect(jsonPath("$.parameters[0].id").value(parameterId.toString()))
+        .andExpect(jsonPath("$.parameters[0].name").value("temperature"))
+        .andExpect(jsonPath("$.parameters[0].dasParameterAlias").value("temperature-alias"))
+        .andExpect(jsonPath("$.parameters[0].type.id").value(typeId.toString()))
+        .andExpect(jsonPath("$.parameters[0].type.name").value("Thermometer"))
+        .andExpect(jsonPath("$.parameters[0].type.version").value(2))
+        .andExpect(jsonPath("$.parameters[0].unit").value("KELVIN"))
+        .andExpect(jsonPath("$.parameters[0].formula.id").value(formulaId.toString()))
+        .andExpect(jsonPath("$.parameters[0].formula.expression").value("x * 2"))
+        .andExpect(jsonPath("$.parameters[0].formula.version").value(4))
+        .andExpect(jsonPath("$.parameters[0].alarmLimits.lower").value(-10.0))
+        .andExpect(jsonPath("$.parameters[0].alarmLimits.upper").value(40.0))
+        .andExpect(jsonPath("$.parameters[0].active").value(true))
+        .andExpect(jsonPath("$.parameters[0].comment").value("parameter comment"))
+        .andExpect(jsonPath("$.parameters[0].version").value(9))
+        // latest reading
+        .andExpect(jsonPath("$.parameters[0].latestParameterReadingValue.value").value(12.5))
+        .andExpect(jsonPath("$.parameters[0].latestParameterReadingValue.rawValue").value(6.25))
+        .andExpect(jsonPath("$.parameters[0].latestParameterReadingValue.status").value("TOO_HIGH"))
+        .andExpect(
+            jsonPath("$.parameters[0].latestParameterReadingValue.timestamp")
+                .value("2023-12-31T10:15:30Z"));
   }
 
   @Test
