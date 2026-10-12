@@ -178,10 +178,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
       throw new FieldBusinessValidationException(
           "name", experiment.getName(), "validation.unique", Map.of());
     }
-    Experiment updated = mapper.toDomain(updatedRecord);
-    // owners are not part of this update, but the audit snapshot must not show them as removed
-    updated.setOwnerIds(ownerIdsOf(updated.getId()));
-    return updated;
+    return fetchExperiment(experiment.getId());
   }
 
   @Override
@@ -211,14 +208,6 @@ public class JooqExperimentRepository implements ExperimentRepository {
         .fetchOptional(JooqExperimentRepository::toExperiment)
         // RLS hides rows the caller may not read, so hidden and missing look the same
         .orElseThrow(() -> new ObjectNotFoundException(Experiment.class));
-  }
-
-  private Set<UUID> ownerIdsOf(UUID experimentId) {
-    return Set.copyOf(
-        dsl.select(EXPERIMENT_OWNER.USER_ID)
-            .from(EXPERIMENT_OWNER)
-            .where(EXPERIMENT_OWNER.EXPERIMENT_ID.eq(experimentId))
-            .fetch(EXPERIMENT_OWNER.USER_ID));
   }
 
   private SelectSelectStep<Record> selectExperiments() {

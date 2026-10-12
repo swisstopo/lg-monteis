@@ -5,6 +5,7 @@ import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
+import org.javers.core.metamodel.annotation.DiffIgnore;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
 
@@ -17,7 +18,8 @@ public class Experiment implements Auditable {
   private Period period;
   private String comment;
   private Integer version;
-  private Integer sensorCount;
+  // derived from the sensors, not something anyone changes on the experiment
+  @DiffIgnore private Integer sensorCount;
   private Set<UUID> ownerIds = Set.of();
 
   /**
