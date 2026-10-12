@@ -32,10 +32,12 @@ export function toFormModel(experiment: ExperimentResponseDto | undefined): Expe
 export function toWriteDto(
   model: ExperimentFormModel,
   experiment: ExperimentResponseDto | undefined,
+  ownerIds?: string[],
 ): WriteExperimentDto {
   return {
     id: experiment?.id,
     version: experiment?.version,
+    ownerIds,
     name: model.name,
     comment: model.comment.trim() || undefined,
     period: {

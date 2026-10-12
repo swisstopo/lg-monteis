@@ -5,14 +5,19 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 import ch.swisstopo.monteis.core.infrastructure.csv.CsvWriter;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import java.io.IOException;
 import java.io.Writer;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
@@ -32,7 +37,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExportQueryRepository {
 
   private static final List<String> HEADER =
-      List.of("name", "status", "period.start", "period.end", "sensorCount", "comment", "id");
+      List.of(
+          "name", "status", "period.start", "period.end", "sensorCount", "owners", "comment", "id");
+  private static final String OWNER_SEPARATOR = "; ";
 
   private final DSLContext dsl;
   private final Clock clock;
@@ -43,12 +50,16 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
   }
 
   @Override
-  public void streamCsv(PagedRequest exportRequest, Writer writer) throws IOException {
+  public void streamCsv(PagedRequest exportRequest, Writer writer, Map<UUID, VisibleOwners> owners)
+      throws IOException {
     // Reuses JooqExperimentRepository's colId->Field map so the export honors exactly the same
     // filter/sort semantics as the grid.
+    ExperimentOwnerFilter.Split ownerFilter = ExperimentOwnerFilter.split(exportRequest);
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
         PagedRequestJooqTranslator.translate(
-            exportRequest, JooqExperimentRepository.COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
+            ownerFilter.requestWithoutOwnersColumn(),
+            JooqExperimentRepository.COLUMNS_BY_COL_ID,
+            EXPERIMENTS.ID.asc());
 
     LocalDate today = LocalDate.now(clock);
     CsvWriter.writeRow(writer, HEADER);
@@ -63,24 +74,45 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
                 EXPERIMENTS.COMMENT,
                 EXPERIMENTS.ID)
             .from(EXPERIMENTS)
-            .where(criteria.condition())
+            .where(criteria.condition().and(ownerFilter.ownerCondition()))
             .orderBy(criteria.sortFields())
             .limit(exportRequest.limit())
             .fetchLazy()) {
       for (Record r : cursor) {
-        Period period = new Period(r.get(EXPERIMENTS.START), r.get(EXPERIMENTS.END));
-        CsvWriter.writeRow(
-            writer,
-            Arrays.asList(
-                r.get(EXPERIMENTS.NAME),
-                period.getStatus(today),
-                r.get(EXPERIMENTS.START),
-                r.get(EXPERIMENTS.END),
-                r.get(JooqExperimentRepository.SENSOR_COUNT_FIELD_NAME, Integer.class),
-                r.get(EXPERIMENTS.COMMENT),
-                r.get(EXPERIMENTS.ID)));
+        CsvWriter.writeRow(writer, rowOf(r, today, owners));
         writer.flush();
       }
     }
+  }
+
+  private static List<Object> rowOf(Record r, LocalDate today, Map<UUID, VisibleOwners> owners) {
+    Period period = new Period(r.get(EXPERIMENTS.START), r.get(EXPERIMENTS.END));
+    VisibleOwners visibleOwners = owners.getOrDefault(r.get(EXPERIMENTS.ID), VisibleOwners.NONE);
+    return Arrays.asList(
+        r.get(EXPERIMENTS.NAME),
+        period.getStatus(today),
+        r.get(EXPERIMENTS.START),
+        r.get(EXPERIMENTS.END),
+        r.get(JooqExperimentRepository.SENSOR_COUNT_FIELD_NAME, Integer.class),
+        ownerNames(visibleOwners),
+        r.get(EXPERIMENTS.COMMENT),
+        r.get(EXPERIMENTS.ID));
+  }
+
+  private static String ownerNames(VisibleOwners owners) {
+    return switch (owners.status()) {
+      case SHOWN -> namesOf(owners.users());
+      case KEYCLOAK_UNAVAILABLE -> "(unavailable)";
+      case ACCESS_DENIED -> "(access denied)";
+      case NO_WRITE_GROUP -> "(no write group)";
+    };
+  }
+
+  private static String namesOf(List<DirectoryUser> users) {
+    return users.stream()
+        .map(DirectoryUser::displayName)
+        // a ; in a name would break splitting the cell on the separator, csv has no escape for it
+        .map(name -> name.replace(";", ""))
+        .collect(Collectors.joining(OWNER_SEPARATOR));
   }
 }

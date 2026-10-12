@@ -7,10 +7,12 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.query.RawExportRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.security.Capabilities;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
+import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
@@ -29,29 +31,35 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(ApiPaths.EXPERIMENTS)
 public class ExperimentController {
-  private final ExperimentService service;
+  private final ExperimentService experimentService;
+  private final ExperimentOwnerService ownerService;
   private final ExperimentWebMapper mapper;
   private final Clock clock;
   private final PagedRequestParser pagedRequestParser;
   private final ExperimentCsvExportQueryRepository csvExportQueryRepository;
 
   public ExperimentController(
-      ExperimentService service,
+      ExperimentService experimentService,
+      ExperimentOwnerService ownerService,
       ExperimentWebMapper mapper,
       Clock clock,
       PagedRequestParser pagedRequestParser,
       ExperimentCsvExportQueryRepository csvExportQueryRepository) {
-    this.service = service;
+    this.experimentService = experimentService;
+    this.ownerService = ownerService;
     this.mapper = mapper;
     this.clock = clock;
     this.pagedRequestParser = pagedRequestParser;
@@ -64,7 +72,9 @@ public class ExperimentController {
   public ResponseEntity<ExperimentResponseDto> getExperiment(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
     LocalDate today = LocalDate.now(clock);
-    return ResponseEntity.ok(mapper.toDto(service.getById(id), today));
+    Experiment experiment = experimentService.getById(id);
+    return ResponseEntity.ok(
+        mapper.toDto(experiment, ownerService.findOwnersOf(experiment), today));
   }
 
   @Operation(
@@ -81,8 +91,9 @@ public class ExperimentController {
       @Validated(Create.class) @RequestBody WriteExperimentDto dto) {
     LocalDate today = LocalDate.now(clock);
 
-    Experiment createdExperiment = service.createExperiment(mapper.toDomain(dto));
-    return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDto(createdExperiment, today));
+    Experiment createdExperiment = experimentService.createExperiment(mapper.toDomain(dto));
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(mapper.toDto(createdExperiment, ownerService.findOwnersOf(createdExperiment), today));
   }
 
   @Operation(
@@ -98,15 +109,31 @@ public class ExperimentController {
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExperimentResponseDto> updateExperiment(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id,
-      @Validated(Update.class) @RequestBody WriteExperimentDto dto) {
+      @Validated(Update.class) @RequestBody WriteExperimentDto dto,
+      Authentication authentication) {
     if (!id.equals(dto.id())) {
       throw new ObjectBusinessValidationException(
           "id.validation.mismatch", Map.of("pathId", id, "id", dto.id()));
     }
     LocalDate today = LocalDate.now(clock);
 
-    Experiment updated = service.updateExperiment(mapper.toDomain(dto));
-    return ResponseEntity.status(HttpStatus.OK).body(mapper.toDto(updated, today));
+    Experiment updated = update(dto, authentication);
+    return ResponseEntity.status(HttpStatus.OK)
+        .body(mapper.toDto(updated, ownerService.findOwnersOf(updated), today));
+  }
+
+  // the filter chain lets every writer of the experiment through, it can't see the owners in the
+  // body
+  private Experiment update(WriteExperimentDto dto, Authentication authentication) {
+    Experiment experiment = mapper.toDomain(dto);
+    if (dto.ownerIds() == null) {
+      return experimentService.updateExperiment(experiment);
+    }
+    // gets refactored in PR 258
+    if (!Capabilities.of(authentication).canManageExperimentOwners()) {
+      throw new AccessDeniedException("Only admins may change the owners of an experiment");
+    }
+    return experimentService.updateExperimentAndOwners(experiment, Set.copyOf(dto.ownerIds()));
   }
 
   @Operation(
@@ -119,8 +146,9 @@ public class ExperimentController {
   @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<ExperimentResponseDto>> getAllExperiments() {
     LocalDate today = LocalDate.now(clock);
+    List<Experiment> experiments = experimentService.findAllExperiments();
     return ResponseEntity.ok(
-        service.findAllExperiments().stream().map(e -> mapper.toDto(e, today)).toList());
+        mapper.toDtos(experiments, ownerService.findOwnersByExperiment(experiments), today));
   }
 
   @Operation(
@@ -136,8 +164,10 @@ public class ExperimentController {
     LocalDate today = LocalDate.now(clock);
 
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
-    PagedResult<Experiment> domainResult = service.getExperiments(pagedRequestParser.parse(raw));
-    return mapper.toPagedDto(domainResult, today);
+    PagedResult<Experiment> domainResult =
+        experimentService.getExperiments(pagedRequestParser.parse(raw));
+    return mapper.toPagedDto(
+        domainResult, ownerService.findOwnersByExperiment(domainResult.rows()), today);
   }
 
   @Operation(
@@ -171,7 +201,8 @@ public class ExperimentController {
     Writer writer =
         new BufferedWriter(
             new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
-    csvExportQueryRepository.streamCsv(exportRequest, writer);
+    csvExportQueryRepository.streamCsv(
+        exportRequest, writer, ownerService.ownersByExperimentForExport());
     writer.flush();
   }
 }

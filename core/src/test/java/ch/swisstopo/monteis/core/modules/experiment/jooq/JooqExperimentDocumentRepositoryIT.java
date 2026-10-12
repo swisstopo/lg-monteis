@@ -13,6 +13,7 @@ import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -150,6 +151,8 @@ class JooqExperimentDocumentRepositoryIT {
                 repository.create(
                     repository.nextId(), hidden, REPORT, SecurityContextTestSupport.USERNAME));
 
+    UUID hiddenDocumentId = hiddenDocument.id();
+
     // when / then
     SecurityContextTestSupport.runAsUser(
         List.of(readable),
@@ -159,7 +162,7 @@ class JooqExperimentDocumentRepositoryIT {
               .containsExactly(readableDocument.id());
           assertThat(repository.findByExperimentId(hidden)).isEmpty();
           assertThrows(
-              ObjectNotFoundException.class, () -> repository.getById(hidden, hiddenDocument.id()));
+              ObjectNotFoundException.class, () -> repository.getById(hidden, hiddenDocumentId));
         });
   }
 
@@ -195,15 +198,14 @@ class JooqExperimentDocumentRepositoryIT {
     // is the last statement of the test
     SecurityContextTestSupport.runAsUser(
         List.of(experimentId),
-        () ->
-            assertThrows(
-                PermissionDeniedDataAccessException.class,
-                () ->
-                    repository.create(
-                        repository.nextId(),
-                        experimentId,
-                        REPORT,
-                        SecurityContextTestSupport.USERNAME)));
+        () -> {
+          UUID documentId = repository.nextId();
+          assertThrows(
+              PermissionDeniedDataAccessException.class,
+              () ->
+                  repository.create(
+                      documentId, experimentId, REPORT, SecurityContextTestSupport.USERNAME));
+        });
   }
 
   @Test
@@ -262,9 +264,8 @@ class JooqExperimentDocumentRepositoryIT {
         () ->
             dsl.insertInto(EXPERIMENTS)
                 .set(EXPERIMENTS.NAME, "documents-it-" + UUID.randomUUID())
-                .set(EXPERIMENTS.START, LocalDate.of(2030, 1, 1))
-                .set(EXPERIMENTS.END, LocalDate.of(2030, 12, 31))
-                .set(EXPERIMENTS.OWNER, "owner")
+                .set(EXPERIMENTS.START, LocalDate.of(2030, Month.JANUARY, 1))
+                .set(EXPERIMENTS.END, LocalDate.of(2030, Month.DECEMBER, 31))
                 .returning(EXPERIMENTS.ID)
                 .fetchSingle()
                 .getId());

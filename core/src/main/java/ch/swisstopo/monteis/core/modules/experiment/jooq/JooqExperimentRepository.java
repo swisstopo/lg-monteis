@@ -1,24 +1,26 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_OWNER;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
-import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.Record;
+import org.jooq.SelectSelectStep;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -31,6 +33,13 @@ public class JooqExperimentRepository implements ExperimentRepository {
   static final String SENSOR_COUNT_FIELD_NAME = ExperimentRecordProjections.SENSOR_COUNT_FIELD_NAME;
 
   static final Field<Integer> SENSOR_COUNT_FIELD = ExperimentRecordProjections.SENSOR_COUNT_FIELD;
+
+  static final Field<UUID[]> OWNER_IDS_FIELD =
+      DSL.array(
+              DSL.select(EXPERIMENT_OWNER.USER_ID)
+                  .from(EXPERIMENT_OWNER)
+                  .where(EXPERIMENT_OWNER.EXPERIMENT_ID.eq(EXPERIMENTS.ID)))
+          .as("ownerIds");
 
   // Package-private (not private): also reused by JooqExperimentCsvExportQueryRepository, to
   // select the exact same computed "status" value the grid filters/sorts by.
@@ -63,50 +72,35 @@ public class JooqExperimentRepository implements ExperimentRepository {
           "status",
           STATUS_FIELD);
 
+  private static final List<Field<?>> EXPERIMENT_FIELDS =
+      List.of(
+          EXPERIMENTS.ID,
+          EXPERIMENTS.NAME,
+          EXPERIMENTS.START,
+          EXPERIMENTS.END,
+          EXPERIMENTS.COMMENT,
+          EXPERIMENTS.VERSION,
+          SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME),
+          OWNER_IDS_FIELD);
+
   private final DSLContext dsl;
   private final ExperimentJooqMapper mapper;
-  private final CurrentUserProvider currentUserProvider;
 
-  public JooqExperimentRepository(
-      DSLContext dsl, ExperimentJooqMapper mapper, CurrentUserProvider currentUserProvider) {
+  public JooqExperimentRepository(DSLContext dsl, ExperimentJooqMapper mapper) {
     this.mapper = mapper;
     this.dsl = dsl;
-    this.currentUserProvider = currentUserProvider;
   }
 
   @Override
   @Transactional(readOnly = true)
   public Experiment getById(UUID experimentId) {
-
-    return dsl.select(
-            EXPERIMENTS.ID,
-            EXPERIMENTS.NAME,
-            EXPERIMENTS.START,
-            EXPERIMENTS.END,
-            EXPERIMENTS.COMMENT,
-            EXPERIMENTS.VERSION,
-            SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))
-        .from(EXPERIMENTS)
-        .where(EXPERIMENTS.ID.eq(experimentId))
-        .fetchOptional(
-            experiment ->
-                new Experiment(
-                    experiment.get(EXPERIMENTS.ID),
-                    experiment.get(EXPERIMENTS.NAME),
-                    new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
-                    experiment.get(EXPERIMENTS.COMMENT),
-                    experiment.get(EXPERIMENTS.VERSION),
-                    experiment.get(SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))))
-        // RLS hides rows the caller may not read, so hidden and missing look the same (BR4.11)
-        .orElseThrow(() -> new ObjectNotFoundException(Experiment.class));
+    return fetchExperiment(experimentId);
   }
 
   @Override
   @Transactional(readOnly = true)
   public void requireVisible(UUID experimentId) {
-    if (!dsl.fetchExists(EXPERIMENTS, EXPERIMENTS.ID.eq(experimentId))) {
-      throw new ObjectNotFoundException(Experiment.class);
-    }
+    requireExperimentVisible(experimentId);
   }
 
   @Override
@@ -115,36 +109,22 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
     // Default to a deterministic order so offset-based paging stays stable across separate
     // requests (Postgres does not guarantee row order without an ORDER BY).
+    ExperimentOwnerFilter.Split ownerFilter = ExperimentOwnerFilter.split(request);
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
-        PagedRequestJooqTranslator.translate(request, COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
+        PagedRequestJooqTranslator.translate(
+            ownerFilter.requestWithoutOwnersColumn(), COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
+    var condition = criteria.condition().and(ownerFilter.ownerCondition());
 
     List<Experiment> data =
-        dsl.select(
-                EXPERIMENTS.ID,
-                EXPERIMENTS.NAME,
-                EXPERIMENTS.START,
-                EXPERIMENTS.END,
-                EXPERIMENTS.COMMENT,
-                EXPERIMENTS.VERSION,
-                SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))
+        selectExperiments()
             .from(EXPERIMENTS)
-            .where(criteria.condition())
+            .where(condition)
             .orderBy(criteria.sortFields())
             .limit(request.limit())
             .offset(request.offset())
-            .fetch(
-                experiment ->
-                    new Experiment(
-                        experiment.get(EXPERIMENTS.ID),
-                        experiment.get(EXPERIMENTS.NAME),
-                        new Period(
-                            experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
-                        experiment.get(EXPERIMENTS.COMMENT),
-                        experiment.get(EXPERIMENTS.VERSION),
-                        experiment.get(SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME))));
+            .fetch(JooqExperimentRepository::toExperiment);
 
-    int totalCount =
-        dsl.fetchCount(dsl.select(EXPERIMENTS.ID).from(EXPERIMENTS).where(criteria.condition()));
+    int totalCount = dsl.fetchCount(dsl.select(EXPERIMENTS.ID).from(EXPERIMENTS).where(condition));
 
     return new PagedResult<>(data, totalCount);
   }
@@ -152,40 +132,17 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Override
   @Transactional(readOnly = true)
   public List<Experiment> findAll() {
-    return dsl.select(
-            EXPERIMENTS.ID,
-            EXPERIMENTS.NAME,
-            EXPERIMENTS.START,
-            EXPERIMENTS.END,
-            EXPERIMENTS.COMMENT,
-            EXPERIMENTS.VERSION,
-            DSL.selectCount()
-                .from(EXPERIMENT_SENSOR)
-                .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
-                .asField(SENSOR_COUNT_FIELD_NAME))
+    return selectExperiments()
         .from(EXPERIMENTS)
         .orderBy(EXPERIMENTS.NAME.asc())
-        .fetch(
-            experiment ->
-                new Experiment(
-                    experiment.get(EXPERIMENTS.ID),
-                    experiment.get(EXPERIMENTS.NAME),
-                    new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
-                    experiment.get(EXPERIMENTS.COMMENT),
-                    experiment.get(EXPERIMENTS.VERSION),
-                    experiment.get(SENSOR_COUNT_FIELD_NAME, Integer.class)));
+        .fetch(JooqExperimentRepository::toExperiment);
   }
 
   @Override
   @Transactional
   public Experiment create(Experiment experiment) {
-    @SuppressWarnings("java:S2325")
-    String currentUser = currentUserProvider.getCurrentUserHandle();
-
     ExperimentsRecord createdExperiment = mapper.toRecord(experiment);
     dsl.attach(createdExperiment);
-
-    createdExperiment.setOwner(currentUser);
 
     try {
       createdExperiment.insert();
@@ -218,7 +175,57 @@ public class JooqExperimentRepository implements ExperimentRepository {
       throw new FieldBusinessValidationException(
           "name", experiment.getName(), "validation.unique", Map.of());
     }
-    return mapper.toDomain(updatedRecord);
+    return fetchExperiment(experiment.getId());
+  }
+
+  @Override
+  @Transactional
+  public Experiment replaceOwners(UUID experimentId, Set<UUID> ownerIds) {
+    // throws for a hidden experiment before anything is written
+    requireExperimentVisible(experimentId);
+
+    dsl.deleteFrom(EXPERIMENT_OWNER)
+        .where(EXPERIMENT_OWNER.EXPERIMENT_ID.eq(experimentId))
+        .and(EXPERIMENT_OWNER.USER_ID.notIn(ownerIds))
+        .execute();
+    if (!ownerIds.isEmpty()) {
+      dsl.insertInto(EXPERIMENT_OWNER, EXPERIMENT_OWNER.EXPERIMENT_ID, EXPERIMENT_OWNER.USER_ID)
+          .valuesOfRows(ownerIds.stream().map(ownerId -> DSL.row(experimentId, ownerId)).toList())
+          .onConflictDoNothing()
+          .execute();
+    }
+
+    return fetchExperiment(experimentId);
+  }
+
+  private void requireExperimentVisible(UUID experimentId) {
+    if (!dsl.fetchExists(EXPERIMENTS, EXPERIMENTS.ID.eq(experimentId))) {
+      throw new ObjectNotFoundException(Experiment.class);
+    }
+  }
+
+  private Experiment fetchExperiment(UUID experimentId) {
+    return selectExperiments()
+        .from(EXPERIMENTS)
+        .where(EXPERIMENTS.ID.eq(experimentId))
+        .fetchOptional(JooqExperimentRepository::toExperiment)
+        // RLS hides rows the caller may not read, so hidden and missing look the same
+        .orElseThrow(() -> new ObjectNotFoundException(Experiment.class));
+  }
+
+  private SelectSelectStep<Record> selectExperiments() {
+    return dsl.select(EXPERIMENT_FIELDS);
+  }
+
+  private static Experiment toExperiment(Record experiment) {
+    return new Experiment(
+        experiment.get(EXPERIMENTS.ID),
+        experiment.get(EXPERIMENTS.NAME),
+        new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
+        experiment.get(EXPERIMENTS.COMMENT),
+        experiment.get(EXPERIMENTS.VERSION),
+        experiment.get(SENSOR_COUNT_FIELD_NAME, Integer.class),
+        Set.of(experiment.get(OWNER_IDS_FIELD)));
   }
 
   @Override

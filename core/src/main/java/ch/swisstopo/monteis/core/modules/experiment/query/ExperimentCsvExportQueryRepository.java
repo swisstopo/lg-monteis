@@ -3,6 +3,8 @@ package ch.swisstopo.monteis.core.modules.experiment.query;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Read-flow contract for streaming all experiments matching a filter/sort as CSV, straight to a
@@ -11,5 +13,6 @@ import java.io.Writer;
  * records.
  */
 public interface ExperimentCsvExportQueryRepository {
-  void streamCsv(PagedRequest exportRequest, Writer writer) throws IOException;
+  void streamCsv(PagedRequest exportRequest, Writer writer, Map<UUID, VisibleOwners> owners)
+      throws IOException;
 }

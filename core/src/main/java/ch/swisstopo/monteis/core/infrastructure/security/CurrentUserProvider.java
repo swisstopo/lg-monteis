@@ -1,8 +1,10 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -21,6 +23,18 @@ public class CurrentUserProvider {
     return currentPrincipal()
         .map(MonteisPrincipal::getName)
         .orElseThrow(() -> new IllegalStateException("No authenticated MonteisPrincipal"));
+  }
+
+  public Optional<UUID> currentSubject() {
+    return currentPrincipal().map(MonteisPrincipal::getSubject);
+  }
+
+  public Optional<String> currentAccessToken() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication != null && authentication.getCredentials() instanceof Jwt jwt) {
+      return Optional.of(jwt.getTokenValue());
+    }
+    return Optional.empty();
   }
 
   private static Optional<MonteisPrincipal> currentPrincipal() {

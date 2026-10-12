@@ -75,6 +75,7 @@ class CapabilitiesTest {
     assertEquals(admin, capabilities.isAdmin());
     assertEquals(admin, capabilities.canCreateExperiment());
     assertEquals(admin, capabilities.canManageSensors());
+    assertEquals(admin, capabilities.canManageExperimentOwners());
   }
 
   @ParameterizedTest
@@ -268,6 +269,7 @@ class CapabilitiesTest {
     assertFalse(none.canWriteAllExperiments());
     assertFalse(none.canCreateExperiment());
     assertFalse(none.canManageSensors());
+    assertFalse(none.canManageExperimentOwners());
     assertFalse(none.canAccessDocuments());
     assertFalse(none.canReadExperiment(EXPERIMENT_A));
     assertFalse(none.canWriteExperiment(EXPERIMENT_A));
@@ -282,6 +284,7 @@ class CapabilitiesTest {
     assertTrue(admin.canWriteAllExperiments());
     assertTrue(admin.canCreateExperiment());
     assertTrue(admin.canManageSensors());
+    assertTrue(admin.canManageExperimentOwners());
     assertFalse(admin.canAccessDocuments());
     assertTrue(admin.canWriteExperiment(EXPERIMENT_A));
   }
@@ -296,6 +299,7 @@ class CapabilitiesTest {
     assertFalse(editor.isAdmin());
     assertFalse(editor.canCreateExperiment());
     assertFalse(editor.canManageSensors());
+    assertFalse(editor.canManageExperimentOwners());
   }
 
   @Test

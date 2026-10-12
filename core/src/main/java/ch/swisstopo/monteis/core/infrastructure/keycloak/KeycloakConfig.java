@@ -1,0 +1,42 @@
+package ch.swisstopo.monteis.core.infrastructure.keycloak;
+
+import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.HttpClientSettings;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.web.client.RestClient;
+
+@Configuration
+public class KeycloakConfig {
+
+  @Bean
+  KeycloakClient keycloakClient(
+      RestClient.Builder builder, KeycloakProperties properties, CurrentUserProvider currentUser) {
+    HttpClientSettings settings =
+        HttpClientSettings.defaults()
+            .withTimeouts(properties.connectTimeout(), properties.readTimeout());
+    return new KeycloakClient(
+        builder
+            .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings))
+            .baseUrl(properties.apiUri())
+            .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+            .requestInterceptor(callerToken(currentUser))
+            .build());
+  }
+
+  private static ClientHttpRequestInterceptor callerToken(CurrentUserProvider currentUser) {
+    return (request, body, execution) -> {
+      String token =
+          currentUser
+              .currentAccessToken()
+              .orElseThrow(
+                  () -> new KeycloakUnavailableException("No caller token to ask Keycloak", null));
+      request.getHeaders().setBearerAuth(token);
+      return execution.execute(request, body);
+    };
+  }
+}

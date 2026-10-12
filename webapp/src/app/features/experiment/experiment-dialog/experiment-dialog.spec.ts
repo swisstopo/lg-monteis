@@ -1,151 +1,173 @@
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, input } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { MatDialogRef } from '@angular/material/dialog';
+import { By } from '@angular/platform-browser';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ErrorDto, ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
+import {
+  EXPERIMENT_FIELDS,
+  ExperimentDialogHarness,
+} from '@features/experiment/testing/experiment-dialog.harness';
+import { ALICE, anExperiment, BOB } from '@features/experiment/testing/experiment-fixtures';
 import { provideTranslateService } from '@ngx-translate/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mocked, vi } from 'vitest';
 import { ExperimentDialog } from './experiment-dialog';
 
-const EXPERIMENT: ExperimentResponseDto = {
-  id: 'experiment-1',
-  version: 3,
-  name: 'Mont Terri Alpha',
-  comment: 'borehole',
-  period: { start: '2030-01-01', end: '2030-05-05' },
-};
-
-/** Stands in for the documents section, which has its own spec. */
 @Component({ selector: 'app-experiment-documents', template: '' })
 class ExperimentDocumentsStub {
-  experimentId = input.required<string>();
-  readOnly = input(false);
+  readonly experimentId = input.required<string>();
+  readonly readOnly = input(false);
+}
+
+interface Setup {
+  experimentId?: string;
+  viewOnly?: boolean;
+  canWrite?: boolean;
+  isAdmin?: boolean;
+  experiment?: ExperimentResponseDto;
+}
+
+async function setup({
+  experimentId,
+  viewOnly = false,
+  canWrite = true,
+  isAdmin = false,
+  experiment = anExperiment(),
+}: Setup = {}) {
+  const experimentService: Mocked<
+    Pick<ExperimentService, 'getExperiment' | 'saveExperiment' | 'findOwnerCandidatesForExperiment'>
+  > = {
+    getExperiment: vi.fn().mockResolvedValue(experiment),
+    saveExperiment: vi.fn().mockResolvedValue(experiment),
+    findOwnerCandidatesForExperiment: vi.fn().mockResolvedValue([ALICE, BOB]),
+  };
+  const toast: Mocked<Pick<ToastService, 'success' | 'warning' | 'error'>> = {
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+  };
+  const dialogRef: Mocked<Pick<MatDialogRef<ExperimentDialog>, 'close'>> = { close: vi.fn() };
+
+  TestBed.configureTestingModule({
+    imports: [ExperimentDialog],
+    providers: [
+      provideTranslateService(),
+      { provide: ExperimentService, useValue: experimentService },
+      {
+        provide: PermissionsService,
+        useValue: { canWriteExperiment: () => canWrite, isAdmin: () => isAdmin },
+      },
+      { provide: MatDialogRef, useValue: dialogRef },
+      { provide: ToastService, useValue: toast },
+    ],
+  }).overrideComponent(ExperimentDialog, {
+    remove: { imports: [ExperimentDocuments] },
+    add: { imports: [ExperimentDocumentsStub] },
+  });
+
+  const fixture = TestBed.createComponent(ExperimentDialog);
+  if (experimentId) {
+    fixture.componentRef.setInput('experimentId', experimentId);
+    fixture.componentRef.setInput('viewOnly', viewOnly);
+  }
+  const dialog = await TestbedHarnessEnvironment.harnessForFixture(
+    fixture,
+    ExperimentDialogHarness,
+  );
+  const documents = () =>
+    fixture.debugElement.query(By.directive(ExperimentDocumentsStub))?.componentInstance as
+      ExperimentDocumentsStub | undefined;
+
+  return { dialog, documents, experimentService, toast, dialogRef };
+}
+
+function saveFailsWith(field: string, messageKey: string) {
+  return new HttpErrorResponse({
+    status: 422,
+    error: [{ field, messageKey, target: ErrorDto.TargetEnum.Field }],
+  });
 }
 
 describe('ExperimentDialog', () => {
-  let experimentService: {
-    getExperiment: ReturnType<typeof vi.fn>;
-    saveExperiment: ReturnType<typeof vi.fn>;
-  };
-  let canWrite: boolean;
-  let dialogRef: { close: ReturnType<typeof vi.fn> };
-  let toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
-
-  beforeEach(() => {
-    experimentService = {
-      getExperiment: vi.fn().mockResolvedValue(EXPERIMENT),
-      saveExperiment: vi.fn().mockResolvedValue(EXPERIMENT),
-    };
-    canWrite = true;
-    dialogRef = { close: vi.fn() };
-    toast = { success: vi.fn(), error: vi.fn() };
-    TestBed.configureTestingModule({
-      imports: [ExperimentDialog],
-      providers: [
-        provideTranslateService(),
-        { provide: ExperimentService, useValue: experimentService },
-        { provide: PermissionsService, useValue: { canWriteExperiment: () => canWrite } },
-        { provide: MatDialogRef, useValue: dialogRef },
-        { provide: ToastService, useValue: toast },
-      ],
-    });
-    TestBed.overrideComponent(ExperimentDialog, {
-      remove: { imports: [ExperimentDocuments] },
-      add: { imports: [ExperimentDocumentsStub] },
-    });
-  });
-
-  async function render(experimentId?: string, { viewOnly = false } = {}) {
-    const fixture = TestBed.createComponent(ExperimentDialog);
-    if (experimentId) {
-      fixture.componentRef.setInput('experimentId', experimentId);
-      fixture.componentRef.setInput('viewOnly', viewOnly);
-    }
-    await fixture.whenStable();
-    return new DialogView(fixture);
-  }
-
   describe('create', () => {
     it('starts empty, without documents', async () => {
-      const view = await render();
+      const { dialog, documents, experimentService } = await setup();
 
-      expect(view.title()).toBe('experiment.dialog.title.create');
-      expect(view.input('name').value).toBe('');
-      expect(view.documents()).toBeNull();
+      expect(await dialog.getTitle()).toBe('experiment.dialog.title.create');
+      expect(await dialog.getValue('name')).toBe('');
+      expect(documents()).toBeUndefined();
       expect(experimentService.getExperiment).not.toHaveBeenCalled();
     });
 
-    it('cannot be saved while the form is invalid', async () => {
-      const view = await render();
+    it('shows the owners disabled and explains that they come later', async () => {
+      const { dialog } = await setup({ isAdmin: true });
 
-      expect(view.button('experiment.button.save').disabled).toBe(true);
-      expect(view.button('experiment.button.saveAndCreate').disabled).toBe(true);
+      expect(await dialog.getOwnersOfNewExperiment()).toEqual({
+        disabled: true,
+        hint: 'experiment.owners.createHint',
+      });
+      expect(await dialog.ownerPicker()).toBeNull();
+      expect(await dialog.ownerList()).toBeNull();
+    });
+
+    it('cannot be saved while the form is invalid', async () => {
+      const { dialog } = await setup();
+
+      expect(await dialog.canSave()).toBe(false);
     });
 
     it('creates the experiment and closes', async () => {
-      const view = await render();
-      await view.type('name', 'Mont Terri Beta');
+      const { dialog, experimentService, toast, dialogRef } = await setup();
+      await dialog.enter('name', 'Mont Terri Beta');
 
-      await view.click('experiment.button.save');
+      await dialog.save();
 
       await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
-      const payload = experimentService.saveExperiment.mock.calls[0][0];
-      expect(payload.id).toBeUndefined();
-      expect(payload.name).toBe('Mont Terri Beta');
+      expect(experimentService.saveExperiment).toHaveBeenCalledWith(
+        expect.objectContaining({ id: undefined, name: 'Mont Terri Beta' }),
+      );
       expect(toast.success).toHaveBeenCalledWith('experiment.success');
     });
 
     it('stays open after "save and create new", ready for the next experiment', async () => {
-      const view = await render();
-      await view.type('name', 'Mont Terri Beta');
+      const { dialog, toast, dialogRef } = await setup();
+      await dialog.enter('name', 'Mont Terri Beta');
 
-      await view.click('experiment.button.saveAndCreate');
+      await dialog.saveAndCreateNew();
 
-      await vi.waitFor(() => expect(view.input('name').value).toBe(''));
+      await vi.waitFor(async () => expect(await dialog.getValue('name')).toBe(''));
       expect(dialogRef.close).not.toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalled();
     });
 
     it('shows why a too long comment blocks saving', async () => {
-      const view = await render();
-      await view.type('name', 'Mont Terri Beta');
+      const { dialog } = await setup();
+      await dialog.enter('name', 'Mont Terri Beta');
 
-      await view.type('comment', 'x'.repeat(4097));
-      view.input('comment').dispatchEvent(new Event('blur'));
-      await view.settle();
+      await dialog.enter('comment', 'x'.repeat(4097));
 
-      expect(view.button('experiment.button.save').disabled).toBe(true);
-      expect(view.element.querySelector('mat-error')?.textContent).toContain(
+      expect(await dialog.canSave()).toBe(false);
+      expect(await dialog.getErrors('comment')).toEqual([
         'experiment.comment.validation.maxLength',
-      );
+      ]);
     });
 
     it('shows a server error on its field and stays open', async () => {
+      const { dialog, experimentService, dialogRef } = await setup();
       experimentService.saveExperiment.mockRejectedValue(
-        new HttpErrorResponse({
-          status: 400,
-          error: [
-            {
-              field: 'name',
-              messageKey: 'experiment.name.validation.unique',
-              target: ErrorDto.TargetEnum.Field,
-            },
-          ],
-        }),
+        saveFailsWith('name', 'experiment.name.validation.unique'),
       );
-      const view = await render();
-      await view.type('name', 'Mont Terri Alpha');
+      await dialog.enter('name', 'Mont Terri Alpha');
 
-      await view.click('experiment.button.save');
+      await dialog.save();
 
-      await vi.waitFor(() =>
-        expect(view.element.querySelector('mat-error')?.textContent).toContain(
-          'experiment.name.validation.unique',
-        ),
+      await vi.waitFor(async () =>
+        expect(await dialog.getErrors('name')).toEqual(['experiment.name.validation.unique']),
       );
       expect(dialogRef.close).not.toHaveBeenCalled();
     });
@@ -153,28 +175,29 @@ describe('ExperimentDialog', () => {
 
   describe('edit', () => {
     it('loads the experiment into the form', async () => {
-      const view = await render('experiment-1');
+      const { dialog, experimentService } = await setup({ experimentId: 'experiment-1' });
 
       expect(experimentService.getExperiment).toHaveBeenCalledWith('experiment-1');
-      expect(view.title()).toBe('experiment.dialog.title.edit');
-      await vi.waitFor(() => expect(view.input('name').value).toBe('Mont Terri Alpha'));
-      expect(view.input('comment').value).toBe('borehole');
-      expect(view.input('name').disabled).toBe(false);
+      expect(await dialog.getTitle()).toBe('experiment.dialog.title.edit');
+      expect(await dialog.getValue('name')).toBe('Mont Terri Alpha');
+      expect(await dialog.getValue('comment')).toBe('borehole');
+      expect(await dialog.isDisabled('name')).toBe(false);
     });
 
     it('shows the documents with upload', async () => {
-      const view = await render('experiment-1');
+      const { documents } = await setup({ experimentId: 'experiment-1' });
 
-      expect(view.documents()?.experimentId()).toBe('experiment-1');
-      expect(view.documents()?.readOnly()).toBe(false);
+      expect(documents()?.experimentId()).toBe('experiment-1');
+      expect(documents()?.readOnly()).toBe(false);
     });
 
     it('updates the experiment with its id and version', async () => {
-      const view = await render('experiment-1');
-      await vi.waitFor(() => expect(view.input('name').value).toBe('Mont Terri Alpha'));
-      await view.type('name', 'Mont Terri Alpha 2');
+      const { dialog, experimentService, dialogRef } = await setup({
+        experimentId: 'experiment-1',
+      });
+      await dialog.enter('name', 'Mont Terri Alpha 2');
 
-      await view.click('experiment.button.save');
+      await dialog.save();
 
       await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
       expect(experimentService.saveExperiment).toHaveBeenCalledWith(
@@ -183,124 +206,157 @@ describe('ExperimentDialog', () => {
     });
 
     it('creates the next experiment after "save and create new"', async () => {
-      const view = await render('experiment-1');
-      await vi.waitFor(() => expect(view.input('name').value).toBe('Mont Terri Alpha'));
-      await view.click('experiment.button.saveAndCreate');
-      await vi.waitFor(() => expect(view.input('name').value).toBe(''));
+      const { dialog, experimentService } = await setup({ experimentId: 'experiment-1' });
+      await dialog.saveAndCreateNew();
+      await vi.waitFor(async () => expect(await dialog.getValue('name')).toBe(''));
 
-      await view.type('name', 'Mont Terri Gamma');
-      await view.click('experiment.button.save');
+      await dialog.enter('name', 'Mont Terri Gamma');
+      await dialog.save();
 
       await vi.waitFor(() => expect(experimentService.saveExperiment).toHaveBeenCalledTimes(2));
-      expect(experimentService.saveExperiment.mock.calls[1][0].id).toBeUndefined();
+      expect(experimentService.saveExperiment).toHaveBeenLastCalledWith(
+        expect.objectContaining({ id: undefined, name: 'Mont Terri Gamma' }),
+      );
+    });
+  });
+
+  describe('owners', () => {
+    const asAdmin = { experimentId: 'experiment-1', isAdmin: true };
+
+    it('lets an admin pick the owners, starting with the stored ones', async () => {
+      const { dialog } = await setup(asAdmin);
+
+      const picker = await dialog.ownerPicker();
+
+      expect(await picker?.getOwnerNames()).toEqual(['Alice Muster']);
+      expect(await dialog.ownerList()).toBeNull();
+    });
+
+    it('saves changed owners with the experiment', async () => {
+      const { dialog, experimentService, toast, dialogRef } = await setup(asAdmin);
+      experimentService.saveExperiment.mockResolvedValue(anExperiment({ owners: [ALICE, BOB] }));
+      await (await dialog.ownerPicker())!.selectOwner('Bob Beispiel');
+
+      await dialog.save();
+
+      await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
+      expect(experimentService.saveExperiment).toHaveBeenCalledWith(
+        expect.objectContaining({ ownerIds: ['alice', 'bob'] }),
+      );
+      expect(toast.success).toHaveBeenCalledWith('experiment.success');
+    });
+
+    it('leaves unchanged owners out of the save', async () => {
+      const { dialog, experimentService, dialogRef } = await setup(asAdmin);
+
+      await dialog.save();
+
+      await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
+      expect(experimentService.saveExperiment).toHaveBeenCalledWith(
+        expect.objectContaining({ ownerIds: undefined }),
+      );
+    });
+
+    it('closes with a warning when Keycloak kept the owners from being changed', async () => {
+      const { dialog, experimentService, toast, dialogRef } = await setup(asAdmin);
+      experimentService.saveExperiment.mockResolvedValue(
+        anExperiment({ owners: [], ownersStatus: 'KEYCLOAK_UNAVAILABLE' }),
+      );
+      await (await dialog.ownerPicker())!.deselectOwner('Alice Muster');
+
+      await dialog.save();
+
+      await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
+      expect(toast.warning).toHaveBeenCalledWith('experiment.owners.notSaved');
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('stays open with the error at the owners when one is no PI', async () => {
+      const { dialog, experimentService, toast, dialogRef } = await setup(asAdmin);
+      experimentService.saveExperiment.mockRejectedValue(
+        saveFailsWith('ownerIds', 'experiment.owner.not-eligible'),
+      );
+      const picker = (await dialog.ownerPicker())!;
+      await picker.selectOwner('Bob Beispiel');
+
+      await dialog.save();
+
+      await vi.waitFor(async () =>
+        expect(await picker.getHint()).toBe('experiment.owner.not-eligible'),
+      );
+      expect(await picker.getOwnerNames()).toEqual(['Alice Muster', 'Bob Beispiel']);
+      expect(dialogRef.close).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it('shows a PI who is no admin the owners read-only', async () => {
+      const { dialog } = await setup({ experimentId: 'experiment-1' });
+
+      expect(await (await dialog.ownerList())?.getOwnerNames()).toEqual(['Alice Muster']);
+      expect(await dialog.ownerPicker()).toBeNull();
+    });
+
+    it('tells a reader why the owners are missing', async () => {
+      const { dialog } = await setup({
+        experimentId: 'experiment-1',
+        canWrite: false,
+        experiment: anExperiment({ owners: [], ownersStatus: 'KEYCLOAK_UNAVAILABLE' }),
+      });
+
+      expect(await (await dialog.ownerList())?.getMissingReason()).toBe(
+        'experiment.owners.status.KEYCLOAK_UNAVAILABLE',
+      );
+    });
+
+    it('does not let an admin edit owners it cannot see', async () => {
+      const { dialog, experimentService, dialogRef } = await setup({
+        ...asAdmin,
+        experiment: anExperiment({ owners: [], ownersStatus: 'KEYCLOAK_UNAVAILABLE' }),
+      });
+      expect(await dialog.ownerPicker()).toBeNull();
+      expect(await dialog.ownerList()).not.toBeNull();
+
+      await dialog.save();
+
+      await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
+      expect(experimentService.saveExperiment).toHaveBeenCalledWith(
+        expect.objectContaining({ ownerIds: undefined }),
+      );
     });
   });
 
   describe('view', () => {
-    beforeEach(() => {
-      canWrite = false;
-    });
+    const asReader = { experimentId: 'experiment-1', canWrite: false };
 
     it('shows the experiment read-only', async () => {
-      const view = await render('experiment-1');
+      const { dialog } = await setup(asReader);
 
-      expect(view.title()).toBe('experiment.dialog.title.view');
-      await vi.waitFor(() => expect(view.input('name').value).toBe('Mont Terri Alpha'));
-      for (const field of ['name', 'comment', 'start', 'end'] as const) {
-        expect(view.input(field).disabled).toBe(true);
+      expect(await dialog.getTitle()).toBe('experiment.dialog.title.view');
+      expect(await dialog.getValue('name')).toBe('Mont Terri Alpha');
+      for (const field of EXPERIMENT_FIELDS) {
+        expect(await dialog.isDisabled(field)).toBe(true);
       }
-      expect(view.element.querySelectorAll('mat-datepicker-toggle button[disabled]')).toHaveLength(
-        2,
-      );
+      expect(await dialog.areDatepickersDisabled()).toBe(true);
     });
 
     it('stays read-only when opened for viewing, even for a writer', async () => {
-      canWrite = true;
+      const { dialog } = await setup({ experimentId: 'experiment-1', viewOnly: true });
 
-      const view = await render('experiment-1', { viewOnly: true });
-
-      expect(view.title()).toBe('experiment.dialog.title.view');
-      await vi.waitFor(() => expect(view.input('name').value).toBe('Mont Terri Alpha'));
-      expect(view.input('name').disabled).toBe(true);
-      expect(view.buttonLabels()).toEqual(['button.close']);
+      expect(await dialog.getTitle()).toBe('experiment.dialog.title.view');
+      expect(await dialog.isDisabled('name')).toBe(true);
+      expect(await dialog.getActionLabels()).toEqual(['button.close']);
     });
 
     it('offers only Close', async () => {
-      const view = await render('experiment-1');
+      const { dialog } = await setup(asReader);
 
-      expect(view.buttonLabels()).toEqual(['button.close']);
+      expect(await dialog.getActionLabels()).toEqual(['button.close']);
     });
 
     it('shows the documents without upload', async () => {
-      const view = await render('experiment-1');
+      const { documents } = await setup(asReader);
 
-      expect(view.documents()?.readOnly()).toBe(true);
+      expect(documents()?.readOnly()).toBe(true);
     });
   });
 });
-
-const LABELS = {
-  name: 'experiment.name.label',
-  start: 'experiment.period.start.label',
-  end: 'experiment.period.end.label',
-  comment: 'experiment.comment.label',
-} as const;
-
-class DialogView {
-  readonly element: HTMLElement;
-
-  constructor(private readonly fixture: ComponentFixture<ExperimentDialog>) {
-    this.element = fixture.nativeElement as HTMLElement;
-  }
-
-  title(): string | undefined {
-    return this.element.querySelector('h2')?.textContent?.trim();
-  }
-
-  input(field: keyof typeof LABELS): HTMLInputElement {
-    const formField = [...this.element.querySelectorAll('mat-form-field')].find((candidate) =>
-      candidate.querySelector('mat-label')?.textContent?.includes(LABELS[field]),
-    );
-    return formField!.querySelector<HTMLInputElement>('input, textarea')!;
-  }
-
-  documents(): ExperimentDocumentsStub | null {
-    const debug = this.fixture.debugElement.query(
-      (node) => node.componentInstance instanceof ExperimentDocumentsStub,
-    );
-    return debug?.componentInstance ?? null;
-  }
-
-  buttonLabels(): string[] {
-    return this.actionButtons().map(labelOf);
-  }
-
-  button(label: string): HTMLButtonElement {
-    return this.actionButtons().find((button) => labelOf(button) === label)!;
-  }
-
-  private actionButtons(): HTMLButtonElement[] {
-    return [...this.element.querySelectorAll<HTMLButtonElement>('mat-dialog-actions button')];
-  }
-
-  async type(field: keyof typeof LABELS, value: string): Promise<void> {
-    const input = this.input(field);
-    input.value = value;
-    input.dispatchEvent(new Event('input'));
-    await this.fixture.whenStable();
-  }
-
-  async settle(): Promise<void> {
-    await this.fixture.whenStable();
-  }
-
-  async click(label: string): Promise<void> {
-    this.button(label).click();
-    await this.fixture.whenStable();
-  }
-}
-
-// the icons render through fontIcon classes, the button's text is its label alone
-function labelOf(button: HTMLButtonElement): string {
-  return button.textContent?.trim() ?? '';
-}

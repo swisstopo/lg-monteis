@@ -1,0 +1,42 @@
+<mat-form-field class="experiment-owner-picker_field" appearance="outline">
+  <mat-label>{{ 'experiment.owners.label' | translate }}</mat-label>
+  <mat-select
+    multiple
+    data-testid="owner-select"
+    [value]="selectedIds()"
+    [disabled]="candidates.isLoading() || candidates.error() !== undefined"
+    (selectionChange)="onSelectionChange($event)"
+  >
+    <mat-select-trigger>{{ selectedNames() }}</mat-select-trigger>
+    @for (owner of selectableOwners(); track owner.id) {
+      <mat-option [value]="owner.id"
+        >{{ owner | ownerName }}
+        @if (owner.email) {
+          ({{ owner.email }})
+        }
+      </mat-option>
+    }
+    @for (owner of formerOwners(); track owner.id) {
+      <mat-option [value]="owner.id" disabled
+        >{{ owner | ownerName }}
+        @if (owner.email) {
+          ({{ owner.email }})
+        }
+        – {{ 'experiment.owners.formerPi' | translate }}
+      </mat-option>
+    }
+  </mat-select>
+  @if (error(); as error) {
+    <mat-hint class="experiment-owner-picker_error" data-testid="owner-error">{{
+      error | translate
+    }}</mat-hint>
+  } @else if (candidatesErrorKey(); as candidatesErrorKey) {
+    <mat-hint class="experiment-owner-picker_error" data-testid="owner-candidates-error">{{
+      candidatesErrorKey | translate
+    }}</mat-hint>
+  } @else if (candidates.hasValue() && candidates.value().length === 0) {
+    <mat-hint>{{ 'experiment.owners.noCandidates' | translate }}</mat-hint>
+  } @else {
+    <mat-hint>{{ 'experiment.owners.hint' | translate }}</mat-hint>
+  }
+</mat-form-field>

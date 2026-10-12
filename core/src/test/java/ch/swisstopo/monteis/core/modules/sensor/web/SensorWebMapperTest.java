@@ -2,14 +2,22 @@ package ch.swisstopo.monteis.core.modules.sensor.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapperImpl;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParameterDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
+import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.Test;
 
 class SensorWebMapperTest {
@@ -65,5 +73,55 @@ class SensorWebMapperTest {
     // then
     assertThat(parameter.getFormula()).isNotNull();
     assertThat(parameter.getFormula().getExpression()).isEqualTo("x");
+  }
+
+  @Test
+  void should_map_a_sensor_without_main_experiment() {
+    // given
+    Sensor sensor =
+        new Sensor(
+            "Sensor",
+            "ALIAS",
+            Das.SOL_EXPERTS,
+            null,
+            null,
+            new Coordinates(0d, 0d, 0d),
+            true,
+            null);
+
+    // when
+    SensorResponseDto dto = mapper.toDto(sensor, LocalDate.of(2030, Month.JANUARY, 1));
+
+    // then
+    assertThat(dto.mainExperiment()).isNull();
+  }
+
+  @Test
+  void should_map_the_main_experiment_without_claiming_its_owners_are_loaded() {
+    // given
+    Experiment experiment =
+        new Experiment(
+            "Mont Terri",
+            new Period(
+                LocalDate.of(2030, Month.JANUARY, 1), LocalDate.of(2030, Month.DECEMBER, 31)),
+            null);
+    Sensor sensor =
+        new Sensor(
+            "Sensor",
+            "ALIAS",
+            Das.SOL_EXPERTS,
+            null,
+            experiment,
+            new Coordinates(0d, 0d, 0d),
+            true,
+            null);
+
+    // when
+    SensorResponseDto dto = mapper.toDto(sensor, LocalDate.of(2030, Month.JUNE, 1));
+
+    // then
+    assertThat(dto.mainExperiment().name()).isEqualTo("Mont Terri");
+    assertThat(dto.mainExperiment().owners()).isNull();
+    assertThat(dto.mainExperiment().ownersStatus()).isNull();
   }
 }

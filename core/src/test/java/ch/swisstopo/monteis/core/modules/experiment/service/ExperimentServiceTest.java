@@ -11,6 +11,7 @@ import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundExceptio
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ExperimentServiceTest {
   @Mock private ExperimentRepository repository;
+  @Mock private ExperimentOwnerService ownerService;
 
   @InjectMocks private ExperimentService service;
 
@@ -54,6 +56,24 @@ class ExperimentServiceTest {
     // then
     then(repository).should().update(inputExperiment);
     assertEquals(expectedExperiment, actualExperiment);
+  }
+
+  @Test
+  void should_update_the_experiment_then_replace_its_owners() {
+    // given
+    Experiment inputExperiment = mock(Experiment.class);
+    Experiment updatedExperiment = mock(Experiment.class);
+    Experiment withOwners = mock(Experiment.class);
+    Set<UUID> ownerIds = Set.of(UUID.randomUUID());
+
+    given(repository.update(inputExperiment)).willReturn(updatedExperiment);
+    given(ownerService.replaceOwnersInKeycloak(updatedExperiment, ownerIds)).willReturn(withOwners);
+
+    // when
+    Experiment actualExperiment = service.updateExperimentAndOwners(inputExperiment, ownerIds);
+
+    // then
+    assertSame(withOwners, actualExperiment);
   }
 
   @Test

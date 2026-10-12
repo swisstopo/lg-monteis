@@ -61,6 +61,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @ControllerTest(SensorController.class)
@@ -541,13 +542,13 @@ class SensorControllerTest {
     String body = objectMapper.writeValueAsString(defaultWriteDto(SENSOR_ID, 1, PARAMETER_ID, 1));
     List<MockHttpServletRequestBuilder> requests =
         List.of(
-            request(HttpMethod.POST, "/api/sensors")
+            MockMvcRequestBuilders.request(HttpMethod.POST, "/api/sensors")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body),
-            request(HttpMethod.PUT, "/api/sensors/{id}", SENSOR_ID)
+            MockMvcRequestBuilders.request(HttpMethod.PUT, "/api/sensors/{id}", SENSOR_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body),
-            request(HttpMethod.POST, "/api/sensors/republish-config"));
+            MockMvcRequestBuilders.request(HttpMethod.POST, "/api/sensors/republish-config"));
 
     for (var request : requests) {
       mockMvc

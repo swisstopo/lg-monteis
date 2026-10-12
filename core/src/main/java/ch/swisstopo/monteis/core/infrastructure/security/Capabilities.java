@@ -116,6 +116,10 @@ public record Capabilities(
     return isAdmin();
   }
 
+  public boolean canManageExperimentOwners() {
+    return isAdmin();
+  }
+
   public boolean canAccessDocuments() {
     return grants.contains(Grant.DOCUMENTS_READ);
   }

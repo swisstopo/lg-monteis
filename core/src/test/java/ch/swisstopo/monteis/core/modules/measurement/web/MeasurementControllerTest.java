@@ -19,6 +19,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
+import ch.swisstopo.monteis.core.modules.experiment.query.OwnersStatus;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
@@ -435,7 +436,9 @@ class MeasurementControllerTest {
                     LocalDate.of(2023, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
                 Status.ACTIVE,
                 3,
-                5),
+                5,
+                List.of(),
+                OwnersStatus.SHOWN),
             new CoordinatesDto(1.5, 2.5, 3.5),
             true,
             "sensor comment",
