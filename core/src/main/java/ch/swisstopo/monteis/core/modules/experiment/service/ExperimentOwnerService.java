@@ -51,6 +51,9 @@ public class ExperimentOwnerService {
     return findOwnersByExperiment(List.of(experiment)).get(experiment.getId());
   }
 
+  // a map by experiment id and not a list of experiment and owners: the csv export streams rows
+  // without loading the experiments, so it can only look the owners up by id, and the list
+  // endpoints use the same lookup instead of a second shape (that was ExperimentWithOwners)
   public Map<UUID, VisibleOwners> findOwnersByExperiment(List<Experiment> experiments) {
     return visibleOwnersByExperiment(
         experiments.stream().map(ExperimentOwnerService::storedOwnersOf).toList());
