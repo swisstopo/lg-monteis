@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_OWNER;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
