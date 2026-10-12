@@ -118,6 +118,24 @@ describe('OrganisationTable', () => {
     });
   });
 
+  it('keeps the other column filters when searching', async () => {
+    const view = await render();
+    await view.gridReady();
+    const commentFilter = { filterType: 'text', type: 'contains', filter: 'partner' };
+    view.fixture.componentInstance['gridApi']()!.setFilterModel({ comment: commentFilter });
+
+    view.fixture.componentInstance.onSearch('swiss');
+    expect(view.fixture.componentInstance['gridApi']()!.getFilterModel()).toEqual({
+      comment: commentFilter,
+      name: { filterType: 'text', type: 'contains', filter: 'swiss' },
+    });
+
+    view.fixture.componentInstance.onSearch('');
+    expect(view.fixture.componentInstance['gridApi']()!.getFilterModel()).toEqual({
+      comment: commentFilter,
+    });
+  });
+
   it('downloads the organisations as CSV', async () => {
     const view = await render();
     await view.gridReady();

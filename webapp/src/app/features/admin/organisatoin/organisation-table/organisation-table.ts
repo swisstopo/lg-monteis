@@ -130,9 +130,12 @@ export default class OrganisationTable {
     // Infinite row model has no quick filter, so the search box drives the name column filter.
     const api = this.gridApi();
     if (!api) return;
+    const { name: _, ...otherFilters } = api.getFilterModel();
     const trimmed = term.trim();
     api.setFilterModel(
-      trimmed ? { name: { filterType: 'text', type: 'contains', filter: trimmed } } : null,
+      trimmed
+        ? { ...otherFilters, name: { filterType: 'text', type: 'contains', filter: trimmed } }
+        : otherFilters,
     );
   }
 
