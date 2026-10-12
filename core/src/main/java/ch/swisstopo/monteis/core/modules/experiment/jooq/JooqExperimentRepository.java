@@ -185,15 +185,15 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Transactional
   public Experiment replaceOwners(UUID experimentId, Set<UUID> ownerIds) {
     // throws for a hidden experiment before anything is written
-    fetchExperiment(experimentId);
+    requireVisible(experimentId);
 
     dsl.deleteFrom(EXPERIMENT_OWNER)
         .where(EXPERIMENT_OWNER.EXPERIMENT_ID.eq(experimentId))
         .and(EXPERIMENT_OWNER.USER_ID.notIn(ownerIds))
         .execute();
-    for (UUID ownerId : ownerIds) {
+    if (!ownerIds.isEmpty()) {
       dsl.insertInto(EXPERIMENT_OWNER, EXPERIMENT_OWNER.EXPERIMENT_ID, EXPERIMENT_OWNER.USER_ID)
-          .values(experimentId, ownerId)
+          .valuesOfRows(ownerIds.stream().map(ownerId -> DSL.row(experimentId, ownerId)).toList())
           .onConflictDoNothing()
           .execute();
     }
