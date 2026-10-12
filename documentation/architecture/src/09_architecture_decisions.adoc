@@ -282,7 +282,7 @@ Es gibt keinen Service Account und kein Secret für `core`. Details in Kap. 8, <
 | Owner stehen als Keycloak User-ID in der DB, Name und E-Mail kommen aus Keycloak (siehe ADR "Benutzerdaten nur in Keycloak, gelesen mit dem Token des Aufrufers"). Zwei Fragen blieben offen. Erstens: wer gilt als Owner, den man anzeigt? Ein Benutzer, der die Gruppe verlassen hat, deaktiviert oder gelöscht wurde, ist kein PI mehr, seine Zeile in `experiment_owner` steht aber noch. Zweitens: was passiert, wenn Keycloak nicht antwortet? Der erste Wurf hatte ein boolsches `ownersUnavailable`, damit liess sich ein Ausfall nicht von einem 403 oder einer fehlenden Schreibgruppe unterscheiden, und für den Benutzer ist das nicht dasselbe (warten vs. Setup kaputt). Dazu kommt, dass Listen, Owner-Filter und CSV viele Experimente auf einmal auflösen, bei einem langsamen Keycloak würde jede Zeile einzeln in den Timeout laufen.
 
 | Entscheidung
-| Gespeichert werden nur User-IDs. Angezeigt werden die "sichtbaren" Owner (`VisibleOwners`): gespeicherte Owner-IDs geschnitten mit den aktuellen PIs des Experiments (aktive Mitglieder der Schreibgruppe, Gruppe gefunden über das Attribut `write_experiment_ids`). Ehemalige PIs sind sofort überall weg (Tabelle, Dialog, CSV, Filterwerte), ihre DB-Zeile wird erst beim nächsten Speichern der Stammdaten oder der Owner des Experiments entfernt.
+| Gespeichert werden nur User-IDs. Angezeigt werden die "sichtbaren" Owner (`VisibleOwners`): gespeicherte Owner-IDs geschnitten mit den aktuellen PIs des Experiments (aktive Mitglieder der Schreibgruppe, Gruppe gefunden über das Attribut `write_experiment_ids`). Ehemalige PIs sind sofort überall weg (Tabelle, Dialog, CSV, Filterwerte), ihre DB-Zeile wird erst entfernt, wenn jemand die Owner des Experiments ersetzt.
 
 Keycloak antwortet mit einem von vier Fällen (`Pis`): `Known(users)`, `NoWriteGroup`, `AccessDenied` (403) oder `KeycloakUnavailable`. Nur `Known` ist eine vollständige Antwort. Aus den anderen drei wird nichts gelöscht und nichts geschlossen, ein Owner verschwindet nie, nur weil Keycloak es nicht sagen konnte.
 
@@ -308,7 +308,7 @@ Lesen darf einen Cache benutzen, Schreiben fragt immer Keycloak (Kandidaten für
 | Konsequenzen
 | Eine neu angelegte Schreibgruppe erscheint in Lesezugriffen nach höchstens 60 s, Schreibzugriffe sehen sie sofort. Bei Ausfall zeigt die Liste "–" statt Owner, der Rest der Antwort bleibt intakt. Fehlende Gruppe oder 403 tauchen als WARN im Log auf und müssen im Realm behoben werden.
 
-Bekannte Einschränkung: der Owner-Filter arbeitet auf den gespeicherten IDs, die Anzeige auf den aktuellen PIs. Bis zum nächsten Speichern findet der Filter deshalb noch einen Ex-PI, und "(no owner)" verpasst Experimente, deren gespeicherte Owner alle Ex-PIs sind. Keycloak-Daten in den SQL-Filter zu holen war zu teuer, das nehmen wir in Kauf.
+Bekannte Einschränkung: der Owner-Filter arbeitet auf den gespeicherten IDs, die Anzeige auf den aktuellen PIs. Bis jemand die Owner ersetzt, findet der Filter deshalb noch einen Ex-PI, und "(no owner)" verpasst Experimente, deren gespeicherte Owner alle Ex-PIs sind. Keycloak-Daten in den SQL-Filter zu holen war zu teuer, das nehmen wir in Kauf.
 
 | Verworfene Alternativen
 | *Boolsches `ownersUnavailable`:* kann Ausfall, 403 und fehlende Schreibgruppe nicht unterscheiden. +
@@ -339,7 +339,7 @@ Bekannte Einschränkung: der Owner-Filter arbeitet auf den gespeicherten IDs, di
 | Betrachtete Optionen
 | *A. Nur beim Lesen filtern, nie löschen.* Die Zeile bleibt für immer. Einfachster Code, aber `experiment_owner` wächst mit jedem Gruppenwechsel, die Unschärfe des Owner-Filters (Filter auf gespeicherten IDs, Anzeige auf PIs) bleibt dauerhaft, und wer wieder in die Gruppe kommt, ist automatisch wieder Owner, auch Jahre später.
 
-*B. Beim Lesen filtern, beim nächsten Schreiben aufräumen (gewählt).* Lesen zeigt nur sichtbare Owner. Die Zeile fällt weg, wenn jemand die Owner ersetzt (die Validierung lässt nur PIs zu) oder die Stammdaten speichert (`dropFormerOwners`, eigener Schritt mit eigenem Audit-Snapshot, best effort). Geschrieben wird nur mit einer frischen `Known`-Antwort und mit dem Token des Benutzers, der sowieso gerade schreibt. Kein neuer Account, keine neue Infrastruktur. Dafür bleiben Zeilen von Experimenten, die niemand mehr bearbeitet, stehen, und bis zum nächsten Speichern gilt dieselbe Filter-Unschärfe und dasselbe Wiederauftauchen wie bei A.
+*B. Beim Lesen filtern, beim nächsten Schreiben aufräumen (gewählt).* Lesen zeigt nur sichtbare Owner. Die Zeile fällt weg, wenn jemand die Owner ersetzt (die Validierung lässt nur PIs zu). [line-through]#Oder wenn jemand die Stammdaten speichert (`dropFormerOwners`, eigener Schritt mit eigenem Audit-Snapshot, best effort).# Im Code Review vom 2026-10-12 entfernt: ein zweiter Schritt mit eigenem Snapshot und ein Keycloak-Aufruf bei jedem Speichern, nur um Zeilen aufzuräumen, die sowieso niemand sieht. Geschrieben wird nur mit einer frischen `Known`-Antwort und mit dem Token des Benutzers, der sowieso gerade schreibt. Kein neuer Account, keine neue Infrastruktur. Dafür bleiben Zeilen von Experimenten, die niemand mehr bearbeitet, stehen, und bis zum nächsten Speichern gilt dieselbe Filter-Unschärfe und dasselbe Wiederauftauchen wie bei A.
 
 *C. Geplanter Cleanup-Job (Spring `@Scheduled` oder Kubernetes CronJob).* Ein Job geht regelmässig alle Experimente mit Ownern durch und löscht, was kein PI mehr ist. Hält die Tabelle sauber, auch für nie bearbeitete Experimente, und macht den Filter nach jedem Lauf wieder genau. Aber: ein Job hat keinen Aufrufer und damit kein Token, er braucht einen Service Account mit `view-users` über alle Experimente plus Secret, genau das, was wir mit der ADR "Benutzerdaten nur in Keycloak, gelesen mit dem Token des Aufrufers" abgeschafft haben. Dazu kommen Locking bei mehreren `core`-Pods (wir haben heute weder `@Scheduled` noch ShedLock), RLS, die für einen technischen Benutzer eine eigene Regel braucht, ein Audit-Snapshot ohne echten Autor, und Last auf Keycloak pro Lauf. Zwischen zwei Läufen braucht es den Lesefilter aus B trotzdem, der Job ersetzt ihn also nicht, er kommt dazu.
 
@@ -348,17 +348,17 @@ Bekannte Einschränkung: der Owner-Filter arbeitet auf den gespeicherten IDs, di
 *E. Beim Lesen aufräumen.* Jeder GET, der einen ehemaligen Owner sieht, löscht ihn gleich. Kein Job, Tabelle sauber sobald jemand hinschaut. Aber GETs würden schreiben (Lese-Transaktionen sind `readOnly` für RLS), jede Anzeige könnte einen Audit-Snapshot erzeugen, und geschrieben würde auf Basis von `pisForReading`, das aus dem 60 s Cache kommen darf. Das bricht die Regel, dass Schreiben immer Keycloak fragt. Zudem dürfen nicht alle Leser schreiben.
 
 | Entscheidung
-| Option B. Angezeigt werden immer nur sichtbare Owner, verwaiste Zeilen werden beim nächsten Schreiben auf das Experiment entfernt, nur bei `Known`, nur mit dem Token des schreibenden Benutzers, und ein Fehler dabei lässt das Speichern der Stammdaten nie scheitern. Kein Job, kein Event Listener, kein Schreiben beim Lesen. Im Code bleibt der Name `VisibleOwners`, mit der Bedeutung aus dem Kontext oben.
+| Option B. Angezeigt werden immer nur sichtbare Owner, verwaiste Zeilen werden entfernt, wenn ein Admin die Owner ersetzt, nur bei `Known` und nur mit dem Token des schreibenden Benutzers. Kein Job, kein Event Listener, kein Schreiben beim Lesen. Im Code bleibt der Name `VisibleOwners`, mit der Bedeutung aus dem Kontext oben.
 
 | Begründung
 | Die Anzeige ist ab dem Gruppenaustritt korrekt, egal ob die Zeile noch steht, die Zeile ist danach nur noch Erinnerung. Ein Cleanup lohnt sich deshalb nur dort, wo er nichts Neues braucht, und beim Schreiben haben wir alles schon: einen Benutzer mit Token, eine frische Antwort von Keycloak und einen Audit-Snapshot mit echtem Autor. C und D kaufen eine sauberere Tabelle mit einem Service Account oder einem Keycloak-Plugin, beide brauchen den Lesefilter trotzdem.
 
 | Konsequenzen
-| `experiment_owner` kann Zeilen ehemaliger PIs enthalten, solange niemand das Experiment speichert. Wer die DB direkt abfragt (Reports, Support), muss das wissen, die Wahrheit über aktuelle Owner kommt nur über `core`.
+| `experiment_owner` kann Zeilen ehemaliger PIs enthalten, solange niemand die Owner des Experiments ersetzt, bei Experimenten ohne Owner-Pflege also dauerhaft. Wer die DB direkt abfragt (Reports, Support), muss das wissen, die Wahrheit über aktuelle Owner kommt nur über `core`.
 
-Der Owner-Filter bleibt unscharf bis zum nächsten Speichern (siehe ADR "Sichtbare Owner"): er findet ein Experiment noch über einen ehemaligen PI, und "(no owner)" verpasst Experimente, deren gespeicherte Owner alle ehemalig sind.
+Der Owner-Filter bleibt unscharf, bis jemand die Owner ersetzt (siehe ADR "Sichtbare Owner"): er findet ein Experiment noch über einen ehemaligen PI, und "(no owner)" verpasst Experimente, deren gespeicherte Owner alle ehemalig sind.
 
-Wer die Gruppe verlässt und vor dem nächsten Speichern zurückkommt, ist wieder Owner. Das ist so gewollt (ein Gruppenwechsel aus Versehen soll nichts kaputt machen), muss aber bekannt sein.
+Wer die Gruppe verlässt und zurückkommt, bevor jemand die Owner ersetzt, ist wieder Owner. Das ist so gewollt (ein Gruppenwechsel aus Versehen soll nichts kaputt machen), muss aber bekannt sein.
 
 Das Aufräumen beim Speichern erzeugt einen zweiten Audit-Snapshot, der Owner entfernt, die der Benutzer gar nicht angefasst hat. Im Verlauf sieht das aus wie eine Änderung durch ihn.
 
