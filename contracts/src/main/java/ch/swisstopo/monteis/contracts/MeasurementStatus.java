@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.measurement.domain;
+package ch.swisstopo.monteis.contracts;
 
 public enum MeasurementStatus {
   TOO_LOW("too_low"),

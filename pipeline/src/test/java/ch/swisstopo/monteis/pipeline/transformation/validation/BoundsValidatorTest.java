@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.then;
 
 import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent;
 import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent.BoundType;
@@ -46,11 +47,11 @@ class BoundsValidatorTest {
             Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x + 1", 100.0, 0.0, 1);
 
     // when
-    BoundStatus status =
+    MeasurementStatus status =
         boundsValidator.evaluateBounds("deviceA", 50.0, config, ProcessingOrigin.INGEST);
 
     // then
-    assertThat(status).isEqualTo(BoundStatus.OK);
+    assertThat(status).isEqualTo(MeasurementStatus.CORRECT);
     then(eventPublisher).shouldHaveNoInteractions();
   }
 
@@ -62,11 +63,11 @@ class BoundsValidatorTest {
             Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x + 1", 100.0, 0.0, 1);
 
     // when
-    BoundStatus status =
+    MeasurementStatus status =
         boundsValidator.evaluateBounds("deviceA", 150.5, config, ProcessingOrigin.INGEST);
 
     // then
-    assertThat(status).isEqualTo(BoundStatus.TOO_HIGH);
+    assertThat(status).isEqualTo(MeasurementStatus.TOO_HIGH);
 
     then(eventPublisher).should().publishEvent(eventCaptor.capture());
     SensorBoundBreachedEvent event = eventCaptor.getValue();
@@ -86,11 +87,11 @@ class BoundsValidatorTest {
             Das.SOL_EXPERTS, "deviceB", "temperature", UUID.randomUUID(), "x + 2", 50.0, -10.0, 1);
 
     // when
-    BoundStatus status =
+    MeasurementStatus status =
         boundsValidator.evaluateBounds("deviceB", -25.0, config, ProcessingOrigin.INGEST);
 
     // then
-    assertThat(status).isEqualTo(BoundStatus.TOO_LOW);
+    assertThat(status).isEqualTo(MeasurementStatus.TOO_LOW);
 
     then(eventPublisher).should().publishEvent(eventCaptor.capture());
     SensorBoundBreachedEvent event = eventCaptor.getValue();
@@ -110,11 +111,11 @@ class BoundsValidatorTest {
             Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x + 1", 100.0, 0.0, 1);
 
     // when
-    BoundStatus status =
+    MeasurementStatus status =
         boundsValidator.evaluateBounds("deviceA", 150.5, config, ProcessingOrigin.REPROCESS);
 
     // then
-    assertThat(status).isEqualTo(BoundStatus.TOO_HIGH);
+    assertThat(status).isEqualTo(MeasurementStatus.TOO_HIGH);
     then(eventPublisher).shouldHaveNoInteractions();
   }
 
@@ -126,11 +127,11 @@ class BoundsValidatorTest {
             Das.SOL_EXPERTS, "deviceB", "temperature", UUID.randomUUID(), "x + 2", 50.0, -10.0, 1);
 
     // when
-    BoundStatus status =
+    MeasurementStatus status =
         boundsValidator.evaluateBounds("deviceB", -25.0, config, ProcessingOrigin.REPROCESS);
 
     // then
-    assertThat(status).isEqualTo(BoundStatus.TOO_LOW);
+    assertThat(status).isEqualTo(MeasurementStatus.TOO_LOW);
     then(eventPublisher).shouldHaveNoInteractions();
   }
 }
