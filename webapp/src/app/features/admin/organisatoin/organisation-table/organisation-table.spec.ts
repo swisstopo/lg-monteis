@@ -1,12 +1,12 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { MatDialog } from '@angular/material/dialog';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ToastService } from '@core/notifications/toast.service';
 import OrganisationEdit from '@features/admin/organisatoin/organisation-edit/organisation-edit';
 import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { FormDialogService } from '@ui/dialog/form-dialog.service';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,7 +18,7 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 const ORGANISATION_ID = 'organisation-1';
 
 describe('OrganisationTable', () => {
-  let dialog: { open: ReturnType<typeof vi.fn> };
+  let formDialog: { open: ReturnType<typeof vi.fn> };
   let organisationService: {
     getOrganisations: ReturnType<typeof vi.fn>;
     getOrganisationsCsv: ReturnType<typeof vi.fn>;
@@ -28,7 +28,7 @@ describe('OrganisationTable', () => {
   let toast: { error: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    dialog = { open: vi.fn() };
+    formDialog = { open: vi.fn() };
     organisationService = {
       getOrganisations: vi.fn().mockResolvedValue({ rows: [], totalCount: 0 }),
       getOrganisationsCsv: vi.fn().mockResolvedValue(new Blob(['name'])),
@@ -44,7 +44,7 @@ describe('OrganisationTable', () => {
       providers: [
         provideTranslateService(),
         WorkbenchView,
-        { provide: MatDialog, useValue: dialog },
+        { provide: FormDialogService, useValue: formDialog },
         { provide: OrganisationService, useValue: organisationService },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
@@ -61,10 +61,7 @@ describe('OrganisationTable', () => {
 
     view.button('organisation.tableHeader.create')!.click();
 
-    expect(dialog.open).toHaveBeenCalledTimes(1);
-    const [component, config] = dialog.open.mock.calls[0];
-    expect(component).toBe(OrganisationEdit);
-    expect(config.bindings).toBeUndefined();
+    expect(formDialog.open).toHaveBeenCalledWith(OrganisationEdit);
   });
 
   it('can only edit once an organisation is selected', async () => {
@@ -84,10 +81,9 @@ describe('OrganisationTable', () => {
 
     view.button('organisation.tableHeader.edit')!.click();
 
-    expect(dialog.open).toHaveBeenCalledTimes(1);
-    const [component, config] = dialog.open.mock.calls[0];
-    expect(component).toBe(OrganisationEdit);
-    expect(config.bindings).toHaveLength(1);
+    expect(formDialog.open).toHaveBeenCalledWith(OrganisationEdit, {
+      organisationId: ORGANISATION_ID,
+    });
   });
 
   it('reloads its rows whenever an organisation was saved', async () => {
@@ -166,12 +162,6 @@ class TableView {
     private readonly organisationService: { getOrganisations: ReturnType<typeof vi.fn> },
   ) {
     this.element = fixture.nativeElement as HTMLElement;
-  }
-
-  labels(): string[] {
-    return [...this.element.querySelectorAll('app-table-header button')].map(
-      (button) => button.textContent?.trim() ?? '',
-    );
   }
 
   button(label: string): HTMLButtonElement | undefined {
