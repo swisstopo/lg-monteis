@@ -12,7 +12,7 @@ test(`${label(SEED_USERS.admin)} opens the admin menu and its Organisations entr
   await page.getByTitle('Admin').click();
   await page.getByRole('link', { name: 'Organisations' }).click();
 
-  await expect(page.getByText('Organisation management follows in a later release.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create Organisation' })).toBeVisible();
 });
 
 for (const user of NON_ADMINS) {

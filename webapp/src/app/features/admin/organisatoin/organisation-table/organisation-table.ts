@@ -11,9 +11,9 @@ import { createColumns } from '@features/admin/organisatoin/organisation-table/c
 import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
+import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
-import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
