@@ -33,7 +33,9 @@ public interface ExperimentWebMapper {
     if (domain == null) {
       return null;
     }
-    return toDto(domain, VisibleOwners.NONE, today);
+    // only the sensor's main experiment comes here, its owners are not loaded, NONE would claim
+    // it has none
+    return toDto(domain, null, today);
   }
 
   ExperimentOwnerDto toOwnerDto(DirectoryUser user);

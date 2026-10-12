@@ -3,6 +3,8 @@ package ch.swisstopo.monteis.core.modules.sensor.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapperImpl;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
@@ -91,5 +93,31 @@ class SensorWebMapperTest {
 
     // then
     assertThat(dto.mainExperiment()).isNull();
+  }
+
+  @Test
+  void should_map_the_main_experiment_without_claiming_its_owners_are_loaded() {
+    // given
+    Experiment experiment =
+        new Experiment(
+            "Mont Terri", new Period(LocalDate.of(2030, 1, 1), LocalDate.of(2030, 12, 31)), null);
+    Sensor sensor =
+        new Sensor(
+            "Sensor",
+            "ALIAS",
+            Das.SOL_EXPERTS,
+            null,
+            experiment,
+            new Coordinates(0d, 0d, 0d),
+            true,
+            null);
+
+    // when
+    SensorResponseDto dto = mapper.toDto(sensor, LocalDate.of(2030, 6, 1));
+
+    // then
+    assertThat(dto.mainExperiment().name()).isEqualTo("Mont Terri");
+    assertThat(dto.mainExperiment().owners()).isNull();
+    assertThat(dto.mainExperiment().ownersStatus()).isNull();
   }
 }
