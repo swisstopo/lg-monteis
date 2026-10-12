@@ -1,5 +1,13 @@
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
-import { form, FormField, maxLength, minLength, required, submit } from '@angular/forms/signals';
+import {
+  form,
+  FormField,
+  maxLength,
+  minLengthError,
+  required,
+  submit,
+  validate,
+} from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
@@ -72,7 +80,12 @@ export default class OrganisationEdit {
 
   readonly organisationForm = form(this.formModel, (schema) => {
     required(schema.name, { message: translate('organisation.name.validation.required')() });
-    minLength(schema.name, 2, { message: translate('organisation.name.validation.minLength')() });
+    // the trimmed name is what gets saved, so that is what has to be long enough
+    validate(schema.name, ({ value }) =>
+      value().trim().length < 2
+        ? minLengthError(2, { message: translate('organisation.name.validation.minLength')() })
+        : undefined,
+    );
     maxLength(schema.name, 100, { message: translate('organisation.name.validation.maxLength')() });
     maxLength(schema.comment, 4096, {
       message: translate('organisation.comment.validation.maxLength')(),
