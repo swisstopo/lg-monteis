@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, effect, inject, inputBinding, signal } from '@angular/core';
+import { Component, effect, inject, inputBinding, signal, untracked } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
@@ -68,13 +68,11 @@ export default class OrganisationTable {
       view.title = this.translateService.translate('tab.organisation')();
     });
 
-    // Re-fetch the currently visible pages whenever a organisation is created/updated elsewhere
-    // (e.g. via the edit dialog) - the infinite row model otherwise has no way to know.
+    // the infinite row model has no way to notice a save in the dialog, so the visible pages are
+    // fetched again on every one
     effect(() => {
-      if (this.organisationService.organisationsChanged()) {
-        this.gridApi()?.refreshInfiniteCache();
-        this.organisationService.organisationsChanged.set(false);
-      }
+      this.organisationService.organisationsSaved();
+      untracked(() => this.gridApi()?.refreshInfiniteCache());
     });
   }
 

@@ -29,19 +29,38 @@ describe('OrganisationService', () => {
     service = TestBed.inject(OrganisationService);
   });
 
-  it('creates an organisation and flags the table and the organisation list', async () => {
+  it('creates an organisation and counts the save for the table and the organisation list', async () => {
     // a reload while the first load is still running is dropped
     await vi.waitFor(() => expect(service['loadedOrganisations'].status()).toBe('resolved'));
     const loadsBefore = api['getAllOrganisations'].mock.calls.length;
 
-    await expect(service.createOrganisation(NEW_ORGANISATION)).resolves.toEqual(SAVED);
+    await expect(service.saveOrganisation(undefined, NEW_ORGANISATION)).resolves.toEqual(SAVED);
     TestBed.tick();
 
     expect(api['createOrganisation']).toHaveBeenCalledWith(NEW_ORGANISATION);
-    expect(service.organisationsChanged()).toBe(true);
+    expect(service.organisationsSaved()).toBe(1);
     await vi.waitFor(() =>
       expect(api['getAllOrganisations'].mock.calls.length).toBeGreaterThan(loadsBefore),
     );
+  });
+
+  it('updates the organisation with an id and counts the save', async () => {
+    await expect(service.saveOrganisation('organisation-1', NEW_ORGANISATION)).resolves.toEqual(
+      SAVED,
+    );
+
+    expect(api['updateOrganisation']).toHaveBeenCalledWith('organisation-1', NEW_ORGANISATION);
+    expect(api['createOrganisation']).not.toHaveBeenCalled();
+    expect(service.organisationsSaved()).toBe(1);
+  });
+
+  it('rethrows a failed save and does not count it', async () => {
+    const failure = new Error('409');
+    api['createOrganisation'].mockReturnValue(throwError(() => failure));
+
+    await expect(service.saveOrganisation(undefined, NEW_ORGANISATION)).rejects.toBe(failure);
+
+    expect(service.organisationsSaved()).toBe(0);
   });
 
   it('lists no organisations when loading them failed', async () => {
@@ -57,35 +76,10 @@ describe('OrganisationService', () => {
     expect(service.allOrganisations()).toEqual([]);
   });
 
-  it('updates an organisation and flags the table', async () => {
-    await expect(service.updateOrganisation('organisation-1', NEW_ORGANISATION)).resolves.toEqual(
-      SAVED,
-    );
+  it('gets one organisation by id', async () => {
+    await expect(service.getOrganisation('organisation-1')).resolves.toEqual(SAVED);
 
-    expect(api['updateOrganisation']).toHaveBeenCalledWith('organisation-1', NEW_ORGANISATION);
-    expect(service.organisationsChanged()).toBe(true);
-  });
-
-  it('rethrows a failed create, keeps its error and leaves the table alone', async () => {
-    const failure = new Error('409');
-    api['createOrganisation'].mockReturnValue(throwError(() => failure));
-
-    await expect(service.createOrganisation(NEW_ORGANISATION)).rejects.toBe(failure);
-
-    expect(service.error()).toBeDefined();
-    expect(service.organisationsChanged()).toBe(false);
-  });
-
-  it('rethrows a failed update, keeps its error and leaves the table alone', async () => {
-    const failure = new Error('409');
-    api['updateOrganisation'].mockReturnValue(throwError(() => failure));
-
-    await expect(service.updateOrganisation('organisation-1', NEW_ORGANISATION)).rejects.toBe(
-      failure,
-    );
-
-    expect(service.error()).toBeDefined();
-    expect(service.organisationsChanged()).toBe(false);
+    expect(api['getOrganisation']).toHaveBeenCalledWith('organisation-1');
   });
 
   it('pages the organisations with the sort and filter of the grid', async () => {

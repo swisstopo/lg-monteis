@@ -1,8 +1,10 @@
 import { Injectable, computed, inject, resource, signal } from '@angular/core';
-import { ErrorDto, OrganisationControllerService, WriteOrganisationDto } from '@core/generated';
-import { toErrorDtos } from '@core/http/api-error.model';
+import {
+  OrganisationControllerService,
+  OrganisationResponseDto,
+  WriteOrganisationDto,
+} from '@core/generated';
 import { skipGlobalErrorToast } from '@core/http/http-context';
-import { translate } from '@ngx-translate/core';
 import { toPagedRequestParams } from '@ui/table/paged-request.mapper';
 import { IGetRowsParams } from 'ag-grid-community';
 import { firstValueFrom } from 'rxjs';
@@ -10,19 +12,13 @@ import { firstValueFrom } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class OrganisationService {
   private readonly api = inject(OrganisationControllerService);
-  private readonly organisationRequest = signal<{ id: string | undefined }>({ id: undefined });
-  readonly error = signal<ErrorDto[] | undefined>(undefined);
-  // Bumped whenever an organisation is created/updated, so the organisation table can refresh its
-  // ag-grid infinite row model cache - ag-grid has no way to detect that on its own.
-  readonly organisationsChanged = signal(false);
-
-  readonly organisation = resource({
-    params: () => this.organisationRequest(),
-    loader: ({ params }) => {
-      if (!params.id) return Promise.reject(new Error(translate('organisation.error.noId')()));
-      return firstValueFrom(this.api.getOrganisation(params.id));
-    },
-  });
+  private readonly saveCount = signal(0);
+  /**
+   * Grows with every saved organisation. The organisation table refreshes its rows on each change,
+   * its ag-grid infinite row model cannot notice a save on its own. A counter, not a flag: the
+   * table only reads it, nothing has to reset it.
+   */
+  readonly organisationsSaved = this.saveCount.asReadonly();
 
   private readonly loadedOrganisations = resource({
     loader: () => firstValueFrom(this.api.getAllOrganisations()),
@@ -32,37 +28,23 @@ export class OrganisationService {
     this.loadedOrganisations.hasValue() ? this.loadedOrganisations.value() : [],
   );
 
-  // always set the organisation id to refetch the organisation
-  getOrganisation(id: string | undefined) {
-    if (id === undefined) {
-      this.organisation.value.set(undefined);
-      return;
-    }
-    this.organisationRequest.set({ id });
+  getOrganisation(id: string): Promise<OrganisationResponseDto> {
+    return firstValueFrom(this.api.getOrganisation(id));
   }
 
-  async createOrganisation(organisation: WriteOrganisationDto) {
-    try {
-      const result = await firstValueFrom(this.api.createOrganisation(organisation));
-      this.organisationsChanged.set(true);
-      this.loadedOrganisations.reload();
-      return result;
-    } catch (err) {
-      this.error.set(toErrorDtos(err));
-      throw err;
-    }
-  }
-
-  async updateOrganisation(id: string, organisation: WriteOrganisationDto) {
-    try {
-      const result = await firstValueFrom(this.api.updateOrganisation(id, organisation));
-      this.organisationsChanged.set(true);
-      this.loadedOrganisations.reload();
-      return result;
-    } catch (err) {
-      this.error.set(toErrorDtos(err));
-      throw err;
-    }
+  /** Creates the organisation, or updates the one with `id`. */
+  async saveOrganisation(
+    id: string | undefined,
+    organisation: WriteOrganisationDto,
+  ): Promise<OrganisationResponseDto> {
+    const saved = await firstValueFrom(
+      id
+        ? this.api.updateOrganisation(id, organisation)
+        : this.api.createOrganisation(organisation),
+    );
+    this.saveCount.update((count) => count + 1);
+    this.loadedOrganisations.reload();
+    return saved;
   }
 
   getOrganisations(params: IGetRowsParams) {

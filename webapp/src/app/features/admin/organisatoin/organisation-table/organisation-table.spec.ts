@@ -22,7 +22,7 @@ describe('OrganisationTable', () => {
   let organisationService: {
     getOrganisations: ReturnType<typeof vi.fn>;
     getOrganisationsCsv: ReturnType<typeof vi.fn>;
-    organisationsChanged: ReturnType<typeof signal<boolean>>;
+    organisationsSaved: ReturnType<typeof signal<number>>;
   };
   let fileDownload: { download: ReturnType<typeof vi.fn> };
   let toast: { error: ReturnType<typeof vi.fn> };
@@ -32,7 +32,7 @@ describe('OrganisationTable', () => {
     organisationService = {
       getOrganisations: vi.fn().mockResolvedValue({ rows: [], totalCount: 0 }),
       getOrganisationsCsv: vi.fn().mockResolvedValue(new Blob(['name'])),
-      organisationsChanged: signal(false),
+      organisationsSaved: signal(0),
     };
     fileDownload = { download: vi.fn() };
     toast = { error: vi.fn() };
@@ -90,18 +90,17 @@ describe('OrganisationTable', () => {
     expect(config.bindings).toHaveLength(1);
   });
 
-  it('reloads its rows and resets the flag whenever an organisation changed', async () => {
+  it('reloads its rows whenever an organisation was saved', async () => {
     const view = await render();
     await view.gridReady();
     const loadsBefore = organisationService.getOrganisations.mock.calls.length;
 
-    organisationService.organisationsChanged.set(true);
+    organisationService.organisationsSaved.set(1);
     await view.settle();
 
     await vi.waitFor(() =>
       expect(organisationService.getOrganisations.mock.calls.length).toBeGreaterThan(loadsBefore),
     );
-    expect(organisationService.organisationsChanged()).toBe(false);
   });
 
   it('filters the name column by the search term', async () => {

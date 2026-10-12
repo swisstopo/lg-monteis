@@ -482,7 +482,6 @@
     },
     "success": "Organisation saved successfully.",
     "error": {
-      "noId": "No organisation id provided",
       "connection": "Failed to connect to the backend server.",
       "downloadFailed": "Failed to download organisations as CSV.",
       "unspecified": {

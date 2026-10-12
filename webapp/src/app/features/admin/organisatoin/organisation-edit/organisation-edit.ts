@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, resource } from '@angular/core';
 import {
   form,
   FormField,
@@ -13,6 +13,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { OrganisationResponseDto, WriteOrganisationDto } from '@core/generated';
+import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
@@ -47,25 +48,21 @@ export default class OrganisationEdit {
   readonly dialogRef = inject<MatDialogRef<OrganisationEdit>>(MatDialogRef, { optional: true });
   readonly organisationId = input<string | undefined>(undefined);
 
-  readonly saveError = this.organisationService.error;
-  private readonly organisation = signal<OrganisationResponseDto | undefined>(undefined);
+  // no error handling here, the restErrorInterceptor already toasts a failed load
+  private readonly loadedOrganisation = resource({
+    params: () => this.organisationId(),
+    loader: ({ params: id }) => this.organisationService.getOrganisation(id),
+  });
+
+  // undefined again once "save and create" starts the next organisation
+  private readonly organisation = linkedSignal(() =>
+    this.loadedOrganisation.hasValue() ? this.loadedOrganisation.value() : undefined,
+  );
   protected readonly title = computed(() =>
     this.organisationId()
       ? this.translateService.translate('organisation.edit.title.edit')()
       : this.translateService.translate('organisation.edit.title.create')(),
   );
-
-  private readonly syncSelectedOrganisation = effect(() => {
-    this.organisationService.getOrganisation(this.organisationId());
-  });
-
-  private readonly applyLoadedOrganisation = effect(() => {
-    if (!this.organisationService.organisation.hasValue()) return;
-    const loaded = this.organisationService.organisation.value();
-    if (loaded === undefined) return;
-    this.organisation.set(loaded);
-    this.organisationForm().markAsTouched();
-  });
 
   private readonly formModel = linkedSignal<
     OrganisationResponseDto | undefined,
@@ -107,12 +104,7 @@ export default class OrganisationEdit {
         comment: this.formModel().comment?.trim() || undefined,
       };
       try {
-        const id = this.organisation()?.id;
-        if (id) {
-          await this.organisationService.updateOrganisation(id, payload);
-        } else {
-          await this.organisationService.createOrganisation(payload);
-        }
+        await this.organisationService.saveOrganisation(this.organisation()?.id, payload);
         this.toastService.success(this.translateService.translate('organisation.success')());
 
         if (resetAfter) {
@@ -121,9 +113,9 @@ export default class OrganisationEdit {
           this.dialogRef?.close();
         }
         return;
-      } catch {
+      } catch (error) {
         return this.formErrorService.mapApiErrorsToFormErrors(
-          this.saveError(),
+          toErrorDtos(error),
           this.organisationForm,
           'organisation.error.unspecified.message',
         );
@@ -133,7 +125,6 @@ export default class OrganisationEdit {
 
   private resetForm(): void {
     this.organisation.set(undefined);
-    this.organisationService.getOrganisation(undefined);
     this.organisationForm().reset({ name: '', comment: '' });
   }
 }
