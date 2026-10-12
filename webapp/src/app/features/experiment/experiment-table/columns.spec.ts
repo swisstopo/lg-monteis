@@ -1,18 +1,15 @@
 import { DatePipe } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
-import { ExperimentOwnerDto } from '@core/generated';
 import { OwnersCellRenderer } from '@features/experiment/owners/owners-cell-renderer';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
+import { ALICE, BOB } from '@features/experiment/testing/experiment-fixtures';
 import { provideTranslateService } from '@ngx-translate/core';
 import { ValueFormatterParams } from 'ag-grid-community';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, Mocked, vi } from 'vitest';
 import { createColumns } from './columns';
 
-const ALICE: ExperimentOwnerDto = { id: 'alice', firstName: 'Alice', lastName: 'Muster' };
-const BOB: ExperimentOwnerDto = { id: 'bob', firstName: 'Bob', lastName: 'Beispiel' };
-
 describe('experiment columns', () => {
-  let experimentService: { findAllVisibleOwners: ReturnType<typeof vi.fn> };
+  let experimentService: Mocked<Pick<ExperimentService, 'findAllVisibleOwners'>>;
 
   beforeEach(() => {
     experimentService = { findAllVisibleOwners: vi.fn().mockResolvedValue([ALICE, BOB]) };
@@ -36,9 +33,7 @@ describe('experiment columns', () => {
     expect(column.cellRenderer).toBe(OwnersCellRenderer);
   });
 
-  it('filters by the assigned owners, by name but on their id', async () => {
-    experimentService.findAllVisibleOwners.mockResolvedValue([ALICE, BOB]);
-
+  it('filters by the visible owners, by name but on their id', async () => {
     const values = await ownerColumn().filterParams.valuesProvider();
 
     expect(values).toEqual([

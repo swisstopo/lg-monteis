@@ -1,205 +1,161 @@
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { ExperimentOwnerDto } from '@core/generated';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
+import { ALICE, BOB } from '@features/experiment/testing/experiment-fixtures';
+import { ExperimentOwnerPickerHarness } from '@features/experiment/testing/experiment-owner-picker.harness';
 import { provideTranslateService } from '@ngx-translate/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, Mocked, vi } from 'vitest';
 import { ExperimentOwnerPicker } from './experiment-owner-picker';
 
-const ALICE: ExperimentOwnerDto = {
-  id: 'alice',
-  firstName: 'Alice',
-  lastName: 'Muster',
-  email: 'alice@example.com',
-};
-const BOB: ExperimentOwnerDto = {
-  id: 'bob',
-  firstName: 'Bob',
-  lastName: 'Beispiel',
-  email: 'bob@example.com',
-};
+const FRITZ: ExperimentOwnerDto = { id: 'fritz', firstName: 'Fritz', lastName: 'Former' };
 
-describe('ExperimentOwnerPicker', () => {
-  let experimentService: { findOwnerCandidatesForExperiment: ReturnType<typeof vi.fn> };
+interface Setup {
+  selectedOwnerIds?: string[];
+  owners?: ExperimentOwnerDto[];
+  error?: string;
+  candidates?: () => Promise<ExperimentOwnerDto[]>;
+}
 
-  beforeEach(() => {
-    experimentService = {
-      findOwnerCandidatesForExperiment: vi.fn().mockResolvedValue([ALICE, BOB]),
-    };
-    TestBed.configureTestingModule({
-      imports: [ExperimentOwnerPicker],
-      providers: [
-        provideTranslateService(),
-        { provide: ExperimentService, useValue: experimentService },
-      ],
-    });
+async function setup({
+  selectedOwnerIds = [],
+  owners = [],
+  error,
+  candidates = () => Promise.resolve([ALICE, BOB]),
+}: Setup = {}) {
+  const experimentService: Mocked<Pick<ExperimentService, 'findOwnerCandidatesForExperiment'>> = {
+    findOwnerCandidatesForExperiment: vi.fn(candidates),
+  };
+  TestBed.configureTestingModule({
+    imports: [ExperimentOwnerPicker],
+    providers: [
+      provideTranslateService(),
+      { provide: ExperimentService, useValue: experimentService },
+    ],
   });
 
-  async function render(
-    selectedOwnerIds: string[] = [],
-    error?: string,
-    owners: ExperimentOwnerDto[] = [],
-  ) {
-    const fixture = TestBed.createComponent(ExperimentOwnerPicker);
-    fixture.componentRef.setInput('experimentId', 'experiment-1');
-    fixture.componentRef.setInput('selectedOwnerIds', selectedOwnerIds);
-    fixture.componentRef.setInput('error', error);
-    fixture.componentRef.setInput('owners', owners);
-    await fixture.whenStable();
-    const element = fixture.nativeElement as HTMLElement;
-    const input = () => element.querySelector<HTMLInputElement>('[data-testid="owner-input"]')!;
-    return {
-      fixture,
-      element,
-      input,
-      chips: () =>
-        [...element.querySelectorAll('[data-testid="selected-owner"]')].map((chip) =>
-          chip.textContent?.replace('cancel', '').trim(),
-        ),
-      hint: () => element.querySelector('mat-hint')?.textContent?.trim(),
-      async open() {
-        input().focus();
-        await fixture.whenStable();
-      },
-      async type(text: string) {
-        input().value = text;
-        input().dispatchEvent(new Event('input'));
-        await fixture.whenStable();
-      },
-      options: () =>
-        [...document.querySelectorAll<HTMLElement>('mat-option')].map((option) =>
-          option.textContent?.trim().replace(/\s+/g, ' '),
-        ),
-      async pick(name: string) {
-        [...document.querySelectorAll<HTMLElement>('mat-option')]
-          .find((option) => option.textContent?.includes(name))!
-          .click();
-        await fixture.whenStable();
-      },
-    };
-  }
+  const fixture = TestBed.createComponent(ExperimentOwnerPicker);
+  fixture.componentRef.setInput('experimentId', 'experiment-1');
+  fixture.componentRef.setInput('selectedOwnerIds', selectedOwnerIds);
+  fixture.componentRef.setInput('owners', owners);
+  fixture.componentRef.setInput('error', error);
+  const picker = await TestbedHarnessEnvironment.harnessForFixture(
+    fixture,
+    ExperimentOwnerPickerHarness,
+  );
+  const selectedOwnerIdsNow = () => fixture.componentInstance.selectedOwnerIds();
 
+  return { picker, selectedOwnerIdsNow, experimentService };
+}
+
+describe('ExperimentOwnerPicker', () => {
   it('loads the candidates of the experiment', async () => {
-    await render();
+    const { experimentService } = await setup();
 
     expect(experimentService.findOwnerCandidatesForExperiment).toHaveBeenCalledWith('experiment-1');
   });
 
   it('shows the selected owners as chips', async () => {
-    const view = await render(['alice']);
+    const { picker } = await setup({ selectedOwnerIds: ['alice'] });
 
-    expect(view.chips()).toEqual(['Alice Muster']);
+    expect(await picker.getOwnerNames()).toEqual(['Alice Muster']);
   });
 
   it('says who can be an owner', async () => {
-    const view = await render();
+    const { picker } = await setup();
 
-    expect(view.hint()).toBe('experiment.owners.hint');
+    expect(await picker.getHint()).toBe('experiment.owners.hint');
   });
 
   it('offers the candidates that are not selected yet with their email', async () => {
-    const view = await render(['alice']);
+    const { picker } = await setup({ selectedOwnerIds: ['alice'] });
 
-    await view.open();
-
-    expect(view.options()).toEqual(['Bob Beispiel (bob@example.com)']);
+    expect(await picker.getOfferedOwners()).toEqual(['Bob Beispiel (bob@example.com)']);
   });
 
   it('offers a candidate without email by name only', async () => {
-    experimentService.findOwnerCandidatesForExperiment.mockResolvedValue([
-      { ...ALICE, email: undefined },
-    ]);
-    const view = await render();
+    const { picker } = await setup({
+      candidates: () => Promise.resolve([{ ...ALICE, email: undefined }]),
+    });
 
-    await view.open();
-
-    expect(view.options()).toEqual(['Alice Muster']);
+    expect(await picker.getOfferedOwners()).toEqual(['Alice Muster']);
   });
 
   it('filters the candidates by name or email', async () => {
-    const view = await render();
-    await view.open();
+    const { picker } = await setup();
 
-    await view.type('beisp');
-    expect(view.options()).toEqual(['Bob Beispiel (bob@example.com)']);
+    await picker.searchFor('beisp');
+    expect(await picker.getOfferedOwners()).toEqual(['Bob Beispiel (bob@example.com)']);
 
-    await view.type('ALICE@');
-    expect(view.options()).toEqual(['Alice Muster (alice@example.com)']);
+    await picker.searchFor('ALICE@');
+    expect(await picker.getOfferedOwners()).toEqual(['Alice Muster (alice@example.com)']);
   });
 
   it('adds a picked candidate and clears the search', async () => {
-    const view = await render(['alice']);
-    await view.open();
-    await view.type('bob');
+    const { picker, selectedOwnerIdsNow } = await setup({ selectedOwnerIds: ['alice'] });
+    await picker.searchFor('bob');
 
-    await view.pick('Bob Beispiel');
+    await picker.addOwner('Bob Beispiel');
 
-    expect(view.fixture.componentInstance.selectedOwnerIds()).toEqual(['alice', 'bob']);
-    expect(view.chips()).toEqual(['Alice Muster', 'Bob Beispiel']);
-    expect(view.input().value).toBe('');
+    expect(selectedOwnerIdsNow()).toEqual(['alice', 'bob']);
+    expect(await picker.getOwnerNames()).toEqual(['Alice Muster', 'Bob Beispiel']);
+    expect(await picker.getSearchText()).toBe('');
   });
 
   it('removes an owner from its chip', async () => {
-    const view = await render(['alice', 'bob']);
+    const { picker, selectedOwnerIdsNow } = await setup({ selectedOwnerIds: ['alice', 'bob'] });
 
-    view.element.querySelector<HTMLButtonElement>('[matChipRemove]')!.click();
-    await view.fixture.whenStable();
+    await picker.removeOwner('Alice Muster');
 
-    expect(view.fixture.componentInstance.selectedOwnerIds()).toEqual(['bob']);
+    expect(selectedOwnerIdsNow()).toEqual(['bob']);
   });
 
   it('leaves out selected ids it knows no name for', async () => {
-    const view = await render(['alice', 'unknown']);
+    const { picker } = await setup({ selectedOwnerIds: ['alice', 'unknown'] });
 
-    expect(view.chips()).toEqual(['Alice Muster']);
+    expect(await picker.getOwnerNames()).toEqual(['Alice Muster']);
   });
 
   it('keeps a stored owner who is no candidate anymore removable', async () => {
-    const former: ExperimentOwnerDto = { id: 'former', firstName: 'Fritz', lastName: 'Former' };
-    const view = await render(['alice', 'former'], undefined, [ALICE, former]);
+    const { picker, selectedOwnerIdsNow } = await setup({
+      selectedOwnerIds: ['alice', 'fritz'],
+      owners: [ALICE, FRITZ],
+    });
+    expect(await picker.getOwnerNames()).toEqual(['Alice Muster', 'Fritz Former']);
 
-    expect(view.chips()).toEqual(['Alice Muster', 'Fritz Former']);
-    view.element.querySelectorAll<HTMLButtonElement>('[matChipRemove]')[1].click();
-    await view.fixture.whenStable();
-    expect(view.fixture.componentInstance.selectedOwnerIds()).toEqual(['alice']);
+    await picker.removeOwner('Fritz Former');
+
+    expect(selectedOwnerIdsNow()).toEqual(['alice']);
   });
 
   it('says so when nobody can be an owner', async () => {
-    experimentService.findOwnerCandidatesForExperiment.mockResolvedValue([]);
+    const { picker } = await setup({ candidates: () => Promise.resolve([]) });
 
-    const view = await render();
-
-    expect(view.hint()).toBe('experiment.owners.noCandidates');
+    expect(await picker.getHint()).toBe('experiment.owners.noCandidates');
   });
 
   it('disables the search when the candidates cannot be loaded', async () => {
-    experimentService.findOwnerCandidatesForExperiment.mockRejectedValue(new Error('503'));
+    const { picker } = await setup({ candidates: () => Promise.reject(new Error('503')) });
 
-    const view = await render();
-
-    expect(view.input().disabled).toBe(true);
-    expect(view.hint()).toBe('error.user-directory.unavailable');
+    expect(await picker.isSearchDisabled()).toBe(true);
+    expect(await picker.getHint()).toBe('error.user-directory.unavailable');
   });
 
   it('tells a Keycloak that refuses the lookup apart from one that is down', async () => {
-    experimentService.findOwnerCandidatesForExperiment.mockRejectedValue(
-      new HttpErrorResponse({
-        status: 502,
-        error: { messageKey: 'error.user-directory.denied', target: 'GLOBAL' },
-      }),
-    );
+    const refused = new HttpErrorResponse({
+      status: 502,
+      error: { messageKey: 'error.user-directory.denied', target: 'GLOBAL' },
+    });
+    const { picker } = await setup({ candidates: () => Promise.reject(refused) });
 
-    const view = await render();
-
-    expect(view.input().disabled).toBe(true);
-    expect(view.hint()).toBe('error.user-directory.denied');
+    expect(await picker.isSearchDisabled()).toBe(true);
+    expect(await picker.getHint()).toBe('error.user-directory.denied');
   });
 
   it('shows the error of a failed save instead of the hint', async () => {
-    const view = await render([], 'error.user-directory.unavailable');
+    const { picker } = await setup({ error: 'experiment.owner.not-eligible' });
 
-    expect(view.element.querySelector('[data-testid="owner-error"]')?.textContent?.trim()).toBe(
-      'error.user-directory.unavailable',
-    );
+    expect(await picker.getHint()).toBe('experiment.owner.not-eligible');
   });
 });

@@ -1,18 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { ExperimentOwnerDto, ExperimentResponseDto } from '@core/generated';
+import { ALICE, BOB } from '@features/experiment/testing/experiment-fixtures';
 import { provideTranslateService } from '@ngx-translate/core';
 import { ICellRendererParams } from 'ag-grid-community';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { OwnersCellRenderer } from './owners-cell-renderer';
 import { OwnersStatus } from './owners-status';
-
-const ALICE: ExperimentOwnerDto = {
-  id: 'alice',
-  firstName: 'Alice',
-  lastName: 'Muster',
-  email: 'alice@example.com',
-};
-const BOB: ExperimentOwnerDto = { id: 'bob', firstName: 'Bob', lastName: 'Beispiel' };
 
 function params(owners: ExperimentOwnerDto[], ownersStatus: OwnersStatus) {
   return {
