@@ -1,7 +1,9 @@
-package ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound;
+package ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound;
 
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.UUID;
 
 public record SensorDetailParameterResponseDto(
@@ -15,5 +17,4 @@ public record SensorDetailParameterResponseDto(
     Boolean active,
     String comment,
     Integer version,
-    SensorParameterReadingResponseDto latestParameterReadingValue)
-    implements SensorParameterBaseResponseDto {}
+    SensorParameterReadingResponseDto latestParameterReadingValue) {}

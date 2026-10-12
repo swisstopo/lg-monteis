@@ -7,8 +7,10 @@ import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorDetailResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
@@ -60,7 +62,11 @@ public class MeasurementController {
         .orElseThrow(() -> new ObjectNotFoundException(SensorParameter.class));
   }
 
-  /** Returns a sensor with all its parameters, each including its latest reading. */
+  @Operation(
+      summary = "Get sensor details by id",
+      description =
+          "Retrieves a sensor with all its parameters, each including its latest reading.")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved sensor details")
   @GetMapping(path = "/sensors/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SensorDetailResponseDto> getSensorDetail(@PathVariable UUID id) {
     return ResponseEntity.ok(measurementService.getSensorDetail(id, LocalDate.now(clock)));

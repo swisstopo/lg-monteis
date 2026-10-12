@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound;
+package ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound;
 
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
@@ -17,5 +17,4 @@ public record SensorDetailResponseDto(
     Boolean active,
     String comment,
     Integer version,
-    List<SensorDetailParameterResponseDto> parameters)
-    implements SensorBaseResponseDto {}
+    List<SensorDetailParameterResponseDto> parameters) {}

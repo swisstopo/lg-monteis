@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound;
+package ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound;
 
 import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import java.time.OffsetDateTime;

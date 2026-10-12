@@ -17,5 +17,4 @@ public record SensorResponseDto(
     Boolean active,
     String comment,
     Integer version,
-    List<SensorParameterResponseDto> parameters)
-    implements SensorBaseResponseDto {}
+    List<SensorParameterResponseDto> parameters) {}
