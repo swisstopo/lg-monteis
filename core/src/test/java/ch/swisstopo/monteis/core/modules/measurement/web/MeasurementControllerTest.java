@@ -34,11 +34,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -403,7 +399,7 @@ class MeasurementControllerTest {
             null,
             1,
             List.of());
-    given(measurementService.getSensorDetail(SENSOR_ID, LocalDate.of(2024, 1, 1)))
+    given(measurementService.getSensorDetail(SENSOR_ID, LocalDate.of(2024, Month.JANUARY, 1)))
         .willReturn(detail);
 
     // when / then
@@ -435,7 +431,8 @@ class MeasurementControllerTest {
                 experimentId,
                 "Mont Terri Alpha",
                 "experiment comment",
-                new PeriodDto(LocalDate.of(2023, 1, 1), LocalDate.of(2024, 12, 31)),
+                new PeriodDto(
+                    LocalDate.of(2023, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
                 Status.ACTIVE,
                 3,
                 5),
@@ -457,7 +454,7 @@ class MeasurementControllerTest {
                     9,
                     new SensorParameterReadingResponseDto(
                         12.5, 6.25, MeasurementStatus.TOO_HIGH, readingTime))));
-    given(measurementService.getSensorDetail(SENSOR_ID, LocalDate.of(2024, 1, 1)))
+    given(measurementService.getSensorDetail(SENSOR_ID, LocalDate.of(2024, Month.JANUARY, 1)))
         .willReturn(detail);
 
     // when / then
@@ -514,7 +511,7 @@ class MeasurementControllerTest {
   @Test
   void should_return_404_for_unknown_sensor_detail() throws Exception {
     // given
-    given(measurementService.getSensorDetail(SENSOR_ID, LocalDate.of(2024, 1, 1)))
+    given(measurementService.getSensorDetail(SENSOR_ID, LocalDate.of(2024, Month.JANUARY, 1)))
         .willThrow(new ObjectNotFoundException(Sensor.class));
 
     // when / then

@@ -18,6 +18,7 @@ import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataR
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorDetailResponseDto;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -152,7 +153,7 @@ class MeasurementServiceTest {
   @Test
   void should_return_sensor_detail_from_query() {
     // given
-    LocalDate today = LocalDate.of(2024, 1, 1);
+    LocalDate today = LocalDate.of(2024, Month.JANUARY, 1);
     SensorDetailResponseDto detail =
         new SensorDetailResponseDto(
             SENSOR_ID,
@@ -175,7 +176,7 @@ class MeasurementServiceTest {
   @Test
   void should_throw_when_sensor_detail_is_absent_or_invisible() {
     // given
-    LocalDate today = LocalDate.of(2024, 1, 1);
+    LocalDate today = LocalDate.of(2024, Month.JANUARY, 1);
     given(query.findSensorDetail(SENSOR_ID, today)).willReturn(Optional.empty());
 
     // when / then
