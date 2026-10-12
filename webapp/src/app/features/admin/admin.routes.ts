@@ -5,6 +5,6 @@ export const ADMIN_ROUTES: Routes = [
   {
     path: 'organisation-table',
     canActivate: [authorizationGuard(ADMIN)],
-    loadComponent: () => import('./organisation-table/organisation-table'),
+    loadComponent: () => import('./organisatoin/organisation-table/organisation-table'),
   },
 ];

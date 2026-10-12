@@ -49,7 +49,10 @@
     "min": "",
     "max": "",
     "positive": "",
-    "unique": "An entity with the same code already exists"
+    "unique": "An entity with the same code already exists",
+    "organisation": {
+      "unknown": "One of the selected organisations does not exist any more."
+    }
   },
   "admin": {
     "organisation": {
@@ -337,6 +340,9 @@
       "createHint": "Nobody has write access to a new experiment yet. Save it first, owners can be assigned once people have write access.",
       "notSaved": "Experiment saved, but the owners were not changed: Keycloak is unavailable or refused the lookup. Please try again later."
     },
+    "organisations": {
+      "label": "Organisations"
+    },
     "success": "Experiment saved successfully.",
     "error": {
       "unspecified": {
@@ -452,6 +458,7 @@
   "tab": {
     "sensor": "Setup Sensors",
     "experiment": "Setup Experiment",
+    "organisation": "Organisations",
     "measurements-table": "Measurements",
     "measurements-visualization": "Measurements 3D View"
   },
@@ -468,5 +475,45 @@
   "button": {
     "cancel": "Cancel",
     "close": "Close"
+  },
+  "organisation": {
+    "edit": {
+      "title": {
+        "create": "Create Organisation",
+        "edit": "Edit Organisation"
+      }
+    },
+    "name": {
+      "label": "Organisation Name",
+      "placeholder": "e.g., swisstopo",
+      "validation": {
+        "required": "Organisation name is required",
+        "minLength": "Name must be at least {{min}} characters long",
+        "maxLength": "Name must be at most {{max}} characters long"
+      }
+    },
+    "button": {
+      "saveAndCreate": "Save and create new",
+      "save": "Save"
+    },
+    "tableHeader": {
+      "download": "Download",
+      "create": "Create Organisation",
+      "edit": "Edit Organisation"
+    },
+    "success": "Organisation saved successfully.",
+    "error": {
+      "connection": "Failed to connect to the backend server.",
+      "downloadFailed": "Failed to download organisations as CSV.",
+      "unspecified": {
+        "message": "An unspecified error occurred while saving the organisation."
+      }
+    },
+    "comment": {
+      "label": "Comment",
+      "validation": {
+        "maxLength": "Comment must be at most {{max}} characters long"
+      }
+    }
   }
 }

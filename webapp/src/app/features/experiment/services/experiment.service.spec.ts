@@ -14,6 +14,7 @@ import { ExperimentService } from './experiment.service';
 const NEW_EXPERIMENT: WriteExperimentDto = {
   name: 'Mont Terri Alpha',
   period: { start: '2030-01-01', end: '2030-05-05' },
+  organisationIds: [],
 };
 const SAVED = { id: 'experiment-1', name: 'Mont Terri Alpha', version: 1 };
 

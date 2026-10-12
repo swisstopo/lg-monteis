@@ -2,6 +2,7 @@ import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ToastService } from '@core/notifications/toast.service';
+import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { ExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -57,6 +58,7 @@ describe('ExperimentTable', () => {
         WorkbenchView,
         { provide: FormDialogService, useValue: formDialog },
         { provide: ExperimentService, useValue: experimentService },
+        { provide: OrganisationService, useValue: { allOrganisations: signal([]) } },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
         {

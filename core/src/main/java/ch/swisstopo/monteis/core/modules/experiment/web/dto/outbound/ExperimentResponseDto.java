@@ -15,4 +15,5 @@ public record ExperimentResponseDto(
     Integer version,
     Integer sensorCount,
     List<ExperimentOwnerDto> owners,
-    OwnersStatus ownersStatus) {}
+    OwnersStatus ownersStatus,
+    List<UUID> organisationIds) {}

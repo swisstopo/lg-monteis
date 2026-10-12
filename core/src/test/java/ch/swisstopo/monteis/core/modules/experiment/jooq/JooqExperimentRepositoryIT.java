@@ -1,8 +1,10 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
+import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOrganisation.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOwner.EXPERIMENT_OWNER;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentSensor.EXPERIMENT_SENSOR;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
+import static ch.swisstopo.monteis.core.jooq.generated.tables.Organisations.ORGANISATIONS;
 import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swisstopo.monteis.contracts.Das;
@@ -28,6 +30,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.jooq.DSLContext;
+import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -400,6 +403,28 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
+  void should_stream_unaudited_experiments_with_their_organisations() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID organisationId = createOrganisationWithDsl("Org unaudited");
+          Experiment experiment = buildDummyDomainExperiment("UNAUDITED-ORG-EXP");
+          experiment.setOrganisationIds(List.of(organisationId));
+          repository.create(experiment);
+
+          try (Stream<Experiment> stream = repository.streamUnauditedExperiments()) {
+            Experiment streamed =
+                stream
+                    .filter(e -> e.getName().equals("UNAUDITED-ORG-EXP"))
+                    .findFirst()
+                    .orElseThrow();
+
+            assertEquals(List.of(organisationId), streamed.getOrganisationIds());
+          }
+        });
+  }
+
+  @Test
+  @Transactional
   void should_exclude_audited_experiments() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
@@ -639,6 +664,111 @@ class JooqExperimentRepositoryIT {
         new Period(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31));
 
     return new Experiment(name, dates, "Dummy comment");
+  }
+
+  // --- Organisations ---
+
+  @Test
+  @Transactional
+  void should_assign_replace_and_remove_organisations() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID first = createOrganisationWithDsl("Org assign A");
+          UUID second = createOrganisationWithDsl("Org assign B");
+          Experiment experiment =
+              new Experiment(
+                  "Org assign IT",
+                  new Period(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+                  null);
+          experiment.setOrganisationIds(List.of(first, second, first));
+
+          Experiment created = repository.create(experiment);
+
+          assertEquals(List.of(first, second), created.getOrganisationIds());
+          assertEquals(
+              List.of(first, second), repository.getById(created.getId()).getOrganisationIds());
+
+          created.setOrganisationIds(List.of(second));
+          Experiment replaced = repository.update(created);
+          assertEquals(List.of(second), repository.getById(created.getId()).getOrganisationIds());
+
+          // the links change raised the version, so the next update starts from the saved one
+          replaced.setOrganisationIds(List.of());
+          repository.update(replaced);
+          assertEquals(List.of(), repository.getById(created.getId()).getOrganisationIds());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_return_the_organisations_in_the_same_order_on_save_and_read() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID first = createOrganisationWithDsl("Org order A");
+          UUID second = createOrganisationWithDsl("Org order B");
+          Experiment experiment = buildDummyDomainExperiment("Org order IT");
+          experiment.setOrganisationIds(List.of(second, first));
+
+          Experiment created = repository.create(experiment);
+
+          assertEquals(
+              repository.getById(created.getId()).getOrganisationIds(),
+              created.getOrganisationIds());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_reject_a_stale_version_when_only_the_organisations_change() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID first = createOrganisationWithDsl("Org stale A");
+          UUID second = createOrganisationWithDsl("Org stale B");
+          Experiment created = repository.create(buildDummyDomainExperiment("Org stale IT"));
+
+          created.setOrganisationIds(List.of(first));
+          Experiment updated = repository.update(created);
+
+          assertEquals(created.getVersion() + 1, updated.getVersion());
+          created.setOrganisationIds(List.of(second));
+          assertThrows(DataChangedException.class, () -> repository.update(created));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_return_organisations_in_the_experiment_list() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID organisationId = createOrganisationWithDsl("Org list IT");
+          UUID experimentId =
+              createExperimentWithDsl(
+                  "Org list experiment IT",
+                  null,
+                  LocalDate.of(2024, 1, 1),
+                  LocalDate.of(2024, 12, 31));
+          dsl.insertInto(EXPERIMENT_ORGANISATION)
+              .set(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, experimentId)
+              .set(EXPERIMENT_ORGANISATION.ORGANISATION_ID, organisationId)
+              .execute();
+
+          Experiment found =
+              repository.findAll().stream()
+                  .filter(e -> e.getId().equals(experimentId))
+                  .findFirst()
+                  .orElseThrow();
+
+          assertEquals(List.of(organisationId), found.getOrganisationIds());
+        });
+  }
+
+  private UUID createOrganisationWithDsl(String name) {
+    return Objects.requireNonNull(
+            dsl.insertInto(ORGANISATIONS)
+                .set(ORGANISATIONS.NAME, name)
+                .returning(ORGANISATIONS.ID)
+                .fetchOne())
+        .getId();
   }
 
   /**

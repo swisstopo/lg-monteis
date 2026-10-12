@@ -29,4 +29,5 @@ public record WriteExperimentDto(
             requiredMode = Schema.RequiredMode.NOT_REQUIRED,
             description = "The new owners, null leaves them unchanged. Only on update.")
         @Null(groups = Create.class)
-        List<@NotNull UUID> ownerIds) {}
+        List<@NotNull UUID> ownerIds,
+    @NotNull List<@NotNull UUID> organisationIds) {}

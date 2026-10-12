@@ -7,9 +7,11 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
+import ch.swisstopo.monteis.core.modules.organisation.domain.OrganisationRepository;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -23,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ExperimentServiceTest {
   @Mock private ExperimentRepository repository;
   @Mock private ExperimentOwnerService ownerService;
+  @Mock private OrganisationRepository organisationRepository;
 
   @InjectMocks private ExperimentService service;
 
@@ -74,6 +77,35 @@ class ExperimentServiceTest {
 
     // then
     assertSame(withOwners, actualExperiment);
+  }
+
+  @Test
+  void should_reject_unknown_organisations_on_create() {
+    UUID known = UUID.randomUUID();
+    UUID unknown = UUID.randomUUID();
+    Experiment experiment = mock(Experiment.class);
+    given(experiment.getOrganisationIds()).willReturn(List.of(known, unknown));
+    given(organisationRepository.findExistingIdsAmong(List.of(known, unknown)))
+        .willReturn(Set.of(known));
+
+    FieldBusinessValidationException exception =
+        assertThrows(
+            FieldBusinessValidationException.class, () -> service.createExperiment(experiment));
+
+    assertEquals(List.of(unknown), exception.getActualValue());
+    then(repository).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_reject_unknown_organisations_on_update() {
+    UUID unknown = UUID.randomUUID();
+    Experiment experiment = mock(Experiment.class);
+    given(experiment.getOrganisationIds()).willReturn(List.of(unknown));
+    given(organisationRepository.findExistingIdsAmong(List.of(unknown))).willReturn(Set.of());
+
+    assertThrows(
+        FieldBusinessValidationException.class, () -> service.updateExperiment(experiment));
+    then(repository).shouldHaveNoInteractions();
   }
 
   @Test

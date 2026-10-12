@@ -35,7 +35,7 @@ export function uniqueExperimentName(): string {
 
 export async function createExperiment(api: APIRequestContext, name: string): Promise<Experiment> {
   const response = await api.post('/api/experiments', {
-    data: { name, period: E2E_EXPERIMENT_PERIOD },
+    data: { name, period: E2E_EXPERIMENT_PERIOD, organisationIds: [] },
   });
   return readJson(response, `Creating experiment "${name}"`);
 }
