@@ -466,12 +466,11 @@
       "placeholder": "e.g., swisstopo",
       "validation": {
         "required": "Organisation name is required",
-        "minLength": "Name must be at least 2 characters long",
-        "maxLength": "Name must be at most 100 characters long"
+        "minLength": "Name must be at least {{min}} characters long",
+        "maxLength": "Name must be at most {{max}} characters long"
       }
     },
     "button": {
-      "cancel": "Cancel",
       "saveAndCreate": "Save and create new",
       "save": "Save"
     },
@@ -491,7 +490,7 @@
     "comment": {
       "label": "Comment",
       "validation": {
-        "maxLength": "Comment must be at most 4096 characters long"
+        "maxLength": "Comment must be at most {{max}} characters long"
       }
     }
   }

@@ -1,7 +1,5 @@
-<h2 mat-dialog-title>{{ title() }}</h2>
-
-<mat-dialog-content>
-  <form id="organisationCreateForm" class="form-layout" (submit)="onSubmit($event)" novalidate>
+<app-dialog-layout [title]="'organisation.edit.title.' + mode() | translate" [mode]="mode()">
+  <form id="organisationForm" class="form-layout" [formRoot]="organisationForm">
     <mat-form-field appearance="outline">
       <mat-label>{{ 'organisation.name.label' | translate }}</mat-label>
       <input
@@ -9,53 +7,29 @@
         [formField]="organisationForm.name"
         [placeholder]="'organisation.name.placeholder' | translate"
       />
-      @if (organisationForm.name().touched() && organisationForm.name().invalid()) {
-        <mat-error>
-          @for (error of organisationForm.name().errors(); track error) {
-            {{ error.message }}
-          }
-        </mat-error>
-      }
+      <mat-error [appFieldErrors]="organisationForm.name" />
     </mat-form-field>
 
     <mat-form-field appearance="outline">
       <mat-label>{{ 'organisation.comment.label' | translate }}</mat-label>
       <textarea matInput [formField]="organisationForm.comment" rows="3"></textarea>
-      @if (organisationForm.comment().touched() && organisationForm.comment().invalid()) {
-        <mat-error>
-          @for (error of organisationForm.comment().errors(); track error) {
-            {{ error.message }}
-          }
-        </mat-error>
-      }
+      <mat-error [appFieldErrors]="organisationForm.comment" />
     </mat-form-field>
   </form>
-</mat-dialog-content>
 
-<mat-dialog-actions align="end">
-  <button matButton mat-dialog-close>
-    <mat-icon fontIcon="cancel"></mat-icon>
-    {{ 'organisation.button.cancel' | translate }}
-  </button>
-  @if (!organisationId()) {
-    <button
-      matButton="tonal"
-      [disabled]="organisationForm().submitting() || organisationForm().invalid()"
-      type="submit"
-      form="organisationCreateForm"
-      data-action="saveAndCreate"
-    >
-      <mat-icon fontIcon="save"></mat-icon>
-      {{ 'organisation.button.saveAndCreate' | translate }}
-    </button>
-  }
-  <button
-    matButton="filled"
-    [disabled]="organisationForm().submitting() || organisationForm().invalid()"
-    type="submit"
-    form="organisationCreateForm"
-  >
-    <mat-icon fontIcon="save"></mat-icon>
-    {{ 'organisation.button.save' | translate }}
-  </button>
-</mat-dialog-actions>
+  <app-dismiss-button dialog-action-dismiss />
+  <ng-container ngProjectAs="[dialog-action-submit]">
+    @if (mode() === 'create') {
+      <app-submit-button
+        [form]="organisationForm"
+        variant="secondary"
+        (pressed)="saveAndCreateNew()"
+      >
+        {{ 'organisation.button.saveAndCreate' | translate }}
+      </app-submit-button>
+    }
+    <app-submit-button [form]="organisationForm" formId="organisationForm">
+      {{ 'organisation.button.save' | translate }}
+    </app-submit-button>
+  </ng-container>
+</app-dialog-layout>
