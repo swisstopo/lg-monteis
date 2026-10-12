@@ -32,36 +32,28 @@
       <mat-error [appFieldErrors]="experimentForm.comment" />
     </mat-form-field>
 
-    @switch (true) {
-      @case (mode() === 'create') {
-        <mat-form-field class="full-width" appearance="outline" data-testid="owners-create">
-          <mat-label>{{ 'experiment.owners.label' | translate }}</mat-label>
-          <mat-icon matPrefix fontIcon="lock" />
-          <input
-            matInput
-            disabled
-            [placeholder]="'experiment.owners.createPlaceholder' | translate"
-          />
-          <mat-hint data-testid="owners-create-hint">{{
-            'experiment.owners.createHint' | translate
-          }}</mat-hint>
-        </mat-form-field>
-      }
-      @case (canManageOwners()) {
-        <app-experiment-owner-picker
-          class="full-width"
-          [experimentId]="experimentId()!"
-          [(selectedOwnerIds)]="ownerIds"
-          [error]="ownerError()"
+    @if (mode() === 'create') {
+      <mat-form-field class="full-width" appearance="outline" data-testid="owners-create">
+        <mat-label>{{ 'experiment.owners.label' | translate }}</mat-label>
+        <mat-icon matPrefix fontIcon="lock" />
+        <input
+          matInput
+          disabled
+          [placeholder]="'experiment.owners.createPlaceholder' | translate"
         />
-      }
-      @default {
-        <app-experiment-owner-list
-          class="full-width"
-          [owners]="owners()"
-          [status]="ownersStatus()"
-        />
-      }
+        <mat-hint data-testid="owners-create-hint">{{
+          'experiment.owners.createHint' | translate
+        }}</mat-hint>
+      </mat-form-field>
+    } @else if (canManageOwners()) {
+      <app-experiment-owner-picker
+        class="full-width"
+        [experimentId]="experimentId()!"
+        [(selectedOwnerIds)]="ownerIds"
+        [error]="ownerError()"
+      />
+    } @else {
+      <app-experiment-owner-list class="full-width" [owners]="owners()" [status]="ownersStatus()" />
     }
   </form>
 

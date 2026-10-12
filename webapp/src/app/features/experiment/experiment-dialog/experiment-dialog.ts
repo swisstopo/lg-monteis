@@ -115,12 +115,16 @@ export class ExperimentDialog {
 
   private readonly formModel = linkedSignal(() => toFormModel(this.experiment()));
 
-  // owners are picked from the PIs, and a new experiment gets its PI group in Keycloak only later
-  protected readonly canManageOwners = computed(
-    () => this.mode() === 'edit' && this.permissions.isAdmin(),
-  );
   protected readonly owners = computed(() => this.experiment()?.owners ?? []);
   protected readonly ownersStatus = computed(() => this.experiment()?.ownersStatus);
+  // owners are picked from the PIs, and a new experiment gets its PI group in Keycloak only later.
+  // hidden owners can't be edited, the picker would start empty and the save replace them unseen
+  protected readonly canManageOwners = computed(
+    () =>
+      this.mode() === 'edit' &&
+      this.permissions.isAdmin() &&
+      this.ownersStatus() === ExperimentResponseDto.OwnersStatusEnum.Shown,
+  );
   // compared by content: a saved experiment with the same owners must not reset the selection
   private readonly storedOwnerIds = computed(() => this.owners().map((owner) => owner.id!), {
     equal: sameIds,

@@ -356,6 +356,22 @@ describe('ExperimentDialog', () => {
 
       await vi.waitFor(() => expect(view.ownerList()?.status()).toBe('KEYCLOAK_UNAVAILABLE'));
     });
+
+    it('does not let an admin edit owners it cannot see', async () => {
+      experimentService.getExperiment.mockResolvedValue({
+        ...EXPERIMENT,
+        owners: [],
+        ownersStatus: 'KEYCLOAK_UNAVAILABLE',
+      });
+      const view = await render('experiment-1');
+      await vi.waitFor(() => expect(view.ownerList()?.status()).toBe('KEYCLOAK_UNAVAILABLE'));
+      expect(view.ownerPicker()).toBeNull();
+
+      await view.click('experiment.button.save');
+
+      await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
+      expect(experimentService.saveExperiment.mock.calls[0][0].ownerIds).toBeUndefined();
+    });
   });
 
   describe('view', () => {
