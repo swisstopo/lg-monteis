@@ -31,7 +31,7 @@ describe('OrganisationService', () => {
 
   it('creates an organisation and flags the table and the organisation list', async () => {
     // a reload while the first load is still running is dropped
-    await vi.waitFor(() => expect(service.allOrganisations.status()).toBe('resolved'));
+    await vi.waitFor(() => expect(service['loadedOrganisations'].status()).toBe('resolved'));
     const loadsBefore = api['getAllOrganisations'].mock.calls.length;
 
     await expect(service.createOrganisation(NEW_ORGANISATION)).resolves.toEqual(SAVED);
@@ -42,6 +42,19 @@ describe('OrganisationService', () => {
     await vi.waitFor(() =>
       expect(api['getAllOrganisations'].mock.calls.length).toBeGreaterThan(loadsBefore),
     );
+  });
+
+  it('lists no organisations when loading them failed', async () => {
+    api['getAllOrganisations'].mockReturnValue(throwError(() => new Error('500')));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [{ provide: OrganisationControllerService, useValue: api }],
+    });
+    service = TestBed.inject(OrganisationService);
+
+    await vi.waitFor(() => expect(service['loadedOrganisations'].status()).toBe('error'));
+
+    expect(service.allOrganisations()).toEqual([]);
   });
 
   it('updates an organisation and flags the table', async () => {

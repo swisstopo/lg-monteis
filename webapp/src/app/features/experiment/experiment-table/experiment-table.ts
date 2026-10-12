@@ -50,8 +50,7 @@ export default class ExperimentTable {
   readonly searchTerm = signal<string>('');
 
   private readonly organisationNames = computed(
-    () =>
-      new Map((this.organisationService.allOrganisations.value() ?? []).map((o) => [o.id, o.name])),
+    () => new Map(this.organisationService.allOrganisations().map((o) => [o.id, o.name])),
   );
   protected readonly wrappedCols = createColumns(
     this.datePipe,

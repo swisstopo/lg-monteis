@@ -75,9 +75,7 @@ export class ExperimentDialog {
   private readonly translateService = inject(TranslateService);
   private readonly dialogRef = inject<MatDialogRef<ExperimentDialog>>(MatDialogRef);
 
-  protected readonly organisations = computed(
-    () => this.organisationService.allOrganisations.value() ?? [],
-  );
+  protected readonly organisations = this.organisationService.allOrganisations;
 
   readonly experimentId = input<string>();
   readonly viewOnly = input(false);

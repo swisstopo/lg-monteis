@@ -1,4 +1,4 @@
-import { Injectable, inject, resource, signal } from '@angular/core';
+import { Injectable, computed, inject, resource, signal } from '@angular/core';
 import { ErrorDto, OrganisationControllerService, WriteOrganisationDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { skipGlobalErrorToast } from '@core/http/http-context';
@@ -24,9 +24,13 @@ export class OrganisationService {
     },
   });
 
-  readonly allOrganisations = resource({
+  private readonly loadedOrganisations = resource({
     loader: () => firstValueFrom(this.api.getAllOrganisations()),
   });
+  // empty while loading and after a failed load, the resource's value() throws in that case
+  readonly allOrganisations = computed(() =>
+    this.loadedOrganisations.hasValue() ? this.loadedOrganisations.value() : [],
+  );
 
   // always set the organisation id to refetch the organisation
   getOrganisation(id: string | undefined) {
@@ -41,7 +45,7 @@ export class OrganisationService {
     try {
       const result = await firstValueFrom(this.api.createOrganisation(organisation));
       this.organisationsChanged.set(true);
-      this.allOrganisations.reload();
+      this.loadedOrganisations.reload();
       return result;
     } catch (err) {
       this.error.set(toErrorDtos(err));
@@ -53,7 +57,7 @@ export class OrganisationService {
     try {
       const result = await firstValueFrom(this.api.updateOrganisation(id, organisation));
       this.organisationsChanged.set(true);
-      this.allOrganisations.reload();
+      this.loadedOrganisations.reload();
       return result;
     } catch (err) {
       this.error.set(toErrorDtos(err));

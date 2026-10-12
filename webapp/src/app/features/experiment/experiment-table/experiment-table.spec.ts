@@ -58,7 +58,7 @@ describe('ExperimentTable', () => {
         WorkbenchView,
         { provide: FormDialogService, useValue: formDialog },
         { provide: ExperimentService, useValue: experimentService },
-        { provide: OrganisationService, useValue: { allOrganisations: { value: signal([]) } } },
+        { provide: OrganisationService, useValue: { allOrganisations: signal([]) } },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
         {

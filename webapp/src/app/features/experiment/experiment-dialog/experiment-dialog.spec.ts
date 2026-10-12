@@ -49,7 +49,7 @@ describe('ExperimentDialog', () => {
       providers: [
         provideTranslateService(),
         { provide: ExperimentService, useValue: experimentService },
-        { provide: OrganisationService, useValue: { allOrganisations: { value: signal([]) } } },
+        { provide: OrganisationService, useValue: { allOrganisations: signal([]) } },
         { provide: PermissionsService, useValue: { canWriteExperiment: () => canWrite } },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: ToastService, useValue: toast },
