@@ -8,6 +8,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.modules.organisation.query.OrganisationCsvExportQueryRepository;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Arrays;
 import java.util.List;
 import org.jooq.DSLContext;
 import org.jooq.Record;
@@ -51,7 +52,7 @@ public class JooqOrganisationCsvExportQueryRepository
       for (Record r : cursor) {
         CsvWriter.writeRow(
             writer,
-            List.of(
+            Arrays.asList(
                 r.get(ORGANISATIONS.NAME), r.get(ORGANISATIONS.COMMENT), r.get(ORGANISATIONS.ID)));
         writer.flush();
       }

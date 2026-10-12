@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class JooqOrganisationCsvExportQueryRepositoryIT {
 
-  private static final String HEADER = "name,id";
+  private static final String HEADER = "name,comment,id";
 
   @Autowired private DSLContext dsl;
   @Autowired private JooqOrganisationCsvExportQueryRepository exportRepository;
@@ -43,7 +43,7 @@ class JooqOrganisationCsvExportQueryRepositoryIT {
                 List.of(),
                 Map.of("name", new TextFilterModel("contains", "uniquecsvexport", null))));
 
-    assertThat(lines).containsExactly(HEADER, "UniqueCsvExportOrganisation," + id);
+    assertThat(lines).containsExactly(HEADER, "UniqueCsvExportOrganisation,," + id);
   }
 
   @Test
@@ -77,7 +77,7 @@ class JooqOrganisationCsvExportQueryRepositoryIT {
 
     List<String> lines = lines(filterByName("Csv, ", List.of(), 10));
 
-    assertThat(lines).contains("\"Csv, \"\"quoted\"\" Org\"," + id);
+    assertThat(lines).contains("\"Csv, \"\"quoted\"\" Org\",," + id);
   }
 
   @Test

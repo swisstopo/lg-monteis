@@ -191,7 +191,7 @@ class OrganisationControllerTest {
                 .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Swisstopo\",\"comment\":\" \"}"))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isUnprocessableContent());
 
     then(service).shouldHaveNoInteractions();
   }
@@ -205,7 +205,7 @@ class OrganisationControllerTest {
                 .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\" \"}"))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isUnprocessableContent());
 
     then(service).shouldHaveNoInteractions();
   }

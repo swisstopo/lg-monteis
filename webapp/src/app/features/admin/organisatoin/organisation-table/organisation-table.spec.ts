@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
+import { PermissionsService } from '@core/auth/permissions.service';
 import { ToastService } from '@core/notifications/toast.service';
 import OrganisationEdit from '@features/admin/organisatoin/organisation-edit/organisation-edit';
 import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
@@ -47,6 +48,7 @@ describe('OrganisationTable', () => {
         { provide: OrganisationService, useValue: organisationService },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
+        { provide: PermissionsService, useValue: { isAdmin: signal(true) } },
       ],
     });
     const fixture = TestBed.createComponent(OrganisationTable);
