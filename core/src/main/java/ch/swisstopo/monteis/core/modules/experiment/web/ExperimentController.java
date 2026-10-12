@@ -112,13 +112,9 @@ public class ExperimentController {
     }
     LocalDate today = LocalDate.now(clock);
 
-    // two steps, so the PI's change and the dropped owners get their own audit snapshot
     Experiment updated = experimentService.updateExperiment(mapper.toDomain(dto));
-    Experiment withoutFormerOwners = ownerService.dropFormerOwners(updated);
     return ResponseEntity.status(HttpStatus.OK)
-        .body(
-            mapper.toDto(
-                withoutFormerOwners, ownerService.findOwnersOf(withoutFormerOwners), today));
+        .body(mapper.toDto(updated, ownerService.findOwnersOf(updated), today));
   }
 
   @Operation(

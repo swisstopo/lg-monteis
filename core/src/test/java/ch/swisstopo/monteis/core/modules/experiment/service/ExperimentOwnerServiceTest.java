@@ -259,63 +259,6 @@ class ExperimentOwnerServiceTest {
     }
   }
 
-  @Nested
-  class DropFormerOwners {
-
-    @Test
-    void should_drop_owners_that_are_no_longer_pis() {
-      UUID leftTheGroup = UUID.randomUUID();
-      Experiment pruned = experiment(EXPERIMENT_ID, ALICE.id());
-      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known(ALICE, BOB));
-      given(repository.replaceOwners(EXPERIMENT_ID, Set.of(ALICE.id()))).willReturn(pruned);
-
-      assertSame(
-          pruned, service.dropFormerOwners(experiment(EXPERIMENT_ID, ALICE.id(), leftTheGroup)));
-    }
-
-    @Test
-    void should_not_write_when_every_owner_is_still_a_pi() {
-      Experiment saved = experiment(EXPERIMENT_ID, ALICE.id());
-      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known(ALICE, BOB));
-
-      assertSame(saved, service.dropFormerOwners(saved));
-      then(repository).shouldHaveNoInteractions();
-    }
-
-    @Test
-    void should_keep_every_owner_without_a_complete_answer_from_keycloak() {
-      Experiment saved = experiment(EXPERIMENT_ID, ALICE.id());
-      given(userDirectory.pisForWriting(EXPERIMENT_ID))
-          .willReturn(
-              new Pis.NoWriteGroup(),
-              new Pis.AccessDenied("403"),
-              new Pis.KeycloakUnavailable("down"));
-
-      for (int i = 0; i < 3; i++) {
-        assertSame(saved, service.dropFormerOwners(saved));
-      }
-      then(repository).shouldHaveNoInteractions();
-    }
-
-    @Test
-    void should_keep_the_owners_when_writing_fails() {
-      Experiment saved = experiment(EXPERIMENT_ID, UUID.randomUUID());
-      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known(ALICE));
-      given(repository.replaceOwners(EXPERIMENT_ID, Set.of()))
-          .willThrow(new IllegalStateException("db down"));
-
-      assertSame(saved, service.dropFormerOwners(saved));
-    }
-
-    @Test
-    void should_not_ask_keycloak_for_an_experiment_without_owners() {
-      Experiment saved = experiment(EXPERIMENT_ID);
-
-      assertSame(saved, service.dropFormerOwners(saved));
-      then(userDirectory).shouldHaveNoInteractions();
-    }
-  }
-
   private static Pis known(DirectoryUser... pis) {
     return new Pis.Known(List.of(pis));
   }

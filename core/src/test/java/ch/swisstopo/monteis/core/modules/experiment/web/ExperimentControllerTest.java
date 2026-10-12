@@ -398,7 +398,6 @@ class ExperimentControllerTest {
 
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(experimentService.updateExperiment(mockDomain)).willReturn(mockDomain);
-    given(ownerService.dropFormerOwners(mockDomain)).willReturn(mockDomain);
     given(mapper.toDto(eq(mockDomain), eq(VisibleOwners.NONE), any(LocalDate.class)))
         .willReturn(expectedResponseDto);
 
@@ -528,7 +527,6 @@ class ExperimentControllerTest {
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(experimentService.updateExperiment(mockDomain)).willReturn(mockDomain);
-    given(ownerService.dropFormerOwners(mockDomain)).willReturn(mockDomain);
 
     // when / then
     mockMvc

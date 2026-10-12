@@ -126,15 +126,6 @@ public class ExperimentOwnerService {
     return repository.replaceOwners(experimentId, ownerIds);
   }
 
-  @AuditChanges
-  public Experiment dropFormerOwners(Experiment experiment) {
-    Set<UUID> formerOwners = formerOwnersOf(experiment);
-    if (formerOwners.isEmpty()) {
-      return experiment;
-    }
-    return removeOwnersQuietly(experiment, formerOwners);
-  }
-
   private List<DirectoryUser> currentPisOrFail(UUID experimentId) {
     return switch (userDirectory.pisForWriting(experimentId)) {
       case Known(var pis) -> pis;
@@ -149,26 +140,6 @@ public class ExperimentOwnerService {
     if (!notPis.isEmpty()) {
       throw new FieldBusinessValidationException(
           OWNER_IDS_FIELD, notPis, NOT_ELIGIBLE_KEY, Map.of());
-    }
-  }
-
-  private Set<UUID> formerOwnersOf(Experiment experiment) {
-    if (experiment.getOwnerIds().isEmpty()) {
-      return Set.of();
-    }
-    if (userDirectory.pisForWriting(experiment.getId()) instanceof Known(var pis)) {
-      return idsWithout(experiment.getOwnerIds(), userIds(pis));
-    }
-    return Set.of();
-  }
-
-  private Experiment removeOwnersQuietly(Experiment experiment, Set<UUID> formerOwners) {
-    Set<UUID> remainingOwners = idsWithout(experiment.getOwnerIds(), formerOwners);
-    try {
-      return repository.replaceOwners(experiment.getId(), remainingOwners);
-    } catch (RuntimeException e) {
-      log.warn("Keeping the former owners of experiment {}: {}", experiment.getId(), e.toString());
-      return experiment;
     }
   }
 
