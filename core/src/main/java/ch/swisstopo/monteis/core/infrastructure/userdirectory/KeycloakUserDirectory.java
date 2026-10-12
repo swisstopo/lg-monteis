@@ -81,21 +81,18 @@ class KeycloakUserDirectory implements UserDirectory {
 
   private Map<UUID, Pis> loadPisUntilKeycloakFails(List<CacheKey> keys) {
     Map<UUID, Pis> pisByExperiment = new LinkedHashMap<>();
-    Optional<KeycloakUnavailable> outage = Optional.empty();
+    KeycloakUnavailable outage = null;
     for (CacheKey key : keys) {
-      // the lambda below can't capture outage since it gets reassigned in the loop
-      Optional<KeycloakUnavailable> finalOutage = outage;
-      Pis pis = cachedPisOf(key).or(() -> finalOutage).orElseGet(() -> loadPis(key));
+      Pis pis = cache.getIfPresent(key);
+      if (pis == null) {
+        pis = outage != null ? outage : loadPis(key);
+      }
       if (pis instanceof KeycloakUnavailable unavailable) {
-        outage = Optional.of(unavailable);
+        outage = unavailable;
       }
       pisByExperiment.put(key.experimentId(), pis);
     }
     return pisByExperiment;
-  }
-
-  private Optional<Pis> cachedPisOf(CacheKey key) {
-    return Optional.ofNullable(cache.getIfPresent(key));
   }
 
   private Pis loadPis(CacheKey key) {
