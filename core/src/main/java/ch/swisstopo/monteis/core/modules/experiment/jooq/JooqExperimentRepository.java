@@ -101,9 +101,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Override
   @Transactional(readOnly = true)
   public void requireVisible(UUID experimentId) {
-    if (!dsl.fetchExists(EXPERIMENTS, EXPERIMENTS.ID.eq(experimentId))) {
-      throw new ObjectNotFoundException(Experiment.class);
-    }
+    requireExperimentVisible(experimentId);
   }
 
   @Override
@@ -185,7 +183,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Transactional
   public Experiment replaceOwners(UUID experimentId, Set<UUID> ownerIds) {
     // throws for a hidden experiment before anything is written
-    requireVisible(experimentId);
+    requireExperimentVisible(experimentId);
 
     dsl.deleteFrom(EXPERIMENT_OWNER)
         .where(EXPERIMENT_OWNER.EXPERIMENT_ID.eq(experimentId))
@@ -199,6 +197,12 @@ public class JooqExperimentRepository implements ExperimentRepository {
     }
 
     return fetchExperiment(experimentId);
+  }
+
+  private void requireExperimentVisible(UUID experimentId) {
+    if (!dsl.fetchExists(EXPERIMENTS, EXPERIMENTS.ID.eq(experimentId))) {
+      throw new ObjectNotFoundException(Experiment.class);
+    }
   }
 
   private Experiment fetchExperiment(UUID experimentId) {
