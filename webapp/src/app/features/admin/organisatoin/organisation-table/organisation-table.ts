@@ -82,10 +82,6 @@ export default class OrganisationTable {
     this.gridApi.set(api);
   }
 
-  onWrappedRow(row: OrganisationResponseDto) {
-    console.log(row);
-  }
-
   onSelectionChanged(rows: OrganisationResponseDto[]): void {
     this.selectedOrganisationId.set(rows[0]?.id);
     this.selectedOrganisationName = rows[0]?.name;
