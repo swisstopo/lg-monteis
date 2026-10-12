@@ -33,7 +33,7 @@ public class ExperimentService {
   @AuditChanges
   public Experiment updateExperimentAndOwners(Experiment experiment, Set<UUID> ownerIds) {
     Experiment updated = repository.update(experiment);
-    return ownerService.replaceOwnersUnlessKeycloakFails(updated, ownerIds);
+    return ownerService.replaceOwnersInKeycloak(updated, ownerIds);
   }
 
   public Experiment getById(UUID experimentId) {

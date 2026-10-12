@@ -67,8 +67,7 @@ class ExperimentServiceTest {
     Set<UUID> ownerIds = Set.of(UUID.randomUUID());
 
     given(repository.update(inputExperiment)).willReturn(updatedExperiment);
-    given(ownerService.replaceOwnersUnlessKeycloakFails(updatedExperiment, ownerIds))
-        .willReturn(withOwners);
+    given(ownerService.replaceOwnersInKeycloak(updatedExperiment, ownerIds)).willReturn(withOwners);
 
     // when
     Experiment actualExperiment = service.updateExperimentAndOwners(inputExperiment, ownerIds);

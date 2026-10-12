@@ -129,6 +129,7 @@ public class ExperimentController {
     if (dto.ownerIds() == null) {
       return experimentService.updateExperiment(experiment);
     }
+    // gets refactored in PR 258
     if (!Capabilities.of(authentication).canManageExperimentOwners()) {
       throw new AccessDeniedException("Only admins may change the owners of an experiment");
     }

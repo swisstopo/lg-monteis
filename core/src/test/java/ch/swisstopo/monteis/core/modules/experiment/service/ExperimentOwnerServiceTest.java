@@ -222,7 +222,7 @@ class ExperimentOwnerServiceTest {
       given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known(ALICE, BOB));
       given(repository.replaceOwners(EXPERIMENT_ID, Set.of(ALICE.id()))).willReturn(replaced);
 
-      assertSame(replaced, service.replaceOwnersUnlessKeycloakFails(stored, Set.of(ALICE.id())));
+      assertSame(replaced, service.replaceOwnersInKeycloak(stored, Set.of(ALICE.id())));
     }
 
     @Test
@@ -232,7 +232,7 @@ class ExperimentOwnerServiceTest {
       FieldBusinessValidationException e =
           assertThrows(
               FieldBusinessValidationException.class,
-              () -> service.replaceOwnersUnlessKeycloakFails(stored, Set.of(ALICE.id(), BOB.id())));
+              () -> service.replaceOwnersInKeycloak(stored, Set.of(ALICE.id(), BOB.id())));
 
       assertEquals(ExperimentOwnerService.OWNER_IDS_FIELD, e.getField());
       assertEquals(ExperimentOwnerService.NOT_ELIGIBLE_KEY, e.getMessageKey());
@@ -246,7 +246,7 @@ class ExperimentOwnerServiceTest {
       given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(new Pis.NoWriteGroup());
       given(repository.replaceOwners(EXPERIMENT_ID, Set.of())).willReturn(cleared);
 
-      assertSame(cleared, service.replaceOwnersUnlessKeycloakFails(stored, Set.of()));
+      assertSame(cleared, service.replaceOwnersInKeycloak(stored, Set.of()));
     }
 
     @Test
@@ -255,7 +255,7 @@ class ExperimentOwnerServiceTest {
           .willReturn(new Pis.KeycloakUnavailable("down"), new Pis.AccessDenied("403"));
 
       for (int i = 0; i < 2; i++) {
-        assertSame(stored, service.replaceOwnersUnlessKeycloakFails(stored, Set.of(ALICE.id())));
+        assertSame(stored, service.replaceOwnersInKeycloak(stored, Set.of(ALICE.id())));
       }
       then(repository).should(never()).replaceOwners(any(), any());
     }

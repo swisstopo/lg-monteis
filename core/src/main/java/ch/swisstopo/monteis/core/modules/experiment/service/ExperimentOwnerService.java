@@ -119,7 +119,7 @@ public class ExperimentOwnerService {
     return currentPisOrFail(experimentId);
   }
 
-  public Experiment replaceOwnersUnlessKeycloakFails(Experiment experiment, Set<UUID> ownerIds) {
+  public Experiment replaceOwnersInKeycloak(Experiment experiment, Set<UUID> ownerIds) {
     UUID experimentId = experiment.getId();
     return switch (userDirectory.pisForWriting(experimentId)) {
       case Known(var pis) -> replaceOwnersAmong(experimentId, ownerIds, pis);
