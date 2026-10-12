@@ -6,7 +6,7 @@
       class="owners-cell-renderer_owner"
       data-testid="experiment-owner"
       [matTooltip]="owner.email ?? ''"
-      >{{ displayName(owner) }}</span
+      >{{ owner | ownerName }}</span
     >
     @if (!last) {
       <span>, </span>

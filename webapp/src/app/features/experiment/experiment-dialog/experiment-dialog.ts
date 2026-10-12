@@ -35,13 +35,14 @@ import {
   MatSuffix,
 } from '@angular/material/input';
 import { PermissionsService } from '@core/auth/permissions.service';
-import { ExperimentResponseDto } from '@core/generated';
+import { ErrorDto, ExperimentResponseDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentOwnerList } from '@features/experiment/owners/experiment-owner-list';
 import { ExperimentOwnerPicker } from '@features/experiment/owners/experiment-owner-picker';
+import { ownerIdsOf, sameIds } from '@features/experiment/owners/owner-ids';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DialogLayout, DialogMode } from '@ui/dialog/dialog-layout';
@@ -126,7 +127,7 @@ export class ExperimentDialog {
       this.ownersStatus() === ExperimentResponseDto.OwnersStatusEnum.Shown,
   );
   // compared by content: a saved experiment with the same owners must not reset the selection
-  private readonly storedOwnerIds = computed(() => this.owners().map((owner) => owner.id), {
+  private readonly storedOwnerIds = computed(() => ownerIdsOf(this.owners()), {
     equal: sameIds,
   });
   protected readonly ownerIds = linkedSignal(() => this.storedOwnerIds());
@@ -154,27 +155,33 @@ export class ExperimentDialog {
   private async save(afterSave: () => void): Promise<TreeValidationResult> {
     const ownerIds = this.changedOwnerIds();
     this.ownerError.set(undefined);
-    let saved: ExperimentResponseDto;
     try {
-      saved = await this.experimentService.saveExperiment(
+      const saved = await this.experimentService.saveExperiment(
         toWriteDto(this.formModel(), this.experiment(), ownerIds),
       );
+      this.toastSaved(saved, ownerIds);
     } catch (error) {
-      const errors = toErrorDtos(error);
-      this.ownerError.set(errors.find((e) => e.field === OWNER_IDS_FIELD)?.messageKey);
-      return this.formErrorService.mapApiErrorsToFormErrors(
-        errors.filter((e) => e.field !== OWNER_IDS_FIELD),
-        this.experimentForm,
-        'experiment.error.unspecified.message',
-      );
+      return this.showSaveErrors(toErrorDtos(error));
     }
+    afterSave();
+    return undefined;
+  }
+
+  private toastSaved(saved: ExperimentResponseDto, ownerIds: string[] | undefined): void {
     if (ownerIds && !ownersSaved(saved, ownerIds)) {
       this.toastService.warning(this.translateService.translate('experiment.owners.notSaved')());
     } else {
       this.toastService.success(this.translateService.translate('experiment.success')());
     }
-    afterSave();
-    return undefined;
+  }
+
+  private showSaveErrors(errors: ErrorDto[]): TreeValidationResult {
+    this.ownerError.set(errors.find((e) => e.field === OWNER_IDS_FIELD)?.messageKey);
+    return this.formErrorService.mapApiErrorsToFormErrors(
+      errors.filter((e) => e.field !== OWNER_IDS_FIELD),
+      this.experimentForm,
+      'experiment.error.unspecified.message',
+    );
   }
 
   // the form model is set as well: in create mode experiment already is undefined, setting it
@@ -191,14 +198,6 @@ export class ExperimentDialog {
 function ownersSaved(saved: ExperimentResponseDto, ownerIds: string[]): boolean {
   return (
     saved.ownersStatus === ExperimentResponseDto.OwnersStatusEnum.Shown &&
-    sameIds(
-      (saved.owners ?? []).map((owner) => owner.id),
-      ownerIds,
-    )
+    sameIds(ownerIdsOf(saved.owners), ownerIds)
   );
-}
-
-function sameIds(a: string[], b: string[]): boolean {
-  const set = new Set(a);
-  return set.size === b.length && b.every((id) => set.has(id));
 }

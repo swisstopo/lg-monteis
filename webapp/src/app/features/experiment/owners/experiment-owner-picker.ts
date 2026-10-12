@@ -11,7 +11,7 @@ import { ExperimentOwnerDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ownerDisplayName } from './owner-name';
+import { ownerDisplayName, OwnerNamePipe } from './owner-name';
 
 /** picks the owners of an experiment out of its PIs in Keycloak */
 @Component({
@@ -23,6 +23,7 @@ import { ownerDisplayName } from './owner-name';
     MatIcon,
     MatInput,
     TranslatePipe,
+    OwnerNamePipe,
   ],
   templateUrl: './experiment-owner-picker.html',
   styleUrl: './experiment-owner-picker.scss',
@@ -38,7 +39,6 @@ export class ExperimentOwnerPicker {
   /** message key of a failed save */
   readonly error = input<string>();
 
-  protected readonly displayName = ownerDisplayName;
   protected readonly searchText = signal('');
 
   protected readonly candidates = resource({

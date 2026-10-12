@@ -3,7 +3,7 @@
   <mat-chip-grid #ownerChips [attr.aria-label]="'experiment.owners.label' | translate">
     @for (owner of selectedOwners(); track owner.id) {
       <mat-chip-row data-testid="selected-owner" (removed)="remove(owner)">
-        {{ displayName(owner) }}
+        {{ owner | ownerName }}
         <button matChipRemove [attr.aria-label]="'experiment.owners.remove' | translate">
           <mat-icon fontIcon="cancel"></mat-icon>
         </button>
@@ -26,7 +26,7 @@
   >
     @for (owner of selectableOwners(); track owner.id) {
       <mat-option [value]="owner.id"
-        >{{ displayName(owner) }}
+        >{{ owner | ownerName }}
         @if (owner.email) {
           ({{ owner.email }})
         }
