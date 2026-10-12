@@ -1,7 +1,12 @@
 package ch.swisstopo.monteis.core.modules.organisation.web;
 
+import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.infrastructure.csv.CsvDownload;
-import ch.swisstopo.monteis.core.infrastructure.query.*;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
+import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.infrastructure.query.RawExportRequest;
+import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
 import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
 import ch.swisstopo.monteis.core.modules.organisation.query.OrganisationCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.organisation.service.OrganisationService;
@@ -29,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
-@RequestMapping("/api/organisations")
+@RequestMapping(ApiPaths.ORGANISATIONS)
 public class OrganisationController {
   private final OrganisationService service;
   private final OrganisationWebMapper mapper;
@@ -74,7 +79,9 @@ public class OrganisationController {
 
   @Operation(
       summary = "Download organisations as CSV",
-      description = "Streams all organisations, sorted alphabetically by name, as a CSV file.")
+      description =
+          "Streams all organisations matching the optional sorting/filtering as a CSV file, capped"
+              + " at a server-configured maximum row count.")
   @ApiResponse(
       responseCode = "200",
       description = "Successfully streamed organisations as CSV",
@@ -112,7 +119,9 @@ public class OrganisationController {
 
   @Operation(
       summary = "Update an organisation",
-      description = "Renames the organisation. The name must be unique, ignoring case.")
+      description =
+          "Changes the name and comment of the organisation. The name must be unique, ignoring"
+              + " case.")
   @ApiResponse(responseCode = "200", description = "Organisation successfully updated")
   @PutMapping(
       path = "{id}",

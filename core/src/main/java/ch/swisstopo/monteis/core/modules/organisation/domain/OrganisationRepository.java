@@ -19,7 +19,7 @@ public interface OrganisationRepository {
   Organisation create(Organisation organisation);
 
   /**
-   * Renames an organisation.
+   * Changes the name and comment of an organisation.
    *
    * @return the updated organisation
    * @throws ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException if the
