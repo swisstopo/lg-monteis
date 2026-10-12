@@ -6,15 +6,18 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ExperimentService {
   private final ExperimentRepository repository;
+  private final ExperimentOwnerService ownerService;
 
-  public ExperimentService(ExperimentRepository repository) {
+  public ExperimentService(ExperimentRepository repository, ExperimentOwnerService ownerService) {
     this.repository = repository;
+    this.ownerService = ownerService;
   }
 
   @AuditChanges
@@ -25,6 +28,12 @@ public class ExperimentService {
   @AuditChanges
   public Experiment updateExperiment(Experiment experiment) {
     return repository.update(experiment);
+  }
+
+  @AuditChanges
+  public Experiment updateExperimentAndOwners(Experiment experiment, Set<UUID> ownerIds) {
+    Experiment updated = repository.update(experiment);
+    return ownerService.replaceOwnersUnlessKeycloakFails(updated, ownerIds);
   }
 
   public Experiment getById(UUID experimentId) {

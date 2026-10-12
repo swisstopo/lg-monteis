@@ -48,7 +48,6 @@ class EndpointCoverageTest {
           "PUT /api/experiments/{id}",
           "GET /api/experiments/owners",
           "GET /api/experiments/{id}/owner-candidates",
-          "PUT /api/experiments/{id}/owners",
           "POST /api/experiments",
           "GET /api/experiments/{id}/documents",
           "POST /api/experiments/{id}/documents",

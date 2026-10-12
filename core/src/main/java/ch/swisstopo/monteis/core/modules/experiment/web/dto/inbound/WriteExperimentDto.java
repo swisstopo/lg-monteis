@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import java.util.UUID;
 
 public record WriteExperimentDto(
@@ -23,4 +24,9 @@ public record WriteExperimentDto(
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
         @Null(groups = Create.class)
         @NotNull(groups = Update.class)
-        Integer version) {}
+        Integer version,
+    @Schema(
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+            description = "The new owners, null leaves them unchanged. Only on update.")
+        @Null(groups = Create.class)
+        List<@NotNull UUID> ownerIds) {}

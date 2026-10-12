@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
@@ -323,6 +324,7 @@ class ExperimentControllerTest {
             "A test experiment",
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
+            null,
             null);
 
     ExperimentResponseDto expectedResponseDto =
@@ -379,7 +381,8 @@ class ExperimentControllerTest {
             "Updated comment",
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-            1);
+            1,
+            null);
 
     ExperimentResponseDto expectedResponseDto =
         new ExperimentResponseDto(
@@ -431,7 +434,8 @@ class ExperimentControllerTest {
             "A test experiment",
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-            1);
+            1,
+            null);
 
     // when / then
     mockMvc
@@ -552,6 +556,7 @@ class ExperimentControllerTest {
                 "A test experiment",
                 new PeriodDto(
                     LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
+                null,
                 null));
 
     // when / then
@@ -615,12 +620,114 @@ class ExperimentControllerTest {
         .andExpect(content().json(NOT_FOUND_BODY, JsonCompareMode.STRICT));
   }
 
+  @Test
+  void should_update_the_owners_with_the_experiment_for_an_admin() throws Exception {
+    // given
+    UUID ownerId = UUID.randomUUID();
+    Experiment mockDomain = mock(Experiment.class);
+    given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
+    given(experimentService.updateExperimentAndOwners(mockDomain, Set.of(ownerId)))
+        .willReturn(mockDomain);
+
+    // when / then
+    mockMvc
+        .perform(
+            put("/api/experiments/{id}", EXPERIMENT_ID)
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateDto(EXPERIMENT_ID, ownerId))))
+        .andExpect(status().isOk());
+
+    then(experimentService).should().updateExperimentAndOwners(mockDomain, Set.of(ownerId));
+    then(experimentService).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
+  void should_forbid_a_pi_to_change_the_owners() throws Exception {
+    given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mock(Experiment.class));
+
+    mockMvc
+        .perform(
+            put("/api/experiments/{id}", EXPERIMENT_ID)
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(updateDto(EXPERIMENT_ID, UUID.randomUUID()))))
+        .andExpect(status().isForbidden())
+        .andExpect(content().json(ACCESS_DENIED_BODY, JsonCompareMode.STRICT));
+
+    then(experimentService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_answer_422_on_the_owner_ids_field_for_a_user_that_is_not_a_pi() throws Exception {
+    // given
+    UUID ownerId = UUID.randomUUID();
+    given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mock(Experiment.class));
+    given(experimentService.updateExperimentAndOwners(any(), any()))
+        .willThrow(
+            new FieldBusinessValidationException(
+                ExperimentOwnerService.OWNER_IDS_FIELD,
+                Set.of(ownerId),
+                ExperimentOwnerService.NOT_ELIGIBLE_KEY,
+                Map.of()));
+
+    // when / then
+    mockMvc
+        .perform(
+            put("/api/experiments/{id}", EXPERIMENT_ID)
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateDto(EXPERIMENT_ID, ownerId))))
+        .andExpect(status().isUnprocessableContent())
+        .andExpect(jsonPath("$.field").value("ownerIds"))
+        .andExpect(jsonPath("$.messageKey").value("experiment.owner.not-eligible"));
+  }
+
+  @Test
+  void should_reject_owners_on_create() throws Exception {
+    WriteExperimentDto requestDto =
+        new WriteExperimentDto(
+            null,
+            "EXP-01",
+            null,
+            new PeriodDto(
+                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
+            null,
+            List.of(UUID.randomUUID()));
+
+    mockMvc
+        .perform(
+            post("/api/experiments")
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestDto)))
+        .andExpect(status().isUnprocessableContent());
+
+    then(experimentService).shouldHaveNoInteractions();
+  }
+
+  private static WriteExperimentDto updateDto(UUID id, UUID ownerId) {
+    return new WriteExperimentDto(
+        id,
+        "EXP-01-UPDATED",
+        "Updated comment",
+        new PeriodDto(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
+        1,
+        List.of(ownerId));
+  }
+
   private static WriteExperimentDto updateDto(UUID id) {
     return new WriteExperimentDto(
         id,
         "EXP-01-UPDATED",
         "Updated comment",
         new PeriodDto(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-        1);
+        1,
+        null);
   }
 }

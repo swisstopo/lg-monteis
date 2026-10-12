@@ -32,7 +32,6 @@ describe('ExperimentService', () => {
       getExperimentsCsv: vi.fn(() => of(new Blob(['name']))),
     };
     ownerApi = {
-      replaceOwners: vi.fn(() => of(SAVED)),
       findOwnerCandidatesForExperiment: vi.fn(() => of([{ id: 'alice' }])),
       findAllVisibleOwners: vi.fn(() => of([{ id: 'bob' }])),
     };
@@ -121,23 +120,6 @@ describe('ExperimentService', () => {
     expect((options.context as HttpContext).get(SKIP_GLOBAL_ERROR_TOAST)).toBe(true);
   });
 
-  it('replaces the owners without the global error toast and counts it as a save', async () => {
-    await expect(service.replaceOwners('experiment-1', ['alice'])).resolves.toEqual(SAVED);
-
-    const [id, body, , , options] = ownerApi['replaceOwners'].mock.calls[0];
-    expect([id, body]).toEqual(['experiment-1', { ownerIds: ['alice'] }]);
-    expect((options.context as HttpContext).get(SKIP_GLOBAL_ERROR_TOAST)).toBe(true);
-    expect(service.experimentsSaved()).toBe(1);
-  });
-
-  it('rethrows failed owners and leaves the table alone', async () => {
-    const failure = new Error('503');
-    ownerApi['replaceOwners'].mockReturnValue(throwError(() => failure));
-
-    await expect(service.replaceOwners('experiment-1', [])).rejects.toBe(failure);
-    expect(service.experimentsSaved()).toBe(0);
-  });
-
   it('loads the owner candidates without the global error toast, the picker shows it', async () => {
     await expect(service.findOwnerCandidatesForExperiment('experiment-1')).resolves.toEqual([
       { id: 'alice' },
@@ -148,7 +130,7 @@ describe('ExperimentService', () => {
     expect((options.context as HttpContext).get(SKIP_GLOBAL_ERROR_TOAST)).toBe(true);
   });
 
-  it('loads the assigned owners for the owner filter', async () => {
+  it('loads the visible owners for the owner filter', async () => {
     await expect(service.findAllVisibleOwners()).resolves.toEqual([{ id: 'bob' }]);
   });
 });

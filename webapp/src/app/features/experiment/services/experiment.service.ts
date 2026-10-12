@@ -42,17 +42,6 @@ export class ExperimentService {
     return saved;
   }
 
-  async replaceOwners(id: string, ownerIds: string[]): Promise<ExperimentResponseDto> {
-    // the dialog shows the failure at the owner field
-    const saved = await firstValueFrom(
-      this.ownerApi.replaceOwners(id, { ownerIds }, 'body', false, {
-        context: skipGlobalErrorToast(),
-      }),
-    );
-    this.saveCount.update((count) => count + 1);
-    return saved;
-  }
-
   findOwnerCandidatesForExperiment(id: string) {
     // the owner picker shows the failure itself
     return firstValueFrom(

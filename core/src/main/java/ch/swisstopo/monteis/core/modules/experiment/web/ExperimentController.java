@@ -7,6 +7,7 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.query.RawExportRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
+import ch.swisstopo.monteis.core.infrastructure.security.Capabilities;
 import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
@@ -30,10 +31,13 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -105,16 +109,30 @@ public class ExperimentController {
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExperimentResponseDto> updateExperiment(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id,
-      @Validated(Update.class) @RequestBody WriteExperimentDto dto) {
+      @Validated(Update.class) @RequestBody WriteExperimentDto dto,
+      Authentication authentication) {
     if (!id.equals(dto.id())) {
       throw new ObjectBusinessValidationException(
           "id.validation.mismatch", Map.of("pathId", id, "id", dto.id()));
     }
     LocalDate today = LocalDate.now(clock);
 
-    Experiment updated = experimentService.updateExperiment(mapper.toDomain(dto));
+    Experiment updated = update(dto, authentication);
     return ResponseEntity.status(HttpStatus.OK)
         .body(mapper.toDto(updated, ownerService.findOwnersOf(updated), today));
+  }
+
+  // the filter chain lets every writer of the experiment through, it can't see the owners in the
+  // body
+  private Experiment update(WriteExperimentDto dto, Authentication authentication) {
+    Experiment experiment = mapper.toDomain(dto);
+    if (dto.ownerIds() == null) {
+      return experimentService.updateExperiment(experiment);
+    }
+    if (!Capabilities.of(authentication).canManageExperimentOwners()) {
+      throw new AccessDeniedException("Only admins may change the owners of an experiment");
+    }
+    return experimentService.updateExperimentAndOwners(experiment, Set.copyOf(dto.ownerIds()));
   }
 
   @Operation(

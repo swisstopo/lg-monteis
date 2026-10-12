@@ -212,7 +212,9 @@ class ExperimentOwnerServiceTest {
   }
 
   @Nested
-  class ReplaceOwners {
+  class ReplaceOwnersUnlessKeycloakFails {
+
+    private final Experiment stored = experiment(EXPERIMENT_ID, BOB.id());
 
     @Test
     void should_replace_owners_with_pis_of_the_experiment() {
@@ -220,7 +222,7 @@ class ExperimentOwnerServiceTest {
       given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known(ALICE, BOB));
       given(repository.replaceOwners(EXPERIMENT_ID, Set.of(ALICE.id()))).willReturn(replaced);
 
-      assertSame(replaced, service.replaceOwners(EXPERIMENT_ID, Set.of(ALICE.id())));
+      assertSame(replaced, service.replaceOwnersUnlessKeycloakFails(stored, Set.of(ALICE.id())));
     }
 
     @Test
@@ -230,7 +232,7 @@ class ExperimentOwnerServiceTest {
       FieldBusinessValidationException e =
           assertThrows(
               FieldBusinessValidationException.class,
-              () -> service.replaceOwners(EXPERIMENT_ID, Set.of(ALICE.id(), BOB.id())));
+              () -> service.replaceOwnersUnlessKeycloakFails(stored, Set.of(ALICE.id(), BOB.id())));
 
       assertEquals(ExperimentOwnerService.OWNER_IDS_FIELD, e.getField());
       assertEquals(ExperimentOwnerService.NOT_ELIGIBLE_KEY, e.getMessageKey());
@@ -244,17 +246,17 @@ class ExperimentOwnerServiceTest {
       given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(new Pis.NoWriteGroup());
       given(repository.replaceOwners(EXPERIMENT_ID, Set.of())).willReturn(cleared);
 
-      assertSame(cleared, service.replaceOwners(EXPERIMENT_ID, Set.of()));
+      assertSame(cleared, service.replaceOwnersUnlessKeycloakFails(stored, Set.of()));
     }
 
     @Test
-    void should_not_replace_owners_when_keycloak_is_unavailable() {
+    void should_keep_the_owners_when_keycloak_is_unavailable_or_denies() {
       given(userDirectory.pisForWriting(EXPERIMENT_ID))
-          .willReturn(new Pis.KeycloakUnavailable("down"));
+          .willReturn(new Pis.KeycloakUnavailable("down"), new Pis.AccessDenied("403"));
 
-      assertThrows(
-          UserDirectoryUnavailableException.class,
-          () -> service.replaceOwners(EXPERIMENT_ID, Set.of(ALICE.id())));
+      for (int i = 0; i < 2; i++) {
+        assertSame(stored, service.replaceOwnersUnlessKeycloakFails(stored, Set.of(ALICE.id())));
+      }
       then(repository).should(never()).replaceOwners(any(), any());
     }
   }

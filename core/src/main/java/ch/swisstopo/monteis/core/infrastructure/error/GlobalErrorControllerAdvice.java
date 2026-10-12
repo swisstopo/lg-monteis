@@ -30,6 +30,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.util.unit.DataSize;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
@@ -186,13 +187,14 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
    * Same body as a filter-chain denial ({@code MonteisAccessDeniedHandler}), so clients have one
    * message path for 403 (contract C5).
    */
-  @ExceptionHandler(PermissionDeniedDataAccessException.class)
+  @ExceptionHandler({PermissionDeniedDataAccessException.class, AccessDeniedException.class})
   @ApiResponse(
       responseCode = "403",
-      description = "Write rejected by row-level security (e.g. experiment not writable).",
+      description =
+          "Write rejected by row-level security (e.g. experiment not writable) or by a check in"
+              + " the controller (e.g. owners changed by a non-admin).",
       content = @Content(schema = @Schema(implementation = ErrorDto.class)))
-  protected ResponseEntity<ErrorDto> handlePermissionDenied(
-      PermissionDeniedDataAccessException ex) {
+  protected ResponseEntity<ErrorDto> handlePermissionDenied(RuntimeException ex) {
     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorDto.accessDenied());
   }
 

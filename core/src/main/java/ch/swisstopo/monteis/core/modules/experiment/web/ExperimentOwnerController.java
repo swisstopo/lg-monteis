@@ -1,25 +1,15 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
-import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentOwnersDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import jakarta.validation.Valid;
-import java.time.Clock;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -27,13 +17,11 @@ public class ExperimentOwnerController {
 
   private final ExperimentOwnerService ownerService;
   private final ExperimentWebMapper mapper;
-  private final Clock clock;
 
   public ExperimentOwnerController(
-      ExperimentOwnerService ownerService, ExperimentWebMapper mapper, Clock clock) {
+      ExperimentOwnerService ownerService, ExperimentWebMapper mapper) {
     this.ownerService = ownerService;
     this.mapper = mapper;
-    this.clock = clock;
   }
 
   @Operation(
@@ -58,22 +46,5 @@ public class ExperimentOwnerController {
   public List<ExperimentOwnerDto> findOwnerCandidatesForExperiment(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
     return mapper.toOwnerDtos(ownerService.findOwnerCandidates(id));
-  }
-
-  @Operation(
-      summary = "Replace the owners of an experiment",
-      description = "Sets the owners to exactly the given users, each must be a PI of it.")
-  @ApiResponse(responseCode = "200", description = "Owners successfully replaced")
-  @ApiResponse(responseCode = "503", description = "Keycloak is unavailable")
-  @PutMapping(
-      path = ApiPaths.EXPERIMENT_OWNERS,
-      consumes = MediaType.APPLICATION_JSON_VALUE,
-      produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ExperimentResponseDto> replaceOwners(
-      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id,
-      @Valid @RequestBody WriteExperimentOwnersDto dto) {
-    Experiment updated = ownerService.replaceOwners(id, Set.copyOf(dto.ownerIds()));
-    return ResponseEntity.ok(
-        mapper.toDto(updated, ownerService.findOwnersOf(updated), LocalDate.now(clock)));
   }
 }

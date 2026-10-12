@@ -93,8 +93,6 @@ class SecurityConfigAuthorizationTest {
             HttpMethod.GET,
             "/api/experiments/" + ASSIGNED_EXPERIMENT + "/owner-candidates",
             adminOnly),
-        Arguments.of(
-            HttpMethod.PUT, "/api/experiments/" + ASSIGNED_EXPERIMENT + "/owners", adminOnly),
         Arguments.of(HttpMethod.GET, "/api/sensors", everyone),
         Arguments.of(HttpMethod.GET, sensor, everyone),
         Arguments.of(HttpMethod.POST, "/api/sensors", adminOnly),
@@ -222,11 +220,6 @@ class SecurityConfigAuthorizationTest {
 
     @GetMapping("/api/experiments/{id}/owner-candidates")
     public String ownerCandidates(@PathVariable String id) {
-      return "ok";
-    }
-
-    @PutMapping("/api/experiments/{id}/owners")
-    public String replaceOwners(@PathVariable String id) {
       return "ok";
     }
 

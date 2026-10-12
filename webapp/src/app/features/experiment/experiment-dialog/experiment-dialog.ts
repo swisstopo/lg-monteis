@@ -35,6 +35,7 @@ import {
   MatSuffix,
 } from '@angular/material/input';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { ExperimentResponseDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
@@ -48,6 +49,8 @@ import { SubmitButton } from '@ui/dialog/submit-button';
 import { DismissButton } from '@ui/dismiss-button/dismiss-button';
 import { FieldErrors } from '@ui/field-errors/field-errors';
 import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
+
+const OWNER_IDS_FIELD = 'ownerIds';
 
 @Component({
   selector: 'app-experiment-dialog',
@@ -123,6 +126,12 @@ export class ExperimentDialog {
     equal: sameIds,
   });
   protected readonly ownerIds = linkedSignal(() => this.storedOwnerIds());
+  // undefined leaves the owners alone, only a changed selection needs Keycloak
+  private readonly changedOwnerIds = computed(() =>
+    this.canManageOwners() && !sameIds(this.storedOwnerIds(), this.ownerIds())
+      ? this.ownerIds()
+      : undefined,
+  );
   protected readonly ownerError = signal<string | undefined>(undefined);
 
   protected readonly experimentForm = form(
@@ -139,44 +148,29 @@ export class ExperimentDialog {
   }
 
   private async save(afterSave: () => void): Promise<TreeValidationResult> {
+    const ownerIds = this.changedOwnerIds();
+    this.ownerError.set(undefined);
+    let saved: ExperimentResponseDto;
     try {
-      const saved = await this.experimentService.saveExperiment(
-        toWriteDto(this.formModel(), this.experiment()),
+      saved = await this.experimentService.saveExperiment(
+        toWriteDto(this.formModel(), this.experiment(), ownerIds),
       );
-      // keeps the new version, a retry after a failed owner save would conflict otherwise
-      this.experiment.set(saved);
     } catch (error) {
+      const errors = toErrorDtos(error);
+      this.ownerError.set(errors.find((e) => e.field === OWNER_IDS_FIELD)?.messageKey);
       return this.formErrorService.mapApiErrorsToFormErrors(
-        toErrorDtos(error),
+        errors.filter((e) => e.field !== OWNER_IDS_FIELD),
         this.experimentForm,
         'experiment.error.unspecified.message',
       );
     }
-    if (!(await this.saveOwners())) return undefined;
-    this.toastService.success(this.translateService.translate('experiment.success')());
+    if (ownerIds && !ownersSaved(saved, ownerIds)) {
+      this.toastService.warning(this.translateService.translate('experiment.owners.notSaved')());
+    } else {
+      this.toastService.success(this.translateService.translate('experiment.success')());
+    }
     afterSave();
     return undefined;
-  }
-
-  /** false when saving the owners failed, the dialog then stays open with the error */
-  private async saveOwners(): Promise<boolean> {
-    const experiment = this.experiment();
-    this.ownerError.set(undefined);
-    if (
-      !experiment?.id ||
-      !this.canManageOwners() ||
-      sameIds(this.storedOwnerIds(), this.ownerIds())
-    )
-      return true;
-    try {
-      this.experiment.set(
-        await this.experimentService.replaceOwners(experiment.id, this.ownerIds()),
-      );
-      return true;
-    } catch (error) {
-      this.ownerError.set(toErrorDtos(error)[0]?.messageKey ?? 'error.user-directory.unavailable');
-      return false;
-    }
   }
 
   // the form model is set as well: in create mode experiment already is undefined, setting it
@@ -187,6 +181,17 @@ export class ExperimentDialog {
     this.formModel.set(toFormModel(undefined));
     this.experimentForm().reset();
   }
+}
+
+// the backend keeps the stored owners when Keycloak fails and still saves everything else
+function ownersSaved(saved: ExperimentResponseDto, ownerIds: string[]): boolean {
+  return (
+    saved.ownersStatus === ExperimentResponseDto.OwnersStatusEnum.Shown &&
+    sameIds(
+      (saved.owners ?? []).map((owner) => owner.id!),
+      ownerIds,
+    )
+  );
 }
 
 function sameIds(a: string[], b: string[]): boolean {

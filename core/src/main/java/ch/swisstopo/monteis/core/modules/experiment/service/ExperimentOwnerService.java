@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.service;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
-import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.AccessDenied;
@@ -120,10 +119,14 @@ public class ExperimentOwnerService {
     return currentPisOrFail(experimentId);
   }
 
-  @AuditChanges
-  public Experiment replaceOwners(UUID experimentId, Set<UUID> ownerIds) {
-    rejectOwnersWhoAreNotPis(ownerIds, findOwnerCandidates(experimentId));
-    return repository.replaceOwners(experimentId, ownerIds);
+  public Experiment replaceOwnersUnlessKeycloakFails(Experiment experiment, Set<UUID> ownerIds) {
+    UUID experimentId = experiment.getId();
+    return switch (userDirectory.pisForWriting(experimentId)) {
+      case Known(var pis) -> replaceOwnersAmong(experimentId, ownerIds, pis);
+      case NoWriteGroup() -> replaceOwnersAmong(experimentId, ownerIds, List.of());
+      case AccessDenied(var reason) -> keepOwners(experiment, reason);
+      case KeycloakUnavailable(var reason) -> keepOwners(experiment, reason);
+    };
   }
 
   private List<DirectoryUser> currentPisOrFail(UUID experimentId) {
@@ -133,6 +136,17 @@ public class ExperimentOwnerService {
       case AccessDenied(var reason) -> throw new UserDirectoryDeniedException(reason);
       case KeycloakUnavailable(var reason) -> throw new UserDirectoryUnavailableException(reason);
     };
+  }
+
+  private Experiment replaceOwnersAmong(
+      UUID experimentId, Set<UUID> ownerIds, List<DirectoryUser> pis) {
+    rejectOwnersWhoAreNotPis(ownerIds, pis);
+    return repository.replaceOwners(experimentId, ownerIds);
+  }
+
+  private static Experiment keepOwners(Experiment experiment, String reason) {
+    log.warn("Keeping the owners of experiment {}: {}", experiment.getId(), reason);
+    return experiment;
   }
 
   private static void rejectOwnersWhoAreNotPis(Set<UUID> ownerIds, List<DirectoryUser> pis) {

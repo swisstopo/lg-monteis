@@ -20,6 +20,13 @@ const ALICE: ExperimentOwnerDto = {
   email: 'alice@example.test',
 };
 
+const BOB: ExperimentOwnerDto = {
+  id: 'bob',
+  firstName: 'Bob',
+  lastName: 'Builder',
+  email: 'bob@example.test',
+};
+
 const EXPERIMENT: ExperimentResponseDto = {
   id: 'experiment-1',
   version: 3,
@@ -55,23 +62,25 @@ describe('ExperimentDialog', () => {
   let experimentService: {
     getExperiment: ReturnType<typeof vi.fn>;
     saveExperiment: ReturnType<typeof vi.fn>;
-    replaceOwners: ReturnType<typeof vi.fn>;
   };
   let canWrite: boolean;
   let isAdmin: boolean;
   let dialogRef: { close: ReturnType<typeof vi.fn> };
-  let toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
+  let toast: {
+    success: ReturnType<typeof vi.fn>;
+    warning: ReturnType<typeof vi.fn>;
+    error: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     experimentService = {
       getExperiment: vi.fn().mockResolvedValue(EXPERIMENT),
       saveExperiment: vi.fn().mockResolvedValue(EXPERIMENT),
-      replaceOwners: vi.fn().mockResolvedValue(EXPERIMENT),
     };
     canWrite = true;
     isAdmin = false;
     dialogRef = { close: vi.fn() };
-    toast = { success: vi.fn(), error: vi.fn() };
+    toast = { success: vi.fn(), warning: vi.fn(), error: vi.fn() };
     TestBed.configureTestingModule({
       imports: [ExperimentDialog],
       providers: [
@@ -256,7 +265,11 @@ describe('ExperimentDialog', () => {
       expect(view.ownerList()).toBeNull();
     });
 
-    it('saves changed owners after the experiment', async () => {
+    it('saves changed owners with the experiment', async () => {
+      experimentService.saveExperiment.mockResolvedValue({
+        ...EXPERIMENT,
+        owners: [ALICE, BOB],
+      });
       const view = await render('experiment-1');
       await vi.waitFor(() => expect(view.ownerPicker()?.selectedOwnerIds()).toEqual(['alice']));
       view.ownerPicker()!.selectedOwnerIds.set(['alice', 'bob']);
@@ -264,41 +277,62 @@ describe('ExperimentDialog', () => {
       await view.click('experiment.button.save');
 
       await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
-      expect(experimentService.replaceOwners).toHaveBeenCalledWith('experiment-1', [
-        'alice',
-        'bob',
-      ]);
+      expect(experimentService.saveExperiment.mock.calls[0][0].ownerIds).toEqual(['alice', 'bob']);
+      expect(toast.success).toHaveBeenCalledWith('experiment.success');
     });
 
-    it('does not save unchanged owners', async () => {
+    it('leaves unchanged owners out of the save', async () => {
       const view = await render('experiment-1');
       await vi.waitFor(() => expect(view.input('name').value).toBe('Mont Terri Alpha'));
 
       await view.click('experiment.button.save');
 
       await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
-      expect(experimentService.replaceOwners).not.toHaveBeenCalled();
+      expect(experimentService.saveExperiment.mock.calls[0][0].ownerIds).toBeUndefined();
     });
 
-    it('stays open with the error at the owners when saving them fails', async () => {
-      experimentService.replaceOwners.mockRejectedValue(
-        new HttpErrorResponse({
-          status: 503,
-          error: { messageKey: 'error.user-directory.unavailable', target: 'GLOBAL' },
-        }),
-      );
+    it('closes with a warning when Keycloak kept the owners from being changed', async () => {
+      experimentService.saveExperiment.mockResolvedValue({
+        ...EXPERIMENT,
+        owners: [],
+        ownersStatus: 'KEYCLOAK_UNAVAILABLE',
+      });
       const view = await render('experiment-1');
       await vi.waitFor(() => expect(view.ownerPicker()?.selectedOwnerIds()).toEqual(['alice']));
       view.ownerPicker()!.selectedOwnerIds.set([]);
 
       await view.click('experiment.button.save');
 
-      await vi.waitFor(() =>
-        expect(view.ownerPicker()?.error()).toBe('error.user-directory.unavailable'),
-      );
-      expect(view.ownerPicker()?.selectedOwnerIds()).toEqual([]);
-      expect(dialogRef.close).not.toHaveBeenCalled();
+      await vi.waitFor(() => expect(dialogRef.close).toHaveBeenCalled());
+      expect(toast.warning).toHaveBeenCalledWith('experiment.owners.notSaved');
       expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('stays open with the error at the owners when one is no PI', async () => {
+      experimentService.saveExperiment.mockRejectedValue(
+        new HttpErrorResponse({
+          status: 422,
+          error: [
+            {
+              field: 'ownerIds',
+              messageKey: 'experiment.owner.not-eligible',
+              target: ErrorDto.TargetEnum.Field,
+            },
+          ],
+        }),
+      );
+      const view = await render('experiment-1');
+      await vi.waitFor(() => expect(view.ownerPicker()?.selectedOwnerIds()).toEqual(['alice']));
+      view.ownerPicker()!.selectedOwnerIds.set(['alice', 'bob']);
+
+      await view.click('experiment.button.save');
+
+      await vi.waitFor(() =>
+        expect(view.ownerPicker()?.error()).toBe('experiment.owner.not-eligible'),
+      );
+      expect(view.ownerPicker()?.selectedOwnerIds()).toEqual(['alice', 'bob']);
+      expect(dialogRef.close).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
     });
 
     it('shows a PI who is no admin the owners read-only', async () => {
