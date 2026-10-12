@@ -5,9 +5,11 @@
 -- it. Deleting an organisation removes it from every experiment (ON DELETE
 -- CASCADE). Names are unique case-insensitively.
 --
--- No row-level security: the list is the same for every caller, and who may
--- change an experiment's organisations is decided by the experiment update
--- itself (ExperimentWriteAuthorizationManager, experiments_update policy).
+-- The organisations themselves have no row-level security, the list is the same
+-- for every caller. The links follow their experiment like experiment_documents
+-- (V18): whoever may read the experiment reads its links, whoever may update it
+-- adds and removes them. The application layer enforces the same rules
+-- (ExperimentWriteAuthorizationManager).
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE organisations (
@@ -26,3 +28,16 @@ CREATE TABLE experiment_organisation (
 
 CREATE INDEX experiment_organisation_organisation_id_idx
     ON experiment_organisation (organisation_id);
+
+ALTER TABLE experiment_organisation ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY experiment_organisation_read ON experiment_organisation FOR SELECT
+    USING (can_access_experiment(experiment_organisation.experiment_id));
+
+-- WITH CHECK raises SQLSTATE 42501 for a forbidden insert, which the
+-- application maps to 403 (see V16).
+CREATE POLICY experiment_organisation_insert ON experiment_organisation FOR INSERT
+    WITH CHECK (can_write_experiment(experiment_organisation.experiment_id));
+
+CREATE POLICY experiment_organisation_delete ON experiment_organisation FOR DELETE
+    USING (can_write_experiment(experiment_organisation.experiment_id));
