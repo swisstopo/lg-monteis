@@ -325,10 +325,9 @@
     "owners": {
       "label": "Experiment Owners",
       "none": "No owner",
-      "placeholder": "Search by name or email",
       "hint": "Only people with write access to this experiment can be owners.",
       "noCandidates": "Nobody has write access to this experiment yet.",
-      "remove": "Remove owner",
+      "formerPi": "no longer has write access",
       "status": {
         "KEYCLOAK_UNAVAILABLE": "Contact details currently unavailable",
         "ACCESS_DENIED": "Owners hidden, Keycloak permissions misconfigured",

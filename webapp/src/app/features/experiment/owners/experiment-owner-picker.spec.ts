@@ -56,10 +56,10 @@ describe('ExperimentOwnerPicker', () => {
     expect(experimentService.findOwnerCandidatesForExperiment).toHaveBeenCalledWith('experiment-1');
   });
 
-  it('shows the selected owners as chips', async () => {
-    const { picker } = await setup({ selectedOwnerIds: ['alice'] });
+  it('shows the names of the selected owners', async () => {
+    const { picker } = await setup({ selectedOwnerIds: ['alice', 'bob'] });
 
-    expect(await picker.getOwnerNames()).toEqual(['Alice Muster']);
+    expect(await picker.getOwnerNames()).toEqual(['Alice Muster', 'Bob Beispiel']);
   });
 
   it('says who can be an owner', async () => {
@@ -68,10 +68,13 @@ describe('ExperimentOwnerPicker', () => {
     expect(await picker.getHint()).toBe('experiment.owners.hint');
   });
 
-  it('offers the candidates that are not selected yet with their email', async () => {
+  it('offers every candidate with its email and checks the selected ones', async () => {
     const { picker } = await setup({ selectedOwnerIds: ['alice'] });
 
-    expect(await picker.getOfferedOwners()).toEqual(['Bob Beispiel (bob@example.com)']);
+    expect(await picker.getOfferedOwners()).toEqual([
+      { text: 'Alice Muster (alice@example.com)', selected: true, disabled: false },
+      { text: 'Bob Beispiel (bob@example.com)', selected: false, disabled: false },
+    ]);
   });
 
   it('offers a candidate without email by name only', async () => {
@@ -79,34 +82,22 @@ describe('ExperimentOwnerPicker', () => {
       candidates: () => Promise.resolve([{ ...ALICE, email: undefined }]),
     });
 
-    expect(await picker.getOfferedOwners()).toEqual(['Alice Muster']);
+    expect((await picker.getOfferedOwners()).map((owner) => owner.text)).toEqual(['Alice Muster']);
   });
 
-  it('filters the candidates by name or email', async () => {
-    const { picker } = await setup();
-
-    await picker.searchFor('beisp');
-    expect(await picker.getOfferedOwners()).toEqual(['Bob Beispiel (bob@example.com)']);
-
-    await picker.searchFor('ALICE@');
-    expect(await picker.getOfferedOwners()).toEqual(['Alice Muster (alice@example.com)']);
-  });
-
-  it('adds a picked candidate and clears the search', async () => {
+  it('adds a selected candidate', async () => {
     const { picker, selectedOwnerIdsNow } = await setup({ selectedOwnerIds: ['alice'] });
-    await picker.searchFor('bob');
 
-    await picker.addOwner('Bob Beispiel');
+    await picker.selectOwner('Bob Beispiel');
 
     expect(selectedOwnerIdsNow()).toEqual(['alice', 'bob']);
     expect(await picker.getOwnerNames()).toEqual(['Alice Muster', 'Bob Beispiel']);
-    expect(await picker.getSearchText()).toBe('');
   });
 
-  it('removes an owner from its chip', async () => {
+  it('removes a deselected owner', async () => {
     const { picker, selectedOwnerIdsNow } = await setup({ selectedOwnerIds: ['alice', 'bob'] });
 
-    await picker.removeOwner('Alice Muster');
+    await picker.deselectOwner('Alice Muster');
 
     expect(selectedOwnerIdsNow()).toEqual(['bob']);
   });
@@ -117,16 +108,40 @@ describe('ExperimentOwnerPicker', () => {
     expect(await picker.getOwnerNames()).toEqual(['Alice Muster']);
   });
 
-  it('keeps a stored owner who is no candidate anymore removable', async () => {
+  it('shows a stored owner who is no candidate anymore unchecked and disabled', async () => {
+    const { picker } = await setup({
+      selectedOwnerIds: ['alice', 'fritz'],
+      owners: [ALICE, FRITZ],
+    });
+
+    expect(await picker.getOwnerNames()).toEqual(['Alice Muster']);
+    expect(await picker.getOfferedOwners()).toEqual([
+      { text: 'Alice Muster (alice@example.com)', selected: true, disabled: false },
+      { text: 'Bob Beispiel (bob@example.com)', selected: false, disabled: false },
+      { text: 'Fritz Former – experiment.owners.formerPi', selected: false, disabled: true },
+    ]);
+  });
+
+  it('drops a stored owner who is no candidate anymore once the selection changes', async () => {
     const { picker, selectedOwnerIdsNow } = await setup({
       selectedOwnerIds: ['alice', 'fritz'],
       owners: [ALICE, FRITZ],
     });
-    expect(await picker.getOwnerNames()).toEqual(['Alice Muster', 'Fritz Former']);
 
-    await picker.removeOwner('Fritz Former');
+    await picker.selectOwner('Bob Beispiel');
 
-    expect(selectedOwnerIdsNow()).toEqual(['alice']);
+    expect(selectedOwnerIdsNow()).toEqual(['alice', 'bob']);
+  });
+
+  it('names the stored owners while the candidates load', async () => {
+    const { picker } = await setup({
+      selectedOwnerIds: ['alice'],
+      owners: [ALICE],
+      candidates: () => new Promise(() => undefined),
+    });
+
+    expect(await picker.isDisabled()).toBe(true);
+    expect(await picker.getOwnerNames()).toEqual(['Alice Muster']);
   });
 
   it('says so when nobody can be an owner', async () => {
@@ -135,10 +150,10 @@ describe('ExperimentOwnerPicker', () => {
     expect(await picker.getHint()).toBe('experiment.owners.noCandidates');
   });
 
-  it('disables the search when the candidates cannot be loaded', async () => {
+  it('disables the select when the candidates cannot be loaded', async () => {
     const { picker } = await setup({ candidates: () => Promise.reject(new Error('503')) });
 
-    expect(await picker.isSearchDisabled()).toBe(true);
+    expect(await picker.isDisabled()).toBe(true);
     expect(await picker.getHint()).toBe('error.user-directory.unavailable');
   });
 
@@ -149,7 +164,7 @@ describe('ExperimentOwnerPicker', () => {
     });
     const { picker } = await setup({ candidates: () => Promise.reject(refused) });
 
-    expect(await picker.isSearchDisabled()).toBe(true);
+    expect(await picker.isDisabled()).toBe(true);
     expect(await picker.getHint()).toBe('error.user-directory.denied');
   });
 

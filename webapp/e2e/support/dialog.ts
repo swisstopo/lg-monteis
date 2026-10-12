@@ -27,3 +27,24 @@ export async function pickAutocompleteOption(
   await input.press('Enter');
   await expect(optionLocator).toBeHidden();
 }
+
+/**
+ * Checks or unchecks `option` in the multiple `select`. For the same overlay reasons as
+ * {@link pickAutocompleteOption} the option gets a dispatched click, which needs no coordinates.
+ */
+export async function setMultiSelectOption(
+  select: Locator,
+  option: string,
+  checked: boolean,
+): Promise<void> {
+  const optionLocator = select.page().getByRole('option', { name: option, exact: true });
+  await select.focus();
+  await select.press('Enter');
+  await expect(optionLocator).toBeVisible();
+  if ((await optionLocator.getAttribute('aria-selected')) !== String(checked)) {
+    await optionLocator.dispatchEvent('click');
+    await expect(optionLocator).toHaveAttribute('aria-selected', String(checked));
+  }
+  await select.press('Escape');
+  await expect(optionLocator).toBeHidden();
+}

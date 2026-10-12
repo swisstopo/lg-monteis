@@ -235,7 +235,7 @@ describe('ExperimentDialog', () => {
     it('saves changed owners with the experiment', async () => {
       const { dialog, experimentService, toast, dialogRef } = await setup(asAdmin);
       experimentService.saveExperiment.mockResolvedValue(anExperiment({ owners: [ALICE, BOB] }));
-      await (await dialog.ownerPicker())!.addOwner('Bob Beispiel');
+      await (await dialog.ownerPicker())!.selectOwner('Bob Beispiel');
 
       await dialog.save();
 
@@ -262,7 +262,7 @@ describe('ExperimentDialog', () => {
       experimentService.saveExperiment.mockResolvedValue(
         anExperiment({ owners: [], ownersStatus: 'KEYCLOAK_UNAVAILABLE' }),
       );
-      await (await dialog.ownerPicker())!.removeOwner('Alice Muster');
+      await (await dialog.ownerPicker())!.deselectOwner('Alice Muster');
 
       await dialog.save();
 
@@ -277,7 +277,7 @@ describe('ExperimentDialog', () => {
         saveFailsWith('ownerIds', 'experiment.owner.not-eligible'),
       );
       const picker = (await dialog.ownerPicker())!;
-      await picker.addOwner('Bob Beispiel');
+      await picker.selectOwner('Bob Beispiel');
 
       await dialog.save();
 

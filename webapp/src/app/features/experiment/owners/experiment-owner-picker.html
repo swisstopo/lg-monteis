@@ -1,29 +1,13 @@
 <mat-form-field class="experiment-owner-picker_field" appearance="outline">
   <mat-label>{{ 'experiment.owners.label' | translate }}</mat-label>
-  <mat-chip-grid #ownerChips [attr.aria-label]="'experiment.owners.label' | translate">
-    @for (owner of selectedOwners(); track owner.id) {
-      <mat-chip-row data-testid="selected-owner" (removed)="remove(owner)">
-        {{ owner | ownerName }}
-        <button matChipRemove [attr.aria-label]="'experiment.owners.remove' | translate">
-          <mat-icon fontIcon="cancel"></mat-icon>
-        </button>
-      </mat-chip-row>
-    }
-    <input
-      #ownerInput
-      matInput
-      data-testid="owner-input"
-      [placeholder]="'experiment.owners.placeholder' | translate"
-      [matChipInputFor]="ownerChips"
-      [matAutocomplete]="ownerOptions"
-      [disabled]="candidates.isLoading() || candidates.error() !== undefined"
-      (input)="searchText.set(ownerInput.value)"
-    />
-  </mat-chip-grid>
-  <mat-autocomplete
-    #ownerOptions="matAutocomplete"
-    (optionSelected)="onSelected($event, ownerInput)"
+  <mat-select
+    multiple
+    data-testid="owner-select"
+    [value]="selectedIds()"
+    [disabled]="candidates.isLoading() || candidates.error() !== undefined"
+    (selectionChange)="onSelectionChange($event)"
   >
+    <mat-select-trigger>{{ selectedNames() }}</mat-select-trigger>
     @for (owner of selectableOwners(); track owner.id) {
       <mat-option [value]="owner.id"
         >{{ owner | ownerName }}
@@ -32,7 +16,16 @@
         }
       </mat-option>
     }
-  </mat-autocomplete>
+    @for (owner of formerOwners(); track owner.id) {
+      <mat-option [value]="owner.id" disabled
+        >{{ owner | ownerName }}
+        @if (owner.email) {
+          ({{ owner.email }})
+        }
+        – {{ 'experiment.owners.formerPi' | translate }}
+      </mat-option>
+    }
+  </mat-select>
   @if (error(); as error) {
     <mat-hint class="experiment-owner-picker_error" data-testid="owner-error">{{
       error | translate

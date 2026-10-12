@@ -1,5 +1,5 @@
 import { expect, Locator, Page, test } from '@playwright/test';
-import { pickAutocompleteOption, waitForAutofocus } from '../support/dialog';
+import { setMultiSelectOption, waitForAutofocus } from '../support/dialog';
 import {
   createExperimentInDialog,
   editExperimentButton,
@@ -32,7 +32,7 @@ test.describe('as admin', () => {
   test('a new experiment shows the owners disabled with the reason', async ({ page }) => {
     const dialog = await openCreateExperimentDialog(page);
 
-    await expect(dialog.getByTestId('owners-create').getByRole('textbox')).toBeDisabled();
+    await expect(dialog.getByTestId('owners-create').getByRole('combobox')).toBeDisabled();
     await expect(dialog.getByTestId('owners-create-hint')).toHaveText(
       'Nobody has write access to a new experiment yet. Save it first, owners can be assigned once people have write access.',
     );
@@ -50,18 +50,15 @@ test.describe('as admin', () => {
   test('assigns a PI as owner and shows it in the table', async ({ page }) => {
     // every browser project assigns the same owner to the shared Alpha, they all end up alike
     const dialog = await openEditDialog(page, SEEDED_EXPERIMENTS.alpha);
-    const input = dialog.getByTestId('owner-input');
-    await expect(input).toBeEnabled();
+    const select = dialog.getByTestId('owner-select');
+    await expect(select).toBeEnabled();
     await expect(
       dialog.getByText('Only people with write access to this experiment can be owners.'),
     ).toBeVisible();
-    const aliceChip = dialog.getByTestId('selected-owner').filter({ hasText: ALICE });
-    if (await aliceChip.count()) {
-      await aliceChip.getByRole('button', { name: 'Remove owner' }).click();
-    }
 
-    await pickAutocompleteOption(input, 'alice', ALICE_OPTION);
-    await expect(aliceChip).toBeVisible();
+    await setMultiSelectOption(select, ALICE_OPTION, false);
+    await setMultiSelectOption(select, ALICE_OPTION, true);
+    await expect(select).toContainText(ALICE);
     await dialog.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(dialog).toHaveCount(0);
 
@@ -77,5 +74,5 @@ test('a PI who is no admin sees the owners read-only', async ({ page }) => {
   const dialog = await openEditDialog(page, SEEDED_EXPERIMENTS.alpha);
 
   await expect(dialog.getByTestId('experiment-owner-list')).toBeVisible();
-  await expect(dialog.getByTestId('owner-input')).toHaveCount(0);
+  await expect(dialog.getByTestId('owner-select')).toHaveCount(0);
 });

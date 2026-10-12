@@ -34,6 +34,7 @@ import {
   MatPrefix,
   MatSuffix,
 } from '@angular/material/input';
+import { MatSelect } from '@angular/material/select';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ErrorDto, ExperimentResponseDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
@@ -68,6 +69,7 @@ const OWNER_IDS_FIELD = 'ownerIds';
     MatIcon,
     MatPrefix,
     MatSuffix,
+    MatSelect,
     MatDatepicker,
     MatDatepickerInput,
     MatDatepickerToggle,
