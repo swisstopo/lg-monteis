@@ -14,6 +14,7 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
+import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { ExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -40,6 +41,7 @@ export default class ExperimentTable {
   private readonly datePipe = inject(DatePipe);
   private readonly formDialog = inject(FormDialogService);
   private readonly experimentService = inject(ExperimentService);
+  private readonly organisationService = inject(OrganisationService);
   private readonly translateService = inject(TranslateService);
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
@@ -47,7 +49,14 @@ export default class ExperimentTable {
 
   readonly searchTerm = signal<string>('');
 
-  protected readonly wrappedCols = createColumns(this.datePipe);
+  private readonly organisationNames = computed(
+    () =>
+      new Map((this.organisationService.allOrganisations.value() ?? []).map((o) => [o.id, o.name])),
+  );
+  protected readonly wrappedCols = createColumns(
+    this.datePipe,
+    (id) => this.organisationNames().get(id) ?? id,
+  );
   protected readonly selectedExperimentId = signal<string | undefined>(undefined);
   protected readonly canEditSelected = computed(() => {
     const experimentId = this.selectedExperimentId();
@@ -81,6 +90,12 @@ export default class ExperimentTable {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
       view.title = this.translateService.translate('tab.experiment')();
+    });
+
+    // the cells only show organisation names once the organisations have loaded
+    effect(() => {
+      this.organisationNames();
+      untracked(() => this.gridApi()?.refreshCells({ force: true }));
     });
 
     // the infinite row model has no way to notice a save in the dialog, so the visible pages are

@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, input } from '@angular/core';
+import { Component, input, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialogRef } from '@angular/material/dialog';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ErrorDto, ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
+import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -48,6 +49,7 @@ describe('ExperimentDialog', () => {
       providers: [
         provideTranslateService(),
         { provide: ExperimentService, useValue: experimentService },
+        { provide: OrganisationService, useValue: { allOrganisations: { value: signal([]) } } },
         { provide: PermissionsService, useValue: { canWriteExperiment: () => canWrite } },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: ToastService, useValue: toast },

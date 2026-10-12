@@ -109,7 +109,8 @@ class ExperimentControllerTest {
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             0,
-            1);
+            1,
+            List.of());
 
     expectedExperiment.getStatus(referenceToday);
 
@@ -154,7 +155,8 @@ class ExperimentControllerTest {
             new PeriodDto(startDate, endDate),
             Status.HISTORIC, // Example status
             2,
-            1);
+            1,
+            List.of());
     PagedResult<ExperimentResponseDto> dtoResult = new PagedResult<>(List.of(responseDto), 1);
 
     given(pagedRequestParser.parse(any())).willReturn(parsedRequest);
@@ -250,7 +252,8 @@ class ExperimentControllerTest {
             new PeriodDto(startDate, endDate),
             Status.HISTORIC,
             2,
-            1);
+            1,
+            List.of());
 
     given(service.findAllExperiments()).willReturn(List.of(experiment1));
     given(mapper.toDto(eq(experiment1), any(LocalDate.class))).willReturn(responseDto);
@@ -277,7 +280,8 @@ class ExperimentControllerTest {
             "A test experiment",
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-            null);
+            null,
+            List.of());
 
     ExperimentResponseDto expectedResponseDto =
         new ExperimentResponseDto(
@@ -288,7 +292,8 @@ class ExperimentControllerTest {
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             0,
-            1);
+            1,
+            List.of());
 
     Experiment mockDomain = mock(Experiment.class);
 
@@ -330,7 +335,8 @@ class ExperimentControllerTest {
             "Updated comment",
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-            1);
+            1,
+            List.of());
 
     ExperimentResponseDto expectedResponseDto =
         new ExperimentResponseDto(
@@ -341,7 +347,8 @@ class ExperimentControllerTest {
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             Status.ACTIVE,
             3,
-            2);
+            2,
+            List.of());
 
     Experiment mockDomain = mock(Experiment.class);
 
@@ -379,7 +386,8 @@ class ExperimentControllerTest {
             "A test experiment",
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-            1);
+            1,
+            List.of());
 
     // when / then
     mockMvc
@@ -500,7 +508,8 @@ class ExperimentControllerTest {
                 "A test experiment",
                 new PeriodDto(
                     LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-                null));
+                null,
+                List.of()));
 
     // when / then
     for (PrivilegeLevel level :
@@ -569,6 +578,7 @@ class ExperimentControllerTest {
         "EXP-01-UPDATED",
         "Updated comment",
         new PeriodDto(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
-        1);
+        1,
+        List.of());
   }
 }

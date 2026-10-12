@@ -1,7 +1,9 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
+import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOrganisation.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentSensor.EXPERIMENT_SENSOR;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
+import static ch.swisstopo.monteis.core.jooq.generated.tables.Organisations.ORGANISATIONS;
 import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swisstopo.monteis.contracts.Das;
@@ -19,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
@@ -515,6 +518,93 @@ class JooqExperimentRepositoryIT {
   /**
    * Legacy helper using DSL context directly (used by read-only tests)
    */
+  // --- Organisations ---
+
+  @Test
+  @Transactional
+  void should_assign_replace_and_remove_organisations() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID first = createOrganisationWithDsl("Org assign A");
+          UUID second = createOrganisationWithDsl("Org assign B");
+          Experiment experiment =
+              new Experiment(
+                  "Org assign IT",
+                  "owner",
+                  new Period(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+                  null);
+          experiment.setOrganisationIds(List.of(first, second, first));
+
+          Experiment created = repository.create(experiment);
+
+          assertEquals(List.of(first, second), created.getOrganisationIds());
+          assertEquals(
+              Set.of(first, second),
+              Set.copyOf(repository.getById(created.getId()).getOrganisationIds()));
+
+          created.setOrganisationIds(List.of(second));
+          repository.update(created);
+          assertEquals(List.of(second), repository.getById(created.getId()).getOrganisationIds());
+
+          created.setOrganisationIds(List.of());
+          repository.update(created);
+          assertEquals(List.of(), repository.getById(created.getId()).getOrganisationIds());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_reject_an_unknown_organisation() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          Experiment experiment =
+              new Experiment(
+                  "Org unknown IT",
+                  "owner",
+                  new Period(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+                  null);
+          experiment.setOrganisationIds(List.of(UUID.randomUUID()));
+
+          assertThrows(FieldBusinessValidationException.class, () -> repository.create(experiment));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_return_organisations_in_the_experiment_list() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID organisationId = createOrganisationWithDsl("Org list IT");
+          UUID experimentId =
+              createExperimentWithDsl(
+                  "Org list experiment IT",
+                  null,
+                  LocalDate.of(2024, 1, 1),
+                  LocalDate.of(2024, 12, 31));
+          dsl.insertInto(EXPERIMENT_ORGANISATION)
+              .set(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, experimentId)
+              .set(EXPERIMENT_ORGANISATION.ORGANISATION_ID, organisationId)
+              .execute();
+
+          Experiment found =
+              repository.findAll().stream()
+                  .filter(e -> e.getId().equals(experimentId))
+                  .findFirst()
+                  .orElseThrow();
+
+          assertEquals(List.of(organisationId), found.getOrganisationIds());
+        });
+  }
+
+  private UUID createOrganisationWithDsl(String name) {
+    return Objects.requireNonNull(
+            dsl.insertInto(ORGANISATIONS)
+                .set(ORGANISATIONS.NAME, name)
+                .returning(ORGANISATIONS.ID)
+                .fetchOne())
+        .getId();
+  }
+
   private UUID createExperimentWithDsl(
       String name, String comment, LocalDate start, LocalDate end) {
     return Objects.requireNonNull(

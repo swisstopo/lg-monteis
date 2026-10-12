@@ -1,7 +1,9 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.ORGANISATIONS;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
@@ -9,16 +11,19 @@ import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
+import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentOrganisationRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.InsertValuesStep2;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -81,6 +86,10 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Override
   @Transactional(readOnly = true)
   public Experiment getById(UUID experimentId) {
+    return withOrganisations(List.of(selectById(experimentId))).getFirst();
+  }
+
+  private Experiment selectById(UUID experimentId) {
 
     return dsl.select(
             EXPERIMENTS.ID,
@@ -116,6 +125,12 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Override
   @Transactional(readOnly = true)
   public PagedResult<Experiment> getExperiments(PagedRequest request) {
+    PagedResult<Experiment> page = selectExperiments(request);
+    withOrganisations(page.rows());
+    return page;
+  }
+
+  private PagedResult<Experiment> selectExperiments(PagedRequest request) {
 
     // Default to a deterministic order so offset-based paging stays stable across separate
     // requests (Postgres does not guarantee row order without an ORDER BY).
@@ -156,6 +171,10 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Override
   @Transactional(readOnly = true)
   public List<Experiment> findAll() {
+    return withOrganisations(selectAll());
+  }
+
+  private List<Experiment> selectAll() {
     return dsl.select(
             EXPERIMENTS.ID,
             EXPERIMENTS.NAME,
@@ -198,7 +217,10 @@ public class JooqExperimentRepository implements ExperimentRepository {
           "name", experiment.getName(), "validation.unique", Map.of());
     }
 
-    return mapper.toDomain(createdExperiment);
+    Experiment created = mapper.toDomain(createdExperiment);
+    created.setOrganisationIds(
+        replaceOrganisations(createdExperiment.getId(), experiment.getOrganisationIds()));
+    return created;
   }
 
   @Override
@@ -222,7 +244,10 @@ public class JooqExperimentRepository implements ExperimentRepository {
       throw new FieldBusinessValidationException(
           "name", experiment.getName(), "validation.unique", Map.of());
     }
-    return mapper.toDomain(updatedRecord);
+    Experiment updated = mapper.toDomain(updatedRecord);
+    updated.setOrganisationIds(
+        replaceOrganisations(updatedRecord.getId(), experiment.getOrganisationIds()));
+    return updated;
   }
 
   @Override
@@ -252,5 +277,56 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
               return mapper.toDomain(experimentsRecord);
             });
+  }
+
+  /** Sets the organisation ids of each experiment, with one query for all of them. */
+  private List<Experiment> withOrganisations(List<Experiment> experiments) {
+    Map<UUID, List<UUID>> organisationIds =
+        dsl.select(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, EXPERIMENT_ORGANISATION.ORGANISATION_ID)
+            .from(EXPERIMENT_ORGANISATION)
+            .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.in(idsOf(experiments)))
+            .fetchGroups(
+                EXPERIMENT_ORGANISATION.EXPERIMENT_ID, EXPERIMENT_ORGANISATION.ORGANISATION_ID);
+    for (Experiment experiment : experiments) {
+      experiment.setOrganisationIds(organisationIds.getOrDefault(experiment.getId(), List.of()));
+    }
+    return experiments;
+  }
+
+  private static Collection<UUID> idsOf(List<Experiment> experiments) {
+    return experiments.stream().map(Experiment::getId).toList();
+  }
+
+  /**
+   * Makes {@code organisationIds} the experiment's organisations: adds the missing links, removes
+   * the others.
+   *
+   * @return the ids now linked, without duplicates
+   * @throws FieldBusinessValidationException if one of them is not an organisation
+   */
+  private List<UUID> replaceOrganisations(UUID experimentId, List<UUID> organisationIds) {
+    List<UUID> distinct = organisationIds.stream().distinct().toList();
+    if (dsl.fetchCount(ORGANISATIONS, ORGANISATIONS.ID.in(distinct)) != distinct.size()) {
+      throw new FieldBusinessValidationException(
+          "organisationIds", distinct, "validation.organisation.unknown", Map.of());
+    }
+
+    dsl.deleteFrom(EXPERIMENT_ORGANISATION)
+        .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.eq(experimentId))
+        .and(EXPERIMENT_ORGANISATION.ORGANISATION_ID.notIn(distinct))
+        .execute();
+
+    if (!distinct.isEmpty()) {
+      InsertValuesStep2<ExperimentOrganisationRecord, UUID, UUID> insert =
+          dsl.insertInto(
+              EXPERIMENT_ORGANISATION,
+              EXPERIMENT_ORGANISATION.EXPERIMENT_ID,
+              EXPERIMENT_ORGANISATION.ORGANISATION_ID);
+      for (UUID organisationId : distinct) {
+        insert = insert.values(experimentId, organisationId);
+      }
+      insert.onConflictDoNothing().execute();
+    }
+    return distinct;
   }
 }

@@ -15,6 +15,7 @@ export interface ExperimentFormModel {
     start: Date;
     end: Date;
   };
+  organisationIds: string[];
 }
 
 export function toFormModel(experiment: ExperimentResponseDto | undefined): ExperimentFormModel {
@@ -25,6 +26,7 @@ export function toFormModel(experiment: ExperimentResponseDto | undefined): Expe
       start: toDate(experiment?.period?.start),
       end: toDate(experiment?.period?.end),
     },
+    organisationIds: [...(experiment?.organisationIds ?? [])],
   };
 }
 
@@ -42,6 +44,7 @@ export function toWriteDto(
       start: toIsoDate(model.period.start),
       end: toIsoDate(model.period.end),
     },
+    organisationIds: model.organisationIds,
   };
 }
 

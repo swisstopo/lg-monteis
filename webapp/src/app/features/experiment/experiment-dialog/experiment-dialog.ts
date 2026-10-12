@@ -16,7 +16,7 @@ import {
   submit,
   TreeValidationResult,
 } from '@angular/forms/signals';
-import { provideNativeDateAdapter } from '@angular/material/core';
+import { MatOption, provideNativeDateAdapter } from '@angular/material/core';
 import {
   MatDatepicker,
   MatDatepickerInput,
@@ -24,10 +24,12 @@ import {
 } from '@angular/material/datepicker';
 import { MatDialogRef } from '@angular/material/dialog';
 import { MatError, MatFormField, MatInput, MatLabel, MatSuffix } from '@angular/material/input';
+import { MatSelect } from '@angular/material/select';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
+import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -49,6 +51,8 @@ import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
     MatInput,
     MatError,
     MatSuffix,
+    MatSelect,
+    MatOption,
     MatDatepicker,
     MatDatepickerInput,
     MatDatepickerToggle,
@@ -64,11 +68,16 @@ import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
 })
 export class ExperimentDialog {
   private readonly experimentService = inject(ExperimentService);
+  private readonly organisationService = inject(OrganisationService);
   private readonly permissions = inject(PermissionsService);
   private readonly formErrorService = inject(FormErrorService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
   private readonly dialogRef = inject<MatDialogRef<ExperimentDialog>>(MatDialogRef);
+
+  protected readonly organisations = computed(
+    () => this.organisationService.allOrganisations.value() ?? [],
+  );
 
   readonly experimentId = input<string>();
   readonly viewOnly = input(false);
