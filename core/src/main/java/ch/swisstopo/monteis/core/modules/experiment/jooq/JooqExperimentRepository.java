@@ -28,13 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class JooqExperimentRepository implements ExperimentRepository {
 
   // Package-private (not private): also reused by JooqExperimentCsvExportQueryRepository.
-  static final String SENSOR_COUNT_FIELD_NAME = "sensorCount";
+  static final String SENSOR_COUNT_FIELD_NAME = ExperimentRecordProjections.SENSOR_COUNT_FIELD_NAME;
 
-  static final Field<Integer> SENSOR_COUNT_FIELD =
-      DSL.selectCount()
-          .from(EXPERIMENT_SENSOR)
-          .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
-          .asField();
+  static final Field<Integer> SENSOR_COUNT_FIELD = ExperimentRecordProjections.SENSOR_COUNT_FIELD;
 
   // Package-private (not private): also reused by JooqExperimentCsvExportQueryRepository, to
   // select the exact same computed "status" value the grid filters/sorts by.

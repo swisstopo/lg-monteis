@@ -5,21 +5,27 @@ import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecur
 import static org.jooq.Records.mapping;
 import static org.jooq.impl.DSL.*;
 
+import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import ch.swisstopo.monteis.core.modules.experiment.jooq.ExperimentRecordProjections;
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorDetailResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.Record;
+import org.jooq.Result;
 import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
@@ -33,12 +39,14 @@ public class MeasurementQueryRepository implements MeasurementQuery {
   private final Clock clock;
 
   // Correlated per sensor_parameter, joined once below and reused by both the projection and the
-  // sort/filter map so "dasKey" resolves against the exact same lateral alias either way.
-  private static final Table<?> LATEST_READINGS =
+  // sort/filter map so "dasKey" resolves against the exact same lateral alias either way. Also
+  // backs findSensorDetail. Reads the secured view, so row-level security applies.
+  static final Table<?> LATEST_READINGS =
       lateral(
               select(
                       SENSOR_READING_SECURED.TIMESTAMP,
                       SENSOR_READING_SECURED.NORM_VALUE,
+                      SENSOR_READING_SECURED.RAW_VALUE,
                       SENSOR_READING_SECURED.DAS_KEY,
                       SENSOR_READING_SECURED.STATUS)
                   .from(SENSOR_READING_SECURED)
@@ -88,6 +96,34 @@ public class MeasurementQueryRepository implements MeasurementQuery {
   public MeasurementQueryRepository(DSLContext dsl, Clock clock) {
     this.dsl = dsl;
     this.clock = clock;
+  }
+
+  @Override
+  public Optional<SensorDetailResponseDto> findSensorDetail(UUID id, LocalDate today) {
+    Result<Record> rows =
+        dsl.select(SENSORS.fields())
+            .select(EXPERIMENTS.fields())
+            .select(ExperimentRecordProjections.SENSOR_COUNT)
+            .select(SENSOR_PARAMETER.fields())
+            .select(FORMULAS.fields())
+            .select(SENSOR_TYPES.fields())
+            .select(LATEST_READINGS.fields())
+            .from(SENSORS)
+            .leftJoin(EXPERIMENTS)
+            .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+            .leftJoin(SENSOR_PARAMETER)
+            .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
+            .leftJoin(FORMULAS)
+            .on(SENSOR_PARAMETER.FORMULA_ID.eq(FORMULAS.ID))
+            .leftJoin(SENSOR_TYPES)
+            .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID))
+            .leftJoin(LATEST_READINGS)
+            .on(trueCondition())
+            .where(SENSORS.ID.eq(id))
+            .orderBy(SENSOR_PARAMETER.ID.asc())
+            .fetch();
+
+    return SensorDetailProjection.toSensorDetail(rows, today);
   }
 
   @Override
@@ -210,8 +246,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                         row.active(),
                         row.comment(),
                         trendByParamId.getOrDefault(row.sensorParameterId(), List.of()),
-                        ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementStatus
-                            .fromDbValue(row.measurementStatus())))
+                        MeasurementStatus.fromDbValue(row.measurementStatus())))
             .toList();
 
     boolean needsReadings =

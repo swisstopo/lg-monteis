@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.pipeline.transformation.validation;
 
+import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.internal.event.SensorBoundBreachedEvent;
 import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
@@ -19,7 +20,7 @@ public class BoundsValidator {
     this.clock = clock;
   }
 
-  public BoundStatus evaluateBounds(
+  public MeasurementStatus evaluateBounds(
       String dasKey, Double siValue, SensorParameterConfig config, ProcessingOrigin origin) {
     if (siValue > config.getUpperBound()) {
       publishBreach(
@@ -28,7 +29,7 @@ public class BoundsValidator {
           config.getUpperBound(),
           SensorBoundBreachedEvent.BoundType.UPPER,
           origin);
-      return BoundStatus.TOO_HIGH;
+      return MeasurementStatus.TOO_HIGH;
     }
 
     if (siValue < config.getLowerBound()) {
@@ -38,10 +39,10 @@ public class BoundsValidator {
           config.getLowerBound(),
           SensorBoundBreachedEvent.BoundType.LOWER,
           origin);
-      return BoundStatus.TOO_LOW;
+      return MeasurementStatus.TOO_LOW;
     }
 
-    return BoundStatus.OK;
+    return MeasurementStatus.CORRECT;
   }
 
   private void publishBreach(

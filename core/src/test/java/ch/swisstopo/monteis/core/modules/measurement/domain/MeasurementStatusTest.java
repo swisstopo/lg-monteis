@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.measurement.domain;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

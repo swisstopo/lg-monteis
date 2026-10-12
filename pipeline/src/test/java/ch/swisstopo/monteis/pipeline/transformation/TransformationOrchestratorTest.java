@@ -6,12 +6,12 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import ch.swisstopo.monteis.pipeline.transformation.standardization.SIStandardizer;
-import ch.swisstopo.monteis.pipeline.transformation.validation.BoundStatus;
 import ch.swisstopo.monteis.pipeline.transformation.validation.BoundsValidator;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -53,7 +53,7 @@ class TransformationOrchestratorTest {
     given(
             boundsValidator.evaluateBounds(
                 "deviceA", standardizedValue, sensorConfig, ProcessingOrigin.INGEST))
-        .willReturn(BoundStatus.OK);
+        .willReturn(MeasurementStatus.CORRECT);
 
     // when
     SensorReadingRecord result =
@@ -106,7 +106,7 @@ class TransformationOrchestratorTest {
     given(
             boundsValidator.evaluateBounds(
                 "deviceA", standardizedValue, sensorConfig, ProcessingOrigin.INGEST))
-        .willReturn(BoundStatus.TOO_HIGH);
+        .willReturn(MeasurementStatus.TOO_HIGH);
 
     // when
     SensorReadingRecord result =
@@ -128,7 +128,7 @@ class TransformationOrchestratorTest {
     given(
             boundsValidator.evaluateBounds(
                 "deviceA", standardizedValue, sensorConfig, ProcessingOrigin.INGEST))
-        .willReturn(BoundStatus.TOO_LOW);
+        .willReturn(MeasurementStatus.TOO_LOW);
 
     // when
     SensorReadingRecord result =

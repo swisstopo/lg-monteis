@@ -6,14 +6,9 @@ import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
-import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -127,29 +122,8 @@ public class JooqSensorParameterRowQueryRepository implements SensorParameterRow
             : new SensorParameterRowResponseDto.MainExperimentRefDto(
                 experimentId, r.get(EXPERIMENTS.NAME));
 
-    UUID parameterId = r.get(SENSOR_PARAMETER.ID);
     SensorParameterResponseDto parameter =
-        parameterId == null
-            ? null
-            : new SensorParameterResponseDto(
-                parameterId,
-                r.get(SENSOR_PARAMETER.NAME),
-                r.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
-                new SensorTypeResponseDto(
-                    r.get(SENSOR_TYPES.ID), r.get(SENSOR_TYPES.NAME), r.get(SENSOR_TYPES.VERSION)),
-                // jOOQ generates its own Unit enum (bound to the native Postgres enum column),
-                // distinct from the domain Unit type SensorParameterResponseDto expects - convert
-                // by name, mirroring the implicit conversion MapStruct generates elsewhere
-                // (SensorJooqMapper.toParameterDomain).
-                Unit.valueOf(r.get(SENSOR_PARAMETER.UNIT).name()),
-                new FormulaResponseDto(
-                    r.get(FORMULAS.ID), r.get(FORMULAS.EXPRESSION), r.get(FORMULAS.VERSION)),
-                new AlarmLimitsDto(
-                    r.get(SENSOR_PARAMETER.LOWER_ALARM_LIMIT),
-                    r.get(SENSOR_PARAMETER.UPPER_ALARM_LIMIT)),
-                r.get(SENSOR_PARAMETER.ACTIVE),
-                r.get(SENSOR_PARAMETER.COMMENT),
-                r.get(SENSOR_PARAMETER.VERSION));
+        r.get(SENSOR_PARAMETER.ID) == null ? null : SensorRecordProjections.toParameter(r);
 
     return new SensorParameterRowResponseDto(
         r.get(SENSORS.ID),
@@ -158,7 +132,7 @@ public class JooqSensorParameterRowQueryRepository implements SensorParameterRow
         Das.valueOf(r.get(SENSORS.DAS)),
         r.get(SENSORS.FULCRUM_ID),
         mainExperiment,
-        new CoordinatesDto(r.get(SENSORS.X), r.get(SENSORS.Y), r.get(SENSORS.Z)),
+        SensorRecordProjections.toCoordinates(r),
         r.get(SENSORS.ACTIVE),
         r.get(SENSORS.COMMENT),
         parameter);
