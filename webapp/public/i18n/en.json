@@ -45,7 +45,10 @@
     "min": "",
     "max": "",
     "positive": "",
-    "unique": "An entity with the same code already exists"
+    "unique": "An entity with the same code already exists",
+    "organisation": {
+      "unknown": "One of the selected organisations does not exist any more."
+    }
   },
   "admin": {
     "organisation": {
@@ -318,6 +321,9 @@
     "sensorCount": {
       "label": "Amount of sensors"
     },
+    "organisations": {
+      "label": "Organisations"
+    },
     "success": "Experiment saved successfully.",
     "error": {
       "unspecified": {
@@ -430,6 +436,7 @@
   "tab": {
     "sensor": "Setup Sensors",
     "experiment": "Setup Experiment",
+    "organisation": "Organisations",
     "measurements-table": "Measurements",
     "measurements-visualization": "Measurements 3D View"
   },
@@ -446,5 +453,47 @@
   "button": {
     "cancel": "Cancel",
     "close": "Close"
+  },
+  "organisation": {
+    "edit": {
+      "title": {
+        "create": "Create Organisation",
+        "edit": "Edit Organisation"
+      }
+    },
+    "name": {
+      "label": "Organisation Name",
+      "placeholder": "e.g., swisstopo",
+      "validation": {
+        "required": "Organisation name is required",
+        "minLength": "Name must be at least 2 characters long",
+        "maxLength": "Name must be at most 100 characters long"
+      }
+    },
+    "button": {
+      "cancel": "Cancel",
+      "saveAndCreate": "Save and create new",
+      "save": "Save"
+    },
+    "tableHeader": {
+      "download": "Download",
+      "create": "Create Organisation",
+      "edit": "Edit Organisation"
+    },
+    "success": "Organisation saved successfully.",
+    "error": {
+      "noId": "No organisation id provided",
+      "connection": "Failed to connect to the backend server.",
+      "downloadFailed": "Failed to download organisations as CSV.",
+      "unspecified": {
+        "message": "An unspecified error occurred while saving the organisation."
+      }
+    },
+    "comment": {
+      "label": "Comment",
+      "validation": {
+        "maxLength": "Comment must be at most 4096 characters long"
+      }
+    }
   }
 }
