@@ -1,3 +1,4 @@
+import { manualChangeDetection } from '@angular/cdk/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
@@ -46,7 +47,7 @@ async function setup({
   );
   const selectedOwnerIdsNow = () => fixture.componentInstance.selectedOwnerIds();
 
-  return { picker, selectedOwnerIdsNow, experimentService };
+  return { fixture, picker, selectedOwnerIdsNow, experimentService };
 }
 
 describe('ExperimentOwnerPicker', () => {
@@ -133,16 +134,22 @@ describe('ExperimentOwnerPicker', () => {
     expect(selectedOwnerIdsNow()).toEqual(['alice', 'bob']);
   });
 
-  it('names the stored owners while the candidates load', async () => {
-    const { picker } = await setup({
-      selectedOwnerIds: ['alice'],
-      owners: [ALICE],
-      candidates: () => new Promise(() => undefined),
-    });
+  // the pending load keeps the fixture from ever getting stable, the harness must not wait for it
+  it('names the stored owners while the candidates load', () =>
+    manualChangeDetection(async () => {
+      const { fixture, picker } = await setup({
+        selectedOwnerIds: ['alice'],
+        owners: [ALICE],
+        candidates: () => new Promise(() => undefined),
+      });
+      fixture.detectChanges();
+      // mat-select applies its value only after its options are initialized
+      await new Promise((resolve) => setTimeout(resolve));
+      fixture.detectChanges();
 
-    expect(await picker.isDisabled()).toBe(true);
-    expect(await picker.getOwnerNames()).toEqual(['Alice Muster']);
-  });
+      expect(await picker.isDisabled()).toBe(true);
+      expect(await picker.getOwnerNames()).toEqual(['Alice Muster']);
+    }));
 
   it('says so when nobody can be an owner', async () => {
     const { picker } = await setup({ candidates: () => Promise.resolve([]) });
