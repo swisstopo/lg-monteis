@@ -158,7 +158,7 @@ class ExperimentOwnerServiceTest {
   }
 
   @Test
-  void should_list_every_owner_column_filter_value_once_sorted_by_name() {
+  void should_find_every_visible_owner_once_sorted_by_name() {
     given(ownerQueryRepository.findStoredOwners())
         .willReturn(
             List.of(
@@ -167,11 +167,11 @@ class ExperimentOwnerServiceTest {
     givenPis(EXPERIMENT_ID, known(ALICE, CAROL));
     givenPis(OTHER_EXPERIMENT_ID, known(ALICE, BOB));
 
-    assertEquals(List.of(BOB, ALICE, CAROL), service.ownerColumnFilterValues());
+    assertEquals(List.of(BOB, ALICE, CAROL), service.findAllVisibleOwners());
   }
 
   @Nested
-  class OwnerCandidates {
+  class FindOwnerCandidates {
 
     @Test
     void should_check_the_experiment_is_readable_first() {
@@ -179,7 +179,7 @@ class ExperimentOwnerServiceTest {
           .given(repository)
           .requireVisible(EXPERIMENT_ID);
 
-      assertThrows(ObjectNotFoundException.class, () -> service.ownerCandidates(EXPERIMENT_ID));
+      assertThrows(ObjectNotFoundException.class, () -> service.findOwnerCandidates(EXPERIMENT_ID));
       then(userDirectory).shouldHaveNoInteractions();
     }
 
@@ -187,7 +187,7 @@ class ExperimentOwnerServiceTest {
     void should_ask_keycloak_fresh() {
       given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known(ALICE));
 
-      assertEquals(List.of(ALICE), service.ownerCandidates(EXPERIMENT_ID));
+      assertEquals(List.of(ALICE), service.findOwnerCandidates(EXPERIMENT_ID));
       then(userDirectory).should(never()).pisForReading(anyCollection());
     }
 
@@ -195,7 +195,7 @@ class ExperimentOwnerServiceTest {
     void should_have_none_without_a_write_group() {
       given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(new Pis.NoWriteGroup());
 
-      assertEquals(List.of(), service.ownerCandidates(EXPERIMENT_ID));
+      assertEquals(List.of(), service.findOwnerCandidates(EXPERIMENT_ID));
     }
 
     @Test
@@ -204,9 +204,10 @@ class ExperimentOwnerServiceTest {
           .willReturn(new Pis.AccessDenied("403"), new Pis.KeycloakUnavailable("down"));
 
       assertThrows(
-          UserDirectoryDeniedException.class, () -> service.ownerCandidates(EXPERIMENT_ID));
+          UserDirectoryDeniedException.class, () -> service.findOwnerCandidates(EXPERIMENT_ID));
       assertThrows(
-          UserDirectoryUnavailableException.class, () -> service.ownerCandidates(EXPERIMENT_ID));
+          UserDirectoryUnavailableException.class,
+          () -> service.findOwnerCandidates(EXPERIMENT_ID));
     }
   }
 

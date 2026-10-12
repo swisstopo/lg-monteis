@@ -53,15 +53,17 @@ export class ExperimentService {
     return saved;
   }
 
-  getOwnerCandidates(id: string) {
+  findOwnerCandidatesForExperiment(id: string) {
     // the owner picker shows the failure itself
     return firstValueFrom(
-      this.ownerApi.getOwnerCandidates(id, 'body', false, { context: skipGlobalErrorToast() }),
+      this.ownerApi.findOwnerCandidatesForExperiment(id, 'body', false, {
+        context: skipGlobalErrorToast(),
+      }),
     );
   }
 
-  getAssignedOwners() {
-    return firstValueFrom(this.ownerApi.getAssignedOwners());
+  findAllVisibleOwners() {
+    return firstValueFrom(this.ownerApi.findAllVisibleOwners());
   }
 
   getExperiments(params: IGetRowsParams) {

@@ -12,10 +12,10 @@ const ALICE: ExperimentOwnerDto = { id: 'alice', firstName: 'Alice', lastName: '
 const BOB: ExperimentOwnerDto = { id: 'bob', firstName: 'Bob', lastName: 'Beispiel' };
 
 describe('experiment columns', () => {
-  let experimentService: { getAssignedOwners: ReturnType<typeof vi.fn> };
+  let experimentService: { findAllVisibleOwners: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    experimentService = { getAssignedOwners: vi.fn().mockResolvedValue([ALICE, BOB]) };
+    experimentService = { findAllVisibleOwners: vi.fn().mockResolvedValue([ALICE, BOB]) };
     TestBed.configureTestingModule({
       providers: [
         provideTranslateService(),
@@ -37,7 +37,7 @@ describe('experiment columns', () => {
   });
 
   it('filters by the assigned owners, by name but on their id', async () => {
-    experimentService.getAssignedOwners.mockResolvedValue([ALICE, { firstName: 'No Id' }, BOB]);
+    experimentService.findAllVisibleOwners.mockResolvedValue([ALICE, { firstName: 'No Id' }, BOB]);
 
     const values = await ownerColumn().filterParams.valuesProvider();
 

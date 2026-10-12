@@ -43,8 +43,8 @@ public class ExperimentOwnerController {
               + " the owner filter of the experiment table. Empty when Keycloak is unavailable.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved owners")
   @GetMapping(path = ApiPaths.ALL_EXPERIMENT_OWNERS, produces = MediaType.APPLICATION_JSON_VALUE)
-  public List<ExperimentOwnerDto> getAssignedOwners() {
-    return mapper.toOwnerDtos(ownerService.ownerColumnFilterValues());
+  public List<ExperimentOwnerDto> findAllVisibleOwners() {
+    return mapper.toOwnerDtos(ownerService.findAllVisibleOwners());
   }
 
   @Operation(
@@ -55,9 +55,9 @@ public class ExperimentOwnerController {
   @GetMapping(
       path = ApiPaths.EXPERIMENT_OWNER_CANDIDATES,
       produces = MediaType.APPLICATION_JSON_VALUE)
-  public List<ExperimentOwnerDto> getOwnerCandidates(
+  public List<ExperimentOwnerDto> findOwnerCandidatesForExperiment(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
-    return mapper.toOwnerDtos(ownerService.ownerCandidates(id));
+    return mapper.toOwnerDtos(ownerService.findOwnerCandidates(id));
   }
 
   @Operation(

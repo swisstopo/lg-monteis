@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping(ApiPaths.EXPERIMENTS)
 public class ExperimentController {
-  private final ExperimentService service;
+  private final ExperimentService experimentService;
   private final ExperimentOwnerService ownerService;
   private final ExperimentWebMapper mapper;
   private final Clock clock;
@@ -48,13 +48,13 @@ public class ExperimentController {
   private final ExperimentCsvExportQueryRepository csvExportQueryRepository;
 
   public ExperimentController(
-      ExperimentService service,
+      ExperimentService experimentService,
       ExperimentOwnerService ownerService,
       ExperimentWebMapper mapper,
       Clock clock,
       PagedRequestParser pagedRequestParser,
       ExperimentCsvExportQueryRepository csvExportQueryRepository) {
-    this.service = service;
+    this.experimentService = experimentService;
     this.ownerService = ownerService;
     this.mapper = mapper;
     this.clock = clock;
@@ -69,7 +69,7 @@ public class ExperimentController {
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
     LocalDate today = LocalDate.now(clock);
     return ResponseEntity.ok(
-        mapper.toDto(ownerService.resolveOwnersOf(service.getById(id)), today));
+        mapper.toDto(ownerService.resolveOwnersOf(experimentService.getById(id)), today));
   }
 
   @Operation(
@@ -86,7 +86,7 @@ public class ExperimentController {
       @Validated(Create.class) @RequestBody WriteExperimentDto dto) {
     LocalDate today = LocalDate.now(clock);
 
-    Experiment createdExperiment = service.createExperiment(mapper.toDomain(dto));
+    Experiment createdExperiment = experimentService.createExperiment(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(mapper.toDto(ownerService.resolveOwnersOf(createdExperiment), today));
   }
@@ -112,7 +112,7 @@ public class ExperimentController {
     LocalDate today = LocalDate.now(clock);
 
     // two steps, so the PI's change and the dropped owners get their own audit snapshot
-    Experiment updated = service.updateExperiment(mapper.toDomain(dto));
+    Experiment updated = experimentService.updateExperiment(mapper.toDomain(dto));
     Experiment withoutFormerOwners = ownerService.dropFormerOwners(updated);
     return ResponseEntity.status(HttpStatus.OK)
         .body(mapper.toDto(ownerService.resolveOwnersOf(withoutFormerOwners), today));
@@ -129,7 +129,7 @@ public class ExperimentController {
   public ResponseEntity<List<ExperimentResponseDto>> getAllExperiments() {
     LocalDate today = LocalDate.now(clock);
     return ResponseEntity.ok(
-        ownerService.resolveOwnersOf(service.findAllExperiments()).stream()
+        ownerService.resolveOwnersOf(experimentService.findAllExperiments()).stream()
             .map(experiment -> mapper.toDto(experiment, today))
             .toList());
   }
@@ -147,7 +147,8 @@ public class ExperimentController {
     LocalDate today = LocalDate.now(clock);
 
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
-    PagedResult<Experiment> domainResult = service.getExperiments(pagedRequestParser.parse(raw));
+    PagedResult<Experiment> domainResult =
+        experimentService.getExperiments(pagedRequestParser.parse(raw));
     return mapper.toPagedDto(ownerService.resolveOwnersOf(domainResult), today);
   }
 

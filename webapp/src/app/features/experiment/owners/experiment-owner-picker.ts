@@ -40,7 +40,7 @@ export class ExperimentOwnerPicker {
 
   protected readonly candidates = resource({
     params: () => ({ id: this.experimentId() }),
-    loader: ({ params }) => this.experimentService.getOwnerCandidates(params.id),
+    loader: ({ params }) => this.experimentService.findOwnerCandidatesForExperiment(params.id),
   });
 
   // value() throws while the resource is in its error state

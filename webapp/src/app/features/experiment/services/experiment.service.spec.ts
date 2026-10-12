@@ -33,8 +33,8 @@ describe('ExperimentService', () => {
     };
     ownerApi = {
       replaceOwners: vi.fn(() => of(SAVED)),
-      getOwnerCandidates: vi.fn(() => of([{ id: 'alice' }])),
-      getAssignedOwners: vi.fn(() => of([{ id: 'bob' }])),
+      findOwnerCandidatesForExperiment: vi.fn(() => of([{ id: 'alice' }])),
+      findAllVisibleOwners: vi.fn(() => of([{ id: 'bob' }])),
     };
     TestBed.configureTestingModule({
       providers: [
@@ -139,14 +139,16 @@ describe('ExperimentService', () => {
   });
 
   it('loads the owner candidates without the global error toast, the picker shows it', async () => {
-    await expect(service.getOwnerCandidates('experiment-1')).resolves.toEqual([{ id: 'alice' }]);
+    await expect(service.findOwnerCandidatesForExperiment('experiment-1')).resolves.toEqual([
+      { id: 'alice' },
+    ]);
 
-    const [id, , , options] = ownerApi['getOwnerCandidates'].mock.calls[0];
+    const [id, , , options] = ownerApi['findOwnerCandidatesForExperiment'].mock.calls[0];
     expect(id).toBe('experiment-1');
     expect((options.context as HttpContext).get(SKIP_GLOBAL_ERROR_TOAST)).toBe(true);
   });
 
   it('loads the assigned owners for the owner filter', async () => {
-    await expect(service.getAssignedOwners()).resolves.toEqual([{ id: 'bob' }]);
+    await expect(service.findAllVisibleOwners()).resolves.toEqual([{ id: 'bob' }]);
   });
 });

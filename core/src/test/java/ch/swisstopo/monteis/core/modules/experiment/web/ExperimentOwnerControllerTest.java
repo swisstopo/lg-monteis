@@ -62,8 +62,8 @@ class ExperimentOwnerControllerTest {
   }
 
   @Test
-  void should_list_assigned_owners_for_every_reader() throws Exception {
-    given(ownerService.ownerColumnFilterValues()).willReturn(List.of(ALICE));
+  void should_list_visible_owners_for_every_reader() throws Exception {
+    given(ownerService.findAllVisibleOwners()).willReturn(List.of(ALICE));
     given(mapper.toOwnerDtos(List.of(ALICE))).willReturn(List.of(ALICE_DTO));
 
     mockMvc
@@ -78,7 +78,7 @@ class ExperimentOwnerControllerTest {
 
   @Test
   void should_list_candidates_for_an_admin() throws Exception {
-    given(ownerService.ownerCandidates(ASSIGNED_EXPERIMENT)).willReturn(List.of(ALICE));
+    given(ownerService.findOwnerCandidates(ASSIGNED_EXPERIMENT)).willReturn(List.of(ALICE));
     given(mapper.toOwnerDtos(List.of(ALICE))).willReturn(List.of(ALICE_DTO));
 
     mockMvc
@@ -177,7 +177,7 @@ class ExperimentOwnerControllerTest {
 
   @Test
   void should_answer_503_when_keycloak_is_unavailable() throws Exception {
-    given(ownerService.ownerCandidates(ASSIGNED_EXPERIMENT))
+    given(ownerService.findOwnerCandidates(ASSIGNED_EXPERIMENT))
         .willThrow(new UserDirectoryUnavailableException("down"));
 
     mockMvc
@@ -191,7 +191,7 @@ class ExperimentOwnerControllerTest {
 
   @Test
   void should_answer_502_when_keycloak_denies() throws Exception {
-    given(ownerService.ownerCandidates(ASSIGNED_EXPERIMENT))
+    given(ownerService.findOwnerCandidates(ASSIGNED_EXPERIMENT))
         .willThrow(new UserDirectoryDeniedException("403"));
 
     mockMvc

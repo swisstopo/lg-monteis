@@ -20,10 +20,12 @@ const BOB: ExperimentOwnerDto = {
 };
 
 describe('ExperimentOwnerPicker', () => {
-  let experimentService: { getOwnerCandidates: ReturnType<typeof vi.fn> };
+  let experimentService: { findOwnerCandidatesForExperiment: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    experimentService = { getOwnerCandidates: vi.fn().mockResolvedValue([ALICE, BOB]) };
+    experimentService = {
+      findOwnerCandidatesForExperiment: vi.fn().mockResolvedValue([ALICE, BOB]),
+    };
     TestBed.configureTestingModule({
       imports: [ExperimentOwnerPicker],
       providers: [
@@ -75,7 +77,7 @@ describe('ExperimentOwnerPicker', () => {
   it('loads the candidates of the experiment', async () => {
     await render();
 
-    expect(experimentService.getOwnerCandidates).toHaveBeenCalledWith('experiment-1');
+    expect(experimentService.findOwnerCandidatesForExperiment).toHaveBeenCalledWith('experiment-1');
   });
 
   it('shows the selected owners as chips', async () => {
@@ -99,7 +101,9 @@ describe('ExperimentOwnerPicker', () => {
   });
 
   it('offers a candidate without email by name only', async () => {
-    experimentService.getOwnerCandidates.mockResolvedValue([{ ...ALICE, email: undefined }]);
+    experimentService.findOwnerCandidatesForExperiment.mockResolvedValue([
+      { ...ALICE, email: undefined },
+    ]);
     const view = await render();
 
     await view.open();
@@ -146,7 +150,7 @@ describe('ExperimentOwnerPicker', () => {
   });
 
   it('says so when nobody can be an owner', async () => {
-    experimentService.getOwnerCandidates.mockResolvedValue([]);
+    experimentService.findOwnerCandidatesForExperiment.mockResolvedValue([]);
 
     const view = await render();
 
@@ -154,7 +158,7 @@ describe('ExperimentOwnerPicker', () => {
   });
 
   it('disables the search when the candidates cannot be loaded', async () => {
-    experimentService.getOwnerCandidates.mockRejectedValue(new Error('503'));
+    experimentService.findOwnerCandidatesForExperiment.mockRejectedValue(new Error('503'));
 
     const view = await render();
 
@@ -163,7 +167,7 @@ describe('ExperimentOwnerPicker', () => {
   });
 
   it('tells a Keycloak that refuses the lookup apart from one that is down', async () => {
-    experimentService.getOwnerCandidates.mockRejectedValue(
+    experimentService.findOwnerCandidatesForExperiment.mockRejectedValue(
       new HttpErrorResponse({
         status: 502,
         error: { messageKey: 'error.user-directory.denied', target: 'GLOBAL' },

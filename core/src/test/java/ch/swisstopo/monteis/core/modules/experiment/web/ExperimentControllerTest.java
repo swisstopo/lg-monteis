@@ -75,7 +75,7 @@ class ExperimentControllerTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-  @MockitoBean private ExperimentService service;
+  @MockitoBean private ExperimentService experimentService;
   @MockitoBean private ExperimentOwnerService ownerService;
 
   @MockitoBean private ExperimentWebMapper mapper;
@@ -146,7 +146,7 @@ class ExperimentControllerTest {
 
     expectedExperiment.getStatus(referenceToday);
 
-    given(service.getById(EXPERIMENT_ID)).willReturn(expectedExperiment);
+    given(experimentService.getById(EXPERIMENT_ID)).willReturn(expectedExperiment);
     ExperimentWithOwners withOwners =
         new ExperimentWithOwners(expectedExperiment, VisibleOwners.of(List.of(OWNER)));
     given(ownerService.resolveOwnersOf(expectedExperiment)).willReturn(withOwners);
@@ -166,7 +166,7 @@ class ExperimentControllerTest {
         .andExpect(jsonPath("$.owners[0].id").value(OWNER.id().toString()))
         .andExpect(jsonPath("$.owners[0].email").value(OWNER.email()));
 
-    then(service).should().getById(EXPERIMENT_ID);
+    then(experimentService).should().getById(EXPERIMENT_ID);
     then(mapper).should().toDto(eq(withOwners), any(LocalDate.class));
   }
 
@@ -203,7 +203,7 @@ class ExperimentControllerTest {
     PagedResult<ExperimentResponseDto> dtoResult = new PagedResult<>(List.of(responseDto), 1);
 
     given(pagedRequestParser.parse(any())).willReturn(parsedRequest);
-    given(service.getExperiments(parsedRequest)).willReturn(domainResult);
+    given(experimentService.getExperiments(parsedRequest)).willReturn(domainResult);
     PagedResult<ExperimentWithOwners> withOwners =
         new PagedResult<>(List.of(withoutOwners(experiment1)), 1);
     given(ownerService.resolveOwnersOf(domainResult)).willReturn(withOwners);
@@ -228,10 +228,10 @@ class ExperimentControllerTest {
 
     // Verify interaction sequence
     then(pagedRequestParser).should().parse(any());
-    then(service).should().getExperiments(parsedRequest);
+    then(experimentService).should().getExperiments(parsedRequest);
     then(mapper).should().toPagedDto(eq(withOwners), any(LocalDate.class));
 
-    then(service).shouldHaveNoMoreInteractions();
+    then(experimentService).shouldHaveNoMoreInteractions();
     then(mapper).shouldHaveNoMoreInteractions();
   }
 
@@ -308,7 +308,7 @@ class ExperimentControllerTest {
             List.of(),
             OwnersStatus.SHOWN);
 
-    given(service.findAllExperiments()).willReturn(List.of(experiment1));
+    given(experimentService.findAllExperiments()).willReturn(List.of(experiment1));
     given(mapper.toDto(eq(withoutOwners(experiment1)), any(LocalDate.class)))
         .willReturn(responseDto);
 
@@ -320,7 +320,7 @@ class ExperimentControllerTest {
         .andExpect(jsonPath("$[0].name").value("EXP-01"))
         .andExpect(jsonPath("$[0].comment").value("A test experiment"));
 
-    then(service).should().findAllExperiments();
+    then(experimentService).should().findAllExperiments();
     then(mapper).should().toDto(eq(withoutOwners(experiment1)), any(LocalDate.class));
   }
 
@@ -352,7 +352,7 @@ class ExperimentControllerTest {
     Experiment mockDomain = mock(Experiment.class);
 
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
-    given(service.createExperiment(mockDomain)).willReturn(mockDomain);
+    given(experimentService.createExperiment(mockDomain)).willReturn(mockDomain);
     given(mapper.toDto(eq(withoutOwners(mockDomain)), any(LocalDate.class)))
         .willReturn(expectedResponseDto);
 
@@ -376,7 +376,7 @@ class ExperimentControllerTest {
 
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteExperimentDto.class));
-    then(service).should().createExperiment(mockDomain);
+    then(experimentService).should().createExperiment(mockDomain);
     then(mapper).should().toDto(eq(withoutOwners(mockDomain)), any(LocalDate.class));
   }
 
@@ -408,7 +408,7 @@ class ExperimentControllerTest {
     Experiment mockDomain = mock(Experiment.class);
 
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
-    given(service.updateExperiment(mockDomain)).willReturn(mockDomain);
+    given(experimentService.updateExperiment(mockDomain)).willReturn(mockDomain);
     given(ownerService.dropFormerOwners(mockDomain)).willReturn(mockDomain);
     given(mapper.toDto(eq(withoutOwners(mockDomain)), any(LocalDate.class)))
         .willReturn(expectedResponseDto);
@@ -429,7 +429,7 @@ class ExperimentControllerTest {
 
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteExperimentDto.class));
-    then(service).should().updateExperiment(mockDomain);
+    then(experimentService).should().updateExperiment(mockDomain);
     then(mapper).should().toDto(eq(withoutOwners(mockDomain)), any(LocalDate.class));
   }
 
@@ -459,7 +459,7 @@ class ExperimentControllerTest {
 
     // Verify the mismatch is caught before any domain/service work happens
     then(mapper).shouldHaveNoInteractions();
-    then(service).shouldHaveNoInteractions();
+    then(experimentService).shouldHaveNoInteractions();
   }
 
   @Test
@@ -468,7 +468,7 @@ class ExperimentControllerTest {
     // given
     UUID hiddenId = UUID.fromString("00000000-0000-7000-8000-000000000302");
     UUID randomId = UUID.randomUUID();
-    given(service.getById(any(UUID.class)))
+    given(experimentService.getById(any(UUID.class)))
         .willThrow(new ObjectNotFoundException(Experiment.class));
 
     // when
@@ -515,7 +515,7 @@ class ExperimentControllerTest {
         .andExpect(content().json(ACCESS_DENIED_BODY, JsonCompareMode.STRICT));
 
     // the filter chain denied before any UPDATE could be issued (NFR2.1)
-    then(service).shouldHaveNoInteractions();
+    then(experimentService).shouldHaveNoInteractions();
     then(mapper).shouldHaveNoInteractions();
   }
 
@@ -530,7 +530,7 @@ class ExperimentControllerTest {
                 .content(objectMapper.writeValueAsString(updateDto(OTHER_EXPERIMENT_ID))))
         .andExpect(status().isForbidden());
 
-    then(service).shouldHaveNoInteractions();
+    then(experimentService).shouldHaveNoInteractions();
   }
 
   @Test
@@ -538,7 +538,7 @@ class ExperimentControllerTest {
     // given
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
-    given(service.updateExperiment(mockDomain)).willReturn(mockDomain);
+    given(experimentService.updateExperiment(mockDomain)).willReturn(mockDomain);
     given(ownerService.dropFormerOwners(mockDomain)).willReturn(mockDomain);
 
     // when / then
@@ -551,7 +551,7 @@ class ExperimentControllerTest {
                 .content(objectMapper.writeValueAsString(updateDto(OTHER_EXPERIMENT_ID))))
         .andExpect(status().isOk());
 
-    then(service).should().updateExperiment(mockDomain);
+    then(experimentService).should().updateExperiment(mockDomain);
   }
 
   @Test
@@ -584,7 +584,7 @@ class ExperimentControllerTest {
           .andExpect(status().isForbidden())
           .andExpect(content().json(ACCESS_DENIED_BODY, JsonCompareMode.STRICT));
     }
-    then(service).shouldHaveNoInteractions();
+    then(experimentService).shouldHaveNoInteractions();
   }
 
   @Test
@@ -593,7 +593,7 @@ class ExperimentControllerTest {
     // given: the filter chain allowed it, but the RLS WITH CHECK rejected the row (42501)
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
-    given(service.updateExperiment(mockDomain))
+    given(experimentService.updateExperiment(mockDomain))
         .willThrow(new PermissionDeniedDataAccessException("42501", null));
 
     // when / then: the same body as a filter-chain denial (NFR2.4)
@@ -613,7 +613,7 @@ class ExperimentControllerTest {
     // given
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
-    given(service.updateExperiment(mockDomain))
+    given(experimentService.updateExperiment(mockDomain))
         .willThrow(new ObjectNotFoundException(Experiment.class));
 
     // when / then: no longer 422 object.deleted (BR4.11)

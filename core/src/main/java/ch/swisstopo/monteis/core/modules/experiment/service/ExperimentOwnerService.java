@@ -66,7 +66,7 @@ public class ExperimentOwnerService {
     return new PagedResult<>(resolveOwnersOf(page.rows()), page.totalCount());
   }
 
-  public List<DirectoryUser> ownerColumnFilterValues() {
+  public List<DirectoryUser> findAllVisibleOwners() {
     return visibleOwnersByExperiment(ownerQueryRepository.findStoredOwners()).values().stream()
         .flatMap(owners -> owners.users().stream())
         .distinct()
@@ -124,14 +124,14 @@ public class ExperimentOwnerService {
     return new StoredOwners(experiment.getId(), experiment.getOwnerIds());
   }
 
-  public List<DirectoryUser> ownerCandidates(UUID experimentId) {
+  public List<DirectoryUser> findOwnerCandidates(UUID experimentId) {
     repository.requireVisible(experimentId);
     return currentPisOrFail(experimentId);
   }
 
   @AuditChanges
   public Experiment replaceOwners(UUID experimentId, Set<UUID> ownerIds) {
-    rejectOwnersWhoAreNotPis(ownerIds, ownerCandidates(experimentId));
+    rejectOwnersWhoAreNotPis(ownerIds, findOwnerCandidates(experimentId));
     return repository.replaceOwners(experimentId, ownerIds);
   }
 
