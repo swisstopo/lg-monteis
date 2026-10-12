@@ -74,6 +74,6 @@ public class ExperimentOwnerController {
       @Valid @RequestBody WriteExperimentOwnersDto dto) {
     Experiment updated = ownerService.replaceOwners(id, Set.copyOf(dto.ownerIds()));
     return ResponseEntity.ok(
-        mapper.toDto(ownerService.resolveOwnersOf(updated), LocalDate.now(clock)));
+        mapper.toDto(updated, ownerService.findOwnersOf(updated), LocalDate.now(clock)));
   }
 }

@@ -78,7 +78,7 @@ class ExperimentOwnerServiceTest {
   }
 
   private VisibleOwners ownersOf(Experiment experiment) {
-    return service.resolveOwnersOf(experiment).owners();
+    return service.findOwnersOf(experiment);
   }
 
   @Nested
@@ -127,18 +127,18 @@ class ExperimentOwnerServiceTest {
   class OwnersByExperiment {
 
     @Test
-    void should_resolve_owners_per_experiment_in_order() {
+    void should_find_the_owners_of_each_experiment() {
       givenPis(EXPERIMENT_ID, known(ALICE));
       givenPis(OTHER_EXPERIMENT_ID, known(BOB));
 
-      List<ExperimentWithOwners> owners =
-          service.resolveOwnersOf(
+      Map<UUID, VisibleOwners> owners =
+          service.findOwnersByExperiment(
               List.of(
                   experiment(EXPERIMENT_ID, ALICE.id()),
                   experiment(OTHER_EXPERIMENT_ID, BOB.id())));
 
-      assertEquals(List.of(ALICE), owners.get(0).owners().users());
-      assertEquals(List.of(BOB), owners.get(1).owners().users());
+      assertEquals(List.of(ALICE), owners.get(EXPERIMENT_ID).users());
+      assertEquals(List.of(BOB), owners.get(OTHER_EXPERIMENT_ID).users());
     }
 
     @Test
@@ -146,14 +146,14 @@ class ExperimentOwnerServiceTest {
       givenPis(EXPERIMENT_ID, new Pis.KeycloakUnavailable("down"));
       givenPis(OTHER_EXPERIMENT_ID, new Pis.KeycloakUnavailable("down"));
 
-      List<ExperimentWithOwners> owners =
-          service.resolveOwnersOf(
+      Map<UUID, VisibleOwners> owners =
+          service.findOwnersByExperiment(
               List.of(
                   experiment(EXPERIMENT_ID, ALICE.id()),
                   experiment(OTHER_EXPERIMENT_ID, BOB.id())));
 
-      assertEquals(VisibleOwners.KEYCLOAK_UNAVAILABLE, owners.get(0).owners());
-      assertEquals(VisibleOwners.KEYCLOAK_UNAVAILABLE, owners.get(1).owners());
+      assertEquals(VisibleOwners.KEYCLOAK_UNAVAILABLE, owners.get(EXPERIMENT_ID));
+      assertEquals(VisibleOwners.KEYCLOAK_UNAVAILABLE, owners.get(OTHER_EXPERIMENT_ID));
     }
   }
 

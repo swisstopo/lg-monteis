@@ -68,8 +68,9 @@ public class ExperimentController {
   public ResponseEntity<ExperimentResponseDto> getExperiment(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
     LocalDate today = LocalDate.now(clock);
+    Experiment experiment = experimentService.getById(id);
     return ResponseEntity.ok(
-        mapper.toDto(ownerService.resolveOwnersOf(experimentService.getById(id)), today));
+        mapper.toDto(experiment, ownerService.findOwnersOf(experiment), today));
   }
 
   @Operation(
@@ -88,7 +89,7 @@ public class ExperimentController {
 
     Experiment createdExperiment = experimentService.createExperiment(mapper.toDomain(dto));
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(mapper.toDto(ownerService.resolveOwnersOf(createdExperiment), today));
+        .body(mapper.toDto(createdExperiment, ownerService.findOwnersOf(createdExperiment), today));
   }
 
   @Operation(
@@ -115,7 +116,9 @@ public class ExperimentController {
     Experiment updated = experimentService.updateExperiment(mapper.toDomain(dto));
     Experiment withoutFormerOwners = ownerService.dropFormerOwners(updated);
     return ResponseEntity.status(HttpStatus.OK)
-        .body(mapper.toDto(ownerService.resolveOwnersOf(withoutFormerOwners), today));
+        .body(
+            mapper.toDto(
+                withoutFormerOwners, ownerService.findOwnersOf(withoutFormerOwners), today));
   }
 
   @Operation(
@@ -128,10 +131,9 @@ public class ExperimentController {
   @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<ExperimentResponseDto>> getAllExperiments() {
     LocalDate today = LocalDate.now(clock);
+    List<Experiment> experiments = experimentService.findAllExperiments();
     return ResponseEntity.ok(
-        ownerService.resolveOwnersOf(experimentService.findAllExperiments()).stream()
-            .map(experiment -> mapper.toDto(experiment, today))
-            .toList());
+        mapper.toDtos(experiments, ownerService.findOwnersByExperiment(experiments), today));
   }
 
   @Operation(
@@ -149,7 +151,8 @@ public class ExperimentController {
     RawPagedRequest raw = new RawPagedRequest(startRow, endRow, sortModel, filterModel);
     PagedResult<Experiment> domainResult =
         experimentService.getExperiments(pagedRequestParser.parse(raw));
-    return mapper.toPagedDto(ownerService.resolveOwnersOf(domainResult), today);
+    return mapper.toPagedDto(
+        domainResult, ownerService.findOwnersByExperiment(domainResult.rows()), today);
   }
 
   @Operation(

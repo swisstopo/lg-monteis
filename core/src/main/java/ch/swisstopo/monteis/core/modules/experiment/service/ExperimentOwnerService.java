@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.modules.experiment.service;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
-import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.AccessDenied;
@@ -49,21 +48,13 @@ public class ExperimentOwnerService {
     this.userDirectory = userDirectory;
   }
 
-  public ExperimentWithOwners resolveOwnersOf(Experiment experiment) {
-    return resolveOwnersOf(List.of(experiment)).getFirst();
+  public VisibleOwners findOwnersOf(Experiment experiment) {
+    return findOwnersByExperiment(List.of(experiment)).get(experiment.getId());
   }
 
-  public List<ExperimentWithOwners> resolveOwnersOf(List<Experiment> experiments) {
-    Map<UUID, VisibleOwners> owners =
-        visibleOwnersByExperiment(
-            experiments.stream().map(ExperimentOwnerService::storedOwnersOf).toList());
-    return experiments.stream()
-        .map(experiment -> new ExperimentWithOwners(experiment, owners.get(experiment.getId())))
-        .toList();
-  }
-
-  public PagedResult<ExperimentWithOwners> resolveOwnersOf(PagedResult<Experiment> page) {
-    return new PagedResult<>(resolveOwnersOf(page.rows()), page.totalCount());
+  public Map<UUID, VisibleOwners> findOwnersByExperiment(List<Experiment> experiments) {
+    return visibleOwnersByExperiment(
+        experiments.stream().map(ExperimentOwnerService::storedOwnersOf).toList());
   }
 
   public List<DirectoryUser> findAllVisibleOwners() {

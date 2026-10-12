@@ -23,7 +23,6 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.query.OwnersStatus;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
-import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentWithOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import java.time.Clock;
@@ -123,10 +122,9 @@ class ExperimentOwnerControllerTest {
             List.of(ALICE_DTO),
             OwnersStatus.SHOWN);
     given(ownerService.replaceOwners(ASSIGNED_EXPERIMENT, Set.of(ALICE.id()))).willReturn(updated);
-    ExperimentWithOwners withOwners =
-        new ExperimentWithOwners(updated, VisibleOwners.of(List.of(ALICE)));
-    given(ownerService.resolveOwnersOf(updated)).willReturn(withOwners);
-    given(mapper.toDto(eq(withOwners), any())).willReturn(response);
+    VisibleOwners owners = VisibleOwners.of(List.of(ALICE));
+    given(ownerService.findOwnersOf(updated)).willReturn(owners);
+    given(mapper.toDto(eq(updated), eq(owners), any())).willReturn(response);
 
     mockMvc
         .perform(
