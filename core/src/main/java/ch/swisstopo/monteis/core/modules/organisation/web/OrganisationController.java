@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.organisation.web;
 
+import ch.swisstopo.monteis.core.infrastructure.csv.CsvDownload;
 import ch.swisstopo.monteis.core.infrastructure.query.*;
 import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
 import ch.swisstopo.monteis.core.modules.organisation.query.OrganisationCsvExportQueryRepository;
@@ -8,15 +9,10 @@ import ch.swisstopo.monteis.core.modules.organisation.web.dto.inbound.WriteOrgan
 import ch.swisstopo.monteis.core.modules.organisation.web.dto.outbound.OrganisationResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -30,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
 @RequestMapping("/api/organisations")
@@ -81,31 +78,16 @@ public class OrganisationController {
   @ApiResponse(
       responseCode = "200",
       description = "Successfully streamed organisations as CSV",
-      content = @Content(mediaType = "text/csv"))
+      content =
+          @Content(mediaType = "text/csv", schema = @Schema(type = "string", format = "binary")))
   @GetMapping(value = "/csv", produces = "text/csv")
-  public void getOrganisationsCsv(
+  public ResponseEntity<StreamingResponseBody> getOrganisationsCsv(
       @RequestParam(required = false) String sortModel,
-      @RequestParam(required = false) String filterModel,
-      HttpServletResponse response)
-      throws IOException {
+      @RequestParam(required = false) String filterModel) {
     PagedRequest exportRequest =
         pagedRequestParser.parseForExport(new RawExportRequest(sortModel, filterModel));
-
-    response.setContentType("text/csv");
-    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-    response.setHeader("Content-Disposition", "attachment; filename=\"organisations.csv\"");
-
-    // Deliberately not try-with-resources: closing the writer commits the response (defaulting to
-    // 200) even if nothing was ever written to it, which would happen during the unwinding of a
-    // translate()-time InvalidPagedRequestException - before the response is committed, we want
-    // that exception to still reach GlobalErrorControllerAdvice as a normal 400. Only flush (not
-    // close) on the success path; the container closes the underlying stream once this request
-    // finishes.
-    Writer writer =
-        new BufferedWriter(
-            new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
-    csvExportQueryRepository.streamCsv(exportRequest, writer);
-    writer.flush();
+    return CsvDownload.attachment(
+        "organisations.csv", writer -> csvExportQueryRepository.streamCsv(exportRequest, writer));
   }
 
   @Operation(summary = "Get an organisation by id", description = "Retrieves an organisation by id")

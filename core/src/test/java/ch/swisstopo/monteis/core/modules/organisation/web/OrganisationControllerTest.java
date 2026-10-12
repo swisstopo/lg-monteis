@@ -9,12 +9,14 @@ import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
@@ -37,6 +39,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 @ControllerTest(OrganisationController.class)
 class OrganisationControllerTest {
@@ -132,10 +135,16 @@ class OrganisationControllerTest {
         .given(csvExportQueryRepository)
         .streamCsv(eq(exportRequest), any());
 
+    MvcResult csv =
+        mockMvc
+            .perform(
+                get("/api/organisations/csv")
+                    .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+
     mockMvc
-        .perform(
-            get("/api/organisations/csv")
-                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .perform(asyncDispatch(csv))
         .andExpect(status().isOk())
         .andExpect(content().contentType("text/csv;charset=UTF-8"))
         .andExpect(
@@ -153,10 +162,16 @@ class OrganisationControllerTest {
         .given(csvExportQueryRepository)
         .streamCsv(eq(exportRequest), any());
 
+    MvcResult csv =
+        mockMvc
+            .perform(
+                get("/api/organisations/csv")
+                    .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+
     mockMvc
-        .perform(
-            get("/api/organisations/csv")
-                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .perform(asyncDispatch(csv))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
   }

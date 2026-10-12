@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
@@ -48,6 +49,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 @ControllerTest(ExperimentController.class)
 class ExperimentControllerTest {
@@ -204,8 +206,14 @@ class ExperimentControllerTest {
         .streamCsv(eq(exportRequest), any());
 
     // when / then
+    MvcResult csv =
+        mockMvc
+            .perform(get("/api/experiments/csv").with(jwt()))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+
     mockMvc
-        .perform(get("/api/experiments/csv").with(jwt()))
+        .perform(asyncDispatch(csv))
         .andExpect(status().isOk())
         .andExpect(content().contentType("text/csv;charset=UTF-8"))
         .andExpect(
@@ -228,8 +236,14 @@ class ExperimentControllerTest {
         .streamCsv(eq(exportRequest), any());
 
     // when / then
+    MvcResult csv =
+        mockMvc
+            .perform(get("/api/experiments/csv").with(jwt()))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+
     mockMvc
-        .perform(get("/api/experiments/csv").with(jwt()))
+        .perform(asyncDispatch(csv))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
   }
