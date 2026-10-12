@@ -3,7 +3,6 @@ package ch.swisstopo.monteis.core.modules.experiment.jooq;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.ORGANISATIONS;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
@@ -11,7 +10,6 @@ import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
-import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentOrganisationRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
@@ -24,7 +22,6 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.Field;
-import org.jooq.InsertValuesStep2;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -87,7 +84,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Override
   @Transactional(readOnly = true)
   public Experiment getById(UUID experimentId) {
-    return withOrganisations(List.of(selectById(experimentId))).getFirst();
+    Experiment experiment = selectById(experimentId);
+    loadOrganisationIdsInto(experiment);
+    return experiment;
   }
 
   private Experiment selectById(UUID experimentId) {
@@ -127,7 +126,7 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Transactional(readOnly = true)
   public PagedResult<Experiment> getExperiments(PagedRequest request) {
     PagedResult<Experiment> page = selectExperiments(request);
-    withOrganisations(page.rows());
+    loadOrganisationIdsInto(page.rows());
     return page;
   }
 
@@ -172,7 +171,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Override
   @Transactional(readOnly = true)
   public List<Experiment> findAll() {
-    return withOrganisations(selectAll());
+    List<Experiment> experiments = selectAll();
+    loadOrganisationIdsInto(experiments);
+    return experiments;
   }
 
   private List<Experiment> selectAll() {
@@ -219,7 +220,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
     }
 
     replaceOrganisations(createdExperiment.getId(), experiment.getOrganisationIds());
-    return withOrganisations(List.of(mapper.toDomain(createdExperiment))).getFirst();
+    Experiment created = mapper.toDomain(createdExperiment);
+    loadOrganisationIdsInto(created);
+    return created;
   }
 
   @Override
@@ -249,7 +252,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
           "name", experiment.getName(), "validation.unique", Map.of());
     }
     replaceOrganisations(updatedRecord.getId(), experiment.getOrganisationIds());
-    return withOrganisations(List.of(mapper.toDomain(updatedRecord))).getFirst();
+    Experiment updated = mapper.toDomain(updatedRecord);
+    loadOrganisationIdsInto(updated);
+    return updated;
   }
 
   @Override
@@ -273,13 +278,22 @@ public class JooqExperimentRepository implements ExperimentRepository {
                 // Ensure this matches your JaVers @TypeName or class name!
                 .and(DSL.field("type_name").eq(Experiment.JAVERS_TYPE)))
         .fetchStream()
-        // one query per experiment for its links, fine for a backfill that runs once
-        .map(r -> withOrganisations(List.of(mapper.toDomain(r.into(EXPERIMENTS)))).getFirst());
+        .map(
+            r -> {
+              Experiment experiment = mapper.toDomain(r.into(EXPERIMENTS));
+              // one query per experiment for its links, fine for a backfill that runs once
+              loadOrganisationIdsInto(experiment);
+              return experiment;
+            });
+  }
+
+  private void loadOrganisationIdsInto(Experiment experiment) {
+    loadOrganisationIdsInto(List.of(experiment));
   }
 
   /** Sets the organisation ids of each experiment, with one query for all of them. */
-  private List<Experiment> withOrganisations(List<Experiment> experiments) {
-    Map<UUID, List<UUID>> organisationIds =
+  private void loadOrganisationIdsInto(List<Experiment> experiments) {
+    Map<UUID, List<UUID>> organisationIdsByExperiment =
         dsl.select(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, EXPERIMENT_ORGANISATION.ORGANISATION_ID)
             .from(EXPERIMENT_ORGANISATION)
             .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.in(idsOf(experiments)))
@@ -287,10 +301,10 @@ public class JooqExperimentRepository implements ExperimentRepository {
             .orderBy(EXPERIMENT_ORGANISATION.ORGANISATION_ID)
             .fetchGroups(
                 EXPERIMENT_ORGANISATION.EXPERIMENT_ID, EXPERIMENT_ORGANISATION.ORGANISATION_ID);
-    for (Experiment experiment : experiments) {
-      experiment.setOrganisationIds(organisationIds.getOrDefault(experiment.getId(), List.of()));
-    }
-    return experiments;
+    experiments.forEach(
+        experiment ->
+            experiment.setOrganisationIds(
+                organisationIdsByExperiment.getOrDefault(experiment.getId(), List.of())));
   }
 
   private boolean organisationsChange(Experiment experiment) {
@@ -302,38 +316,25 @@ public class JooqExperimentRepository implements ExperimentRepository {
     return !linked.equals(Set.copyOf(experiment.getOrganisationIds()));
   }
 
-  private static Collection<UUID> idsOf(List<Experiment> experiments) {
-    return experiments.stream().map(Experiment::getId).toList();
-  }
-
-  /**
-   * Makes {@code organisationIds} the experiment's organisations: adds the missing links, removes
-   * the others.
-   *
-   * @throws FieldBusinessValidationException if one of them is not an organisation
-   */
+  /** Makes {@code organisationIds} the experiment's organisations: adds the missing links, removes the others. */
   private void replaceOrganisations(UUID experimentId, List<UUID> organisationIds) {
-    List<UUID> distinct = organisationIds.stream().distinct().toList();
-    if (dsl.fetchCount(ORGANISATIONS, ORGANISATIONS.ID.in(distinct)) != distinct.size()) {
-      throw new FieldBusinessValidationException(
-          "organisationIds", distinct, "validation.organisation.unknown", Map.of());
-    }
-
     dsl.deleteFrom(EXPERIMENT_ORGANISATION)
         .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.eq(experimentId))
-        .and(EXPERIMENT_ORGANISATION.ORGANISATION_ID.notIn(distinct))
+        .and(EXPERIMENT_ORGANISATION.ORGANISATION_ID.notIn(organisationIds))
         .execute();
 
-    if (!distinct.isEmpty()) {
-      InsertValuesStep2<ExperimentOrganisationRecord, UUID, UUID> insert =
-          dsl.insertInto(
+    if (!organisationIds.isEmpty()) {
+      dsl.insertInto(
               EXPERIMENT_ORGANISATION,
               EXPERIMENT_ORGANISATION.EXPERIMENT_ID,
-              EXPERIMENT_ORGANISATION.ORGANISATION_ID);
-      for (UUID organisationId : distinct) {
-        insert = insert.values(experimentId, organisationId);
-      }
-      insert.onConflictDoNothing().execute();
+              EXPERIMENT_ORGANISATION.ORGANISATION_ID)
+          .valuesOfRows(organisationIds.stream().map(id -> DSL.row(experimentId, id)).toList())
+          .onConflictDoNothing()
+          .execute();
     }
+  }
+
+  private static Collection<UUID> idsOf(List<Experiment> experiments) {
+    return experiments.stream().map(Experiment::getId).toList();
   }
 }

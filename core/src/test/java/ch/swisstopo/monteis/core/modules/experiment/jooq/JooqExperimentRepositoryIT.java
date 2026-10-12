@@ -612,23 +612,6 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
-  void should_reject_an_unknown_organisation() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          Experiment experiment =
-              new Experiment(
-                  "Org unknown IT",
-                  "owner",
-                  new Period(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
-                  null);
-          experiment.setOrganisationIds(List.of(UUID.randomUUID()));
-
-          assertThrows(FieldBusinessValidationException.class, () -> repository.create(experiment));
-        });
-  }
-
-  @Test
-  @Transactional
   void should_return_organisations_in_the_experiment_list() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {

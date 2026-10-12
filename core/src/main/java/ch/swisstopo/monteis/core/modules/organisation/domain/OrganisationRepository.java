@@ -2,8 +2,10 @@ package ch.swisstopo.monteis.core.modules.organisation.domain;
 
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface OrganisationRepository {
@@ -29,6 +31,9 @@ public interface OrganisationRepository {
 
   /** Retrieves an organisation by id, empty if it does not exist. */
   Optional<Organisation> findById(UUID id);
+
+  /** The ids among {@code ids} that belong to an organisation. */
+  Set<UUID> findExistingIdsAmong(Collection<UUID> ids);
 
   /** Retrieves all organisations, sorted alphabetically by name. */
   List<Organisation> findAll();

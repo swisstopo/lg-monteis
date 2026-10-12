@@ -9,9 +9,11 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
 import ch.swisstopo.monteis.core.modules.organisation.domain.OrganisationRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -73,6 +75,15 @@ public class JooqOrganisationRepository implements OrganisationRepository {
     return dsl.selectFrom(ORGANISATIONS)
         .where(ORGANISATIONS.ID.eq(id))
         .fetchOptional(mapper::toDomain);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Set<UUID> findExistingIdsAmong(Collection<UUID> ids) {
+    return dsl.select(ORGANISATIONS.ID)
+        .from(ORGANISATIONS)
+        .where(ORGANISATIONS.ID.in(ids))
+        .fetchSet(ORGANISATIONS.ID);
   }
 
   @Override

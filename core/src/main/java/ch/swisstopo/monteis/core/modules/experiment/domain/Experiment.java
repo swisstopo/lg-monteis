@@ -5,6 +5,7 @@ import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
@@ -112,6 +113,6 @@ public class Experiment implements Auditable {
 
   public void setOrganisationIds(List<UUID> organisationIds) {
     this.organisationIds =
-        organisationIds == null ? List.of() : List.copyOf(new LinkedHashSet<>(organisationIds));
+        List.copyOf(new LinkedHashSet<>(Objects.requireNonNull(organisationIds)));
   }
 }

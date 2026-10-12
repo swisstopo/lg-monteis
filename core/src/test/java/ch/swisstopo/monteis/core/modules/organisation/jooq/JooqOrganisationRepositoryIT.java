@@ -13,6 +13,7 @@ import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.modules.organisation.domain.Organisation;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,14 @@ class JooqOrganisationRepositoryIT {
 
     assertThatThrownBy(() -> repository.create(new Organisation("eth zürich it", null)))
         .isInstanceOf(FieldBusinessValidationException.class);
+  }
+
+  @Test
+  void should_find_only_the_ids_that_belong_to_an_organisation() {
+    UUID existing = repository.create(new Organisation("Existing IT", null)).getId();
+
+    assertThat(repository.findExistingIdsAmong(List.of(existing, UUID.randomUUID())))
+        .isEqualTo(Set.of(existing));
   }
 
   @Test
