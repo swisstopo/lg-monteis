@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
@@ -540,8 +539,7 @@ class JooqExperimentRepositoryIT {
 
           assertEquals(List.of(first, second), created.getOrganisationIds());
           assertEquals(
-              Set.of(first, second),
-              Set.copyOf(repository.getById(created.getId()).getOrganisationIds()));
+              List.of(first, second), repository.getById(created.getId()).getOrganisationIds());
 
           created.setOrganisationIds(List.of(second));
           repository.update(created);
@@ -550,6 +548,24 @@ class JooqExperimentRepositoryIT {
           created.setOrganisationIds(List.of());
           repository.update(created);
           assertEquals(List.of(), repository.getById(created.getId()).getOrganisationIds());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_return_the_organisations_in_the_same_order_on_save_and_read() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID first = createOrganisationWithDsl("Org order A");
+          UUID second = createOrganisationWithDsl("Org order B");
+          Experiment experiment = buildDummyDomainExperiment("Org order IT", "owner");
+          experiment.setOrganisationIds(List.of(second, first));
+
+          Experiment created = repository.create(experiment);
+
+          assertEquals(
+              repository.getById(created.getId()).getOrganisationIds(),
+              created.getOrganisationIds());
         });
   }
 

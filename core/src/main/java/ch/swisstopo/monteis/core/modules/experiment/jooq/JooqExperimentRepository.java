@@ -218,10 +218,8 @@ public class JooqExperimentRepository implements ExperimentRepository {
           "name", experiment.getName(), "validation.unique", Map.of());
     }
 
-    Experiment created = mapper.toDomain(createdExperiment);
-    created.setOrganisationIds(
-        replaceOrganisations(createdExperiment.getId(), experiment.getOrganisationIds()));
-    return created;
+    replaceOrganisations(createdExperiment.getId(), experiment.getOrganisationIds());
+    return withOrganisations(List.of(mapper.toDomain(createdExperiment))).getFirst();
   }
 
   @Override
@@ -250,10 +248,8 @@ public class JooqExperimentRepository implements ExperimentRepository {
       throw new FieldBusinessValidationException(
           "name", experiment.getName(), "validation.unique", Map.of());
     }
-    Experiment updated = mapper.toDomain(updatedRecord);
-    updated.setOrganisationIds(
-        replaceOrganisations(updatedRecord.getId(), experiment.getOrganisationIds()));
-    return updated;
+    replaceOrganisations(updatedRecord.getId(), experiment.getOrganisationIds());
+    return withOrganisations(List.of(mapper.toDomain(updatedRecord))).getFirst();
   }
 
   @Override
@@ -291,6 +287,8 @@ public class JooqExperimentRepository implements ExperimentRepository {
         dsl.select(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, EXPERIMENT_ORGANISATION.ORGANISATION_ID)
             .from(EXPERIMENT_ORGANISATION)
             .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.in(idsOf(experiments)))
+            // a stable order, javers compares the ids as a list
+            .orderBy(EXPERIMENT_ORGANISATION.ORGANISATION_ID)
             .fetchGroups(
                 EXPERIMENT_ORGANISATION.EXPERIMENT_ID, EXPERIMENT_ORGANISATION.ORGANISATION_ID);
     for (Experiment experiment : experiments) {
@@ -316,10 +314,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
    * Makes {@code organisationIds} the experiment's organisations: adds the missing links, removes
    * the others.
    *
-   * @return the ids now linked, without duplicates
    * @throws FieldBusinessValidationException if one of them is not an organisation
    */
-  private List<UUID> replaceOrganisations(UUID experimentId, List<UUID> organisationIds) {
+  private void replaceOrganisations(UUID experimentId, List<UUID> organisationIds) {
     List<UUID> distinct = organisationIds.stream().distinct().toList();
     if (dsl.fetchCount(ORGANISATIONS, ORGANISATIONS.ID.in(distinct)) != distinct.size()) {
       throw new FieldBusinessValidationException(
@@ -342,6 +339,5 @@ public class JooqExperimentRepository implements ExperimentRepository {
       }
       insert.onConflictDoNothing().execute();
     }
-    return distinct;
   }
 }
