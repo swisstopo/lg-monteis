@@ -8,14 +8,18 @@ import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,11 +30,13 @@ public class MeasurementController {
 
   private final MeasurementService measurementService;
   private final PagedRequestParser pagedRequestParser;
+  private final Clock clock;
 
   public MeasurementController(
-      MeasurementService measurementService, PagedRequestParser pagedRequestParser) {
+      MeasurementService measurementService, PagedRequestParser pagedRequestParser, Clock clock) {
     this.measurementService = measurementService;
     this.pagedRequestParser = pagedRequestParser;
+    this.clock = clock;
   }
 
   /**
@@ -52,6 +58,12 @@ public class MeasurementController {
         .map(ResponseEntity::ok)
         // a sensor parameter RLS hides looks exactly like a missing one: 404 object.not-found
         .orElseThrow(() -> new ObjectNotFoundException(SensorParameter.class));
+  }
+
+  /** Returns a sensor with all its parameters, each including its latest reading. */
+  @GetMapping(path = "/sensors/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<SensorDetailResponseDto> getSensorDetail(@PathVariable UUID id) {
+    return ResponseEntity.ok(measurementService.getSensorDetail(id, LocalDate.now(clock)));
   }
 
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)

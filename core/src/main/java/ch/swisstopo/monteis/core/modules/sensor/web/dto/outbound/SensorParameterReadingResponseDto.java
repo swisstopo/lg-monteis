@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound;
 
-import ch.swisstopo.monteis.core.modules.sensor.domain.MeasurementStatus;
+import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import java.time.OffsetDateTime;
 
 public record SensorParameterReadingResponseDto(

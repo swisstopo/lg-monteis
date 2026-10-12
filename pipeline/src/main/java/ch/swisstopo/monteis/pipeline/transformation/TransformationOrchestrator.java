@@ -1,10 +1,10 @@
 package ch.swisstopo.monteis.pipeline.transformation;
 
+import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
 import ch.swisstopo.monteis.pipeline.transformation.standardization.SIStandardizer;
-import ch.swisstopo.monteis.pipeline.transformation.validation.BoundStatus;
 import ch.swisstopo.monteis.pipeline.transformation.validation.BoundsValidator;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -52,7 +52,7 @@ public class TransformationOrchestrator {
     Double standardizedToSI = siStandardizer.standardizeToSI(rawValue, activeConfig);
 
     // 2. Validate the value
-    BoundStatus status =
+    MeasurementStatus status =
         boundsValidator.evaluateBounds(dasKey, standardizedToSI, activeConfig.getConfig(), origin);
 
     // 3. Map to jOOQ record
@@ -65,17 +65,9 @@ public class TransformationOrchestrator {
     sensorReading.setTimestamp(timestamp);
     sensorReading.setRawValue(rawValue);
     sensorReading.setNormValue(standardizedToSI);
-    sensorReading.setStatus(toRangeCategory(status));
+    sensorReading.setStatus(RangeCategory.lookupLiteral(status.getDbValue()));
     sensorReading.setVersion(activeConfig.getConfig().getVersion().shortValue());
 
     return sensorReading;
-  }
-
-  private RangeCategory toRangeCategory(BoundStatus status) {
-    return switch (status) {
-      case OK -> RangeCategory.correct;
-      case TOO_LOW -> RangeCategory.too_low;
-      case TOO_HIGH -> RangeCategory.too_high;
-    };
   }
 }

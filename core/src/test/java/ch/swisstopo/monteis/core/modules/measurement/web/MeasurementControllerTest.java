@@ -8,26 +8,35 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.query.RawPagedRequest;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
-import ch.swisstopo.monteis.core.modules.measurement.domain.MeasurementStatus;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -43,6 +52,17 @@ class MeasurementControllerTest {
   @MockitoBean private MeasurementService measurementService;
 
   @MockitoBean private PagedRequestParser pagedRequestParser;
+
+  @MockitoBean private Clock clock;
+
+  @BeforeEach
+  void setUpClock() {
+    // Set up LocalDate.now(clock) to be the exact date
+    Clock fixedClock = Clock.fixed(Instant.parse("2024-01-01T12:00:00Z"), ZoneId.of("UTC"));
+
+    given(clock.instant()).willReturn(fixedClock.instant());
+    given(clock.getZone()).willReturn(fixedClock.getZone());
+  }
 
   // A valid, ascending, past date pair reused by tests that only care about the happy path.
   private final OffsetDateTime validFrom = OffsetDateTime.parse("2024-01-01T00:00:00Z");
@@ -358,5 +378,45 @@ class MeasurementControllerTest {
                     "{\"bogus\":{\"filterType\":\"text\",\"type\":\"contains\",\"filter\":\"x\"}}"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
+  }
+
+  @Test
+  void should_route_get_sensor_detail_with_today_from_clock() throws Exception {
+    // given
+    SensorDetailResponseDto detail =
+        new SensorDetailResponseDto(
+            SENSOR_ID,
+            "Test",
+            "ALIAS",
+            Das.SOL_EXPERTS,
+            null,
+            null,
+            null,
+            true,
+            null,
+            1,
+            List.of());
+    given(measurementService.getSensorDetail(SENSOR_ID, LocalDate.of(2024, 1, 1)))
+        .willReturn(detail);
+
+    // when / then
+    mockMvc
+        .perform(get("/api/measurements/sensors/{id}", SENSOR_ID).with(jwt()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(SENSOR_ID.toString()))
+        .andExpect(jsonPath("$.parameters").isEmpty());
+  }
+
+  @Test
+  void should_return_404_for_unknown_sensor_detail() throws Exception {
+    // given
+    given(measurementService.getSensorDetail(SENSOR_ID, LocalDate.of(2024, 1, 1)))
+        .willThrow(new ObjectNotFoundException(Sensor.class));
+
+    // when / then
+    mockMvc
+        .perform(get("/api/measurements/sensors/{id}", SENSOR_ID).with(jwt()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.messageKey").value("object.not-found"));
   }
 }

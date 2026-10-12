@@ -8,12 +8,16 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -143,5 +147,38 @@ class MeasurementServiceTest {
     // then
     then(query).should().findPaged(request);
     assertEquals(expected, actual);
+  }
+
+  @Test
+  void should_return_sensor_detail_from_query() {
+    // given
+    LocalDate today = LocalDate.of(2024, 1, 1);
+    SensorDetailResponseDto detail =
+        new SensorDetailResponseDto(
+            SENSOR_ID,
+            "Test",
+            "ALIAS",
+            Das.SOL_EXPERTS,
+            null,
+            null,
+            null,
+            true,
+            null,
+            1,
+            List.of());
+    given(query.findSensorDetail(SENSOR_ID, today)).willReturn(Optional.of(detail));
+
+    // when / then
+    assertEquals(detail, service.getSensorDetail(SENSOR_ID, today));
+  }
+
+  @Test
+  void should_throw_when_sensor_detail_is_absent_or_invisible() {
+    // given
+    LocalDate today = LocalDate.of(2024, 1, 1);
+    given(query.findSensorDetail(SENSOR_ID, today)).willReturn(Optional.empty());
+
+    // when / then
+    assertThrows(ObjectNotFoundException.class, () -> service.getSensorDetail(SENSOR_ID, today));
   }
 }

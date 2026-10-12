@@ -22,6 +22,10 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.jooq.JooqSensorRepository;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailParameterResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
+import java.time.LocalDate;
+import java.time.Month;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,6 +72,11 @@ class MeasurementQueryRepositoryIT {
   private static final UUID DISP_2_PARAM = UUID.fromString("00000000-0000-7000-8000-000000000403");
   private static final UUID FLOW_ADMIN_PARAM =
       UUID.fromString("00000000-0000-7000-8000-000000000405");
+  private static final UUID TEMP_1_SENSOR = UUID.fromString("00000000-0000-7000-8000-000000000201");
+  // TEMP-1 belongs to experiment Alpha (...301) only
+  private static final UUID EXPERIMENT_BETA =
+      UUID.fromString("00000000-0000-7000-8000-000000000302");
+  private static final LocalDate DETAIL_TODAY = LocalDate.of(2024, Month.JANUARY, 1);
   private static final UUID NON_EXISTENT_ID = UUID.randomUUID();
   private static final List<UUID> EXPERIMENT_1_ONLY =
       List.of(UUID.fromString("00000000-0000-7000-8000-000000000301"));
@@ -689,5 +698,104 @@ class MeasurementQueryRepositoryIT {
           assertEquals(0, result.totalCount());
           assertTrue(result.rows().isEmpty());
         });
+  }
+
+  @Test
+  @Transactional
+  void should_return_sensor_with_parameters_and_their_latest_reading() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // when
+          SensorDetailResponseDto detail =
+              repository.findSensorDetail(TEMP_1_SENSOR, DETAIL_TODAY).orElseThrow();
+
+          // then
+          assertEquals(TEMP_1_SENSOR, detail.id());
+          assertNotNull(detail.das());
+          assertEquals(1, detail.parameters().size());
+          SensorDetailParameterResponseDto temperature = detail.parameters().getFirst();
+          assertEquals(TEMP_1_PARAM, temperature.id());
+          assertNotNull(temperature.formula());
+          assertNotNull(temperature.latestParameterReadingValue());
+          assertNotNull(temperature.latestParameterReadingValue().status());
+          assertNotNull(temperature.latestParameterReadingValue().timestamp());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_return_sensor_without_parameters() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given
+          Sensor sensor = sensorRepository.create(buildDetailSensor("DETAIL-NONE"));
+
+          // when
+          SensorDetailResponseDto detail =
+              repository.findSensorDetail(sensor.getId(), DETAIL_TODAY).orElseThrow();
+
+          // then
+          assertEquals(sensor.getId(), detail.id());
+          assertTrue(detail.parameters().isEmpty());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_return_parameter_without_readings_with_null_latest_reading() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // given: a freshly created parameter has no readings
+          Sensor input = buildDetailSensor("DETAIL-NO-READING");
+          input.setParameters(new ArrayList<>(List.of(buildDetailParameter())));
+          Sensor sensor = sensorRepository.create(input);
+
+          // when
+          SensorDetailResponseDto detail =
+              repository.findSensorDetail(sensor.getId(), DETAIL_TODAY).orElseThrow();
+
+          // then
+          assertEquals(1, detail.parameters().size());
+          assertNull(detail.parameters().getFirst().latestParameterReadingValue());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_return_empty_for_unknown_sensor() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> assertTrue(repository.findSensorDetail(UUID.randomUUID(), DETAIL_TODAY).isEmpty()));
+  }
+
+  @Test
+  @Transactional
+  void should_return_empty_for_sensor_hidden_by_row_level_security() {
+    SecurityContextTestSupport.runAsUser(
+        List.of(EXPERIMENT_BETA),
+        () -> assertTrue(repository.findSensorDetail(TEMP_1_SENSOR, DETAIL_TODAY).isEmpty()));
+  }
+
+  private Sensor buildDetailSensor(String name) {
+    Sensor sensor =
+        new Sensor(
+            name, name, Das.SOL_EXPERTS, null, null, new Coordinates(0d, 0d, 0d), true, null);
+    sensor.setParameters(new ArrayList<>());
+    return sensor;
+  }
+
+  private SensorParameter buildDetailParameter() {
+    Formula formula = new Formula();
+    formula.setExpression("x");
+    return new SensorParameter(
+        null,
+        "param",
+        null,
+        new SensorType(null, "Other", null),
+        Unit.METER,
+        formula,
+        new AlarmLimits(0.0, 100.0),
+        true,
+        null,
+        null);
   }
 }

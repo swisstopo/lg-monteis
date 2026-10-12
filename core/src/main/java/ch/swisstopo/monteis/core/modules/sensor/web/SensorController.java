@@ -192,15 +192,4 @@ public class SensorController {
     csvExportQueryRepository.streamCsv(exportRequest, writer);
     writer.flush();
   }
-
-  @Operation(
-      summary = "Get sensor details by id",
-      description =
-          "Retrieves a sensor with all its parameters, each including its latest reading.")
-  @ApiResponse(responseCode = "200", description = "Successfully retrieved sensor details")
-  @GetMapping(path = "/{id}/detail", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<SensorDetailResponseDto> getSensorDetail(@PathVariable UUID id) {
-    LocalDate today = LocalDate.now(clock);
-    return ResponseEntity.ok(service.findDetailById(id, today));
-  }
 }

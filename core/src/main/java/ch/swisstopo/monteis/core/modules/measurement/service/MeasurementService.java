@@ -1,11 +1,15 @@
 package ch.swisstopo.monteis.core.modules.measurement.service;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorDetailResponseDto;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
@@ -32,5 +36,11 @@ public class MeasurementService {
 
   public PagedResult<MeasurementResponseDto> getPagedMeasurements(PagedRequest request) {
     return query.findPaged(request);
+  }
+
+  public SensorDetailResponseDto getSensorDetail(UUID id, LocalDate today) {
+    return query
+        .findSensorDetail(id, today)
+        .orElseThrow(() -> new ObjectNotFoundException(Sensor.class));
   }
 }
