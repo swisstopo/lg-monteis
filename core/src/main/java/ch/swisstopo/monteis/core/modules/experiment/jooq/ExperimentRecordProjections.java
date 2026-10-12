@@ -5,9 +5,12 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
+import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Set;
 import org.jooq.Field;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
@@ -41,7 +44,8 @@ public final class ExperimentRecordProjections {
             new Period(r.get(EXPERIMENTS.START), r.get(EXPERIMENTS.END)),
             r.get(EXPERIMENTS.COMMENT),
             r.get(EXPERIMENTS.VERSION),
-            r.get(SENSOR_COUNT));
+            r.get(SENSOR_COUNT),
+            Set.of());
     return new ExperimentResponseDto(
         experiment.getId(),
         experiment.getName(),
@@ -49,6 +53,9 @@ public final class ExperimentRecordProjections {
         new PeriodDto(experiment.getPeriod().start(), experiment.getPeriod().end()),
         experiment.getStatus(today),
         experiment.getVersion(),
-        experiment.getSensorCount());
+        experiment.getSensorCount(),
+        // the owners would need a keycloak lookup, the sensor detail does not show them
+        List.of(),
+        VisibleOwners.NONE.status());
   }
 }
