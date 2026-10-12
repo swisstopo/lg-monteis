@@ -1,0 +1,44 @@
+<div class="metrics-panel">
+  <app-table-header (searchAction)="onSearch($event)">
+    <button read-action matButton="text" [disabled]="downloading()" (click)="onDownload()">
+      @if (downloading()) {
+        <mat-spinner diameter="16"></mat-spinner>
+      } @else {
+        <mat-icon fontIcon="download"></mat-icon>
+      }
+      {{ 'organisation.tableHeader.download' | translate }}
+    </button>
+
+    <button write-action matButton="tonal" (click)="onCreate()">
+      <mat-icon fontIcon="add"></mat-icon>
+      {{ 'organisation.tableHeader.create' | translate }}
+    </button>
+
+    <button
+      write-action
+      matButton="filled"
+      [disabled]="selectedOrganisationId() === undefined"
+      (click)="onEdit()"
+    >
+      <mat-icon fontIcon="edit"></mat-icon>
+      {{ 'organisation.tableHeader.edit' | translate }}
+    </button>
+  </app-table-header>
+  @if (loadError()) {
+    <app-inline-error [message]="'organisation.error.connection' | translate"></app-inline-error>
+  } @else {
+    <app-table
+      class="custom-grid"
+      [checkboxes]="true"
+      [multiple]="false"
+      [columns]="columns"
+      [rowModelType]="'infinite'"
+      [datasource]="datasource"
+      [gridOptions]="gridOptions"
+      [getRowId]="getOrganisationRowId"
+      (selectionChanged)="onSelectionChanged($event)"
+      (gridReady)="onGridReady($event)"
+    >
+    </app-table>
+  }
+</div>

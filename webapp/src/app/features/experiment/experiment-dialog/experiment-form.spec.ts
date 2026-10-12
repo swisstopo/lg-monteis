@@ -12,6 +12,7 @@ const EXPERIMENT: ExperimentResponseDto = {
   name: 'Mont Terri Alpha',
   comment: 'borehole',
   period: { start: '2030-01-01', end: '2030-05-05' },
+  organisationIds: ['organisation-1'],
 };
 
 function validModel(): ExperimentFormModel {
@@ -19,6 +20,7 @@ function validModel(): ExperimentFormModel {
     name: 'Mont Terri Alpha',
     comment: '',
     period: { start: new Date(2030, 0, 1), end: new Date(2030, 4, 5) },
+    organisationIds: [],
   };
 }
 
@@ -37,6 +39,7 @@ describe('toFormModel', () => {
       comment: 'borehole',
       // local midnight, a date-only string must not shift a day west of UTC
       period: { start: new Date(2030, 0, 1), end: new Date(2030, 4, 5) },
+      organisationIds: ['organisation-1'],
     });
   });
 
@@ -45,6 +48,7 @@ describe('toFormModel', () => {
 
     expect(model.name).toBe('');
     expect(model.comment).toBe('');
+    expect(model.organisationIds).toEqual([]);
     expect(model.period.start.toDateString()).toBe(new Date().toDateString());
     expect(model.period.end.toDateString()).toBe(new Date().toDateString());
   });
@@ -58,6 +62,7 @@ describe('toWriteDto', () => {
       name: 'Mont Terri Alpha',
       comment: 'note',
       period: { start: '2030-01-01', end: '2030-05-05' },
+      organisationIds: [],
     });
   });
 

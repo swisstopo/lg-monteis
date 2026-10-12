@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
@@ -11,6 +12,7 @@ import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentR
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.jooq.Field;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
@@ -29,6 +31,15 @@ public final class ExperimentRecordProjections {
   /** Must be selected next to the experiments columns for {@link #toExperiment}. */
   public static final Field<Integer> SENSOR_COUNT = SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME);
 
+  /** Must be selected next to the experiments columns for {@link #toExperiment}. */
+  public static final Field<UUID[]> ORGANISATION_IDS =
+      DSL.array(
+              DSL.select(EXPERIMENT_ORGANISATION.ORGANISATION_ID)
+                  .from(EXPERIMENT_ORGANISATION)
+                  .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
+                  .orderBy(EXPERIMENT_ORGANISATION.ORGANISATION_ID))
+          .as("organisationIds");
+
   private ExperimentRecordProjections() {}
 
   /** Null when the record holds no experiment (e.g. an unmatched LEFT JOIN). */
@@ -46,6 +57,7 @@ public final class ExperimentRecordProjections {
             r.get(EXPERIMENTS.VERSION),
             r.get(SENSOR_COUNT),
             Set.of());
+    experiment.setOrganisationIds(List.of(r.get(ORGANISATION_IDS)));
     return new ExperimentResponseDto(
         experiment.getId(),
         experiment.getName(),
@@ -56,6 +68,7 @@ public final class ExperimentRecordProjections {
         experiment.getSensorCount(),
         // the owners would need a keycloak lookup, the sensor detail does not show them
         List.of(),
-        VisibleOwners.NONE.status());
+        VisibleOwners.NONE.status(),
+        experiment.getOrganisationIds());
   }
 }

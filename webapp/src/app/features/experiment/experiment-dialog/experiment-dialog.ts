@@ -17,7 +17,7 @@ import {
   submit,
   TreeValidationResult,
 } from '@angular/forms/signals';
-import { provideNativeDateAdapter } from '@angular/material/core';
+import { MatOption, provideNativeDateAdapter } from '@angular/material/core';
 import {
   MatDatepicker,
   MatDatepickerInput,
@@ -40,6 +40,7 @@ import { ErrorDto, ExperimentResponseDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
+import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentOwnerList } from '@features/experiment/owners/experiment-owner-list';
 import { ExperimentOwnerPicker } from '@features/experiment/owners/experiment-owner-picker';
@@ -70,6 +71,7 @@ const OWNER_IDS_FIELD = 'ownerIds';
     MatPrefix,
     MatSuffix,
     MatSelect,
+    MatOption,
     MatDatepicker,
     MatDatepickerInput,
     MatDatepickerToggle,
@@ -87,11 +89,14 @@ const OWNER_IDS_FIELD = 'ownerIds';
 })
 export class ExperimentDialog {
   private readonly experimentService = inject(ExperimentService);
+  private readonly organisationService = inject(OrganisationService);
   private readonly permissions = inject(PermissionsService);
   private readonly formErrorService = inject(FormErrorService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
   private readonly dialogRef = inject<MatDialogRef<ExperimentDialog>>(MatDialogRef);
+
+  protected readonly organisations = this.organisationService.allOrganisations;
 
   readonly experimentId = input<string>();
   readonly viewOnly = input(false);

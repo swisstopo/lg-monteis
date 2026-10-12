@@ -1,12 +1,13 @@
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, input } from '@angular/core';
+import { Component, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MatDialogRef } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ErrorDto, ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
+import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import {
@@ -58,6 +59,7 @@ async function setup({
     providers: [
       provideTranslateService(),
       { provide: ExperimentService, useValue: experimentService },
+      { provide: OrganisationService, useValue: { allOrganisations: signal([]) } },
       {
         provide: PermissionsService,
         useValue: { canWriteExperiment: () => canWrite, isAdmin: () => isAdmin },

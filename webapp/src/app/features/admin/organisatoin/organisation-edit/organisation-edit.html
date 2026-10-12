@@ -1,0 +1,39 @@
+<app-dialog-layout [title]="'organisation.edit.title.' + mode() | translate" [mode]="mode()">
+  <form id="organisationForm" class="form-layout" [formRoot]="organisationForm">
+    <div class="form-column">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'organisation.name.label' | translate }}</mat-label>
+        <input
+          matInput
+          [formField]="organisationForm.name"
+          [placeholder]="'organisation.name.placeholder' | translate"
+        />
+        <mat-error [appFieldErrors]="organisationForm.name" />
+      </mat-form-field>
+    </div>
+
+    <div class="form-column">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'organisation.comment.label' | translate }}</mat-label>
+        <textarea matInput [formField]="organisationForm.comment" rows="5"></textarea>
+        <mat-error [appFieldErrors]="organisationForm.comment" />
+      </mat-form-field>
+    </div>
+  </form>
+
+  <app-dismiss-button dialog-action-dismiss />
+  <ng-container ngProjectAs="[dialog-action-submit]">
+    @if (mode() === 'create') {
+      <app-submit-button
+        [form]="organisationForm"
+        variant="secondary"
+        (pressed)="saveAndCreateNew()"
+      >
+        {{ 'organisation.button.saveAndCreate' | translate }}
+      </app-submit-button>
+    }
+    <app-submit-button [form]="organisationForm" formId="organisationForm">
+      {{ 'organisation.button.save' | translate }}
+    </app-submit-button>
+  </ng-container>
+</app-dialog-layout>

@@ -104,6 +104,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
         dsl.select(SENSORS.fields())
             .select(EXPERIMENTS.fields())
             .select(ExperimentRecordProjections.SENSOR_COUNT)
+            .select(ExperimentRecordProjections.ORGANISATION_IDS)
             .select(SENSOR_PARAMETER.fields())
             .select(FORMULAS.fields())
             .select(SENSOR_TYPES.fields())

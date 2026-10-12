@@ -10,7 +10,10 @@ import { CopyCellRenderer } from '@ui/table/copy-cell-renderer/copy-cell-rendere
 import { TableColumn } from '@ui/table/table.types';
 import StatusEnum = ExperimentResponseDto.StatusEnum;
 
-export function createColumns(datePipe: DatePipe): TableColumn<ExperimentResponseDto>[] {
+export function createColumns(
+  datePipe: DatePipe,
+  organisationName: (id: string) => string,
+): TableColumn<ExperimentResponseDto>[] {
   const translateService = inject(TranslateService);
   const experimentService = inject(ExperimentService);
 
@@ -95,6 +98,14 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
       valueFormatter: (params) =>
         (params.value as ExperimentOwnerDto[] | undefined)?.map(ownerDisplayName).join(', ') ?? '',
       cellRenderer: OwnersCellRenderer,
+    },
+    {
+      field: 'organisationIds',
+      headerName: translateService.translate('experiment.organisations.label')(),
+      sortable: false,
+      filter: false,
+      valueFormatter: (params) => (params.value ?? []).map(organisationName).join(', '),
+      tooltip: (params) => (params.value ?? []).map(organisationName).join(', '),
     },
     {
       field: 'comment',

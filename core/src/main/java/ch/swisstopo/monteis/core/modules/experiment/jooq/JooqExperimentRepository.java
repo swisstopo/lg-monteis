@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_OWNER;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
@@ -12,6 +13,7 @@ import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentsRecord
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,6 +23,7 @@ import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Record;
 import org.jooq.SelectSelectStep;
+import org.jooq.exception.DataChangedException;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -81,7 +84,8 @@ public class JooqExperimentRepository implements ExperimentRepository {
           EXPERIMENTS.COMMENT,
           EXPERIMENTS.VERSION,
           SENSOR_COUNT_FIELD.as(SENSOR_COUNT_FIELD_NAME),
-          OWNER_IDS_FIELD);
+          OWNER_IDS_FIELD,
+          ExperimentRecordProjections.ORGANISATION_IDS);
 
   private final DSLContext dsl;
   private final ExperimentJooqMapper mapper;
@@ -151,7 +155,10 @@ public class JooqExperimentRepository implements ExperimentRepository {
           "name", experiment.getName(), "validation.unique", Map.of());
     }
 
-    return mapper.toDomain(createdExperiment);
+    replaceOrganisations(createdExperiment.getId(), experiment.getOrganisationIds());
+    Experiment created = mapper.toDomain(createdExperiment);
+    loadOrganisationIdsInto(created);
+    return created;
   }
 
   @Override
@@ -167,14 +174,22 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
     // map new properties to existing
     mapper.updateRecordFromDomain(experiment, updatedRecord);
+    boolean organisationsChange = organisationsChange(experiment);
 
+    int updatedRows;
     try {
-      updatedRecord.update();
+      updatedRows = updatedRecord.update();
     } catch (DuplicateKeyException _) {
       // unique constraint
       throw new FieldBusinessValidationException(
           "name", experiment.getName(), "validation.unique", Map.of());
     }
+    if (updatedRows == 0 && organisationsChange) {
+      // a links only change leaves no column dirty, jOOQ then skips the update and with it the
+      // version check and the experiments_update policy
+      incrementVersion(experiment);
+    }
+    replaceOrganisations(updatedRecord.getId(), experiment.getOrganisationIds());
     return fetchExperiment(experiment.getId());
   }
 
@@ -218,14 +233,18 @@ public class JooqExperimentRepository implements ExperimentRepository {
   }
 
   private static Experiment toExperiment(Record experiment) {
-    return new Experiment(
-        experiment.get(EXPERIMENTS.ID),
-        experiment.get(EXPERIMENTS.NAME),
-        new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
-        experiment.get(EXPERIMENTS.COMMENT),
-        experiment.get(EXPERIMENTS.VERSION),
-        experiment.get(SENSOR_COUNT_FIELD_NAME, Integer.class),
-        Set.of(experiment.get(OWNER_IDS_FIELD)));
+    Experiment rebuilt =
+        new Experiment(
+            experiment.get(EXPERIMENTS.ID),
+            experiment.get(EXPERIMENTS.NAME),
+            new Period(experiment.get(EXPERIMENTS.START), experiment.get(EXPERIMENTS.END)),
+            experiment.get(EXPERIMENTS.COMMENT),
+            experiment.get(EXPERIMENTS.VERSION),
+            experiment.get(SENSOR_COUNT_FIELD_NAME, Integer.class),
+            Set.of(experiment.get(OWNER_IDS_FIELD)));
+    rebuilt.setOrganisationIds(
+        List.of(experiment.get(ExperimentRecordProjections.ORGANISATION_IDS)));
+    return rebuilt;
   }
 
   @Override
@@ -251,9 +270,74 @@ public class JooqExperimentRepository implements ExperimentRepository {
         .fetchStream()
         .map(
             r -> {
-              ExperimentsRecord experimentsRecord = r.into(EXPERIMENTS);
-
-              return mapper.toDomain(experimentsRecord);
+              Experiment experiment = mapper.toDomain(r.into(EXPERIMENTS));
+              // one query per experiment for its links, fine for a backfill that runs once
+              loadOrganisationIdsInto(experiment);
+              return experiment;
             });
+  }
+
+  private void loadOrganisationIdsInto(Experiment experiment) {
+    loadOrganisationIdsInto(List.of(experiment));
+  }
+
+  /** Sets the organisation ids of each experiment, with one query for all of them. */
+  private void loadOrganisationIdsInto(List<Experiment> experiments) {
+    Map<UUID, List<UUID>> organisationIdsByExperiment =
+        dsl.select(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, EXPERIMENT_ORGANISATION.ORGANISATION_ID)
+            .from(EXPERIMENT_ORGANISATION)
+            .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.in(idsOf(experiments)))
+            // a stable order, javers compares the ids as a list
+            .orderBy(EXPERIMENT_ORGANISATION.ORGANISATION_ID)
+            .fetchGroups(
+                EXPERIMENT_ORGANISATION.EXPERIMENT_ID, EXPERIMENT_ORGANISATION.ORGANISATION_ID);
+    experiments.forEach(
+        experiment ->
+            experiment.setOrganisationIds(
+                organisationIdsByExperiment.getOrDefault(experiment.getId(), List.of())));
+  }
+
+  /** Increments the version like a column update would, failing for a stale version. */
+  private void incrementVersion(Experiment experiment) {
+    int updatedRows =
+        dsl.update(EXPERIMENTS)
+            .set(EXPERIMENTS.VERSION, EXPERIMENTS.VERSION.plus(1))
+            .where(EXPERIMENTS.ID.eq(experiment.getId()))
+            .and(EXPERIMENTS.VERSION.eq(experiment.getVersion()))
+            .execute();
+    if (updatedRows == 0) {
+      throw new DataChangedException("Database record has been changed");
+    }
+  }
+
+  private boolean organisationsChange(Experiment experiment) {
+    Set<UUID> linked =
+        dsl.select(EXPERIMENT_ORGANISATION.ORGANISATION_ID)
+            .from(EXPERIMENT_ORGANISATION)
+            .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.eq(experiment.getId()))
+            .fetchSet(EXPERIMENT_ORGANISATION.ORGANISATION_ID);
+    return !linked.equals(Set.copyOf(experiment.getOrganisationIds()));
+  }
+
+  /** Makes {@code organisationIds} the experiment's organisations: adds the missing links, removes the others. */
+  private void replaceOrganisations(UUID experimentId, List<UUID> organisationIds) {
+    dsl.deleteFrom(EXPERIMENT_ORGANISATION)
+        .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.eq(experimentId))
+        .and(EXPERIMENT_ORGANISATION.ORGANISATION_ID.notIn(organisationIds))
+        .execute();
+
+    if (!organisationIds.isEmpty()) {
+      dsl.insertInto(
+              EXPERIMENT_ORGANISATION,
+              EXPERIMENT_ORGANISATION.EXPERIMENT_ID,
+              EXPERIMENT_ORGANISATION.ORGANISATION_ID)
+          .valuesOfRows(organisationIds.stream().map(id -> DSL.row(experimentId, id)).toList())
+          .onConflictDoNothing()
+          .execute();
+    }
+  }
+
+  private static Collection<UUID> idsOf(List<Experiment> experiments) {
+    return experiments.stream().map(Experiment::getId).toList();
   }
 }

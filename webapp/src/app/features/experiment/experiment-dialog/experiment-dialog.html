@@ -27,6 +27,16 @@
     </mat-form-field>
 
     <mat-form-field class="full-width" appearance="outline">
+      <mat-label>{{ 'experiment.organisations.label' | translate }}</mat-label>
+      <mat-select multiple [formField]="experimentForm.organisationIds">
+        @for (organisation of organisations(); track organisation.id) {
+          <mat-option [value]="organisation.id">{{ organisation.name }}</mat-option>
+        }
+      </mat-select>
+      <mat-error [appFieldErrors]="experimentForm.organisationIds" />
+    </mat-form-field>
+
+    <mat-form-field class="full-width" appearance="outline">
       <mat-label>{{ 'experiment.comment.label' | translate }}</mat-label>
       <textarea matInput [formField]="experimentForm.comment" rows="3"></textarea>
       <mat-error [appFieldErrors]="experimentForm.comment" />

@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOrganisation.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOwner.EXPERIMENT_OWNER;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Sensors.SENSORS;
@@ -42,6 +43,9 @@ class RowLevelSecurityIT {
       UUID.fromString("00000000-0000-7000-8000-000000000301");
   private static final UUID EXPERIMENT_BETA =
       UUID.fromString("00000000-0000-7000-8000-000000000302");
+  // "swisstopo" from the same seed
+  private static final UUID ORGANISATION_SWISSTOPO =
+      UUID.fromString("00000000-0000-7000-8000-000000000501");
 
   @Autowired private DSLContext dsl;
 
@@ -189,6 +193,21 @@ class RowLevelSecurityIT {
             assertThrows(
                 PermissionDeniedDataAccessException.class,
                 () -> renameExperiment(EXPERIMENT_ALPHA, "Mont Terri Alpha renamed")));
+  }
+
+  @Test
+  @Transactional
+  void read_only_user_may_not_link_an_organisation_to_a_readable_experiment() {
+    SecurityContextTestSupport.runAsUser(
+        List.of(EXPERIMENT_ALPHA),
+        () ->
+            assertThrows(
+                PermissionDeniedDataAccessException.class,
+                () ->
+                    dsl.insertInto(EXPERIMENT_ORGANISATION)
+                        .set(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, EXPERIMENT_ALPHA)
+                        .set(EXPERIMENT_ORGANISATION.ORGANISATION_ID, ORGANISATION_SWISSTOPO)
+                        .execute()));
   }
 
   @Test

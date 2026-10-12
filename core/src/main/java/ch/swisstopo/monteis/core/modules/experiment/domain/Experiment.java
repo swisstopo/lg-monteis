@@ -3,6 +3,9 @@ package ch.swisstopo.monteis.core.modules.experiment.domain;
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.javers.core.metamodel.annotation.DiffIgnore;
@@ -21,6 +24,7 @@ public class Experiment implements Auditable {
   // derived from the sensors, not something anyone changes on the experiment
   @DiffIgnore private Integer sensorCount;
   private Set<UUID> ownerIds = Set.of();
+  private List<UUID> organisationIds = List.of();
 
   /**
    * Constructor for creating a NEW Experiment from a web request.
@@ -110,5 +114,14 @@ public class Experiment implements Auditable {
 
   public void setOwnerIds(Set<UUID> ownerIds) {
     this.ownerIds = ownerIds == null ? Set.of() : Set.copyOf(ownerIds);
+  }
+
+  public List<UUID> getOrganisationIds() {
+    return organisationIds;
+  }
+
+  public void setOrganisationIds(List<UUID> organisationIds) {
+    this.organisationIds =
+        List.copyOf(new LinkedHashSet<>(Objects.requireNonNull(organisationIds)));
   }
 }

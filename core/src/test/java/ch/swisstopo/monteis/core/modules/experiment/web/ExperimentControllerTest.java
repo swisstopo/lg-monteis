@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
@@ -55,6 +56,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 @ControllerTest(ExperimentController.class)
 class ExperimentControllerTest {
@@ -126,7 +128,8 @@ class ExperimentControllerTest {
             0,
             1,
             List.of(OWNER_DTO),
-            OwnersStatus.SHOWN);
+            OwnersStatus.SHOWN,
+            List.of());
 
     expectedExperiment.getStatus(referenceToday);
 
@@ -183,7 +186,8 @@ class ExperimentControllerTest {
             2,
             1,
             List.of(),
-            OwnersStatus.SHOWN);
+            OwnersStatus.SHOWN,
+            List.of());
     PagedResult<ExperimentResponseDto> dtoResult = new PagedResult<>(List.of(responseDto), 1);
 
     given(pagedRequestParser.parse(any())).willReturn(parsedRequest);
@@ -234,8 +238,14 @@ class ExperimentControllerTest {
         .streamCsv(eq(exportRequest), any(), any());
 
     // when / then
+    MvcResult csv =
+        mockMvc
+            .perform(get("/api/experiments/csv").with(jwt()))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+
     mockMvc
-        .perform(get("/api/experiments/csv").with(jwt()))
+        .perform(asyncDispatch(csv))
         .andExpect(status().isOk())
         .andExpect(content().contentType("text/csv;charset=UTF-8"))
         .andExpect(
@@ -258,8 +268,14 @@ class ExperimentControllerTest {
         .streamCsv(eq(exportRequest), any(), any());
 
     // when / then
+    MvcResult csv =
+        mockMvc
+            .perform(get("/api/experiments/csv").with(jwt()))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+
     mockMvc
-        .perform(get("/api/experiments/csv").with(jwt()))
+        .perform(asyncDispatch(csv))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
   }
@@ -290,7 +306,8 @@ class ExperimentControllerTest {
             2,
             1,
             List.of(),
-            OwnersStatus.SHOWN);
+            OwnersStatus.SHOWN,
+            List.of());
 
     given(experimentService.findAllExperiments()).willReturn(List.of(experiment1));
     Map<UUID, VisibleOwners> owners = Map.of(EXPERIMENT_ID, VisibleOwners.NONE);
@@ -321,7 +338,8 @@ class ExperimentControllerTest {
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             null,
-            null);
+            null,
+            List.of());
 
     ExperimentResponseDto expectedResponseDto =
         new ExperimentResponseDto(
@@ -334,7 +352,8 @@ class ExperimentControllerTest {
             0,
             1,
             List.of(),
-            OwnersStatus.SHOWN);
+            OwnersStatus.SHOWN,
+            List.of());
 
     Experiment mockDomain = mock(Experiment.class);
 
@@ -378,7 +397,8 @@ class ExperimentControllerTest {
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             1,
-            null);
+            null,
+            List.of());
 
     ExperimentResponseDto expectedResponseDto =
         new ExperimentResponseDto(
@@ -391,7 +411,8 @@ class ExperimentControllerTest {
             3,
             2,
             List.of(),
-            OwnersStatus.SHOWN);
+            OwnersStatus.SHOWN,
+            List.of());
 
     Experiment mockDomain = mock(Experiment.class);
 
@@ -431,7 +452,8 @@ class ExperimentControllerTest {
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             1,
-            null);
+            null,
+            List.of());
 
     // when / then
     mockMvc
@@ -553,7 +575,8 @@ class ExperimentControllerTest {
                 new PeriodDto(
                     LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
                 null,
-                null));
+                null,
+                List.of()));
 
     // when / then
     for (PrivilegeLevel level :
@@ -693,7 +716,8 @@ class ExperimentControllerTest {
             new PeriodDto(
                 LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
             null,
-            List.of(UUID.randomUUID()));
+            List.of(UUID.randomUUID()),
+            List.of());
 
     mockMvc
         .perform(
@@ -714,7 +738,8 @@ class ExperimentControllerTest {
         "Updated comment",
         new PeriodDto(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
         1,
-        List.of(ownerId));
+        List.of(ownerId),
+        List.of());
   }
 
   private static WriteExperimentDto updateDto(UUID id) {
@@ -724,6 +749,7 @@ class ExperimentControllerTest {
         "Updated comment",
         new PeriodDto(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
         1,
-        null);
+        null,
+        List.of());
   }
 }
