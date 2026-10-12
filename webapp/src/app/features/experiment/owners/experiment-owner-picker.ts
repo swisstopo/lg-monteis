@@ -32,6 +32,9 @@ export class ExperimentOwnerPicker {
 
   readonly experimentId = input.required<string>();
   readonly selectedOwnerIds = model<string[]>([]);
+  // the stored owners, the cached read can still list one the fresh candidates no longer have and
+  // it needs a chip to be removable
+  readonly owners = input<ExperimentOwnerDto[]>([]);
   /** message key of a failed save */
   readonly error = input<string>();
 
@@ -56,7 +59,9 @@ export class ExperimentOwnerPicker {
   });
 
   protected readonly selectedOwners = computed(() => {
-    const byId = new Map(this.loadedCandidates().map((owner) => [owner.id, owner]));
+    const byId = new Map(
+      [...this.owners(), ...this.loadedCandidates()].map((owner) => [owner.id, owner]),
+    );
     return this.selectedOwnerIds()
       .map((id) => byId.get(id))
       .filter((owner): owner is ExperimentOwnerDto => owner !== undefined);

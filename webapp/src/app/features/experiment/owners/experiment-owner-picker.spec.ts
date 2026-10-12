@@ -35,11 +35,16 @@ describe('ExperimentOwnerPicker', () => {
     });
   });
 
-  async function render(selectedOwnerIds: string[] = [], error?: string) {
+  async function render(
+    selectedOwnerIds: string[] = [],
+    error?: string,
+    owners: ExperimentOwnerDto[] = [],
+  ) {
     const fixture = TestBed.createComponent(ExperimentOwnerPicker);
     fixture.componentRef.setInput('experimentId', 'experiment-1');
     fixture.componentRef.setInput('selectedOwnerIds', selectedOwnerIds);
     fixture.componentRef.setInput('error', error);
+    fixture.componentRef.setInput('owners', owners);
     await fixture.whenStable();
     const element = fixture.nativeElement as HTMLElement;
     const input = () => element.querySelector<HTMLInputElement>('[data-testid="owner-input"]')!;
@@ -143,10 +148,20 @@ describe('ExperimentOwnerPicker', () => {
     expect(view.fixture.componentInstance.selectedOwnerIds()).toEqual(['bob']);
   });
 
-  it('leaves out selected owners who are no candidates anymore', async () => {
-    const view = await render(['alice', 'former']);
+  it('leaves out selected ids it knows no name for', async () => {
+    const view = await render(['alice', 'unknown']);
 
     expect(view.chips()).toEqual(['Alice Muster']);
+  });
+
+  it('keeps a stored owner who is no candidate anymore removable', async () => {
+    const former: ExperimentOwnerDto = { id: 'former', firstName: 'Fritz', lastName: 'Former' };
+    const view = await render(['alice', 'former'], undefined, [ALICE, former]);
+
+    expect(view.chips()).toEqual(['Alice Muster', 'Fritz Former']);
+    view.element.querySelectorAll<HTMLButtonElement>('[matChipRemove]')[1].click();
+    await view.fixture.whenStable();
+    expect(view.fixture.componentInstance.selectedOwnerIds()).toEqual(['alice']);
   });
 
   it('says so when nobody can be an owner', async () => {

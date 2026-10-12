@@ -50,6 +50,7 @@ class ExperimentOwnerPickerStub {
   experimentId = input.required<string>();
   selectedOwnerIds = model<string[]>([]);
   error = input<string>();
+  owners = input<ExperimentOwnerDto[]>([]);
 }
 
 @Component({ selector: 'app-experiment-owner-list', template: '' })
