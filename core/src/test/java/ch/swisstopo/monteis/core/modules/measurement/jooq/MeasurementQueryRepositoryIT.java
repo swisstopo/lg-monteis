@@ -11,6 +11,9 @@ import ch.swisstopo.monteis.core.infrastructure.query.SortModelItem;
 import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
+import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
+import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
+import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
@@ -74,6 +77,8 @@ class MeasurementQueryRepositoryIT {
       UUID.fromString("00000000-0000-7000-8000-000000000405");
   private static final UUID TEMP_1_SENSOR = UUID.fromString("00000000-0000-7000-8000-000000000201");
   // TEMP-1 belongs to experiment Alpha (...301) only
+  private static final UUID EXPERIMENT_ALPHA =
+      UUID.fromString("00000000-0000-7000-8000-000000000301");
   private static final UUID EXPERIMENT_BETA =
       UUID.fromString("00000000-0000-7000-8000-000000000302");
   private static final LocalDate DETAIL_TODAY = LocalDate.of(2024, Month.JANUARY, 1);
@@ -712,6 +717,16 @@ class MeasurementQueryRepositoryIT {
           // then
           assertEquals(TEMP_1_SENSOR, detail.id());
           assertNotNull(detail.das());
+          ExperimentResponseDto mainExperiment = detail.mainExperiment();
+          assertNotNull(mainExperiment);
+          assertEquals(EXPERIMENT_ALPHA, mainExperiment.id());
+          assertEquals("Mont Terri Alpha", mainExperiment.name());
+          assertEquals(
+              new PeriodDto(LocalDate.of(2024, Month.JANUARY, 15), LocalDate.of(2024, 6, 30)),
+              mainExperiment.period());
+          assertEquals(Status.UPCOMING, mainExperiment.status());
+          assertEquals(1, mainExperiment.version());
+          assertEquals(12, mainExperiment.sensorCount());
           assertEquals(1, detail.parameters().size());
           SensorDetailParameterResponseDto temperature = detail.parameters().getFirst();
           assertEquals(TEMP_1_PARAM, temperature.id());
@@ -736,6 +751,7 @@ class MeasurementQueryRepositoryIT {
 
           // then
           assertEquals(sensor.getId(), detail.id());
+          assertNull(detail.mainExperiment());
           assertTrue(detail.parameters().isEmpty());
         });
   }

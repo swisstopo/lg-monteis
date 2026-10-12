@@ -65,9 +65,18 @@ public class TransformationOrchestrator {
     sensorReading.setTimestamp(timestamp);
     sensorReading.setRawValue(rawValue);
     sensorReading.setNormValue(standardizedToSI);
-    sensorReading.setStatus(RangeCategory.lookupLiteral(status.getDbValue()));
+    sensorReading.setStatus(toRangeCategory(status));
     sensorReading.setVersion(activeConfig.getConfig().getVersion().shortValue());
 
     return sensorReading;
+  }
+
+  // Exhaustive switch: a new MeasurementStatus fails compilation (lookupLiteral would yield null).
+  private static RangeCategory toRangeCategory(MeasurementStatus status) {
+    return switch (status) {
+      case TOO_LOW -> RangeCategory.too_low;
+      case CORRECT -> RangeCategory.correct;
+      case TOO_HIGH -> RangeCategory.too_high;
+    };
   }
 }

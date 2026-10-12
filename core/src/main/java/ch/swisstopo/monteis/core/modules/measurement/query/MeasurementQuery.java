@@ -26,8 +26,6 @@ public interface MeasurementQuery {
    * Fetches a sensor with all its parameters and the newest reading of each, in a single round
    * trip.
    *
-   * @param id the sensor id
-   * @param today reference date for the main experiment's status
    * @return the sensor detail, or empty when the sensor does not exist or is not visible to the
    *     caller under row-level security
    */

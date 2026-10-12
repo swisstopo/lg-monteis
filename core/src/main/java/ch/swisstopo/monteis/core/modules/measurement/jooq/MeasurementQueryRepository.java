@@ -5,27 +5,19 @@ import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecur
 import static org.jooq.Records.mapping;
 import static org.jooq.impl.DSL.*;
 
-import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.core.infrastructure.jooq.PagedRequestJooqTranslator;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
-import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
-import ch.swisstopo.monteis.core.modules.experiment.jooq.ExperimentJooqMapper;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
+import ch.swisstopo.monteis.core.modules.experiment.jooq.ExperimentRecordProjections;
 import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
-import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorDetailParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorDetailResponseDto;
-import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorParameterReadingResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -45,12 +37,11 @@ public class MeasurementQueryRepository implements MeasurementQuery {
 
   private final DSLContext dsl;
   private final Clock clock;
-  private final ExperimentJooqMapper experimentJooqMapper;
 
   // Correlated per sensor_parameter, joined once below and reused by both the projection and the
   // sort/filter map so "dasKey" resolves against the exact same lateral alias either way. Also
   // backs findSensorDetail. Reads the secured view, so row-level security applies.
-  private static final Table<?> LATEST_READINGS =
+  static final Table<?> LATEST_READINGS =
       lateral(
               select(
                       SENSOR_READING_SECURED.TIMESTAMP,
@@ -102,11 +93,9 @@ public class MeasurementQueryRepository implements MeasurementQuery {
           Map.entry("active", SENSORS.ACTIVE),
           Map.entry("comment", SENSORS.COMMENT));
 
-  public MeasurementQueryRepository(
-      DSLContext dsl, Clock clock, ExperimentJooqMapper experimentJooqMapper) {
+  public MeasurementQueryRepository(DSLContext dsl, Clock clock) {
     this.dsl = dsl;
     this.clock = clock;
-    this.experimentJooqMapper = experimentJooqMapper;
   }
 
   @Override
@@ -114,6 +103,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
     Result<Record> rows =
         dsl.select(SENSORS.fields())
             .select(EXPERIMENTS.fields())
+            .select(ExperimentRecordProjections.SENSOR_COUNT)
             .select(SENSOR_PARAMETER.fields())
             .select(FORMULAS.fields())
             .select(SENSOR_TYPES.fields())
@@ -133,17 +123,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
             .orderBy(SENSOR_PARAMETER.ID.asc())
             .fetch();
 
-    if (rows.isEmpty()) {
-      return Optional.empty();
-    }
-
-    List<SensorDetailParameterResponseDto> parameters =
-        rows.stream()
-            .filter(r -> r.get(SENSOR_PARAMETER.ID) != null)
-            .map(MeasurementQueryRepository::toParameter)
-            .toList();
-
-    return Optional.of(toSensor(rows.get(0), parameters, today));
+    return SensorDetailProjection.toSensorDetail(rows, today);
   }
 
   @Override
@@ -283,76 +263,6 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                 .where(criteria.condition()));
 
     return new PagedResult<>(data, totalCount);
-  }
-
-  private SensorDetailResponseDto toSensor(
-      Record r, List<SensorDetailParameterResponseDto> parameters, LocalDate today) {
-    return new SensorDetailResponseDto(
-        r.get(SENSORS.ID),
-        r.get(SENSORS.NAME),
-        r.get(SENSORS.DAS_SENSOR_ALIAS),
-        Das.valueOf(r.get(SENSORS.DAS)),
-        r.get(SENSORS.FULCRUM_ID),
-        toExperiment(r, today),
-        toCoordinates(r),
-        r.get(SENSORS.ACTIVE),
-        r.get(SENSORS.COMMENT),
-        r.get(SENSORS.VERSION),
-        parameters);
-  }
-
-  private ExperimentResponseDto toExperiment(Record r, LocalDate today) {
-    if (r.get(EXPERIMENTS.ID) == null) {
-      return null;
-    }
-    Experiment experiment = experimentJooqMapper.toDomain(r.into(EXPERIMENTS));
-    return new ExperimentResponseDto(
-        experiment.getId(),
-        experiment.getName(),
-        experiment.getComment(),
-        new PeriodDto(experiment.getPeriod().start(), experiment.getPeriod().end()),
-        experiment.getStatus(today),
-        experiment.getVersion(),
-        experiment.getSensorCount());
-  }
-
-  private static CoordinatesDto toCoordinates(Record r) {
-    Double x = r.get(SENSORS.X);
-    Double y = r.get(SENSORS.Y);
-    Double z = r.get(SENSORS.Z);
-    return x == null || y == null || z == null ? null : new CoordinatesDto(x, y, z);
-  }
-
-  private static SensorDetailParameterResponseDto toParameter(Record r) {
-    return new SensorDetailParameterResponseDto(
-        r.get(SENSOR_PARAMETER.ID),
-        r.get(SENSOR_PARAMETER.NAME),
-        r.get(SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
-        new SensorTypeResponseDto(
-            r.get(SENSOR_TYPES.ID), r.get(SENSOR_TYPES.NAME), r.get(SENSOR_TYPES.VERSION)),
-        Unit.valueOf(r.get(SENSOR_PARAMETER.UNIT).name()),
-        new FormulaResponseDto(
-            r.get(FORMULAS.ID), r.get(FORMULAS.EXPRESSION), r.get(FORMULAS.VERSION)),
-        new AlarmLimitsDto(
-            r.get(SENSOR_PARAMETER.LOWER_ALARM_LIMIT), r.get(SENSOR_PARAMETER.UPPER_ALARM_LIMIT)),
-        r.get(SENSOR_PARAMETER.ACTIVE),
-        r.get(SENSOR_PARAMETER.COMMENT),
-        r.get(SENSOR_PARAMETER.VERSION),
-        toReading(r));
-  }
-
-  private static SensorParameterReadingResponseDto toReading(Record r) {
-    OffsetDateTime timestamp =
-        r.get(LATEST_READINGS.field(SENSOR_READING_SECURED.TIMESTAMP), OffsetDateTime.class);
-    if (timestamp == null) {
-      return null;
-    }
-    return new SensorParameterReadingResponseDto(
-        r.get(LATEST_READINGS.field(SENSOR_READING_SECURED.NORM_VALUE)),
-        r.get(LATEST_READINGS.field(SENSOR_READING_SECURED.RAW_VALUE)),
-        MeasurementStatus.fromDbValue(
-            r.get(LATEST_READINGS.field(SENSOR_READING_SECURED.STATUS), String.class)),
-        timestamp);
   }
 
   // The per-row correlated "trend" subquery used to re-run this range scan once per page row
