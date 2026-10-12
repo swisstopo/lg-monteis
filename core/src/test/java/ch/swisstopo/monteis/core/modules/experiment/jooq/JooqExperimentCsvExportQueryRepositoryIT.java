@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -59,8 +60,8 @@ class JooqExperimentCsvExportQueryRepositoryIT {
               createExperiment(
                   "OwnerCsvExportExperiment",
                   null,
-                  LocalDate.of(2024, 1, 1),
-                  LocalDate.of(2024, 12, 31));
+                  LocalDate.of(2024, Month.JANUARY, 1),
+                  LocalDate.of(2024, Month.DECEMBER, 31));
           addOwners(experimentId, ALICE.id(), BOB.id());
           owners = Map.of(experimentId, VisibleOwners.of(List.of(BOB, ALICE)));
 
@@ -80,8 +81,8 @@ class JooqExperimentCsvExportQueryRepositoryIT {
               createExperiment(
                   "SemicolonOwnerCsvExportExperiment",
                   null,
-                  LocalDate.of(2024, 1, 1),
-                  LocalDate.of(2024, 12, 31));
+                  LocalDate.of(2024, Month.JANUARY, 1),
+                  LocalDate.of(2024, Month.DECEMBER, 31));
           DirectoryUser semicolon =
               new DirectoryUser(UUID.randomUUID(), "Ca;rl", "Sem; i", "carl@example.test");
           addOwners(experimentId, semicolon.id(), ALICE.id());
@@ -103,8 +104,8 @@ class JooqExperimentCsvExportQueryRepositoryIT {
               createExperiment(
                   "OfflineCsvExportExperiment",
                   null,
-                  LocalDate.of(2024, 1, 1),
-                  LocalDate.of(2024, 12, 31));
+                  LocalDate.of(2024, Month.JANUARY, 1),
+                  LocalDate.of(2024, Month.DECEMBER, 31));
           addOwners(experimentId, ALICE.id());
           Map<VisibleOwners, String> cells =
               Map.of(
@@ -127,9 +128,15 @@ class JooqExperimentCsvExportQueryRepositoryIT {
         () -> {
           UUID owned =
               createExperiment(
-                  "FilteredCsvOwned", null, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+                  "FilteredCsvOwned",
+                  null,
+                  LocalDate.of(2024, Month.JANUARY, 1),
+                  LocalDate.of(2024, Month.DECEMBER, 31));
           createExperiment(
-              "FilteredCsvOther", null, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+              "FilteredCsvOther",
+              null,
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
           addOwners(owned, ALICE.id());
           owners = Map.of(owned, VisibleOwners.of(List.of(ALICE)));
 
@@ -270,11 +277,20 @@ class JooqExperimentCsvExportQueryRepositoryIT {
         () -> {
           // given: three experiments matching the filter, but the request's limit only allows 2
           createExperiment(
-              "CapExperiment One", "c", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+              "CapExperiment One",
+              "c",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
           createExperiment(
-              "CapExperiment Two", "c", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+              "CapExperiment Two",
+              "c",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
           createExperiment(
-              "CapExperiment Three", "c", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+              "CapExperiment Three",
+              "c",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
 
           PagedRequest request =
               new PagedRequest(

@@ -157,10 +157,11 @@ class JooqExperimentRepositoryIT {
   @Test
   @Transactional
   void should_not_accept_an_unknown_experiment_as_visible() {
+    UUID unknownId = UUID.randomUUID();
     SecurityContextTestSupport.runAsAdmin(
         () ->
             assertThrows(
-                ObjectNotFoundException.class, () -> repository.requireVisible(UUID.randomUUID())));
+                ObjectNotFoundException.class, () -> repository.requireVisible(unknownId)));
   }
 
   @Test
@@ -544,13 +545,14 @@ class JooqExperimentRepositoryIT {
     UUID[] hiddenId = new UUID[1];
     SecurityContextTestSupport.runAsAdmin(
         () -> hiddenId[0] = createDefaultExperiment("OWNER-HIDDEN"));
+    Set<UUID> owners = Set.of(ALICE);
 
     SecurityContextTestSupport.runAsUser(
         List.of(),
         () ->
             assertThrows(
                 ObjectNotFoundException.class,
-                () -> repository.replaceOwners(hiddenId[0], Set.of(ALICE))));
+                () -> repository.replaceOwners(hiddenId[0], owners)));
     assertEquals(
         0, dsl.fetchCount(EXPERIMENT_OWNER, EXPERIMENT_OWNER.EXPERIMENT_ID.eq(hiddenId[0])));
   }

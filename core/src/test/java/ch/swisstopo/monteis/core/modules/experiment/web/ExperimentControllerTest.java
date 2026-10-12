@@ -85,12 +85,13 @@ class ExperimentControllerTest {
   @MockitoBean private ExperimentCsvExportQueryRepository csvExportQueryRepository;
 
   @BeforeEach
-  void setUpClock() {
+  void setUp() {
     // Set up LocalDate.now(clock) to be the exact date
     Clock fixedClock = Clock.fixed(Instant.parse("2024-01-01T12:00:00Z"), ZoneId.of("UTC"));
 
     given(clock.instant()).willReturn(fixedClock.instant());
     given(clock.getZone()).willReturn(fixedClock.getZone());
+    given(ownerService.findOwnersOf(any(Experiment.class))).willReturn(VisibleOwners.NONE);
   }
 
   private final LocalDate referenceToday = LocalDate.of(2024, Month.JUNE, 15);
@@ -99,11 +100,6 @@ class ExperimentControllerTest {
       new DirectoryUser(UUID.randomUUID(), "Alice", "Example", "alice@example.test");
   private static final ExperimentOwnerDto OWNER_DTO =
       new ExperimentOwnerDto(OWNER.id(), OWNER.firstName(), OWNER.lastName(), OWNER.email());
-
-  @BeforeEach
-  void experimentsComeWithoutOwners() {
-    given(ownerService.findOwnersOf(any(Experiment.class))).willReturn(VisibleOwners.NONE);
-  }
 
   @Test
   void should_route_get_experiment_and_verify_output() throws Exception {

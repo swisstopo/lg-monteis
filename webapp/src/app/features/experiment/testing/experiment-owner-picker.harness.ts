@@ -3,7 +3,7 @@ import { MatFormFieldHarness } from '@angular/material/form-field/testing';
 import { MatSelectHarness } from '@angular/material/select/testing';
 
 export class ExperimentOwnerPickerHarness extends ComponentHarness {
-  static hostSelector = 'app-experiment-owner-picker';
+  static readonly hostSelector = 'app-experiment-owner-picker';
 
   private readonly formField = this.locatorFor(MatFormFieldHarness);
   private readonly select = this.locatorFor(MatSelectHarness);

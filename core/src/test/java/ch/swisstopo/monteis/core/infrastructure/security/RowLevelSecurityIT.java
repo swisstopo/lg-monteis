@@ -288,14 +288,13 @@ class RowLevelSecurityIT {
   void read_only_user_may_not_assign_an_owner() {
     SecurityContextTestSupport.runAsUser(
         List.of(EXPERIMENT_BETA),
-        () ->
-            assertThrows(
-                PermissionDeniedDataAccessException.class,
-                () ->
-                    dsl.insertInto(EXPERIMENT_OWNER)
-                        .set(EXPERIMENT_OWNER.EXPERIMENT_ID, EXPERIMENT_BETA)
-                        .set(EXPERIMENT_OWNER.USER_ID, ALICE)
-                        .execute()));
+        () -> {
+          var insertOwner =
+              dsl.insertInto(EXPERIMENT_OWNER)
+                  .set(EXPERIMENT_OWNER.EXPERIMENT_ID, EXPERIMENT_BETA)
+                  .set(EXPERIMENT_OWNER.USER_ID, ALICE);
+          assertThrows(PermissionDeniedDataAccessException.class, insertOwner::execute);
+        });
   }
 
   @Test

@@ -17,6 +17,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeD
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.Test;
 
 class SensorWebMapperTest {
@@ -89,7 +90,7 @@ class SensorWebMapperTest {
             null);
 
     // when
-    SensorResponseDto dto = mapper.toDto(sensor, LocalDate.of(2030, 1, 1));
+    SensorResponseDto dto = mapper.toDto(sensor, LocalDate.of(2030, Month.JANUARY, 1));
 
     // then
     assertThat(dto.mainExperiment()).isNull();
@@ -100,7 +101,10 @@ class SensorWebMapperTest {
     // given
     Experiment experiment =
         new Experiment(
-            "Mont Terri", new Period(LocalDate.of(2030, 1, 1), LocalDate.of(2030, 12, 31)), null);
+            "Mont Terri",
+            new Period(
+                LocalDate.of(2030, Month.JANUARY, 1), LocalDate.of(2030, Month.DECEMBER, 31)),
+            null);
     Sensor sensor =
         new Sensor(
             "Sensor",
@@ -113,7 +117,7 @@ class SensorWebMapperTest {
             null);
 
     // when
-    SensorResponseDto dto = mapper.toDto(sensor, LocalDate.of(2030, 6, 1));
+    SensorResponseDto dto = mapper.toDto(sensor, LocalDate.of(2030, Month.JUNE, 1));
 
     // then
     assertThat(dto.mainExperiment().name()).isEqualTo("Mont Terri");

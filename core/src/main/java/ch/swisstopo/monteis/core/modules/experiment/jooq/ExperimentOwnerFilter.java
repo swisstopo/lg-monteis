@@ -51,7 +51,7 @@ final class ExperimentOwnerFilter {
   }
 
   private static Set<String> selectedValuesOf(FilterModelItem ownersFilter) {
-    if (ownersFilter instanceof SetFilterModel(var _, var values)) {
+    if (ownersFilter instanceof SetFilterModel(_, var values)) {
       return values == null ? Set.of() : values;
     }
     throw new InvalidPagedRequestException("The owners column only supports a set filter");

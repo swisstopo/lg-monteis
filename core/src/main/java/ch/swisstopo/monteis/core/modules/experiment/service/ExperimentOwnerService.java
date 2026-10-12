@@ -100,7 +100,7 @@ public class ExperimentOwnerService {
           hideOwners(experimentId, VisibleOwners.NO_WRITE_GROUP, "no write group");
       case AccessDenied(var reason) ->
           hideOwners(experimentId, VisibleOwners.ACCESS_DENIED, reason);
-      case KeycloakUnavailable(var _) -> VisibleOwners.KEYCLOAK_UNAVAILABLE;
+      case KeycloakUnavailable _ -> VisibleOwners.KEYCLOAK_UNAVAILABLE;
     };
   }
 

@@ -25,6 +25,7 @@ import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentOwnerQueryRe
 import ch.swisstopo.monteis.core.modules.experiment.query.StoredOwners;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -228,11 +229,12 @@ class ExperimentOwnerServiceTest {
     @Test
     void should_reject_an_owner_that_is_not_a_pi_of_the_experiment() {
       given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known(ALICE));
+      Set<UUID> ownerIds = Set.of(ALICE.id(), BOB.id());
 
       FieldBusinessValidationException e =
           assertThrows(
               FieldBusinessValidationException.class,
-              () -> service.replaceOwnersInKeycloak(stored, Set.of(ALICE.id(), BOB.id())));
+              () -> service.replaceOwnersInKeycloak(stored, ownerIds));
 
       assertEquals(ExperimentOwnerService.OWNER_IDS_FIELD, e.getField());
       assertEquals(ExperimentOwnerService.NOT_ELIGIBLE_KEY, e.getMessageKey());
@@ -269,7 +271,7 @@ class ExperimentOwnerServiceTest {
     return new Experiment(
         id,
         "EXP",
-        new Period(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+        new Period(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
         null,
         1,
         0,

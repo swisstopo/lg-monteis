@@ -145,11 +145,12 @@ class ExperimentTest {
 
     ownerIds.add(UUID.randomUUID());
 
+    Set<UUID> returnedOwnerIds = experiment.getOwnerIds();
+    UUID anotherOwnerId = UUID.randomUUID();
     assertAll(
-        () -> assertEquals(1, experiment.getOwnerIds().size()),
+        () -> assertEquals(1, returnedOwnerIds.size()),
         () ->
             assertThrows(
-                UnsupportedOperationException.class,
-                () -> experiment.getOwnerIds().add(UUID.randomUUID())));
+                UnsupportedOperationException.class, () -> returnedOwnerIds.add(anotherOwnerId)));
   }
 }

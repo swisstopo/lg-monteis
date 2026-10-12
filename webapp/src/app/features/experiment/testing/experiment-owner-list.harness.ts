@@ -1,7 +1,7 @@
 import { ComponentHarness } from '@angular/cdk/testing';
 
 export class ListedOwnerHarness extends ComponentHarness {
-  static hostSelector = '[data-testid="experiment-owner"]';
+  static readonly hostSelector = '[data-testid="experiment-owner"]';
 
   private readonly name = this.locatorFor('span');
   private readonly mailLink = this.locatorForOptional('a');
@@ -17,7 +17,7 @@ export class ListedOwnerHarness extends ComponentHarness {
 }
 
 export class ExperimentOwnerListHarness extends ComponentHarness {
-  static hostSelector = 'app-experiment-owner-list';
+  static readonly hostSelector = 'app-experiment-owner-list';
 
   private readonly owners = this.locatorForAll(ListedOwnerHarness);
   private readonly noOwners = this.locatorForOptional('[data-testid="no-owners"]');

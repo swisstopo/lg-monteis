@@ -18,7 +18,7 @@ export type ExperimentField = keyof typeof FIELD_LABELS;
 export const EXPERIMENT_FIELDS = Object.keys(FIELD_LABELS) as ExperimentField[];
 
 export class ExperimentDialogHarness extends ComponentHarness {
-  static hostSelector = 'app-experiment-dialog';
+  static readonly hostSelector = 'app-experiment-dialog';
 
   private readonly title = this.locatorFor('h2');
   private readonly actions = this.locatorForAll(
