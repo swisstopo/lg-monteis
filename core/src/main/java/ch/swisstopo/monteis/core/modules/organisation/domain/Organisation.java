@@ -2,14 +2,9 @@ package ch.swisstopo.monteis.core.modules.organisation.domain;
 
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import java.util.UUID;
-import org.javers.core.metamodel.annotation.Id;
-import org.javers.core.metamodel.annotation.TypeName;
 
-@TypeName(Organisation.JAVERS_TYPE)
 public class Organisation {
-  public static final String JAVERS_TYPE = "Organisation";
-
-  @Id private UUID id;
+  private UUID id;
   private String name;
   private String comment;
 
