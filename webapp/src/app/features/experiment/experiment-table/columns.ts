@@ -85,9 +85,10 @@ export function createColumns(datePipe: DatePipe): TableColumn<ExperimentRespons
       filterParams: {
         valuesProvider: async () => {
           const owners = await experimentService.findAllVisibleOwners();
-          return owners
-            .filter((owner): owner is ExperimentOwnerDto & { id: string } => !!owner.id)
-            .map((owner) => ({ displayName: ownerDisplayName(owner), value: owner.id }));
+          return owners.map((owner) => ({
+            displayName: ownerDisplayName(owner),
+            value: owner.id,
+          }));
         },
         blankOptionLabel: translateService.translate('experiment.owners.none')(),
       },

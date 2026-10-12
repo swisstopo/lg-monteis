@@ -72,7 +72,7 @@ export class ExperimentOwnerPicker {
     const search = this.searchText().trim().toLowerCase();
     return this.loadedCandidates().filter(
       (owner) =>
-        !selected.has(owner.id!) &&
+        !selected.has(owner.id) &&
         (!search ||
           ownerDisplayName(owner).toLowerCase().includes(search) ||
           owner.email?.toLowerCase().includes(search)),

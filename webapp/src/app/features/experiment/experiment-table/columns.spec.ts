@@ -37,7 +37,7 @@ describe('experiment columns', () => {
   });
 
   it('filters by the assigned owners, by name but on their id', async () => {
-    experimentService.findAllVisibleOwners.mockResolvedValue([ALICE, { firstName: 'No Id' }, BOB]);
+    experimentService.findAllVisibleOwners.mockResolvedValue([ALICE, BOB]);
 
     const values = await ownerColumn().filterParams.valuesProvider();
 

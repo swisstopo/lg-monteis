@@ -126,7 +126,7 @@ export class ExperimentDialog {
       this.ownersStatus() === ExperimentResponseDto.OwnersStatusEnum.Shown,
   );
   // compared by content: a saved experiment with the same owners must not reset the selection
-  private readonly storedOwnerIds = computed(() => this.owners().map((owner) => owner.id!), {
+  private readonly storedOwnerIds = computed(() => this.owners().map((owner) => owner.id), {
     equal: sameIds,
   });
   protected readonly ownerIds = linkedSignal(() => this.storedOwnerIds());
@@ -192,7 +192,7 @@ function ownersSaved(saved: ExperimentResponseDto, ownerIds: string[]): boolean 
   return (
     saved.ownersStatus === ExperimentResponseDto.OwnersStatusEnum.Shown &&
     sameIds(
-      (saved.owners ?? []).map((owner) => owner.id!),
+      (saved.owners ?? []).map((owner) => owner.id),
       ownerIds,
     )
   );
