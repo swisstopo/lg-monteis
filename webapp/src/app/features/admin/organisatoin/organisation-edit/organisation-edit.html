@@ -30,32 +30,32 @@
       }
     </mat-form-field>
   </form>
+</mat-dialog-content>
 
-  <mat-dialog-actions align="end">
-    <button matButton mat-dialog-close>
-      <mat-icon fontIcon="cancel"></mat-icon>
-      {{ 'organisation.button.cancel' | translate }}
-    </button>
-    @if (!organisationId()) {
-      <button
-        matButton="tonal"
-        [disabled]="organisationForm().submitting() || organisationForm().invalid()"
-        type="submit"
-        form="organisationCreateForm"
-        data-action="saveAndCreate"
-      >
-        <mat-icon fontIcon="save"></mat-icon>
-        {{ 'organisation.button.saveAndCreate' | translate }}
-      </button>
-    }
+<mat-dialog-actions align="end">
+  <button matButton mat-dialog-close>
+    <mat-icon fontIcon="cancel"></mat-icon>
+    {{ 'organisation.button.cancel' | translate }}
+  </button>
+  @if (!organisationId()) {
     <button
-      matButton="filled"
+      matButton="tonal"
       [disabled]="organisationForm().submitting() || organisationForm().invalid()"
       type="submit"
       form="organisationCreateForm"
+      data-action="saveAndCreate"
     >
       <mat-icon fontIcon="save"></mat-icon>
-      {{ 'organisation.button.save' | translate }}
+      {{ 'organisation.button.saveAndCreate' | translate }}
     </button>
-  </mat-dialog-actions>
-</mat-dialog-content>
+  }
+  <button
+    matButton="filled"
+    [disabled]="organisationForm().submitting() || organisationForm().invalid()"
+    type="submit"
+    form="organisationCreateForm"
+  >
+    <mat-icon fontIcon="save"></mat-icon>
+    {{ 'organisation.button.save' | translate }}
+  </button>
+</mat-dialog-actions>
