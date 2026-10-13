@@ -1,6 +1,9 @@
 package ch.swisstopo.monteis.core.modules.visualization.web;
 
+import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.modules.visualization.service.TileConversionStatus;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,7 +30,11 @@ public class TileController {
     this.status = status;
   }
 
-  @GetMapping("/model/tiles/{*path}")
+  @Operation(
+      summary = "Get a tile by path",
+      description = "Get a tile by path. This implements a simple authentified tile server")
+  @ApiResponse(responseCode = "200", description = "Successfully get a tile")
+  @GetMapping(path = ApiPaths.TILE_PATH, produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
   public ResponseEntity<Resource> getTile(@PathVariable String path) throws IOException {
     if (!status.isReady()) {
       return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
