@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
@@ -38,16 +39,26 @@ public class FulcrumConfig {
         .createClient(DefaultApi.class);
   }
 
-  private RestClient fulcrumRestClient(RestClient.Builder builder, FulcrumProperties properties) {
-    HttpClientSettings settings =
-        HttpClientSettings.defaults()
-            .withTimeouts(properties.connectTimeout(), properties.readTimeout());
+  @Bean
+  FulcrumAttachments fulcrumAttachments(
+      DefaultApi fulcrumApi, RestClient.Builder builder, FulcrumProperties properties) {
+    RestClient downloadClient = builder.requestFactory(requestFactoryOf(properties)).build();
+    return new FulcrumAttachments(fulcrumApi, properties, downloadClient);
+  }
 
+  private RestClient fulcrumRestClient(RestClient.Builder builder, FulcrumProperties properties) {
     return builder
-        .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings))
+        .requestFactory(requestFactoryOf(properties))
         .baseUrl(properties.baseUrl())
         .defaultHeader(API_TOKEN_HEADER, properties.apiToken())
         .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
         .build();
+  }
+
+  private static ClientHttpRequestFactory requestFactoryOf(FulcrumProperties properties) {
+    return ClientHttpRequestFactoryBuilder.detect()
+        .build(
+            HttpClientSettings.defaults()
+                .withTimeouts(properties.connectTimeout(), properties.readTimeout()));
   }
 }

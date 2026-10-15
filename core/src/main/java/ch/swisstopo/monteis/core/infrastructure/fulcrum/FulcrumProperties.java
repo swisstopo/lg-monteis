@@ -9,6 +9,7 @@ public record FulcrumProperties(
     @DefaultValue("https://api.fulcrumapp.com/api") String baseUrl,
     @DefaultValue("") String apiToken,
     @DefaultValue("Mont Terri Monitoring Systems and Sensors") String sensorTable,
+    @DefaultValue("Mont Terri Literature") String literatureTable,
     @DefaultValue("20000") int perPage,
     @DefaultValue("5s") Duration connectTimeout,
     @DefaultValue("60s") Duration readTimeout) {}

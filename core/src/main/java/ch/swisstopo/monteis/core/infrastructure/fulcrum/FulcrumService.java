@@ -14,7 +14,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Read-only access to the sensor metadata Fulcrum holds (MON-142).
+ * Read-only access to the sensor metadata (MON-142) and the literature (MON-228) Fulcrum holds.
  *
  * <p>Fulcrum exposes no per-record REST resource for an app's data; the
  * <a href="https://docs.fulcrumapp.com/reference/query-get">Query API</a> is the documented way
@@ -41,6 +41,8 @@ public class FulcrumService {
 
   private static final TypeReference<FulcrumQueryResponse<FulcrumSensor>> SENSOR_ROWS =
       new TypeReference<>() {};
+  private static final TypeReference<FulcrumQueryResponse<FulcrumLiteratureEntry>> LITERATURE_ROWS =
+      new TypeReference<>() {};
 
   /**
    * The columns {@link FulcrumSensor} is built from. Fulcrum's table carries roughly 120 of them,
@@ -58,6 +60,19 @@ public class FulcrumService {
           "fy_point_with_offset",
           "fz_point_with_offset");
 
+  private static final String LITERATURE_COLUMNS =
+      String.join(
+          ", ",
+          "_record_id",
+          "number",
+          "reference_title",
+          "author_sequence",
+          "year",
+          "categories",
+          "keywords",
+          "document",
+          "document_names");
+
   private final DefaultApi fulcrumApi;
   private final FulcrumProperties properties;
   private final ObjectMapper objectMapper;
@@ -74,7 +89,7 @@ public class FulcrumService {
         "SELECT %s FROM \"%s\" WHERE _record_id = '%s';"
             .formatted(SENSOR_COLUMNS, properties.sensorTable(), fulcrumRecordId);
 
-    List<FulcrumSensor> rows = query(statement);
+    List<FulcrumSensor> rows = query(statement, SENSOR_ROWS);
     if (rows.size() > 1) {
       log.warn(
           "Fulcrum returned {} records for record id {}, using the first one",
@@ -86,10 +101,19 @@ public class FulcrumService {
   }
 
   public List<FulcrumSensor> getSensors() {
-    return query("SELECT %s FROM \"%s\";".formatted(SENSOR_COLUMNS, properties.sensorTable()));
+    return query(
+        "SELECT %s FROM \"%s\";".formatted(SENSOR_COLUMNS, properties.sensorTable()), SENSOR_ROWS);
   }
 
-  private List<FulcrumSensor> query(String statement) {
+  // entries without a file are of no use in the overview, the PO wants them ignored
+  public List<FulcrumLiteratureEntry> getLiteratureToSync() {
+    return query(
+        "SELECT %s FROM \"%s\" WHERE synchronise_with_monteis = 'yes' AND document IS NOT NULL;"
+            .formatted(LITERATURE_COLUMNS, properties.literatureTable()),
+        LITERATURE_ROWS);
+  }
+
+  private <T> List<T> query(String statement, TypeReference<FulcrumQueryResponse<T>> rowType) {
     log.debug("Querying Fulcrum: {}", statement);
 
     if (properties.apiToken() == null || properties.apiToken().isBlank()) {
@@ -105,7 +129,7 @@ public class FulcrumService {
 
     // The spec types this response as an empty object (see FulcrumSpecTest), so the generated
     // signature can only promise Object and the row envelope is converted here.
-    return objectMapper.convertValue(body, SENSOR_ROWS).rows();
+    return objectMapper.convertValue(body, rowType).rows();
   }
 
   private Object queryApi(String statement) {
