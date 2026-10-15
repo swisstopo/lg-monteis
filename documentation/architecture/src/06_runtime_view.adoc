@@ -114,6 +114,8 @@ include::../images/iam-sequence.puml[]
 
 MONTEIS kommuniziert eng mit Umsystemen wie Fulcrum (dem digitalen Logbuch des Felslabors). Anstatt alle Log- und Asset-Daten asynchron und redundant in die MONTEIS-Datenbank zu spiegeln, wendet die Architektur für diese Daten das **On-Demand Fetching (Pull-Pattern)** an.
 
+Ausnahme sind die Fulcrum Documents (Literatur aus "Mont Terri Literature"), die nächtlich gespiegelt werden, siehe ADR "Fulcrum Documents spiegeln statt On-Demand abrufen" in Kapitel 9.
+
 Das Spring Boot Backend fungiert hierbei als API-Gateway. Wenn externe Daten benötigt werden, werden diese "Just in Time" via REST abgerufen.
 
 **Ablauf:**
