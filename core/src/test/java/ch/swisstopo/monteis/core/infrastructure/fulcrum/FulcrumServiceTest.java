@@ -44,6 +44,7 @@ class FulcrumServiceTest {
       "_record_id, _title, system_or_component_category_and_type, fx_point_with_offset,"
           + " fy_point_with_offset, fz_point_with_offset";
   private static final String TABLE = "Mont Terri Monitoring Systems and Sensors";
+  private static final String LITERATURE_TABLE = "Mont Terri Literature";
   private static final UUID SENSOR_RECORD_ID =
       UUID.fromString("29d8aee7-d9c6-4459-ac9d-bbd6e10f6518");
 
@@ -89,6 +90,21 @@ class FulcrumServiceTest {
       }
       """;
 
+  private static final String LITERATURE_ROW =
+      """
+      {
+        "_record_id": "221ae592-4527-4442-8294-8dc2c5be1168",
+        "number": "2011-02",
+        "reference_title": "DS Experiment: BDS-1: Determination of the 3D total and effective stress",
+        "author_sequence": "Jahns E.",
+        "year": 2011,
+        "categories": "2 Mont Terri Technical Notes (TN)",
+        "keywords": ["Experiment DS", "RACOS"],
+        "document": ["22c52651-0b4b-48ca-bf8e-6594e935da0f"],
+        "document_names": ["Jahns 03 2011 - DS Experiment.pdf"]
+      }
+      """;
+
   private MockRestServiceServer server;
   private FulcrumService service;
 
@@ -100,7 +116,13 @@ class FulcrumServiceTest {
   private void givenAnApiTokenOf(String apiToken) {
     FulcrumProperties properties =
         new FulcrumProperties(
-            BASE_URL, apiToken, TABLE, 20000, Duration.ofSeconds(5), Duration.ofSeconds(60));
+            BASE_URL,
+            apiToken,
+            TABLE,
+            LITERATURE_TABLE,
+            20000,
+            Duration.ofSeconds(5),
+            Duration.ofSeconds(60));
 
     JsonMapper objectMapper = JsonMapper.builder().build();
 
@@ -255,6 +277,39 @@ class FulcrumServiceTest {
     assertThat(rows).hasSize(2);
     assertThat(rows).filteredOn(FulcrumSensor::isSensor).hasSize(1);
     assertThat(rows.get(1).title()).isEqualTo("CL_BCL-05_MMMS");
+    server.verify();
+  }
+
+  @Test
+  void getLiteratureToSync_asks_for_the_marked_entries_with_files_only() {
+    server
+        .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
+        .andExpect(
+            sqlQuery(
+                "SELECT _record_id, number, reference_title, author_sequence, year, categories,"
+                    + " keywords, document, document_names FROM \"Mont Terri Literature\" WHERE"
+                    + " synchronise_with_monteis = 'yes' AND document IS NOT NULL;"))
+        .andRespond(withSuccess(rows(LITERATURE_ROW), MediaType.APPLICATION_JSON));
+
+    List<FulcrumLiteratureEntry> entries = service.getLiteratureToSync();
+
+    assertThat(entries)
+        .singleElement()
+        .satisfies(
+            entry -> {
+              assertThat(entry.recordId())
+                  .isEqualTo(UUID.fromString("221ae592-4527-4442-8294-8dc2c5be1168"));
+              assertThat(entry.number()).isEqualTo("2011-02");
+              assertThat(entry.title()).startsWith("DS Experiment: BDS-1");
+              assertThat(entry.authors()).isEqualTo("Jahns E.");
+              assertThat(entry.year()).isEqualTo(2011);
+              assertThat(entry.category()).isEqualTo("2 Mont Terri Technical Notes (TN)");
+              assertThat(entry.keywords()).containsExactly("Experiment DS", "RACOS");
+              assertThat(entry.attachments())
+                  .singleElement()
+                  .extracting(FulcrumLiteratureEntry.FulcrumAttachmentReference::name)
+                  .isEqualTo("Jahns 03 2011 - DS Experiment.pdf");
+            });
     server.verify();
   }
 
