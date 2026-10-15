@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.experiment.web;
+package ch.swisstopo.monteis.core.infrastructure.api;
 
 import java.util.List;
 import org.mapstruct.Named;
@@ -11,9 +11,9 @@ import org.springframework.util.MimeTypeUtils;
  * viewed document opens from a blob url on the webapp's origin, html or svg would run its scripts
  * there with the viewer's session.
  */
-final class ViewableContentTypes {
+public final class ViewableContentTypes {
 
-  static final String VIEWABLE = "viewable";
+  public static final String VIEWABLE = "viewable";
 
   private static final List<MimeType> TYPES =
       List.of(
@@ -27,7 +27,7 @@ final class ViewableContentTypes {
   private ViewableContentTypes() {}
 
   @Named(VIEWABLE)
-  static boolean isViewable(String contentType) {
+  public static boolean isViewable(String contentType) {
     try {
       MimeType type = MimeTypeUtils.parseMimeType(contentType);
       return TYPES.stream().anyMatch(type::equalsTypeAndSubtype);
