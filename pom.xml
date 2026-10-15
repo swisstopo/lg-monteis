@@ -43,6 +43,7 @@
     <testcontainers-keycloak.version>4.4.0</testcontainers-keycloak.version>
     <aws-msk-iam-auth.version>2.3.9</aws-msk-iam-auth.version>
     <awssdk.version>2.51.2</awssdk.version>
+    <shedlock.version>7.10.1</shedlock.version>
 
     <!-- Override the Spring Boot BOM's managed flyway.version so the test-scoped
          flyway-core + flyway-database-postgresql (Testcontainers validation) and the
@@ -83,6 +84,12 @@
         <version>${awssdk.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>net.javacrumbs.shedlock</groupId>
+        <artifactId>shedlock-provider-jdbc-template</artifactId>
+        <version>${shedlock.version}</version>
       </dependency>
 
       <dependency>
