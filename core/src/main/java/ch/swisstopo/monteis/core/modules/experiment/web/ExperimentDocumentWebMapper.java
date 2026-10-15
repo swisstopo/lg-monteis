@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
+import ch.swisstopo.monteis.core.infrastructure.api.ViewableContentTypes;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentDocumentResponseDto;
