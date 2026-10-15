@@ -46,6 +46,7 @@ class S3DocumentStorageIT {
             S3TestcontainersConfiguration.BUCKET,
             "eu-central-1",
             KEY_PREFIX,
+            "fulcrum-documents/",
             Duration.ofSeconds(60),
             Duration.ofSeconds(30),
             URI.create(S3TestcontainersConfiguration.endpointOf(S3_MOCK)));
