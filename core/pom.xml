@@ -74,6 +74,10 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>net.javacrumbs.shedlock</groupId>
+      <artifactId>shedlock-provider-jdbc-template</artifactId>
+    </dependency>
+    <dependency>
       <groupId>software.amazon.msk</groupId>
       <artifactId>aws-msk-iam-auth</artifactId>
       <scope>runtime</scope>

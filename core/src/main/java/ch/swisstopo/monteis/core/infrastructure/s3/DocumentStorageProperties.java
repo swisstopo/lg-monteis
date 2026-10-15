@@ -18,6 +18,7 @@ public record DocumentStorageProperties(
     @NotBlank String bucket,
     @DefaultValue("eu-central-1") String region,
     @DefaultValue("experiment-documents/") String keyPrefix,
+    @DefaultValue("fulcrum-documents/") String fulcrumKeyPrefix,
     @DefaultValue("60s") Duration callTimeout,
     @DefaultValue("30s") Duration attemptTimeout,
     @Nullable URI localEndpoint) {}
