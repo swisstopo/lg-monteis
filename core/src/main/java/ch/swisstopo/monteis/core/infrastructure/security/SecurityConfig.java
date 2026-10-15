@@ -59,6 +59,12 @@ public class SecurityConfig {
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)
                     .access(allowIf(Capabilities::canCreateExperiment))
+                    // the list is open to everyone signed in, the files and a refresh need
+                    // documents:read (MON-196 FR2.9)
+                    .requestMatchers(HttpMethod.GET, ApiPaths.FULCRUM_DOCUMENT_FILES)
+                    .access(allowIf(Capabilities::canAccessDocuments))
+                    .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
+                    .access(allowIf(Capabilities::canAccessDocuments))
                     // sensor reads need no rule of their own: RLS filters the rows by experiment
                     .requestMatchers(HttpMethod.GET, SENSORS_PATHS)
                     .authenticated()

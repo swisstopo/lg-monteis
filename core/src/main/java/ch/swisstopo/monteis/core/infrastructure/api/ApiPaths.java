@@ -24,5 +24,11 @@ public final class ApiPaths {
   public static final String SENSORS = "/api/sensors";
   public static final String ORGANISATIONS = "/api/organisations";
 
+  public static final String FULCRUM_DOCUMENTS = "/api/fulcrum-documents";
+  public static final String FULCRUM_DOCUMENT_FILE_CONTENT = "files/{fileId}/content";
+  public static final String FULCRUM_DOCUMENT_FILES = FULCRUM_DOCUMENTS + "/files/**";
+  public static final String FULCRUM_SYNC_SEGMENT = "sync";
+  public static final String FULCRUM_SYNC = FULCRUM_DOCUMENTS + "/" + FULCRUM_SYNC_SEGMENT;
+
   private ApiPaths() {}
 }

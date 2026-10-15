@@ -71,6 +71,10 @@ class SecurityConfigAuthorizationTest {
     };
     String sensor = "/api/sensors/" + UUID.randomUUID();
     String organisation = "/api/organisations/" + UUID.randomUUID();
+    PrivilegeLevel[] documentReaders = {
+      PrivilegeLevel.EXPERIMENT_USER, PrivilegeLevel.EXPERIMENT_PI, PrivilegeLevel.MONTEIS_ADMIN
+    };
+    String fulcrumFile = "/api/fulcrum-documents/files/" + UUID.randomUUID() + "/content";
     return Stream.of(
         Arguments.of(HttpMethod.GET, "/api/experiments", everyone),
         Arguments.of(HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT, everyone),
@@ -108,6 +112,10 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.PUT, "/api/other", adminOnly),
         Arguments.of(HttpMethod.PATCH, "/api/other", adminOnly),
         Arguments.of(HttpMethod.DELETE, "/api/other", adminOnly),
+        Arguments.of(HttpMethod.GET, "/api/fulcrum-documents", everyone),
+        Arguments.of(HttpMethod.GET, fulcrumFile, documentReaders),
+        Arguments.of(HttpMethod.GET, "/api/fulcrum-documents/sync", everyone),
+        Arguments.of(HttpMethod.POST, "/api/fulcrum-documents/sync", documentReaders),
         Arguments.of(HttpMethod.GET, "/api/measurements", everyone),
         Arguments.of(HttpMethod.GET, "/api/me", everyone));
   }
@@ -212,6 +220,8 @@ class SecurityConfigAuthorizationTest {
     @GetMapping({
       "/api/experiments",
       "/api/experiments/owners",
+      "/api/fulcrum-documents",
+      "/api/fulcrum-documents/sync",
       "/api/measurements",
       "/api/me",
       "/api/organisations",
@@ -228,6 +238,16 @@ class SecurityConfigAuthorizationTest {
       "/api/sensors/{id}"
     })
     public String readOne(@PathVariable String id) {
+      return "ok";
+    }
+
+    @GetMapping("/api/fulcrum-documents/files/{fileId}/content")
+    public String fulcrumDocumentFile(@PathVariable String fileId) {
+      return "ok";
+    }
+
+    @PostMapping("/api/fulcrum-documents/sync")
+    public String startFulcrumSync() {
       return "ok";
     }
 
