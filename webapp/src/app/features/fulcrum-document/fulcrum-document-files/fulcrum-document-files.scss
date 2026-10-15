@@ -1,0 +1,15 @@
+:host {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+}
+
+[mat-icon-button] {
+  --mat-icon-button-state-layer-size: 32px;
+  padding: 4px;
+}
+
+.removed {
+  color: var(--mat-sys-error);
+}

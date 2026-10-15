@@ -1,0 +1,29 @@
+<span class="sync-status" data-testid="sync-status">
+  @if (running()) {
+    {{ 'fulcrumDocument.sync.running' | translate }}
+  } @else if (statusUnknown()) {
+    <span class="hint">{{ 'fulcrumDocument.sync.statusUnknown' | translate }}</span>
+  } @else if (latestRun(); as run) {
+    @if (run.finishedAt) {
+      {{
+        'fulcrumDocument.sync.lastSynced'
+          | translate: { finishedAt: run.finishedAt | date: 'dd.MM.yyyy; HH:mm:ss' }
+      }}
+    }
+    @if (lastRunHintKey(); as hintKey) {
+      <span class="hint" data-testid="sync-hint">{{ hintKey | translate }}</span>
+    }
+  } @else {
+    {{ 'fulcrumDocument.sync.never' | translate }}
+  }
+</span>
+@if (permissions.canAccessDocuments()) {
+  <button matButton="filled" type="button" [disabled]="running()" (click)="onRefresh()">
+    @if (running()) {
+      <mat-spinner diameter="16"></mat-spinner>
+    } @else {
+      <mat-icon fontIcon="sync"></mat-icon>
+    }
+    {{ 'fulcrumDocument.sync.refresh' | translate }}
+  </button>
+}

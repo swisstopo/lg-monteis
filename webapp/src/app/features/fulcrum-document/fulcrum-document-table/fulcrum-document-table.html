@@ -1,0 +1,17 @@
+<div class="metrics-panel">
+  <app-table-header (searchAction)="onSearch($event)">
+    <app-fulcrum-sync primary-action (finished)="onSyncFinished()"></app-fulcrum-sync>
+  </app-table-header>
+  @if (documents.error()) {
+    <app-inline-error [message]="'fulcrumDocument.error.load' | translate"></app-inline-error>
+  } @else {
+    <app-table
+      class="custom-grid"
+      [columns]="columns"
+      [rows]="visibleRows()"
+      [gridOptions]="gridOptions"
+      [getRowId]="getRowId"
+    >
+    </app-table>
+  }
+</div>

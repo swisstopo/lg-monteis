@@ -1,0 +1,26 @@
+:host {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sync-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.hint {
+  color: var(--mat-sys-error);
+}
+
+// matButton only lays out a mat-icon, the spinner needs the same spacing to take its place
+mat-spinner {
+  --mat-progress-spinner-active-indicator-color: currentColor;
+  display: inline-block;
+  vertical-align: top;
+  margin-inline-start: var(--mat-button-filled-icon-offset, -8px);
+  margin-inline-end: var(--mat-button-filled-icon-spacing, 8px);
+}
