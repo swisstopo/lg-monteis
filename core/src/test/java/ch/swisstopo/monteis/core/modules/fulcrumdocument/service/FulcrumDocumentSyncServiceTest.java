@@ -3,23 +3,25 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachments;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumAttachment;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntry;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncResult;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRun;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRunRepository;
@@ -43,6 +45,7 @@ import net.javacrumbs.shedlock.core.SimpleLock;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.task.SyncTaskExecutor;
@@ -73,6 +76,7 @@ class FulcrumDocumentSyncServiceTest {
 
   @Mock private FulcrumService fulcrumService;
   @Mock private FulcrumAttachments fulcrumAttachments;
+  @Mock private FulcrumEntryRepository entryRepository;
   @Mock private FulcrumDocumentRepository documentRepository;
   @Mock private FulcrumSyncRunRepository runRepository;
   @Mock private FulcrumDocumentStorage storage;
@@ -93,32 +97,28 @@ class FulcrumDocumentSyncServiceTest {
 
     // then
     @SuppressWarnings("unchecked")
-    ArgumentCaptor<List<FulcrumDocument>> saved = ArgumentCaptor.forClass(List.class);
-    then(documentRepository).should().saveSeen(saved.capture(), eq(STARTED_AT));
-    FulcrumDocument document = saved.getValue().getFirst();
-    assertThat(document.id()).isEqualTo(RECORD_ID);
-    assertThat(document.number()).isEqualTo("2011-02");
-    assertThat(document.authors()).isEqualTo("Jahns E.");
-    assertThat(document.keywords()).containsExactly("Experiment DS", "RACOS");
-    assertThat(document.files())
-        .singleElement()
-        .satisfies(
-            file -> {
-              assertThat(file.id()).isEqualTo(ATTACHMENT_ID);
-              assertThat(file.fileName()).isEqualTo(FILE_NAME);
-              assertThat(file.contentType()).isEqualTo("application/pdf");
-            });
-    then(documentRepository).should().markRemovedUnlessSeenAt(STARTED_AT);
+    ArgumentCaptor<List<FulcrumEntry>> saved = ArgumentCaptor.forClass(List.class);
+    then(entryRepository).should().saveSeen(saved.capture(), eq(STARTED_AT));
+    FulcrumEntry entry = saved.getValue().getFirst();
+    assertThat(entry.id()).isEqualTo(RECORD_ID);
+    assertThat(entry.number()).isEqualTo("2011-02");
+    assertThat(entry.authors()).isEqualTo("Jahns E.");
+    assertThat(entry.keywords()).containsExactly("Experiment DS", "RACOS");
+    assertThat(entry.attachments())
+        .containsExactly(new FulcrumAttachment(ATTACHMENT_ID, RECORD_ID, FILE_NAME));
+    InOrder order = inOrder(entryRepository, documentRepository);
+    order.verify(entryRepository).markRemovedUnlessSeenAt(STARTED_AT);
+    order.verify(documentRepository).reconcileWithEntries();
   }
 
   @Test
-  void should_store_the_files_that_are_missing_and_succeed() throws Exception {
+  void should_store_the_content_before_recording_the_document() throws Exception {
     // given
     givenTheLockIsFree();
     givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
     given(clock.instant()).willReturn(NOW);
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
-    given(documentRepository.findFilesToStore()).willReturn(List.of(missingFile(ATTACHMENT_ID)));
+    given(entryRepository.findAttachmentsToStore()).willReturn(List.of(attachment(ATTACHMENT_ID)));
     given(fulcrumAttachments.open(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(CONTENT));
     List<byte[]> stored = new ArrayList<>();
     willAnswer(invocation -> stored.add(Files.readAllBytes(invocation.getArgument(2, Path.class))))
@@ -130,7 +130,14 @@ class FulcrumDocumentSyncServiceTest {
 
     // then
     assertThat(stored).singleElement().isEqualTo(CONTENT);
-    then(documentRepository).should().markStored(ATTACHMENT_ID, CONTENT.length);
+    InOrder order = inOrder(storage, documentRepository);
+    order.verify(storage).store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
+    order
+        .verify(documentRepository)
+        .create(
+            ATTACHMENT_ID,
+            RECORD_ID,
+            new DocumentMetadata(FILE_NAME, "application/pdf", CONTENT.length));
     then(runRepository)
         .should()
         .finish(RUN_ID, new FulcrumSyncResult(FulcrumSyncStatus.SUCCEEDED, 1, 1, 0));
@@ -138,15 +145,15 @@ class FulcrumDocumentSyncServiceTest {
   }
 
   @Test
-  void should_go_on_with_the_other_files_when_one_fails() {
+  void should_go_on_with_the_other_attachments_when_one_fails() {
     // given
     UUID brokenId = UUID.randomUUID();
     givenTheLockIsFree();
     givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
     given(clock.instant()).willReturn(NOW);
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
-    given(documentRepository.findFilesToStore())
-        .willReturn(List.of(missingFile(brokenId), missingFile(ATTACHMENT_ID)));
+    given(entryRepository.findAttachmentsToStore())
+        .willReturn(List.of(attachment(brokenId), attachment(ATTACHMENT_ID)));
     given(fulcrumAttachments.open(brokenId)).willThrow(new IllegalStateException("answered 404"));
     given(fulcrumAttachments.open(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(CONTENT));
 
@@ -154,22 +161,42 @@ class FulcrumDocumentSyncServiceTest {
     service("token").syncOnSchedule();
 
     // then
-    then(documentRepository).should(never()).markStored(eq(brokenId), anyLong());
-    then(documentRepository).should().markStored(ATTACHMENT_ID, CONTENT.length);
+    then(documentRepository).should(never()).create(eq(brokenId), any(), any());
+    then(documentRepository).should().create(eq(ATTACHMENT_ID), eq(RECORD_ID), any());
     then(runRepository)
         .should()
         .finish(RUN_ID, new FulcrumSyncResult(FulcrumSyncStatus.INCOMPLETE, 1, 1, 1));
   }
 
   @Test
-  void should_stop_storing_files_once_the_time_budget_is_used_up() {
+  void should_not_record_an_empty_download() {
     // given
     givenTheLockIsFree();
     givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
-    // lock, deadline, then the check before the one file
+    given(clock.instant()).willReturn(NOW);
+    given(entryRepository.findAttachmentsToStore()).willReturn(List.of(attachment(ATTACHMENT_ID)));
+    given(fulcrumAttachments.open(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(new byte[0]));
+
+    // when
+    service("token").syncOnSchedule();
+
+    // then
+    then(storage).shouldHaveNoInteractions();
+    then(documentRepository).should(never()).create(any(), any(), any());
+    then(runRepository)
+        .should()
+        .finish(RUN_ID, new FulcrumSyncResult(FulcrumSyncStatus.INCOMPLETE, 0, 0, 1));
+  }
+
+  @Test
+  void should_stop_storing_documents_once_the_time_budget_is_used_up() {
+    // given
+    givenTheLockIsFree();
+    givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
+    // lock, deadline, then the check before the one attachment
     given(clock.instant()).willReturn(NOW, NOW, NOW.plus(Duration.ofMinutes(9)));
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
-    given(documentRepository.findFilesToStore()).willReturn(List.of(missingFile(ATTACHMENT_ID)));
+    given(entryRepository.findAttachmentsToStore()).willReturn(List.of(attachment(ATTACHMENT_ID)));
 
     // when
     service("token").syncOnSchedule();
@@ -183,7 +210,7 @@ class FulcrumDocumentSyncServiceTest {
   }
 
   @Test
-  void should_fail_the_run_and_keep_the_documents_when_fulcrum_cannot_be_queried() {
+  void should_fail_the_run_and_keep_the_entries_when_fulcrum_cannot_be_queried() {
     // given
     givenTheLockIsFree();
     givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
@@ -196,6 +223,7 @@ class FulcrumDocumentSyncServiceTest {
     service("token").syncOnSchedule();
 
     // then
+    then(entryRepository).shouldHaveNoInteractions();
     then(documentRepository).shouldHaveNoInteractions();
     then(runRepository).should().finish(RUN_ID, FulcrumSyncResult.failed());
     then(lock).should().unlock();
@@ -279,6 +307,7 @@ class FulcrumDocumentSyncServiceTest {
     return new FulcrumDocumentSyncService(
         fulcrumService,
         fulcrumAttachments,
+        entryRepository,
         documentRepository,
         runRepository,
         storage,
@@ -314,7 +343,7 @@ class FulcrumDocumentSyncServiceTest {
                 null));
   }
 
-  private static FulcrumDocumentFile missingFile(UUID id) {
-    return new FulcrumDocumentFile(id, RECORD_ID, FILE_NAME, "application/pdf", null, null, null);
+  private static FulcrumAttachment attachment(UUID id) {
+    return new FulcrumAttachment(id, RECORD_ID, FILE_NAME);
   }
 }

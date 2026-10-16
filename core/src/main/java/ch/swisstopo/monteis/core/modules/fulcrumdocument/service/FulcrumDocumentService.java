@@ -1,10 +1,10 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
-import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryRepository;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryWithDocuments;
 import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
@@ -13,29 +13,28 @@ import org.springframework.stereotype.Service;
 @Service
 public class FulcrumDocumentService {
 
-  private final FulcrumDocumentRepository repository;
+  private final FulcrumEntryRepository entryRepository;
+  private final FulcrumDocumentRepository documentRepository;
   private final FulcrumDocumentStorage storage;
 
   public FulcrumDocumentService(
-      FulcrumDocumentRepository repository, FulcrumDocumentStorage storage) {
-    this.repository = repository;
+      FulcrumEntryRepository entryRepository,
+      FulcrumDocumentRepository documentRepository,
+      FulcrumDocumentStorage storage) {
+    this.entryRepository = entryRepository;
+    this.documentRepository = documentRepository;
     this.storage = storage;
   }
 
-  public List<FulcrumDocument> getDocuments() {
-    return repository.findAll();
+  public List<FulcrumEntryWithDocuments> getEntriesWithDocuments() {
+    return entryRepository.findAllWithDocuments();
   }
 
-  // a file whose content is not in storage yet is as good as missing for the caller
-  public FulcrumDocumentFile getStoredFile(UUID fileId) {
-    FulcrumDocumentFile file = repository.getFileById(fileId);
-    if (!file.isStored()) {
-      throw new ObjectNotFoundException(FulcrumDocumentFile.class);
-    }
-    return file;
+  public FulcrumDocument getDocument(UUID documentId) {
+    return documentRepository.getById(documentId);
   }
 
-  public InputStream openContent(FulcrumDocumentFile file) {
-    return storage.load(file.id());
+  public InputStream openContent(FulcrumDocument document) {
+    return storage.load(document.id());
   }
 }

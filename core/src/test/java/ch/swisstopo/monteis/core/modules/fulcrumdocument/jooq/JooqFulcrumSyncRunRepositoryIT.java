@@ -66,8 +66,8 @@ class JooqFulcrumSyncRunRepositoryIT {
     FulcrumSyncRun finished = repository.findLatest().orElseThrow();
     assertThat(finished.status()).isEqualTo(FulcrumSyncStatus.INCOMPLETE);
     assertThat(finished.finishedAt()).isNotNull();
-    assertThat(finished.documentsSeen()).isEqualTo(650);
-    assertThat(finished.filesStored()).isEqualTo(12);
-    assertThat(finished.filesFailed()).isEqualTo(3);
+    assertThat(finished.entriesSeen()).isEqualTo(650);
+    assertThat(finished.documentsStored()).isEqualTo(12);
+    assertThat(finished.documentsFailed()).isEqualTo(3);
   }
 }
