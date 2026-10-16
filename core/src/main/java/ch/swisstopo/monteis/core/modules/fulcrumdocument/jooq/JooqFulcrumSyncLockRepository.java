@@ -26,11 +26,11 @@ public class JooqFulcrumSyncLockRepository implements FulcrumSyncLockRepository 
   // unlocking sets lock_until to now, a pod that died leaves it until lockAtMostFor runs out
   @Override
   @Transactional(readOnly = true)
-  public boolean isHeld(String lockName) {
+  public boolean isSyncRunning() {
     return dsl.fetchExists(
         dsl.selectOne()
             .from(SHEDLOCK)
-            .where(SHEDLOCK.NAME.eq(lockName))
+            .where(SHEDLOCK.NAME.eq(LOCK_NAME))
             .and(SHEDLOCK.LOCK_UNTIL.gt(NOW_UTC)));
   }
 }
