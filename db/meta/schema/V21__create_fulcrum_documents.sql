@@ -22,19 +22,26 @@
 
 CREATE TABLE fulcrum_documents (
     id            UUID PRIMARY KEY,
-    number        VARCHAR(255),
+    number        TEXT,
     title         TEXT,
     authors       TEXT,
     year          INTEGER,
-    category      VARCHAR(255),
+    category      TEXT,
     keywords      TEXT[] NOT NULL DEFAULT '{}',
     attachment_id UUID NOT NULL,
     file_name     VARCHAR(255) NOT NULL,
     content_type  VARCHAR(255) NOT NULL,
     size_bytes    BIGINT NOT NULL,
-    stored_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    last_synced_at TIMESTAMPTZ NOT NULL,
     removed_at    TIMESTAMPTZ
+);
+
+-- when the last successful sync started: it reached Fulcrum, saved every
+-- document, imported every file it had to and finished within its time budget.
+-- one row, overwritten at the end of each successful sync. not a log of the
+-- syncs, a failed one leaves it as it is
+CREATE TABLE fulcrum_document_sync (
+    id                      BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+    last_successful_sync_at TIMESTAMPTZ NOT NULL
 );
 
 -- ShedLock (JdbcTemplateLockProvider), keeps the sync to one core pod at a time

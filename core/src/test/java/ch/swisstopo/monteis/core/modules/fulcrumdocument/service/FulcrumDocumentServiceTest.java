@@ -1,17 +1,20 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
 
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
-import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,35 +33,50 @@ class FulcrumDocumentServiceTest {
   @InjectMocks private FulcrumDocumentService service;
 
   @Test
-  void should_open_the_file_stored_under_the_attachment_id() {
+  void should_get_the_documents_from_the_repository() {
     // given
-    FulcrumDocument document =
-        new FulcrumDocument(
-            DOCUMENT_ID,
-            null,
-            "report",
-            null,
-            null,
-            null,
-            List.of(),
-            new FulcrumDocumentFile(
-                ATTACHMENT_ID, new DocumentMetadata("report.pdf", "application/pdf", 4)),
-            null);
+    List<FulcrumDocument> documents = List.of(document(null));
+    given(documentRepository.findAll()).willReturn(documents);
 
-    // when
-    service.openFileContent(document);
-
-    // then
-    then(storage).should().load(ATTACHMENT_ID);
+    // when / then
+    assertThat(service.getDocuments()).isEqualTo(documents);
   }
 
   @Test
-  void should_not_find_an_unknown_document() {
+  void should_open_the_file_stored_under_the_attachment_id() {
     // given
-    given(documentRepository.getById(DOCUMENT_ID))
-        .willThrow(new ObjectNotFoundException(FulcrumDocument.class));
+    InputStream content = new ByteArrayInputStream(new byte[] {1, 2, 3, 4});
+    given(storage.load(ATTACHMENT_ID)).willReturn(content);
 
     // when / then
-    assertThrows(ObjectNotFoundException.class, () -> service.getDocument(DOCUMENT_ID));
+    assertThat(service.openFileContent(document(null))).isSameAs(content);
+  }
+
+  // the backup is the point of keeping a removed document (PO)
+  @Test
+  void should_still_open_the_file_of_a_document_fulcrum_no_longer_has() {
+    // given
+    InputStream content = new ByteArrayInputStream(new byte[] {1, 2, 3, 4});
+    given(storage.load(ATTACHMENT_ID)).willReturn(content);
+
+    // when / then
+    assertThat(
+            service.openFileContent(
+                document(OffsetDateTime.of(2026, 10, 1, 2, 0, 0, 0, ZoneOffset.UTC))))
+        .isSameAs(content);
+  }
+
+  private static FulcrumDocument document(@Nullable OffsetDateTime removedAt) {
+    return new FulcrumDocument(
+        DOCUMENT_ID,
+        null,
+        "report",
+        null,
+        null,
+        null,
+        List.of(),
+        new FulcrumDocumentFile(
+            ATTACHMENT_ID, new DocumentMetadata("report.pdf", "application/pdf", 4)),
+        removedAt);
   }
 }

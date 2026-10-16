@@ -30,6 +30,11 @@ public class S3FulcrumDocumentStorage implements FulcrumDocumentStorage {
             .bucket(properties.bucket())
             .key(keyOf(attachmentId))
             .contentType(contentType)
+            .overrideConfiguration(
+                override ->
+                    override
+                        .apiCallTimeout(properties.fulcrumDocumentUploadTimeout())
+                        .apiCallAttemptTimeout(properties.fulcrumDocumentUploadTimeout()))
             .build();
     s3.putObject(request, RequestBody.fromFile(content));
   }
@@ -41,6 +46,6 @@ public class S3FulcrumDocumentStorage implements FulcrumDocumentStorage {
   }
 
   private String keyOf(UUID attachmentId) {
-    return properties.fulcrumKeyPrefix() + attachmentId;
+    return properties.fulcrumDocumentKeyPrefix() + attachmentId;
   }
 }

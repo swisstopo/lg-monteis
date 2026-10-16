@@ -3,7 +3,9 @@ package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.URI;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -34,7 +36,21 @@ class FulcrumPropertiesTest {
         .isInstanceOf(FulcrumDisabledException.class);
   }
 
+  @Test
+  void should_refuse_to_start_without_an_attachment_origin_while_fulcrum_is_enabled() {
+    // when / then
+    assertThatThrownBy(() -> properties(true, "token", List.of()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("monteis.fulcrum.attachment-origins");
+  }
+
   private static FulcrumProperties properties(boolean enabled, String apiToken) {
+    return properties(
+        enabled, apiToken, List.of(URI.create("https://attachments.fulcrumapp-eu.com")));
+  }
+
+  private static FulcrumProperties properties(
+      boolean enabled, String apiToken, List<URI> attachmentOrigins) {
     return new FulcrumProperties(
         enabled,
         "https://api.fulcrumapp-eu.com/api",
@@ -43,6 +59,7 @@ class FulcrumPropertiesTest {
         "Mont Terri Literature",
         20000,
         Duration.ofSeconds(5),
-        Duration.ofSeconds(60));
+        Duration.ofSeconds(60),
+        attachmentOrigins);
   }
 }
