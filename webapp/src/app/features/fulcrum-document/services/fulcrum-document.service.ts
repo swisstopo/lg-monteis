@@ -21,7 +21,7 @@ export class FulcrumDocumentService {
 
   getContent(documentId: string): Promise<Blob> {
     return firstValueFrom(
-      this.api.downloadFulcrumDocument(documentId, 'body', false, {
+      this.api.downloadFulcrumDocumentFile(documentId, 'body', false, {
         context: skipGlobalErrorToast(),
       }),
     );

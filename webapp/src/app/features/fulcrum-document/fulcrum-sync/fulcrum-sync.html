@@ -4,10 +4,10 @@
   } @else if (statusUnknown()) {
     <span class="hint">{{ 'fulcrumSync.statusUnknown' | translate }}</span>
   } @else if (status(); as status) {
-    @if (status.lastSyncedAt) {
+    @if (status.lastSuccessfulSyncAt) {
       {{
-        'fulcrumSync.lastSynced'
-          | translate: { lastSyncedAt: status.lastSyncedAt | date: 'dd.MM.yyyy; HH:mm:ss' }
+        'fulcrumSync.lastSuccessfulSync'
+          | translate: { lastSuccessfulSyncAt: status.lastSuccessfulSyncAt | date: 'dd.MM.yyyy; HH:mm:ss' }
       }}
     } @else {
       {{ 'fulcrumSync.never' | translate }}
