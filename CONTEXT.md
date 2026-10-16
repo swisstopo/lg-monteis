@@ -17,17 +17,13 @@ _Avoid_: Document (alone)
 
 ## Documents from Fulcrum
 
-**Fulcrum entry**:
-An entry of the Mont Terri literature that is maintained in Fulcrum and marked for MONTEIS, made up of citation metadata (number, title, authors, year and so on) and exactly one Fulcrum Document; it only exists in MONTEIS once that document was copied, and it belongs to no Experiment.
-_Avoid_: Literature reference, Fulcrum record, Fulcrum Document
-
-**Citation**:
-The bibliographic data of a Fulcrum entry (number, title, authors, year, category, keywords), without its document.
-_Avoid_: Details, metadata (ambiguous with the document's file metadata)
-
 **Fulcrum Document**:
-The one file of a Fulcrum entry, copied from Fulcrum into MONTEIS; when Fulcrum lists several, the first one is taken.
-_Avoid_: Fulcrum file, attachment (Fulcrum's term for a file not yet copied), Experiment document
+A document from the Mont Terri literature that is maintained in Fulcrum and marked for MONTEIS, made up of its metadata (number, title, authors, year, category, keywords) and exactly one file; it only exists in MONTEIS once that file was copied, and it belongs to no Experiment.
+_Avoid_: Fulcrum entry, literature reference, citation, Experiment document, Document (alone)
+
+**Attachment**:
+Fulcrum's term for a file it holds; when Fulcrum lists several for one Fulcrum Document, the first one is taken.
+_Avoid_: Fulcrum file
 
 ## People and access
 

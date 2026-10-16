@@ -24,23 +24,23 @@ public class S3FulcrumDocumentStorage implements FulcrumDocumentStorage {
   }
 
   @Override
-  public void store(UUID documentId, String contentType, Path content) {
+  public void store(UUID attachmentId, String contentType, Path content) {
     PutObjectRequest request =
         PutObjectRequest.builder()
             .bucket(properties.bucket())
-            .key(keyOf(documentId))
+            .key(keyOf(attachmentId))
             .contentType(contentType)
             .build();
     s3.putObject(request, RequestBody.fromFile(content));
   }
 
   @Override
-  public InputStream load(UUID documentId) {
+  public InputStream load(UUID attachmentId) {
     return s3.getObject(
-        GetObjectRequest.builder().bucket(properties.bucket()).key(keyOf(documentId)).build());
+        GetObjectRequest.builder().bucket(properties.bucket()).key(keyOf(attachmentId)).build());
   }
 
-  private String keyOf(UUID documentId) {
-    return properties.fulcrumKeyPrefix() + documentId;
+  private String keyOf(UUID attachmentId) {
+    return properties.fulcrumKeyPrefix() + attachmentId;
   }
 }

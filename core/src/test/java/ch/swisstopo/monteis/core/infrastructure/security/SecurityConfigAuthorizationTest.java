@@ -112,7 +112,7 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.PUT, "/api/other", adminOnly),
         Arguments.of(HttpMethod.PATCH, "/api/other", adminOnly),
         Arguments.of(HttpMethod.DELETE, "/api/other", adminOnly),
-        Arguments.of(HttpMethod.GET, "/api/fulcrum-entries", everyone),
+        Arguments.of(HttpMethod.GET, "/api/fulcrum-documents", everyone),
         Arguments.of(HttpMethod.GET, fulcrumDocument, documentReaders),
         Arguments.of(HttpMethod.GET, "/api/fulcrum-sync", everyone),
         Arguments.of(HttpMethod.POST, "/api/fulcrum-sync", documentReaders),
@@ -220,7 +220,7 @@ class SecurityConfigAuthorizationTest {
     @GetMapping({
       "/api/experiments",
       "/api/experiments/owners",
-      "/api/fulcrum-entries",
+      "/api/fulcrum-documents",
       "/api/fulcrum-sync",
       "/api/measurements",
       "/api/me",
