@@ -34,7 +34,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class FulcrumDocumentCopierTest {
+class FulcrumDocumentImportServiceTest {
 
   private static final OffsetDateTime SEEN_AT =
       OffsetDateTime.of(2026, 10, 15, 2, 0, 0, 0, ZoneOffset.UTC);
@@ -60,12 +60,12 @@ class FulcrumDocumentCopierTest {
   @Mock private FulcrumDocumentStorage storage;
   @Mock private FulcrumDocumentRepository documentRepository;
 
-  private FulcrumDocumentCopier copier;
+  private FulcrumDocumentImportService importService;
 
   @BeforeEach
-  void createCopier() {
-    copier =
-        new FulcrumDocumentCopier(
+  void createImportService() {
+    importService =
+        new FulcrumDocumentImportService(
             downloadClient, storage, documentRepository, new FulcrumLiteratureMapperImpl());
   }
 
@@ -79,10 +79,10 @@ class FulcrumDocumentCopierTest {
         .store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
 
     // when
-    boolean copied = copier.copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
 
     // then
-    assertThat(copied).isTrue();
+    assertThat(imported).isTrue();
     assertThat(stored).singleElement().isEqualTo(CONTENT);
     InOrder order = inOrder(storage, documentRepository);
     order.verify(storage).store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
@@ -112,10 +112,10 @@ class FulcrumDocumentCopierTest {
         .willThrow(new IllegalStateException("answered 404"));
 
     // when
-    boolean copied = copier.copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
 
     // then
-    assertThat(copied).isFalse();
+    assertThat(imported).isFalse();
     then(storage).shouldHaveNoInteractions();
     then(documentRepository).shouldHaveNoInteractions();
   }
@@ -129,23 +129,23 @@ class FulcrumDocumentCopierTest {
         .store(eq(ATTACHMENT_ID), any(), any(Path.class));
 
     // when
-    boolean copied = copier.copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
 
     // then
-    assertThat(copied).isFalse();
+    assertThat(imported).isFalse();
     then(documentRepository).shouldHaveNoInteractions();
   }
 
   @Test
-  void should_not_copy_an_empty_file() {
+  void should_not_import_an_empty_file() {
     // given
     given(downloadClient.download(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(new byte[0]));
 
     // when
-    boolean copied = copier.copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
 
     // then
-    assertThat(copied).isFalse();
+    assertThat(imported).isFalse();
     then(storage).shouldHaveNoInteractions();
   }
 
@@ -155,7 +155,7 @@ class FulcrumDocumentCopierTest {
     given(downloadClient.download(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(CONTENT));
 
     // when
-    copier.copyQuietly(
+    importService.importQuietly(
         ENTRY, new FulcrumAttachmentReference(ATTACHMENT_ID, "notes.unknownext"), SEEN_AT);
 
     // then
