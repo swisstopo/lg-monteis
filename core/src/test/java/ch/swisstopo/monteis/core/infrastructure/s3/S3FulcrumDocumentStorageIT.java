@@ -60,24 +60,24 @@ class S3FulcrumDocumentStorageIT {
   @Test
   void should_load_what_it_stored() throws IOException {
     // given
-    UUID fileId = UUID.randomUUID();
+    UUID documentId = UUID.randomUUID();
 
     // when
-    storage.store(fileId, "application/pdf", download());
+    storage.store(documentId, "application/pdf", download());
 
     // then
-    try (InputStream loaded = storage.load(fileId)) {
+    try (InputStream loaded = storage.load(documentId)) {
       assertThat(loaded.readAllBytes()).isEqualTo(CONTENT);
     }
   }
 
   @Test
-  void should_key_by_attachment_id_apart_from_the_experiment_documents() throws IOException {
+  void should_key_by_document_id_apart_from_the_experiment_documents() throws IOException {
     // given
-    UUID fileId = UUID.randomUUID();
+    UUID documentId = UUID.randomUUID();
 
     // when
-    storage.store(fileId, "application/pdf", download());
+    storage.store(documentId, "application/pdf", download());
 
     // then
     HeadObjectResponse head =
@@ -85,13 +85,13 @@ class S3FulcrumDocumentStorageIT {
             request ->
                 request
                     .bucket(S3TestcontainersConfiguration.BUCKET)
-                    .key(FULCRUM_KEY_PREFIX + fileId));
+                    .key(FULCRUM_KEY_PREFIX + documentId));
     assertThat(head.contentType()).isEqualTo("application/pdf");
     assertThat(head.contentLength()).isEqualTo(CONTENT.length);
   }
 
   @Test
-  void should_fail_to_load_a_file_that_was_never_stored() {
+  void should_fail_to_load_a_document_that_was_never_stored() {
     // when / then
     assertThrows(NoSuchKeyException.class, () -> storage.load(UUID.randomUUID()));
   }

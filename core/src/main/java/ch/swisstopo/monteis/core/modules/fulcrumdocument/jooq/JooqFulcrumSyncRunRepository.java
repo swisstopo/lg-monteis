@@ -44,9 +44,9 @@ public class JooqFulcrumSyncRunRepository implements FulcrumSyncRunRepository {
     dsl.update(FULCRUM_SYNC_RUNS)
         .set(FULCRUM_SYNC_RUNS.STATUS, result.status().name())
         .set(FULCRUM_SYNC_RUNS.FINISHED_AT, DSL.currentOffsetDateTime())
-        .set(FULCRUM_SYNC_RUNS.DOCUMENTS_SEEN, result.documentsSeen())
-        .set(FULCRUM_SYNC_RUNS.FILES_STORED, result.filesStored())
-        .set(FULCRUM_SYNC_RUNS.FILES_FAILED, result.filesFailed())
+        .set(FULCRUM_SYNC_RUNS.ENTRIES_SEEN, result.entriesSeen())
+        .set(FULCRUM_SYNC_RUNS.DOCUMENTS_STORED, result.documentsStored())
+        .set(FULCRUM_SYNC_RUNS.DOCUMENTS_FAILED, result.documentsFailed())
         .where(FULCRUM_SYNC_RUNS.ID.eq(runId))
         .execute();
   }
@@ -67,8 +67,8 @@ public class JooqFulcrumSyncRunRepository implements FulcrumSyncRunRepository {
         runRecord.getTriggeredBy(),
         runRecord.getStartedAt(),
         runRecord.getFinishedAt(),
-        runRecord.getDocumentsSeen(),
-        runRecord.getFilesStored(),
-        runRecord.getFilesFailed());
+        runRecord.getEntriesSeen(),
+        runRecord.getDocumentsStored(),
+        runRecord.getDocumentsFailed());
   }
 }
