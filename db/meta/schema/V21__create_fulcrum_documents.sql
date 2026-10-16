@@ -1,26 +1,26 @@
 -- -----------------------------------------------------------------------------
--- Fulcrum entries (MON-228)
+-- Fulcrum Documents (MON-228)
 --
 -- A mirror of the Mont Terri literature maintained in Fulcrum, filled by the
 -- nightly sync in core (ADR "Fulcrum Documents spiegeln statt On-Demand
--- abrufen"). Each Fulcrum entry has exactly one Fulcrum Document, whose content
--- is in S3 under fulcrum-documents/<attachment_id>. The id is Fulcrum's record
--- id, attachment_id Fulcrum's id of the file.
+-- abrufen"). A Fulcrum Document is one literature entry with its metadata and
+-- its one file, whose content is in S3 under fulcrum-documents/<attachment_id>.
+-- The id is Fulcrum's record id, attachment_id Fulcrum's id of the file.
 --
 -- Like an experiment document upload, the content goes to S3 first and the row
--- after, so an entry only exists once its document does. A replaced file is
+-- after, so a document only exists once its file does. A replaced file is
 -- downloaded under its new attachment id before the row switches to it, the old
 -- object stays in S3 as a backup.
 --
--- Nothing is ever deleted, an entry Fulcrum no longer returns keeps its row and
--- gets removed_at (backup, PO decision).
+-- Nothing is ever deleted, a document Fulcrum no longer returns keeps its row
+-- and gets removed_at (backup, PO decision).
 --
--- No row-level security: the entries belong to no experiment and every caller
+-- No row-level security: the documents belong to no experiment and every caller
 -- sees the same list. Opening a document is guarded by documents:read in the
 -- filter chain.
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE fulcrum_entries (
+CREATE TABLE fulcrum_documents (
     id            UUID PRIMARY KEY,
     number        VARCHAR(255),
     title         TEXT,
