@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-// every test rolls back, markRemovedUnlessSeenAt and findLastSeenAt look at the whole table
+// every test rolls back, findLastSuccessfulSyncAt looks at the whole table
 @IT
 @Transactional
 class JooqFulcrumDocumentRepositoryIT {
@@ -33,7 +33,7 @@ class JooqFulcrumDocumentRepositoryIT {
     FulcrumDocument document = document(UUID.randomUUID(), "2011-02", file());
 
     // when
-    repository.saveSeen(List.of(document), FIRST_SYNC);
+    repository.saveSynced(List.of(document), FIRST_SYNC);
 
     // then
     assertThat(repository.getById(document.id())).isEqualTo(document);
@@ -44,10 +44,10 @@ class JooqFulcrumDocumentRepositoryIT {
     // given
     UUID id = UUID.randomUUID();
     FulcrumDocumentFile file = file();
-    repository.saveSeen(List.of(document(id, "2011-02", file)), FIRST_SYNC);
+    repository.saveSynced(List.of(document(id, "2011-02", file)), FIRST_SYNC);
 
     // when
-    repository.saveSeen(List.of(document(id, "2011-03", file)), SECOND_SYNC);
+    repository.saveSynced(List.of(document(id, "2011-03", file)), SECOND_SYNC);
 
     // then
     FulcrumDocument saved = repository.getById(id);
@@ -59,11 +59,11 @@ class JooqFulcrumDocumentRepositoryIT {
   void should_switch_a_document_to_its_new_file() {
     // given
     UUID id = UUID.randomUUID();
-    repository.saveSeen(List.of(document(id, "1", file())), FIRST_SYNC);
+    repository.saveSynced(List.of(document(id, "1", file())), FIRST_SYNC);
     FulcrumDocumentFile replacement = file();
 
     // when
-    repository.saveSeen(List.of(document(id, "1", replacement)), SECOND_SYNC);
+    repository.saveSynced(List.of(document(id, "1", replacement)), SECOND_SYNC);
 
     // then
     assertThat(repository.getById(id).file()).isEqualTo(replacement);
@@ -74,14 +74,12 @@ class JooqFulcrumDocumentRepositoryIT {
     // given
     FulcrumDocument kept = document(UUID.randomUUID(), "1", file());
     FulcrumDocument gone = document(UUID.randomUUID(), "2", file());
-    repository.saveSeen(List.of(kept, gone), FIRST_SYNC);
-    repository.saveSeen(List.of(kept), SECOND_SYNC);
+    repository.saveSynced(List.of(kept, gone), FIRST_SYNC);
 
     // when
-    int removed = repository.markRemovedUnlessSeenAt(SECOND_SYNC);
+    repository.markRemovedFromFulcrum(List.of(gone.id()));
 
     // then
-    assertThat(removed).isEqualTo(1);
     assertThat(repository.getById(gone.id()).isAvailableInFulcrum()).isFalse();
     assertThat(repository.getById(kept.id()).isAvailableInFulcrum()).isTrue();
   }
@@ -90,24 +88,24 @@ class JooqFulcrumDocumentRepositoryIT {
   void should_make_a_document_available_again_once_fulcrum_returns_it() {
     // given
     FulcrumDocument document = document(UUID.randomUUID(), "1", file());
-    repository.saveSeen(List.of(document), FIRST_SYNC);
-    repository.markRemovedUnlessSeenAt(SECOND_SYNC);
+    repository.saveSynced(List.of(document), FIRST_SYNC);
+    repository.markRemovedFromFulcrum(List.of(document.id()));
 
     // when
-    repository.saveSeen(List.of(document), SECOND_SYNC);
+    repository.saveSynced(List.of(document), SECOND_SYNC);
 
     // then
     assertThat(repository.getById(document.id()).isAvailableInFulcrum()).isTrue();
   }
 
   @Test
-  void should_report_when_documents_were_last_seen() {
+  void should_report_when_the_last_successful_sync_started() {
     // given
-    repository.saveSeen(List.of(document(UUID.randomUUID(), "1", file())), SECOND_SYNC);
+    repository.saveSynced(List.of(document(UUID.randomUUID(), "1", file())), SECOND_SYNC);
 
     // when / then
-    assertThat(repository.findLastSeenAt())
-        .hasValueSatisfying(lastSeen -> assertThat(lastSeen).isAfterOrEqualTo(SECOND_SYNC));
+    assertThat(repository.findLastSuccessfulSyncAt())
+        .hasValueSatisfying(lastSync -> assertThat(lastSync).isAfterOrEqualTo(SECOND_SYNC));
   }
 
   @Test
@@ -115,7 +113,7 @@ class JooqFulcrumDocumentRepositoryIT {
     // given
     FulcrumDocument older = document(UUID.randomUUID(), "2011-02", file());
     FulcrumDocument newer = document(UUID.randomUUID(), "2015-17", file());
-    repository.saveSeen(List.of(older, newer), FIRST_SYNC);
+    repository.saveSynced(List.of(older, newer), FIRST_SYNC);
 
     // when
     List<UUID> order =
