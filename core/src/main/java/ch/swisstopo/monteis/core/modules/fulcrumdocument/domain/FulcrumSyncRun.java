@@ -9,9 +9,9 @@ public record FulcrumSyncRun(
     String triggeredBy,
     OffsetDateTime startedAt,
     OffsetDateTime finishedAt,
-    Integer documentsSeen,
-    Integer filesStored,
-    Integer filesFailed) {
+    Integer entriesSeen,
+    Integer documentsStored,
+    Integer documentsFailed) {
 
   public static final String TRIGGERED_BY_SCHEDULE = "schedule";
 }
