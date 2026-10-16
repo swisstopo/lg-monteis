@@ -33,7 +33,7 @@ CREATE TABLE fulcrum_documents (
     content_type  VARCHAR(255) NOT NULL,
     size_bytes    BIGINT NOT NULL,
     stored_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    last_seen_at  TIMESTAMPTZ NOT NULL,
+    last_synced_at TIMESTAMPTZ NOT NULL,
     removed_at    TIMESTAMPTZ
 );
 

@@ -19,6 +19,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -39,8 +40,6 @@ import org.springframework.stereotype.Service;
 // time and the lock tells whether a sync is running
 @Service
 public class FulcrumDocumentSyncService {
-
-  public static final String LOCK_NAME = "fulcrum-document-sync";
 
   private static final Logger log = LoggerFactory.getLogger(FulcrumDocumentSyncService.class);
 
@@ -80,7 +79,7 @@ public class FulcrumDocumentSyncService {
 
   public FulcrumSyncStatus currentStatus() {
     return FulcrumSyncStatus.of(
-        lockRepository.isHeld(LOCK_NAME), documentRepository.findLastSeenAt());
+        lockRepository.isSyncRunning(), documentRepository.findLastSuccessfulSyncAt());
   }
 
   // a switched off Fulcrum would log a failed sync each night
@@ -107,13 +106,16 @@ public class FulcrumDocumentSyncService {
       lock.unlock();
       throw e;
     }
-    return FulcrumSyncStatus.of(true, documentRepository.findLastSeenAt());
+    return FulcrumSyncStatus.of(true, documentRepository.findLastSuccessfulSyncAt());
   }
 
   private Optional<SimpleLock> acquireLock() {
     return lockProvider.lock(
         new LockConfiguration(
-            clock.instant(), LOCK_NAME, syncProperties.lockAtMostFor(), Duration.ZERO));
+            clock.instant(),
+            FulcrumSyncLockRepository.LOCK_NAME,
+            syncProperties.lockAtMostFor(),
+            Duration.ZERO));
   }
 
   private void syncAndRelease(SimpleLock lock) {
@@ -134,23 +136,24 @@ public class FulcrumDocumentSyncService {
 
   private void sync() {
     Instant start = clock.instant();
-    OffsetDateTime seenAt = start.atOffset(ZoneOffset.UTC);
+    OffsetDateTime syncedAt = start.atOffset(ZoneOffset.UTC);
     List<FulcrumLiteratureEntry> fromFulcrum = fulcrumService.getLiteratureToSync();
     Map<UUID, FulcrumDocument> storedById = storedDocumentsById();
 
-    refreshStoredDocuments(fromFulcrum, storedById, seenAt);
-    int removed = documentRepository.markRemovedUnlessSeenAt(seenAt);
+    refreshStoredDocuments(fromFulcrum, storedById, syncedAt);
+    List<UUID> noLongerInFulcrum = idsNoLongerInFulcrum(storedById, fromFulcrum);
+    documentRepository.markRemovedFromFulcrum(noLongerInFulcrum);
     ImportCounts imported =
         importNewFiles(
             filesToImport(fromFulcrum, storedById),
-            seenAt,
+            syncedAt,
             start.plus(syncProperties.timeBudget()));
 
     log.info(
         "Fulcrum Document sync: {} documents from Fulcrum, {} newly removed, {} files imported,"
             + " {} failed",
         fromFulcrum.size(),
-        removed,
+        noLongerInFulcrum.size(),
         imported.imported(),
         imported.failed());
   }
@@ -164,19 +167,31 @@ public class FulcrumDocumentSyncService {
   private void refreshStoredDocuments(
       List<FulcrumLiteratureEntry> fromFulcrum,
       Map<UUID, FulcrumDocument> storedById,
-      OffsetDateTime seenAt) {
-    documentRepository.saveSeen(
+      OffsetDateTime syncedAt) {
+    documentRepository.saveSynced(
         fromFulcrum.stream()
             .filter(entry -> storedById.containsKey(entry.recordId()))
             .map(
                 entry ->
                     literatureMapper.toDocument(entry, storedById.get(entry.recordId()).file()))
             .toList(),
-        seenAt);
+        syncedAt);
+  }
+
+  // stored documents still available that Fulcrum did not return this time
+  private static List<UUID> idsNoLongerInFulcrum(
+      Map<UUID, FulcrumDocument> storedById, List<FulcrumLiteratureEntry> fromFulcrum) {
+    Set<UUID> inFulcrum =
+        fromFulcrum.stream().map(FulcrumLiteratureEntry::recordId).collect(Collectors.toSet());
+    return storedById.values().stream()
+        .filter(FulcrumDocument::isAvailableInFulcrum)
+        .map(FulcrumDocument::id)
+        .filter(id -> !inFulcrum.contains(id))
+        .toList();
   }
 
   private ImportCounts importNewFiles(
-      List<FileToImport> filesToImport, OffsetDateTime seenAt, Instant deadline) {
+      List<FileToImport> filesToImport, OffsetDateTime syncedAt, Instant deadline) {
     int imported = 0;
     int failed = 0;
     for (FileToImport toImport : filesToImport) {
@@ -184,7 +199,7 @@ public class FulcrumDocumentSyncService {
         log.info("Fulcrum Document sync ran out of time, the next one continues");
         break;
       }
-      if (importService.importQuietly(toImport.entry(), toImport.attachment(), seenAt)) {
+      if (importService.importQuietly(toImport.entry(), toImport.attachment(), syncedAt)) {
         imported++;
       } else {
         failed++;

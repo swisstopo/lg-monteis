@@ -7,6 +7,7 @@ import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundExceptio
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,8 +50,8 @@ public class JooqFulcrumDocumentRepository implements FulcrumDocumentRepository 
 
   @Override
   @Transactional
-  public void saveSeen(List<FulcrumDocument> documents, OffsetDateTime seenAt) {
-    List<Query> upserts = documents.stream().map(document -> upsert(document, seenAt)).toList();
+  public void saveSynced(List<FulcrumDocument> documents, OffsetDateTime syncedAt) {
+    List<Query> upserts = documents.stream().map(document -> upsert(document, syncedAt)).toList();
     if (!upserts.isEmpty()) {
       dsl.batch(upserts).execute();
     }
@@ -58,27 +59,30 @@ public class JooqFulcrumDocumentRepository implements FulcrumDocumentRepository 
 
   @Override
   @Transactional
-  public int markRemovedUnlessSeenAt(OffsetDateTime seenAt) {
-    return dsl.update(FULCRUM_DOCUMENTS)
+  public void markRemovedFromFulcrum(Collection<UUID> documentIds) {
+    if (documentIds.isEmpty()) {
+      return;
+    }
+    dsl.update(FULCRUM_DOCUMENTS)
         .set(FULCRUM_DOCUMENTS.REMOVED_AT, DSL.currentOffsetDateTime())
-        .where(FULCRUM_DOCUMENTS.REMOVED_AT.isNull())
-        .and(FULCRUM_DOCUMENTS.LAST_SEEN_AT.lt(seenAt))
+        .where(FULCRUM_DOCUMENTS.ID.in(documentIds))
+        .and(FULCRUM_DOCUMENTS.REMOVED_AT.isNull())
         .execute();
   }
 
   @Override
   @Transactional(readOnly = true)
-  public Optional<OffsetDateTime> findLastSeenAt() {
+  public Optional<OffsetDateTime> findLastSuccessfulSyncAt() {
     // max over no rows is one row holding null
     return Optional.ofNullable(
-        dsl.select(DSL.max(FULCRUM_DOCUMENTS.LAST_SEEN_AT))
+        dsl.select(DSL.max(FULCRUM_DOCUMENTS.LAST_SYNCED_AT))
             .from(FULCRUM_DOCUMENTS)
             .fetchSingle()
             .value1());
   }
 
   // stored_at only moves when the row switches to another file
-  private Query upsert(FulcrumDocument document, OffsetDateTime seenAt) {
+  private Query upsert(FulcrumDocument document, OffsetDateTime syncedAt) {
     DocumentMetadata metadata = document.file().metadata();
     return dsl.insertInto(FULCRUM_DOCUMENTS)
         .set(FULCRUM_DOCUMENTS.ID, document.id())
@@ -92,7 +96,7 @@ public class JooqFulcrumDocumentRepository implements FulcrumDocumentRepository 
         .set(FULCRUM_DOCUMENTS.FILE_NAME, metadata.fileName())
         .set(FULCRUM_DOCUMENTS.CONTENT_TYPE, metadata.contentType())
         .set(FULCRUM_DOCUMENTS.SIZE_BYTES, metadata.sizeBytes())
-        .set(FULCRUM_DOCUMENTS.LAST_SEEN_AT, seenAt)
+        .set(FULCRUM_DOCUMENTS.LAST_SYNCED_AT, syncedAt)
         .onConflict(FULCRUM_DOCUMENTS.ID)
         .doUpdate()
         .set(FULCRUM_DOCUMENTS.NUMBER, DSL.excluded(FULCRUM_DOCUMENTS.NUMBER))
@@ -112,7 +116,7 @@ public class JooqFulcrumDocumentRepository implements FulcrumDocumentRepository 
         .set(FULCRUM_DOCUMENTS.FILE_NAME, DSL.excluded(FULCRUM_DOCUMENTS.FILE_NAME))
         .set(FULCRUM_DOCUMENTS.CONTENT_TYPE, DSL.excluded(FULCRUM_DOCUMENTS.CONTENT_TYPE))
         .set(FULCRUM_DOCUMENTS.SIZE_BYTES, DSL.excluded(FULCRUM_DOCUMENTS.SIZE_BYTES))
-        .set(FULCRUM_DOCUMENTS.LAST_SEEN_AT, DSL.excluded(FULCRUM_DOCUMENTS.LAST_SEEN_AT))
+        .set(FULCRUM_DOCUMENTS.LAST_SYNCED_AT, DSL.excluded(FULCRUM_DOCUMENTS.LAST_SYNCED_AT))
         .setNull(FULCRUM_DOCUMENTS.REMOVED_AT);
   }
 }

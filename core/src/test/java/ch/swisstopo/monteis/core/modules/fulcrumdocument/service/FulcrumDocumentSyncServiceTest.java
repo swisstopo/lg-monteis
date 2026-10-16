@@ -44,7 +44,7 @@ import org.springframework.web.client.RestClientResponseException;
 class FulcrumDocumentSyncServiceTest {
 
   private static final Instant NOW = Instant.parse("2026-10-15T00:00:00Z");
-  private static final OffsetDateTime SEEN_AT = NOW.atOffset(ZoneOffset.UTC);
+  private static final OffsetDateTime SYNCED_AT = NOW.atOffset(ZoneOffset.UTC);
   private static final boolean ENABLED = true;
   private static final boolean DISABLED = false;
   private static final UUID RECORD_ID = UUID.fromString("221ae592-4527-4442-8294-8dc2c5be1168");
@@ -74,10 +74,26 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(documentRepository).should().saveSeen(List.of(stored(ATTACHMENT_ID)), SEEN_AT);
-    then(documentRepository).should().markRemovedUnlessSeenAt(SEEN_AT);
+    then(documentRepository).should().saveSynced(List.of(stored(ATTACHMENT_ID)), SYNCED_AT);
+    then(documentRepository).should().markRemovedFromFulcrum(List.of());
     then(importService).shouldHaveNoInteractions();
     then(lock).should().unlock();
+  }
+
+  @Test
+  void should_mark_stored_documents_fulcrum_no_longer_returns_as_removed() {
+    // given
+    FulcrumDocument alreadyRemoved = removed(UUID.randomUUID());
+    givenTheLockIsFree();
+    given(clock.instant()).willReturn(NOW);
+    given(fulcrumService.getLiteratureToSync()).willReturn(List.of());
+    given(documentRepository.findAll()).willReturn(List.of(stored(ATTACHMENT_ID), alreadyRemoved));
+
+    // when
+    service(ENABLED).syncUnlessRunning();
+
+    // then
+    then(documentRepository).should().markRemovedFromFulcrum(List.of(RECORD_ID));
   }
 
   @Test
@@ -91,8 +107,8 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(documentRepository).should().saveSeen(List.of(), SEEN_AT);
-    then(importService).should().importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    then(documentRepository).should().saveSynced(List.of(), SYNCED_AT);
+    then(importService).should().importQuietly(ENTRY, ATTACHMENT, SYNCED_AT);
   }
 
   @Test
@@ -108,8 +124,8 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then the document keeps its old file until the new one is imported
-    then(documentRepository).should().saveSeen(List.of(stored(oldAttachment)), SEEN_AT);
-    then(importService).should().importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    then(documentRepository).should().saveSynced(List.of(stored(oldAttachment)), SYNCED_AT);
+    then(importService).should().importQuietly(ENTRY, ATTACHMENT, SYNCED_AT);
   }
 
   @Test
@@ -124,7 +140,7 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(importService).should().importQuietly(withTwoFiles, ATTACHMENT, SEEN_AT);
+    then(importService).should().importQuietly(withTwoFiles, ATTACHMENT, SYNCED_AT);
   }
 
   @Test
@@ -134,13 +150,13 @@ class FulcrumDocumentSyncServiceTest {
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(broken, ENTRY));
-    given(importService.importQuietly(eq(broken), any(), eq(SEEN_AT))).willReturn(false);
+    given(importService.importQuietly(eq(broken), any(), eq(SYNCED_AT))).willReturn(false);
 
     // when
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(importService).should().importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    then(importService).should().importQuietly(ENTRY, ATTACHMENT, SYNCED_AT);
   }
 
   @Test
@@ -156,7 +172,7 @@ class FulcrumDocumentSyncServiceTest {
 
     // then
     then(importService).shouldHaveNoInteractions();
-    then(documentRepository).should().markRemovedUnlessSeenAt(SEEN_AT);
+    then(documentRepository).should().markRemovedFromFulcrum(List.of());
     then(lock).should().unlock();
   }
 
@@ -206,13 +222,14 @@ class FulcrumDocumentSyncServiceTest {
     // given
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
-    given(documentRepository.findLastSeenAt()).willReturn(Optional.of(SEEN_AT.minusDays(1)));
+    given(documentRepository.findLastSuccessfulSyncAt())
+        .willReturn(Optional.of(SYNCED_AT.minusDays(1)));
 
     // when
     FulcrumSyncStatus status = service(ENABLED).startSyncInBackground();
 
     // then
-    assertThat(status).isEqualTo(new FulcrumSyncStatus(true, SEEN_AT.minusDays(1)));
+    assertThat(status).isEqualTo(new FulcrumSyncStatus(true, SYNCED_AT.minusDays(1)));
     then(lock).should().unlock();
   }
 
@@ -248,16 +265,16 @@ class FulcrumDocumentSyncServiceTest {
     ArgumentCaptor<LockConfiguration> configuration =
         ArgumentCaptor.forClass(LockConfiguration.class);
     then(lockProvider).should().lock(configuration.capture());
-    assertThat(configuration.getValue().getName()).isEqualTo(FulcrumDocumentSyncService.LOCK_NAME);
+    assertThat(configuration.getValue().getName()).isEqualTo(FulcrumSyncLockRepository.LOCK_NAME);
     assertThat(configuration.getValue().getLockAtMostUntil())
         .isEqualTo(NOW.plus(Duration.ofMinutes(10)));
   }
 
   @Test
-  void should_derive_the_status_from_the_lock_and_the_last_seen_entry() {
+  void should_derive_the_status_from_the_lock_and_the_last_successful_sync() {
     // given
-    given(lockRepository.isHeld(FulcrumDocumentSyncService.LOCK_NAME)).willReturn(false);
-    given(documentRepository.findLastSeenAt()).willReturn(Optional.empty());
+    given(lockRepository.isSyncRunning()).willReturn(false);
+    given(documentRepository.findLastSuccessfulSyncAt()).willReturn(Optional.empty());
 
     // when / then
     assertThat(service(ENABLED).currentStatus()).isEqualTo(new FulcrumSyncStatus(false, null));
@@ -300,6 +317,20 @@ class FulcrumDocumentSyncServiceTest {
         List.of("Experiment DS", "RACOS"),
         List.of(attachmentIds),
         Arrays.stream(attachmentIds).map(id -> FILE_NAME).toList());
+  }
+
+  private static FulcrumDocument removed(UUID id) {
+    FulcrumDocument document = stored(UUID.randomUUID());
+    return new FulcrumDocument(
+        id,
+        document.number(),
+        document.title(),
+        document.authors(),
+        document.year(),
+        document.category(),
+        document.keywords(),
+        document.file(),
+        SYNCED_AT.minusDays(3));
   }
 
   private static FulcrumDocument stored(UUID attachmentId) {

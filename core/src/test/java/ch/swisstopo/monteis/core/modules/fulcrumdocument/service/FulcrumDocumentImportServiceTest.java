@@ -36,7 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class FulcrumDocumentImportServiceTest {
 
-  private static final OffsetDateTime SEEN_AT =
+  private static final OffsetDateTime SYNCED_AT =
       OffsetDateTime.of(2026, 10, 15, 2, 0, 0, 0, ZoneOffset.UTC);
   private static final UUID RECORD_ID = UUID.randomUUID();
   private static final UUID ATTACHMENT_ID = UUID.randomUUID();
@@ -79,7 +79,7 @@ class FulcrumDocumentImportServiceTest {
         .store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
 
     // when
-    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SYNCED_AT);
 
     // then
     assertThat(imported).isTrue();
@@ -88,7 +88,7 @@ class FulcrumDocumentImportServiceTest {
     order.verify(storage).store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
     order
         .verify(documentRepository)
-        .saveSeen(
+        .saveSynced(
             List.of(
                 new FulcrumDocument(
                     RECORD_ID,
@@ -102,7 +102,7 @@ class FulcrumDocumentImportServiceTest {
                         ATTACHMENT_ID,
                         new DocumentMetadata(FILE_NAME, "application/pdf", CONTENT.length)),
                     null)),
-            SEEN_AT);
+            SYNCED_AT);
   }
 
   @Test
@@ -112,7 +112,7 @@ class FulcrumDocumentImportServiceTest {
         .willThrow(new IllegalStateException("answered 404"));
 
     // when
-    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SYNCED_AT);
 
     // then
     assertThat(imported).isFalse();
@@ -129,7 +129,7 @@ class FulcrumDocumentImportServiceTest {
         .store(eq(ATTACHMENT_ID), any(), any(Path.class));
 
     // when
-    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SYNCED_AT);
 
     // then
     assertThat(imported).isFalse();
@@ -142,7 +142,7 @@ class FulcrumDocumentImportServiceTest {
     given(downloadClient.download(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(new byte[0]));
 
     // when
-    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    boolean imported = importService.importQuietly(ENTRY, ATTACHMENT, SYNCED_AT);
 
     // then
     assertThat(imported).isFalse();
@@ -156,7 +156,7 @@ class FulcrumDocumentImportServiceTest {
 
     // when
     importService.importQuietly(
-        ENTRY, new FulcrumAttachmentReference(ATTACHMENT_ID, "notes.unknownext"), SEEN_AT);
+        ENTRY, new FulcrumAttachmentReference(ATTACHMENT_ID, "notes.unknownext"), SYNCED_AT);
 
     // then
     then(storage)

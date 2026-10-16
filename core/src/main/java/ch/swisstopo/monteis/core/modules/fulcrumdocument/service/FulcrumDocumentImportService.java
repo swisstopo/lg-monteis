@@ -46,13 +46,15 @@ public class FulcrumDocumentImportService {
 
   // one failed import must not stop the others, the next sync tries it again
   public boolean importQuietly(
-      FulcrumLiteratureEntry entry, FulcrumAttachmentReference attachment, OffsetDateTime seenAt) {
+      FulcrumLiteratureEntry entry,
+      FulcrumAttachmentReference attachment,
+      OffsetDateTime syncedAt) {
     Path download = null;
     try {
       download = downloadToTempFile(attachment);
       FulcrumDocumentFile file = fileOf(attachment, download);
       storage.store(file.attachmentId(), file.metadata().contentType(), download);
-      documentRepository.saveSeen(List.of(literatureMapper.toDocument(entry, file)), seenAt);
+      documentRepository.saveSynced(List.of(literatureMapper.toDocument(entry, file)), syncedAt);
       return true;
     } catch (IOException | RuntimeException e) {
       log.warn(

@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.jooq;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.swisstopo.monteis.core.itconfig.IT;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncLockRepository;
 import java.time.Duration;
 import java.time.Instant;
 import net.javacrumbs.shedlock.core.LockConfiguration;
@@ -15,30 +16,31 @@ import org.springframework.beans.factory.annotation.Autowired;
 @IT
 class JooqFulcrumSyncLockRepositoryIT {
 
-  private static final String LOCK_NAME = "fulcrum-sync-lock-it";
-
   @Autowired private JooqFulcrumSyncLockRepository repository;
   @Autowired private LockProvider lockProvider;
 
   @Test
-  void should_report_a_lock_as_held_until_it_is_released() {
+  void should_report_a_sync_as_running_until_its_lock_is_released() {
     // given
     SimpleLock lock =
         lockProvider
             .lock(
                 new LockConfiguration(
-                    Instant.now(), LOCK_NAME, Duration.ofMinutes(10), Duration.ZERO))
+                    Instant.now(),
+                    FulcrumSyncLockRepository.LOCK_NAME,
+                    Duration.ofMinutes(10),
+                    Duration.ZERO))
             .orElseThrow();
 
     // when / then
-    assertThat(repository.isHeld(LOCK_NAME)).isTrue();
+    assertThat(repository.isSyncRunning()).isTrue();
     lock.unlock();
-    assertThat(repository.isHeld(LOCK_NAME)).isFalse();
+    assertThat(repository.isSyncRunning()).isFalse();
   }
 
   @Test
-  void should_not_report_a_lock_nobody_ever_took() {
+  void should_not_report_a_sync_while_nobody_took_the_lock() {
     // when / then
-    assertThat(repository.isHeld("never-taken")).isFalse();
+    assertThat(repository.isSyncRunning()).isFalse();
   }
 }
