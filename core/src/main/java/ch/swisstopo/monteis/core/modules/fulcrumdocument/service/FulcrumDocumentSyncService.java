@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
-import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachments;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownloadClient;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry.FulcrumAttachmentReference;
@@ -54,7 +54,7 @@ public class FulcrumDocumentSyncService {
   private static final Logger log = LoggerFactory.getLogger(FulcrumDocumentSyncService.class);
 
   private final FulcrumService fulcrumService;
-  private final FulcrumAttachments fulcrumAttachments;
+  private final FulcrumAttachmentDownloadClient downloadClient;
   private final FulcrumEntryRepository entryRepository;
   private final FulcrumSyncLockRepository lockRepository;
   private final FulcrumDocumentStorage storage;
@@ -66,7 +66,7 @@ public class FulcrumDocumentSyncService {
 
   public FulcrumDocumentSyncService(
       FulcrumService fulcrumService,
-      FulcrumAttachments fulcrumAttachments,
+      FulcrumAttachmentDownloadClient downloadClient,
       FulcrumEntryRepository entryRepository,
       FulcrumSyncLockRepository lockRepository,
       FulcrumDocumentStorage storage,
@@ -76,7 +76,7 @@ public class FulcrumDocumentSyncService {
       FulcrumDocumentSyncProperties syncProperties,
       Clock clock) {
     this.fulcrumService = fulcrumService;
-    this.fulcrumAttachments = fulcrumAttachments;
+    this.downloadClient = downloadClient;
     this.entryRepository = entryRepository;
     this.lockRepository = lockRepository;
     this.storage = storage;
@@ -92,11 +92,11 @@ public class FulcrumDocumentSyncService {
         lockRepository.isHeld(LOCK_NAME), entryRepository.findLastSeenAt().orElse(null));
   }
 
-  // without a token every environment that has none (local, ci) would log a failed sync each night
+  // a switched off Fulcrum would log a failed sync each night
   @Scheduled(cron = "${monteis.fulcrum.documents.sync-cron}", zone = "Europe/Zurich")
   public void syncOnSchedule() {
-    if (fulcrumProperties.apiToken() == null || fulcrumProperties.apiToken().isBlank()) {
-      log.info("No Fulcrum API token configured, skipping the scheduled Fulcrum Document sync");
+    if (!fulcrumProperties.enabled()) {
+      log.info("Fulcrum is switched off, skipping the scheduled Fulcrum Document sync");
       return;
     }
     acquireLock()
@@ -108,6 +108,7 @@ public class FulcrumDocumentSyncService {
   // the lock is taken here so the caller learns right away that a sync is running, the sync itself
   // continues in the background and releases it
   public FulcrumSyncStatus startSync() {
+    fulcrumProperties.requireEnabled();
     SimpleLock lock = acquireLock().orElseThrow(FulcrumSyncAlreadyRunningException::new);
     try {
       taskExecutor.execute(() -> syncAsSystem(lock));
@@ -204,7 +205,7 @@ public class FulcrumDocumentSyncService {
     Path download = null;
     try {
       download = Files.createTempFile("fulcrum-document-", ".download");
-      try (InputStream content = fulcrumAttachments.open(attachment.id())) {
+      try (InputStream content = downloadClient.download(attachment.id())) {
         Files.copy(content, download, StandardCopyOption.REPLACE_EXISTING);
       }
       DocumentMetadata metadata =

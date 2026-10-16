@@ -1,8 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
 /**
- * Thrown when Monteis cannot authenticate against the Fulcrum API: no {@code
- * monteis.fulcrum.api-token} is configured, or Fulcrum answers 401/403.
+ * Thrown when Fulcrum rejects the configured API token with 401/403. A missing token never gets
+ * here, {@link FulcrumProperties} refuses to start without one while Fulcrum is enabled.
  *
  * <p>{@code GlobalErrorControllerAdvice} maps this to 502 with the generic {@code
  * error.system.internal} message and an error id. The message here is written to the log under
