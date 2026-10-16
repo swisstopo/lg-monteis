@@ -535,22 +535,15 @@
     "category": {
       "label": "Category"
     },
-    "documents": {
-      "label": "Documents",
+    "document": {
+      "label": "Document",
       "view": "View {{fileName}}",
       "download": "Download {{fileName}}",
-      "menu": "{{count}} documents",
-      "viewAction": "View",
-      "downloadAction": "Download",
       "error": {
         "download": "The document could not be loaded."
       }
     },
-    "removed": {
-      "entry": "No longer available in Fulcrum. Its documents stored in MONTEIS can still be viewed and downloaded here.",
-      "document": "No longer available in Fulcrum. The copy stored in MONTEIS can still be viewed and downloaded here.",
-      "someDocuments": "Some documents are no longer available in Fulcrum. Their copies stored in MONTEIS can still be viewed and downloaded here."
-    },
+    "removed": "No longer available in Fulcrum. Its document stored in MONTEIS can still be viewed and downloaded here.",
     "error": {
       "load": "The Fulcrum entries could not be loaded."
     }
@@ -558,10 +551,8 @@
   "fulcrumSync": {
     "refresh": "Refresh",
     "running": "Sync with Fulcrum running...",
-    "lastSynced": "Last synced at {{finishedAt}}",
+    "lastSynced": "Last synced at {{lastSyncedAt}}",
     "never": "Not synced with Fulcrum yet",
-    "failed": "The last sync failed.",
-    "incomplete": "The last sync was incomplete, some entries or documents could not be synced.",
     "statusUnknown": "The sync status could not be loaded.",
     "error": {
       "start": "The sync with Fulcrum could not be started."
