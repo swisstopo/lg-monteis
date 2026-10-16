@@ -7,7 +7,7 @@ import {
   resource,
   signal,
 } from '@angular/core';
-import { FulcrumDocumentResponseDto } from '@core/generated';
+import { FulcrumEntryResponseDto } from '@core/generated';
 import { FulcrumSync } from '@features/fulcrum-document/fulcrum-sync/fulcrum-sync';
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -34,20 +34,20 @@ export default class FulcrumDocumentTable {
 
   protected readonly columns = createColumns();
 
-  protected readonly documents = resource({
-    loader: () => this.documentService.getDocuments(),
+  protected readonly entries = resource({
+    loader: () => this.documentService.getEntries(),
   });
 
   // undefined while loading, so the grid shows its loading overlay instead of "no rows"
   protected readonly visibleRows = computed(() => {
-    if (!this.documents.hasValue()) return undefined;
+    if (!this.entries.hasValue()) return undefined;
     const term = this.searchTerm();
-    return this.documents.value().filter((document) => matchesSearch(document, term));
+    return this.entries.value().filter((entry) => matchesSearch(entry, term));
   });
 
-  protected readonly gridOptions: GridOptions<FulcrumDocumentResponseDto> = {
+  protected readonly gridOptions: GridOptions<FulcrumEntryResponseDto> = {
     domLayout: 'normal',
-    // read only, a click on a file button should not select the row
+    // read only, a click on a document button should not select the row
     rowSelection: undefined,
   };
 
@@ -62,8 +62,8 @@ export default class FulcrumDocumentTable {
   }
 
   onSyncFinished(): void {
-    this.documents.reload();
+    this.entries.reload();
   }
 
-  protected getRowId = (row: FulcrumDocumentResponseDto): string => row.id;
+  protected getRowId = (row: FulcrumEntryResponseDto): string => row.id;
 }
