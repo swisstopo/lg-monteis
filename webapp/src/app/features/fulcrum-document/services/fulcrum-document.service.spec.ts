@@ -6,7 +6,7 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FulcrumDocumentService } from './fulcrum-document.service';
 
-const DOCUMENT = { id: 'document-1', title: 'Geology of Mont Terri' };
+const ENTRY = { id: 'entry-1', title: 'Geology of Mont Terri' };
 const RUN = { id: 'run-1', status: 'RUNNING', startedAt: '2026-10-15T08:00:00Z' };
 
 describe('FulcrumDocumentService', () => {
@@ -15,8 +15,8 @@ describe('FulcrumDocumentService', () => {
 
   beforeEach(() => {
     api = {
-      getFulcrumDocuments: vi.fn(() => of([DOCUMENT])),
-      downloadFulcrumDocumentFile: vi.fn(() => of(new Blob(['%PDF']))),
+      getFulcrumEntries: vi.fn(() => of([ENTRY])),
+      downloadFulcrumDocument: vi.fn(() => of(new Blob(['%PDF']))),
       getLatestFulcrumSyncRun: vi.fn(() => of(RUN)),
       startFulcrumSync: vi.fn(() => of(RUN)),
     };
@@ -26,16 +26,16 @@ describe('FulcrumDocumentService', () => {
     service = TestBed.inject(FulcrumDocumentService);
   });
 
-  it('lists the Fulcrum Documents', async () => {
-    await expect(service.getDocuments()).resolves.toEqual([DOCUMENT]);
+  it('lists the Fulcrum entries', async () => {
+    await expect(service.getEntries()).resolves.toEqual([ENTRY]);
   });
 
-  it('fetches the content of a file', async () => {
-    const content = await service.getContent('file-1');
+  it('fetches the content of a Fulcrum Document', async () => {
+    const content = await service.getContent('document-1');
 
     expect(await content.text()).toBe('%PDF');
-    const [fileId, , , options] = api['downloadFulcrumDocumentFile'].mock.calls[0];
-    expect(fileId).toBe('file-1');
+    const [documentId, , , options] = api['downloadFulcrumDocument'].mock.calls[0];
+    expect(documentId).toBe('document-1');
     expect(skipsGlobalErrorToast(options)).toBe(true);
   });
 

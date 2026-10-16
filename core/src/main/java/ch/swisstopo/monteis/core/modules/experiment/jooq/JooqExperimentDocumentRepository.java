@@ -2,9 +2,9 @@ package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_DOCUMENTS;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentDocumentsRecord;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentRepository;
 import java.util.List;

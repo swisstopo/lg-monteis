@@ -1,28 +1,28 @@
 import {
-  FulcrumDocumentFileResponseDto,
   FulcrumDocumentResponseDto,
+  FulcrumEntryResponseDto,
   FulcrumSyncRunResponseDto,
 } from '@core/generated';
-
-export function file(
-  overrides: Partial<FulcrumDocumentFileResponseDto> = {},
-): FulcrumDocumentFileResponseDto {
-  return {
-    id: 'file-1',
-    fileName: 'report.pdf',
-    contentType: 'application/pdf',
-    viewable: true,
-    stored: true,
-    availableInFulcrum: true,
-    ...overrides,
-  };
-}
 
 export function fulcrumDocument(
   overrides: Partial<FulcrumDocumentResponseDto> = {},
 ): FulcrumDocumentResponseDto {
   return {
     id: 'document-1',
+    fileName: 'report.pdf',
+    contentType: 'application/pdf',
+    sizeBytes: 1024,
+    viewable: true,
+    availableInFulcrum: true,
+    ...overrides,
+  };
+}
+
+export function fulcrumEntry(
+  overrides: Partial<FulcrumEntryResponseDto> = {},
+): FulcrumEntryResponseDto {
+  return {
+    id: 'entry-1',
     number: 'TR 2019-04',
     title: 'Self-sealing of fractures in Opalinus Clay',
     authors: 'Bossart, P.; Thury, M.',
@@ -30,7 +30,7 @@ export function fulcrumDocument(
     category: 'Technical Report',
     keywords: ['hydrogeology'],
     availableInFulcrum: true,
-    files: [file()],
+    documents: [fulcrumDocument()],
     ...overrides,
   };
 }
