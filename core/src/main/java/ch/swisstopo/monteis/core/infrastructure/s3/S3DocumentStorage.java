@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.s3;
 
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentStorage;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import java.io.InputStream;

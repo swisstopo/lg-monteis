@@ -59,7 +59,7 @@ describe('FulcrumSync', () => {
   it('shows when the last sync finished', async () => {
     const view = await render();
 
-    expect(view.status()).toBe('fulcrumDocument.sync.lastSynced');
+    expect(view.status()).toBe('fulcrumSync.lastSynced');
     expect(view.refresh()?.disabled).toBe(false);
   });
 
@@ -68,12 +68,12 @@ describe('FulcrumSync', () => {
 
     const view = await render();
 
-    expect(view.status()).toBe('fulcrumDocument.sync.never');
+    expect(view.status()).toBe('fulcrumSync.never');
   });
 
   it.each([
-    ['FAILED', 'fulcrumDocument.sync.failed'],
-    ['INCOMPLETE', 'fulcrumDocument.sync.incomplete'],
+    ['FAILED', 'fulcrumSync.failed'],
+    ['INCOMPLETE', 'fulcrumSync.incomplete'],
   ] as const)('hints at a last run that %s', async (status, hint) => {
     documentService.getLatestSyncRun.mockResolvedValue(syncRun({ status }));
 
@@ -86,7 +86,7 @@ describe('FulcrumSync', () => {
     const view = await render(false);
 
     expect(view.refresh()).toBeNull();
-    expect(view.status()).toBe('fulcrumDocument.sync.lastSynced');
+    expect(view.status()).toBe('fulcrumSync.lastSynced');
   });
 
   it('runs a sync until the status is no longer RUNNING, then reports it finished', async () => {
@@ -104,7 +104,7 @@ describe('FulcrumSync', () => {
     await view.settle();
     expect(documentService.getLatestSyncRun).toHaveBeenCalledTimes(3);
     expect(view.refresh()?.disabled).toBe(false);
-    expect(view.status()).toBe('fulcrumDocument.sync.lastSynced');
+    expect(view.status()).toBe('fulcrumSync.lastSynced');
   });
 
   it('shows a running sync as running and disables the refresh', async () => {
@@ -117,7 +117,7 @@ describe('FulcrumSync', () => {
     await view.settle();
 
     expect(view.refresh()?.disabled).toBe(true);
-    expect(view.status()).toBe('fulcrumDocument.sync.running');
+    expect(view.status()).toBe('fulcrumSync.running');
   });
 
   it('picks up a sync that is already running when the page opens', async () => {
@@ -157,9 +157,7 @@ describe('FulcrumSync', () => {
 
     view.refresh()!.click();
 
-    await vi.waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('fulcrumDocument.sync.error.start'),
-    );
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('fulcrumSync.error.start'));
     await view.settle();
     expect(view.refresh()?.disabled).toBe(false);
     expect(view.finished).not.toHaveBeenCalled();
@@ -175,7 +173,7 @@ describe('FulcrumSync', () => {
 
     await vi.waitFor(() => expect(documentService.getLatestSyncRun).toHaveBeenCalledTimes(2));
     await view.settle();
-    expect(view.status()).toBe('fulcrumDocument.sync.statusUnknown');
+    expect(view.status()).toBe('fulcrumSync.statusUnknown');
     expect(view.refresh()?.disabled).toBe(false);
   });
 });

@@ -40,7 +40,7 @@ export class FulcrumSync {
   private readonly pollInterval = inject(SYNC_POLL_INTERVAL_MS);
   protected readonly permissions = inject(PermissionsService);
 
-  /** A run this view watched has ended, the documents changed. */
+  /** A run this view watched has ended, the Fulcrum entries changed. */
   readonly finished = output<void>();
 
   protected readonly latestRun = signal<FulcrumSyncRunResponseDto | undefined>(undefined);
@@ -49,9 +49,9 @@ export class FulcrumSync {
   protected readonly lastRunHintKey = computed(() => {
     switch (this.latestRun()?.status) {
       case StatusEnum.Failed:
-        return 'fulcrumDocument.sync.failed';
+        return 'fulcrumSync.failed';
       case StatusEnum.Incomplete:
-        return 'fulcrumDocument.sync.incomplete';
+        return 'fulcrumSync.incomplete';
       default:
         return undefined;
     }
@@ -120,7 +120,7 @@ export class FulcrumSync {
       .filter((dto) => !!dto.messageKey)
       .map((dto) => this.translateService.translate(dto.messageKey!, dto.params)());
     if (messages.length === 0) {
-      messages.push(this.translateService.translate('fulcrumDocument.sync.error.start')());
+      messages.push(this.translateService.translate('fulcrumSync.error.start')());
     }
     messages.forEach((message) => this.toastService.error(message));
   }

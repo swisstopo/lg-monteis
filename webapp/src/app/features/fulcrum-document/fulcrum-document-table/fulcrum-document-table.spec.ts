@@ -2,11 +2,11 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { PermissionsService } from '@core/auth/permissions.service';
-import { FulcrumDocumentResponseDto } from '@core/generated';
+import { FulcrumEntryResponseDto } from '@core/generated';
 import { SYNC_POLL_INTERVAL_MS } from '@features/fulcrum-document/fulcrum-sync/fulcrum-sync';
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
 import {
-  fulcrumDocument,
+  fulcrumEntry,
   syncRun,
 } from '@features/fulcrum-document/testing/fulcrum-document-fixtures';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -20,30 +20,31 @@ import FulcrumDocumentTable from './fulcrum-document-table';
 // main.ts registers these for the app, the test bed never runs it
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const CLAY = fulcrumDocument({
+const CLAY = fulcrumEntry({
   id: 'clay',
   number: 'TR 2019-04',
   title: 'Self-sealing of fractures in Opalinus Clay',
   keywords: ['hydrogeology'],
 });
-const GAS = fulcrumDocument({
+const GAS = fulcrumEntry({
   id: 'gas',
   number: 'TN 2021-11',
   title: 'Gas transport experiment',
   authors: 'Marschall, P.',
+  year: 2022,
   keywords: ['two-phase flow'],
 });
 
 describe('FulcrumDocumentTable', () => {
   let documentService: {
-    getDocuments: ReturnType<typeof vi.fn>;
+    getEntries: ReturnType<typeof vi.fn>;
     getLatestSyncRun: ReturnType<typeof vi.fn>;
     startSync: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     documentService = {
-      getDocuments: vi.fn().mockResolvedValue([CLAY, GAS]),
+      getEntries: vi.fn().mockResolvedValue([CLAY, GAS]),
       getLatestSyncRun: vi.fn().mockResolvedValue(syncRun()),
       startSync: vi.fn().mockResolvedValue(syncRun({ status: 'RUNNING' })),
     };
@@ -71,7 +72,7 @@ describe('FulcrumDocumentTable', () => {
     return view;
   }
 
-  it('lists all Fulcrum Documents', async () => {
+  it('lists all Fulcrum entries', async () => {
     const view = await render();
 
     expect(view.titles()).toEqual([CLAY.title, GAS.title]);
@@ -86,6 +87,9 @@ describe('FulcrumDocumentTable', () => {
     await view.search('TR 2019');
     expect(view.titles()).toEqual([CLAY.title]);
 
+    await view.search('2022');
+    expect(view.titles()).toEqual([GAS.title]);
+
     await view.search('');
     expect(view.titles()).toEqual([CLAY.title, GAS.title]);
   });
@@ -97,24 +101,24 @@ describe('FulcrumDocumentTable', () => {
     expect(view.refreshButton()).toBeUndefined();
   });
 
-  it('reloads the documents once a sync finished', async () => {
+  it('reloads the entries once a sync finished', async () => {
     documentService.getLatestSyncRun
       .mockResolvedValueOnce(syncRun())
       .mockResolvedValueOnce(syncRun({ status: 'SUCCEEDED' }));
     const view = await render();
-    documentService.getDocuments.mockResolvedValue([GAS]);
+    documentService.getEntries.mockResolvedValue([GAS]);
 
     view.refreshButton()!.click();
 
-    await vi.waitFor(() => expect(documentService.getDocuments).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(documentService.getEntries).toHaveBeenCalledTimes(2));
     await vi.waitFor(async () => {
       await view.settle();
       expect(view.titles()).toEqual([GAS.title]);
     });
   });
 
-  it('shows an inline error when the documents cannot be loaded', async () => {
-    documentService.getDocuments.mockRejectedValue(new Error('500'));
+  it('shows an inline error when the entries cannot be loaded', async () => {
+    documentService.getEntries.mockRejectedValue(new Error('500'));
     TestBed.configureTestingModule({
       imports: [FulcrumDocumentTable],
       providers: [
@@ -152,15 +156,13 @@ class TableView {
   // what the grid is handed, its own rendering depends on the layout of the test page
   titles(): (string | undefined)[] {
     const table = this.fixture.debugElement.query(By.directive(Table));
-    const rows = (
-      table?.componentInstance as Table<FulcrumDocumentResponseDto> | undefined
-    )?.rows();
+    const rows = (table?.componentInstance as Table<FulcrumEntryResponseDto> | undefined)?.rows();
     return (rows ?? []).map((row) => row.title);
   }
 
   refreshButton(): HTMLButtonElement | undefined {
     return [...this.element.querySelectorAll<HTMLButtonElement>('app-table-header button')].find(
-      (button) => button.textContent?.includes('fulcrumDocument.sync.refresh'),
+      (button) => button.textContent?.includes('fulcrumSync.refresh'),
     );
   }
 
