@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import {
   FulcrumDocumentControllerService,
-  FulcrumDocumentResponseDto,
+  FulcrumEntryResponseDto,
   FulcrumSyncRunResponseDto,
 } from '@core/generated';
 import { skipGlobalErrorToast } from '@core/http/http-context';
@@ -15,13 +15,13 @@ import { firstValueFrom } from 'rxjs';
 export class FulcrumDocumentService {
   private readonly api = inject(FulcrumDocumentControllerService);
 
-  getDocuments(): Promise<FulcrumDocumentResponseDto[]> {
-    return firstValueFrom(this.api.getFulcrumDocuments());
+  getEntries(): Promise<FulcrumEntryResponseDto[]> {
+    return firstValueFrom(this.api.getFulcrumEntries());
   }
 
-  getContent(fileId: string): Promise<Blob> {
+  getContent(documentId: string): Promise<Blob> {
     return firstValueFrom(
-      this.api.downloadFulcrumDocumentFile(fileId, 'body', false, {
+      this.api.downloadFulcrumDocument(documentId, 'body', false, {
         context: skipGlobalErrorToast(),
       }),
     );
