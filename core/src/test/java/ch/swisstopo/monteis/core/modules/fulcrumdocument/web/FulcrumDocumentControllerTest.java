@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
@@ -183,6 +184,21 @@ class FulcrumDocumentControllerTest {
         .andExpect(status().isForbidden());
 
     then(syncService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_answer_503_while_fulcrum_is_switched_off() throws Exception {
+    // given
+    given(syncService.startSync()).willThrow(new FulcrumDisabledException());
+
+    // when / then
+    mockMvc
+        .perform(
+            post(SYNC)
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication())))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(jsonPath("$.messageKey").value("fulcrum.disabled"));
   }
 
   @Test

@@ -45,6 +45,8 @@ class FulcrumServiceTest {
           + " fy_point_with_offset, fz_point_with_offset";
   private static final String TABLE = "Mont Terri Monitoring Systems and Sensors";
   private static final String LITERATURE_TABLE = "Mont Terri Literature";
+  private static final boolean ENABLED = true;
+  private static final boolean DISABLED = false;
   private static final UUID SENSOR_RECORD_ID =
       UUID.fromString("29d8aee7-d9c6-4459-ac9d-bbd6e10f6518");
 
@@ -110,12 +112,14 @@ class FulcrumServiceTest {
 
   @BeforeEach
   void setUp() {
-    givenAnApiTokenOf("test-token");
+    givenFulcrumIs(ENABLED);
   }
 
-  private void givenAnApiTokenOf(String apiToken) {
+  private void givenFulcrumIs(boolean enabled) {
+    String apiToken = "test-token";
     FulcrumProperties properties =
         new FulcrumProperties(
+            enabled,
             BASE_URL,
             apiToken,
             TABLE,
@@ -228,12 +232,11 @@ class FulcrumServiceTest {
   }
 
   @Test
-  void getSensorById_fails_without_calling_fulcrum_when_no_api_token_is_configured() {
-    givenAnApiTokenOf("");
+  void getSensorById_fails_without_calling_fulcrum_when_fulcrum_is_switched_off() {
+    givenFulcrumIs(DISABLED);
 
     assertThatThrownBy(() -> service.getSensorById(SENSOR_RECORD_ID))
-        .isInstanceOf(FulcrumAuthenticationException.class)
-        .hasMessageContaining("monteis.fulcrum.api-token");
+        .isInstanceOf(FulcrumDisabledException.class);
 
     server.verify();
   }
