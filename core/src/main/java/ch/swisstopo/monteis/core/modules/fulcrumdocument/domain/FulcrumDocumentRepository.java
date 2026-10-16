@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.domain;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,12 +12,13 @@ public interface FulcrumDocumentRepository {
 
   FulcrumDocument getById(UUID id);
 
-  // inserts new documents and updates known ones, metadata and file alike. all of them count as
-  // seen at seenAt and are no longer removed. only once their file is in storage
-  void saveSeen(List<FulcrumDocument> documents, OffsetDateTime seenAt);
+  // inserts new documents and updates known ones, metadata and file alike, as Fulcrum delivered
+  // them in the sync started at syncedAt. a removed one becomes available again. only once their
+  // file is in storage
+  void saveSynced(List<FulcrumDocument> documents, OffsetDateTime syncedAt);
 
-  // documents not seen at seenAt get removedAt, returns how many that hit
-  int markRemovedUnlessSeenAt(OffsetDateTime seenAt);
+  void markRemovedFromFulcrum(Collection<UUID> documentIds);
 
-  Optional<OffsetDateTime> findLastSeenAt();
+  // when the last sync that reached Fulcrum started, its file imports may still have failed
+  Optional<OffsetDateTime> findLastSuccessfulSyncAt();
 }
