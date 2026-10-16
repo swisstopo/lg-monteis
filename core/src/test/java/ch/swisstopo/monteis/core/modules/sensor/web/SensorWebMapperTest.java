@@ -22,8 +22,6 @@ import org.junit.jupiter.api.Test;
 
 class SensorWebMapperTest {
 
-  private static final String DEFAULT_EXPRESSION = "x";
-
   private final SensorWebMapper mapper = new SensorWebMapperImpl(new ExperimentWebMapperImpl());
 
   /**

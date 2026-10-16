@@ -20,8 +20,8 @@ class RequestTimingTest {
   void should_accumulate_time_rows_and_query_count_across_statements() {
     RequestTiming.begin();
 
-    RequestTiming.record(5_000_000L, 10);
-    RequestTiming.record(7_000_000L, 90);
+    RequestTiming.recordStatement(5_000_000L, 10);
+    RequestTiming.recordStatement(7_000_000L, 90);
 
     RequestTiming timing = RequestTiming.current();
     assertEquals(12, timing.databaseMillis());
@@ -33,7 +33,7 @@ class RequestTimingTest {
   void should_record_nothing_when_no_request_is_in_scope() {
     // No begin() — this is a startup task or scheduled job, not a request. Must not throw, and
     // must not leave a collector behind on the thread.
-    RequestTiming.record(9_000_000L, 500);
+    RequestTiming.recordStatement(9_000_000L, 500);
 
     assertNull(RequestTiming.current());
   }
@@ -53,14 +53,14 @@ class RequestTimingTest {
   @Test
   void should_keep_threads_isolated() throws ExecutionException, InterruptedException {
     RequestTiming.begin();
-    RequestTiming.record(10_000_000L, 100);
+    RequestTiming.recordStatement(10_000_000L, 100);
 
     // A second "request" on another thread must not see or disturb this one's totals
     long otherThreadRows =
         CompletableFuture.supplyAsync(
                 () -> {
                   RequestTiming.begin();
-                  RequestTiming.record(1_000_000L, 7);
+                  RequestTiming.recordStatement(1_000_000L, 7);
                   long rows = RequestTiming.current().rows();
                   RequestTiming.end();
                   return rows;
@@ -74,7 +74,7 @@ class RequestTimingTest {
   @Test
   void should_start_from_zero_when_a_thread_is_reused() {
     RequestTiming.begin();
-    RequestTiming.record(10_000_000L, 100);
+    RequestTiming.recordStatement(10_000_000L, 100);
     RequestTiming.end();
 
     RequestTiming.begin();

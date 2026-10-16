@@ -37,6 +37,6 @@ public class QueryTimingListener implements ExecuteListener {
 
   @Override
   public void end(ExecuteContext ctx) {
-    RequestTiming.record(System.nanoTime() - startNanos, rows);
+    RequestTiming.recordStatement(System.nanoTime() - startNanos, rows);
   }
 }

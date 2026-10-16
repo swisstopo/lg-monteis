@@ -78,10 +78,11 @@ class ExperimentDocumentServiceTest {
         .given(experimentRepository)
         .requireVisible(EXPERIMENT_ID);
 
+    InputStream content = InputStream.nullInputStream();
+
     // when / then
     assertThrows(
-        ObjectNotFoundException.class,
-        () -> service.upload(EXPERIMENT_ID, METADATA, InputStream.nullInputStream()));
+        ObjectNotFoundException.class, () -> service.upload(EXPERIMENT_ID, METADATA, content));
     then(documentRepository).shouldHaveNoInteractions();
     then(storage).shouldHaveNoInteractions();
   }
@@ -94,10 +95,11 @@ class ExperimentDocumentServiceTest {
         .given(storage)
         .store(any(), any(), any(), any());
 
+    InputStream content = InputStream.nullInputStream();
+
     // when / then
     assertThrows(
-        IllegalStateException.class,
-        () -> service.upload(EXPERIMENT_ID, METADATA, InputStream.nullInputStream()));
+        IllegalStateException.class, () -> service.upload(EXPERIMENT_ID, METADATA, content));
     then(documentRepository).should(never()).create(any(), any(), any(), any());
     then(storage).should(never()).delete(any(), any());
   }
@@ -112,11 +114,13 @@ class ExperimentDocumentServiceTest {
     given(documentRepository.create(DOCUMENT_ID, EXPERIMENT_ID, METADATA, "alice"))
         .willThrow(rejection);
 
+    InputStream content = InputStream.nullInputStream();
+
     // when
     PermissionDeniedDataAccessException thrown =
         assertThrows(
             PermissionDeniedDataAccessException.class,
-            () -> service.upload(EXPERIMENT_ID, METADATA, InputStream.nullInputStream()));
+            () -> service.upload(EXPERIMENT_ID, METADATA, content));
 
     // then
     assertSame(rejection, thrown);
@@ -135,11 +139,13 @@ class ExperimentDocumentServiceTest {
         .willThrow(rejection);
     willThrow(deleteFailure).given(storage).delete(EXPERIMENT_ID, DOCUMENT_ID);
 
+    InputStream content = InputStream.nullInputStream();
+
     // when
     PermissionDeniedDataAccessException thrown =
         assertThrows(
             PermissionDeniedDataAccessException.class,
-            () -> service.upload(EXPERIMENT_ID, METADATA, InputStream.nullInputStream()));
+            () -> service.upload(EXPERIMENT_ID, METADATA, content));
 
     // then
     assertSame(rejection, thrown);

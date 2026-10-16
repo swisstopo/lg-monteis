@@ -340,7 +340,7 @@ export class ChartComponent {
 
       // Assuming time-series data is sorted from the backend (Fastest O(D) execution)
       const localMin = data[0].x;
-      const localMax = data[data.length - 1].x;
+      const localMax = data.at(-1)!.x;
 
       if (localMin < min) min = localMin;
       if (localMax > max) max = localMax;

@@ -78,7 +78,7 @@ public interface SensorJooqMapper {
   @Mapping(target = "typeId", ignore = true)
   @Mapping(target = "sensorId", ignore = true)
   void updateParameterRecordFromDomain(
-      SensorParameter domain, @MappingTarget SensorParameterRecord record);
+      SensorParameter domain, @MappingTarget SensorParameterRecord target);
 
   // --- Embedded Formula and Type Sub-Object Mappings ---
 

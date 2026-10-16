@@ -45,11 +45,12 @@ class ExperimentDocumentWebMapperTest {
 
   @Test
   void should_reject_a_file_name_that_is_only_a_client_path() {
+    // given
+    MockMultipartFile file = file("C:\\Users\\me\\", "application/pdf");
+
     // when
     ObjectBusinessValidationException exception =
-        assertThrows(
-            ObjectBusinessValidationException.class,
-            () -> mapper.toMetadata(file("C:\\Users\\me\\", "application/pdf")));
+        assertThrows(ObjectBusinessValidationException.class, () -> mapper.toMetadata(file));
 
     // then
     assertEquals("document.validation.fileName", exception.getMessageKey());

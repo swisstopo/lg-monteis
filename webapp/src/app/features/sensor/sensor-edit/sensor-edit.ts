@@ -473,7 +473,7 @@ export default class SensorEdit {
 
     const selected = this.selectedExperiment();
     const mainExperimentId =
-      selected && selected.name === formData.mainExperiment.name ? selected.id : undefined;
+      selected?.name === formData.mainExperiment.name ? selected.id : undefined;
 
     return {
       id: this.sensor()?.id ?? undefined,
