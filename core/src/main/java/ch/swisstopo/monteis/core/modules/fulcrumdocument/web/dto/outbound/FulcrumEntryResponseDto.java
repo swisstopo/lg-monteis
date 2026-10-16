@@ -12,4 +12,4 @@ public record FulcrumEntryResponseDto(
     String category,
     List<String> keywords,
     boolean availableInFulcrum,
-    List<FulcrumDocumentResponseDto> documents) {}
+    FulcrumDocumentResponseDto document) {}
