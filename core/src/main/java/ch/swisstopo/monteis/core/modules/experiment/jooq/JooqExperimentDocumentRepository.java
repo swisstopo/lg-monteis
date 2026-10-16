@@ -4,7 +4,6 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_DOCUMEN
 
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
-import ch.swisstopo.monteis.core.jooq.generated.tables.records.ExperimentDocumentsRecord;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentRepository;
 import java.util.List;
@@ -18,9 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class JooqExperimentDocumentRepository implements ExperimentDocumentRepository {
 
   private final DSLContext dsl;
+  private final ExperimentDocumentJooqMapper mapper;
 
-  public JooqExperimentDocumentRepository(DSLContext dsl) {
+  public JooqExperimentDocumentRepository(DSLContext dsl, ExperimentDocumentJooqMapper mapper) {
     this.dsl = dsl;
+    this.mapper = mapper;
   }
 
   // the upload needs the id for the S3 key before the insert, the db still generates it
@@ -42,7 +43,7 @@ public class JooqExperimentDocumentRepository implements ExperimentDocumentRepos
         .set(EXPERIMENT_DOCUMENTS.SIZE_BYTES, metadata.sizeBytes())
         .set(EXPERIMENT_DOCUMENTS.UPLOADED_BY, uploadedBy)
         .returning()
-        .fetchSingle(JooqExperimentDocumentRepository::toDomain);
+        .fetchSingle(mapper::toDomain);
   }
 
   @Override
@@ -51,7 +52,7 @@ public class JooqExperimentDocumentRepository implements ExperimentDocumentRepos
     return dsl.selectFrom(EXPERIMENT_DOCUMENTS)
         .where(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID.eq(experimentId))
         .orderBy(EXPERIMENT_DOCUMENTS.UPLOADED_AT.desc(), EXPERIMENT_DOCUMENTS.ID.desc())
-        .fetch(JooqExperimentDocumentRepository::toDomain);
+        .fetch(mapper::toDomain);
   }
 
   @Override
@@ -60,19 +61,7 @@ public class JooqExperimentDocumentRepository implements ExperimentDocumentRepos
     return dsl.selectFrom(EXPERIMENT_DOCUMENTS)
         .where(EXPERIMENT_DOCUMENTS.ID.eq(documentId))
         .and(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID.eq(experimentId))
-        .fetchOptional(JooqExperimentDocumentRepository::toDomain)
+        .fetchOptional(mapper::toDomain)
         .orElseThrow(() -> new ObjectNotFoundException(ExperimentDocument.class));
-  }
-
-  private static ExperimentDocument toDomain(ExperimentDocumentsRecord documentRecord) {
-    return new ExperimentDocument(
-        documentRecord.getId(),
-        documentRecord.getExperimentId(),
-        new DocumentMetadata(
-            documentRecord.getFileName(),
-            documentRecord.getContentType(),
-            documentRecord.getSizeBytes()),
-        documentRecord.getUploadedAt(),
-        documentRecord.getUploadedBy());
   }
 }
