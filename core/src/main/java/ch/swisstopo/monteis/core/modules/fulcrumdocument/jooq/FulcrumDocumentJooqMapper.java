@@ -12,7 +12,7 @@ import org.mapstruct.Mapping;
 public interface FulcrumDocumentJooqMapper {
 
   @Mapping(target = "file", source = ".")
-  FulcrumDocument toDocument(FulcrumDocumentsRecord documentRecord);
+  FulcrumDocument toDomain(FulcrumDocumentsRecord documentRecord);
 
   @Mapping(target = "metadata", source = ".")
   FulcrumDocumentFile toFile(FulcrumDocumentsRecord documentRecord);

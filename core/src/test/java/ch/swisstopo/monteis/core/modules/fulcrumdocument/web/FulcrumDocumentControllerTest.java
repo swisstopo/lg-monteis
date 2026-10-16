@@ -3,9 +3,11 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.web;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -34,6 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 @ControllerTest(FulcrumDocumentController.class)
 @Import(FulcrumDocumentWebMapperImpl.class)
@@ -114,7 +117,75 @@ class FulcrumDocumentControllerTest {
         .andExpect(status().isOk())
         .andExpect(header().string("Content-Type", "application/pdf"))
         .andExpect(header().string("Content-Disposition", containsString("attachment")))
+        .andExpect(header().longValue("Content-Length", 8))
         .andExpect(content().bytes(CONTENT));
+  }
+
+  @Test
+  void should_encode_a_file_name_outside_ascii() throws Exception {
+    // given
+    FulcrumDocument withUmlaut =
+        new FulcrumDocument(
+            UUID.randomUUID(),
+            null,
+            "Gräben",
+            null,
+            null,
+            null,
+            List.of(),
+            new FulcrumDocumentFile(
+                UUID.randomUUID(),
+                new DocumentMetadata("Bericht Gräben.pdf", "application/pdf", 8)),
+            null);
+    given(documentService.getDocument(withUmlaut.id())).willReturn(withUmlaut);
+    given(documentService.openFileContent(withUmlaut))
+        .willReturn(new ByteArrayInputStream(CONTENT));
+
+    // when / then
+    mockMvc
+        .perform(
+            get(DOCUMENT_CONTENT, withUmlaut.id())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication())))
+        .andExpect(status().isOk())
+        .andExpect(
+            header()
+                .string(
+                    "Content-Disposition",
+                    containsString("filename*=UTF-8''Bericht%20Gr%C3%A4ben.pdf")));
+  }
+
+  @Test
+  void should_stream_the_backup_of_a_document_fulcrum_no_longer_has() throws Exception {
+    // given
+    given(documentService.getDocument(REMOVED_DOCUMENT.id())).willReturn(REMOVED_DOCUMENT);
+    given(documentService.openFileContent(REMOVED_DOCUMENT))
+        .willReturn(new ByteArrayInputStream(new byte[] {1, 2, 3}));
+
+    // when / then
+    mockMvc
+        .perform(
+            get(DOCUMENT_CONTENT, REMOVED_DOCUMENT.id())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication())))
+        .andExpect(status().isOk())
+        .andExpect(content().bytes(new byte[] {1, 2, 3}));
+  }
+
+  // only a bug or a hand deleted object gets here, S3 is written before the row
+  @Test
+  void should_answer_500_when_the_file_is_missing_in_storage() throws Exception {
+    // given
+    given(documentService.getDocument(DOCUMENT.id())).willReturn(DOCUMENT);
+    given(documentService.openFileContent(DOCUMENT))
+        .willThrow(
+            NoSuchKeyException.builder().message("The specified key does not exist").build());
+
+    // when / then
+    mockMvc
+        .perform(
+            get(DOCUMENT_CONTENT, DOCUMENT.id())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication())))
+        .andExpect(status().isInternalServerError())
+        .andExpect(jsonPath("$.params.errorId").exists());
   }
 
   @Test
@@ -126,6 +197,18 @@ class FulcrumDocumentControllerTest {
                 .with(authentication(PrivilegeLevel.GLOBAL_EDITOR.authentication())))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.messageKey").value("access.denied"));
+
+    then(documentService).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_forbid_a_head_request_for_a_document_without_document_access() throws Exception {
+    // when / then
+    mockMvc
+        .perform(
+            head(DOCUMENT_CONTENT, DOCUMENT.id())
+                .with(authentication(PrivilegeLevel.BASISROLLE.authentication())))
+        .andExpect(status().isForbidden());
 
     then(documentService).shouldHaveNoInteractions();
   }
@@ -156,13 +239,14 @@ class FulcrumDocumentControllerTest {
         .perform(get(SYNC).with(authentication(PrivilegeLevel.BASISROLLE.authentication())))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.running").value(false))
-        .andExpect(jsonPath("$.lastSyncedAt").exists());
+        .andExpect(jsonPath("$.lastSuccessfulSyncAt").value("2026-10-15T02:00:00Z"));
   }
 
   @Test
-  void should_start_a_sync_for_a_caller_with_document_access() throws Exception {
+  void should_start_a_sync_for_a_caller_with_document_access_and_report_it_running()
+      throws Exception {
     // given
-    given(syncService.startSyncInBackground()).willReturn(new FulcrumSyncStatus(true, null));
+    given(syncService.currentStatus()).willReturn(new FulcrumSyncStatus(true, null));
 
     // when / then
     mockMvc
@@ -172,6 +256,8 @@ class FulcrumDocumentControllerTest {
                 .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication())))
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.running").value(true));
+
+    then(syncService).should().startSyncInBackground();
   }
 
   @Test
@@ -190,7 +276,7 @@ class FulcrumDocumentControllerTest {
   @Test
   void should_answer_503_while_fulcrum_is_switched_off() throws Exception {
     // given
-    given(syncService.startSyncInBackground()).willThrow(new FulcrumDisabledException());
+    willThrow(new FulcrumDisabledException()).given(syncService).startSyncInBackground();
 
     // when / then
     mockMvc
@@ -205,7 +291,7 @@ class FulcrumDocumentControllerTest {
   @Test
   void should_answer_409_while_a_sync_is_already_running() throws Exception {
     // given
-    given(syncService.startSyncInBackground()).willThrow(new FulcrumSyncAlreadyRunningException());
+    willThrow(new FulcrumSyncAlreadyRunningException()).given(syncService).startSyncInBackground();
 
     // when / then
     mockMvc
