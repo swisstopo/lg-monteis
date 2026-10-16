@@ -5,7 +5,7 @@ import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentService;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.dto.outbound.FulcrumEntryResponseDto;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.dto.outbound.FulcrumDocumentResponseDto;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.dto.outbound.FulcrumSyncStatusResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -43,25 +43,25 @@ public class FulcrumDocumentController {
   }
 
   @Operation(
-      summary = "Get the Fulcrum entries",
+      summary = "Get the Fulcrum Documents",
       description =
-          "Retrieves all Fulcrum entries mirrored from Fulcrum, each with its document, unpaged"
-              + " and sorted by number (newest first), then title. Entries Fulcrum no longer has"
-              + " stay in the list with availableInFulcrum false.")
-  @ApiResponse(responseCode = "200", description = "Successfully retrieved Fulcrum entries")
-  @GetMapping(path = ApiPaths.FULCRUM_ENTRIES, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<List<FulcrumEntryResponseDto>> getFulcrumEntries() {
-    return ResponseEntity.ok(mapper.toDtos(documentService.getEntries()));
+          "Retrieves all Fulcrum Documents mirrored from Fulcrum with the metadata of their file,"
+              + " unpaged and sorted by number (newest first), then title. Documents Fulcrum no"
+              + " longer has stay in the list with availableInFulcrum false.")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved Fulcrum Documents")
+  @GetMapping(path = ApiPaths.FULCRUM_DOCUMENTS, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<FulcrumDocumentResponseDto>> getFulcrumDocuments() {
+    return ResponseEntity.ok(mapper.toDtos(documentService.getDocuments()));
   }
 
   @Operation(
-      summary = "Download a Fulcrum Document",
+      summary = "Download the file of a Fulcrum Document",
       description =
-          "Streams the content MONTEIS stored for the document as an attachment. Requires"
+          "Streams the file MONTEIS stored for the document as an attachment. Requires"
               + " documents:read.")
   @ApiResponse(
       responseCode = "200",
-      description = "Successfully streamed the document",
+      description = "Successfully streamed the file",
       content =
           @Content(
               mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
@@ -69,7 +69,7 @@ public class FulcrumDocumentController {
   @GetMapping(path = ApiPaths.FULCRUM_DOCUMENT_CONTENT)
   public ResponseEntity<Resource> downloadFulcrumDocument(@PathVariable UUID documentId) {
     FulcrumDocument document = documentService.getDocument(documentId);
-    DocumentMetadata metadata = document.metadata();
+    DocumentMetadata metadata = document.file().metadata();
     ContentDisposition disposition =
         ContentDisposition.attachment()
             .filename(metadata.fileName(), StandardCharsets.UTF_8)
@@ -80,7 +80,7 @@ public class FulcrumDocumentController {
         .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
         .contentType(contentType)
         .contentLength(metadata.sizeBytes())
-        .body(new InputStreamResource(documentService.openContent(document)));
+        .body(new InputStreamResource(documentService.openFileContent(document)));
   }
 
   @Operation(
@@ -97,7 +97,7 @@ public class FulcrumDocumentController {
   @Operation(
       summary = "Start a Fulcrum sync",
       description =
-          "Starts loading the Fulcrum entries and documents from Fulcrum again, in the"
+          "Starts loading the Fulcrum Documents and their files from Fulcrum again, in the"
               + " background. Poll the sync status until it no longer runs. Requires"
               + " documents:read.")
   @ApiResponse(responseCode = "202", description = "Sync started")

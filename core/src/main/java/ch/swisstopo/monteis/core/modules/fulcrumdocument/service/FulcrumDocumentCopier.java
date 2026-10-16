@@ -2,24 +2,25 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownloadClient;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry.FulcrumAttachmentReference;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumCitation;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryRepository;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.OffsetDateTime;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.stereotype.Service;
 
-// copies one Fulcrum attachment into MONTEIS: download -> temp file -> storage -> entry row.
+// copies the file of one Fulcrum Document into MONTEIS: download -> temp file -> storage -> row.
 // storage first and the row after, like an experiment document upload: a failure in between leaves
 // an object nobody sees, the next sync overwrites it under the same key
 @Service
@@ -29,29 +30,33 @@ public class FulcrumDocumentCopier {
 
   private final FulcrumAttachmentDownloadClient downloadClient;
   private final FulcrumDocumentStorage storage;
-  private final FulcrumEntryRepository entryRepository;
+  private final FulcrumDocumentRepository documentRepository;
+  private final FulcrumLiteratureMapper literatureMapper;
 
   public FulcrumDocumentCopier(
       FulcrumAttachmentDownloadClient downloadClient,
       FulcrumDocumentStorage storage,
-      FulcrumEntryRepository entryRepository) {
+      FulcrumDocumentRepository documentRepository,
+      FulcrumLiteratureMapper literatureMapper) {
     this.downloadClient = downloadClient;
     this.storage = storage;
-    this.entryRepository = entryRepository;
+    this.documentRepository = documentRepository;
+    this.literatureMapper = literatureMapper;
   }
 
   // one failed copy must not stop the others, the next sync tries it again
   public boolean copyQuietly(
-      FulcrumCitation citation, FulcrumAttachmentReference attachment, OffsetDateTime seenAt) {
+      FulcrumLiteratureEntry entry, FulcrumAttachmentReference attachment, OffsetDateTime seenAt) {
     Path download = null;
     try {
       download = downloadToTempFile(attachment);
-      FulcrumDocument document = documentOf(attachment, download);
-      storage.store(document.id(), document.metadata().contentType(), download);
-      entryRepository.saveWithDocument(citation, document, seenAt);
+      FulcrumDocumentFile file = fileOf(attachment, download);
+      storage.store(file.attachmentId(), file.metadata().contentType(), download);
+      documentRepository.saveSeen(List.of(literatureMapper.toDocument(entry, file)), seenAt);
       return true;
     } catch (IOException | RuntimeException e) {
-      log.warn("Could not copy file {} of Fulcrum entry {}", attachment.id(), citation.id(), e);
+      log.warn(
+          "Could not copy file {} of Fulcrum Document {}", attachment.id(), entry.recordId(), e);
       return false;
     } finally {
       deleteQuietly(download);
@@ -66,9 +71,9 @@ public class FulcrumDocumentCopier {
     return download;
   }
 
-  private static FulcrumDocument documentOf(FulcrumAttachmentReference attachment, Path download)
+  private static FulcrumDocumentFile fileOf(FulcrumAttachmentReference attachment, Path download)
       throws IOException {
-    return new FulcrumDocument(
+    return new FulcrumDocumentFile(
         attachment.id(),
         DocumentMetadata.of(
             fileNameOf(attachment.name()), contentTypeOf(attachment.name()), Files.size(download)));

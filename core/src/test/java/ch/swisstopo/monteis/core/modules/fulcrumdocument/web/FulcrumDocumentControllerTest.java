@@ -18,9 +18,8 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumCitation;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntry;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatus;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentService;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService;
@@ -40,33 +39,35 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import(FulcrumDocumentWebMapperImpl.class)
 class FulcrumDocumentControllerTest {
 
-  private static final String ENTRIES = "/api/fulcrum-entries";
+  private static final String DOCUMENTS = "/api/fulcrum-documents";
   private static final String DOCUMENT_CONTENT = "/api/fulcrum-documents/{documentId}/content";
   private static final String SYNC = "/api/fulcrum-sync";
   private static final byte[] CONTENT = "%PDF-1.7".getBytes(StandardCharsets.UTF_8);
   private static final OffsetDateTime STARTED_AT =
       OffsetDateTime.of(2026, 10, 15, 2, 0, 0, 0, ZoneOffset.UTC);
-  private static final UUID ENTRY_ID = UUID.randomUUID();
   private static final FulcrumDocument DOCUMENT =
       new FulcrumDocument(
           UUID.randomUUID(),
-          new DocumentMetadata("Jahns 03 2011 - DS Experiment.pdf", "application/pdf", 8));
-  private static final FulcrumEntry ENTRY =
-      new FulcrumEntry(
-          new FulcrumCitation(
-              ENTRY_ID,
-              "2011-02",
-              "DS Experiment: BDS-1",
-              "Jahns E.",
-              2011,
-              "2 Mont Terri Technical Notes (TN)",
-              List.of("Experiment DS")),
-          DOCUMENT,
+          "2011-02",
+          "DS Experiment: BDS-1",
+          "Jahns E.",
+          2011,
+          "2 Mont Terri Technical Notes (TN)",
+          List.of("Experiment DS"),
+          new FulcrumDocumentFile(
+              UUID.randomUUID(),
+              new DocumentMetadata("Jahns 03 2011 - DS Experiment.pdf", "application/pdf", 8)),
           null);
-  private static final FulcrumEntry REMOVED_ENTRY =
-      new FulcrumEntry(
-          new FulcrumCitation(UUID.randomUUID(), null, "notes", null, null, null, List.of()),
-          new FulcrumDocument(
+  private static final FulcrumDocument REMOVED_DOCUMENT =
+      new FulcrumDocument(
+          UUID.randomUUID(),
+          null,
+          "notes",
+          null,
+          null,
+          null,
+          List.of(),
+          new FulcrumDocumentFile(
               UUID.randomUUID(), new DocumentMetadata("notes.bin", "application/octet-stream", 3)),
           STARTED_AT);
 
@@ -75,15 +76,15 @@ class FulcrumDocumentControllerTest {
   @MockitoBean private FulcrumDocumentSyncService syncService;
 
   @Test
-  void should_list_the_entries_with_their_document_to_anyone_signed_in() throws Exception {
+  void should_list_the_documents_with_their_file_to_anyone_signed_in() throws Exception {
     // given
-    given(documentService.getEntries()).willReturn(List.of(ENTRY, REMOVED_ENTRY));
+    given(documentService.getDocuments()).willReturn(List.of(DOCUMENT, REMOVED_DOCUMENT));
 
     // when / then
     mockMvc
-        .perform(get(ENTRIES).with(authentication(PrivilegeLevel.BASISROLLE.authentication())))
+        .perform(get(DOCUMENTS).with(authentication(PrivilegeLevel.BASISROLLE.authentication())))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].id").value(ENTRY_ID.toString()))
+        .andExpect(jsonPath("$[0].id").value(DOCUMENT.id().toString()))
         .andExpect(jsonPath("$[0].number").value("2011-02"))
         .andExpect(jsonPath("$[0].title").value("DS Experiment: BDS-1"))
         .andExpect(jsonPath("$[0].authors").value("Jahns E."))
@@ -91,19 +92,19 @@ class FulcrumDocumentControllerTest {
         .andExpect(jsonPath("$[0].category").value("2 Mont Terri Technical Notes (TN)"))
         .andExpect(jsonPath("$[0].keywords[0]").value("Experiment DS"))
         .andExpect(jsonPath("$[0].availableInFulcrum").value(true))
-        .andExpect(jsonPath("$[0].document.id").value(DOCUMENT.id().toString()))
-        .andExpect(jsonPath("$[0].document.fileName").value("Jahns 03 2011 - DS Experiment.pdf"))
-        .andExpect(jsonPath("$[0].document.sizeBytes").value(8))
-        .andExpect(jsonPath("$[0].document.viewable").value(true))
+        .andExpect(jsonPath("$[0].file.fileName").value("Jahns 03 2011 - DS Experiment.pdf"))
+        .andExpect(jsonPath("$[0].file.sizeBytes").value(8))
+        .andExpect(jsonPath("$[0].file.viewable").value(true))
+        .andExpect(jsonPath("$[0].file.attachmentId").doesNotExist())
         .andExpect(jsonPath("$[1].availableInFulcrum").value(false))
-        .andExpect(jsonPath("$[1].document.viewable").value(false));
+        .andExpect(jsonPath("$[1].file.viewable").value(false));
   }
 
   @Test
   void should_stream_a_document_to_a_caller_with_document_access() throws Exception {
     // given
     given(documentService.getDocument(DOCUMENT.id())).willReturn(DOCUMENT);
-    given(documentService.openContent(DOCUMENT)).willReturn(new ByteArrayInputStream(CONTENT));
+    given(documentService.openFileContent(DOCUMENT)).willReturn(new ByteArrayInputStream(CONTENT));
 
     // when / then
     mockMvc

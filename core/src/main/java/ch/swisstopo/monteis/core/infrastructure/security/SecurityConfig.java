@@ -59,9 +59,9 @@ public class SecurityConfig {
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)
                     .access(allowIf(Capabilities::canCreateExperiment))
-                    // the entries are open to everyone signed in, the documents and a refresh
-                    // need documents:read (MON-196 FR2.9)
-                    .requestMatchers(HttpMethod.GET, ApiPaths.FULCRUM_DOCUMENTS + "/**")
+                    // the list is open to everyone signed in, a file and a refresh need
+                    // documents:read (MON-196 FR2.9)
+                    .requestMatchers(HttpMethod.GET, ApiPaths.FULCRUM_DOCUMENT_CONTENT)
                     .access(allowIf(Capabilities::canAccessDocuments))
                     .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
                     .access(allowIf(Capabilities::canAccessDocuments))

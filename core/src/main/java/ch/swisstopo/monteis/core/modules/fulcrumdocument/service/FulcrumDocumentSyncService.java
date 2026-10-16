@@ -7,8 +7,8 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
 import ch.swisstopo.monteis.core.infrastructure.security.SystemSecurityContext;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumCitation;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryRepository;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncLockRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatus;
 import java.time.Clock;
@@ -18,12 +18,14 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.core.SimpleLock;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -44,7 +46,8 @@ public class FulcrumDocumentSyncService {
 
   private final FulcrumService fulcrumService;
   private final FulcrumDocumentCopier documentCopier;
-  private final FulcrumEntryRepository entryRepository;
+  private final FulcrumDocumentRepository documentRepository;
+  private final FulcrumLiteratureMapper literatureMapper;
   private final FulcrumSyncLockRepository lockRepository;
   private final LockProvider lockProvider;
   private final TaskExecutor taskExecutor;
@@ -55,7 +58,8 @@ public class FulcrumDocumentSyncService {
   public FulcrumDocumentSyncService(
       FulcrumService fulcrumService,
       FulcrumDocumentCopier documentCopier,
-      FulcrumEntryRepository entryRepository,
+      FulcrumDocumentRepository documentRepository,
+      FulcrumLiteratureMapper literatureMapper,
       FulcrumSyncLockRepository lockRepository,
       LockProvider lockProvider,
       @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
@@ -64,7 +68,8 @@ public class FulcrumDocumentSyncService {
       Clock clock) {
     this.fulcrumService = fulcrumService;
     this.documentCopier = documentCopier;
-    this.entryRepository = entryRepository;
+    this.documentRepository = documentRepository;
+    this.literatureMapper = literatureMapper;
     this.lockRepository = lockRepository;
     this.lockProvider = lockProvider;
     this.taskExecutor = taskExecutor;
@@ -74,7 +79,8 @@ public class FulcrumDocumentSyncService {
   }
 
   public FulcrumSyncStatus currentStatus() {
-    return FulcrumSyncStatus.of(lockRepository.isHeld(LOCK_NAME), entryRepository.findLastSeenAt());
+    return FulcrumSyncStatus.of(
+        lockRepository.isHeld(LOCK_NAME), documentRepository.findLastSeenAt());
   }
 
   // a switched off Fulcrum would log a failed sync each night
@@ -101,7 +107,7 @@ public class FulcrumDocumentSyncService {
       lock.unlock();
       throw e;
     }
-    return FulcrumSyncStatus.of(true, entryRepository.findLastSeenAt());
+    return FulcrumSyncStatus.of(true, documentRepository.findLastSeenAt());
   }
 
   private Optional<SimpleLock> acquireLock() {
@@ -130,18 +136,16 @@ public class FulcrumDocumentSyncService {
     Instant start = clock.instant();
     OffsetDateTime seenAt = start.atOffset(ZoneOffset.UTC);
     List<FulcrumLiteratureEntry> fromFulcrum = fulcrumService.getLiteratureToSync();
-    Map<UUID, UUID> storedDocumentIds = entryRepository.findDocumentIdsByEntry();
+    Map<UUID, FulcrumDocument> storedById = storedDocumentsById();
 
-    refreshKnownCitations(fromFulcrum, storedDocumentIds, seenAt);
-    int removed = entryRepository.markRemovedUnlessSeenAt(seenAt);
+    refreshStoredDocuments(fromFulcrum, storedById, seenAt);
+    int removed = documentRepository.markRemovedUnlessSeenAt(seenAt);
     CopyCounts copied =
-        copyNewDocuments(
-            documentsToCopy(fromFulcrum, storedDocumentIds),
-            seenAt,
-            start.plus(syncProperties.timeBudget()));
+        copyNewFiles(
+            filesToCopy(fromFulcrum, storedById), seenAt, start.plus(syncProperties.timeBudget()));
 
     log.info(
-        "Fulcrum Document sync: {} entries from Fulcrum, {} newly removed, {} documents copied,"
+        "Fulcrum Document sync: {} documents from Fulcrum, {} newly removed, {} files copied,"
             + " {} failed",
         fromFulcrum.size(),
         removed,
@@ -149,29 +153,36 @@ public class FulcrumDocumentSyncService {
         copied.failed());
   }
 
-  // a replaced file counts as seen too, its entry keeps the old document until the new one is in
-  private void refreshKnownCitations(
+  private Map<UUID, FulcrumDocument> storedDocumentsById() {
+    return documentRepository.findAll().stream()
+        .collect(Collectors.toMap(FulcrumDocument::id, Function.identity()));
+  }
+
+  // a replaced file counts as seen too, the document keeps its old file until the new one is in
+  private void refreshStoredDocuments(
       List<FulcrumLiteratureEntry> fromFulcrum,
-      Map<UUID, UUID> storedDocumentIds,
+      Map<UUID, FulcrumDocument> storedById,
       OffsetDateTime seenAt) {
-    entryRepository.saveSeenCitations(
+    documentRepository.saveSeen(
         fromFulcrum.stream()
-            .filter(entry -> storedDocumentIds.containsKey(entry.recordId()))
-            .map(FulcrumDocumentSyncService::citationOf)
+            .filter(entry -> storedById.containsKey(entry.recordId()))
+            .map(
+                entry ->
+                    literatureMapper.toDocument(entry, storedById.get(entry.recordId()).file()))
             .toList(),
         seenAt);
   }
 
-  private CopyCounts copyNewDocuments(
-      List<DocumentToCopy> documentsToCopy, OffsetDateTime seenAt, Instant deadline) {
+  private CopyCounts copyNewFiles(
+      List<FileToCopy> filesToCopy, OffsetDateTime seenAt, Instant deadline) {
     int copied = 0;
     int failed = 0;
-    for (DocumentToCopy toCopy : documentsToCopy) {
+    for (FileToCopy toCopy : filesToCopy) {
       if (clock.instant().isAfter(deadline)) {
         log.info("Fulcrum Document sync ran out of time, the next one continues");
         break;
       }
-      if (documentCopier.copyQuietly(toCopy.citation(), toCopy.attachment(), seenAt)) {
+      if (documentCopier.copyQuietly(toCopy.entry(), toCopy.attachment(), seenAt)) {
         copied++;
       } else {
         failed++;
@@ -180,29 +191,31 @@ public class FulcrumDocumentSyncService {
     return new CopyCounts(copied, failed);
   }
 
-  // new entries, and known ones whose file Fulcrum replaced
-  private static List<DocumentToCopy> documentsToCopy(
-      List<FulcrumLiteratureEntry> fromFulcrum, Map<UUID, UUID> storedDocumentIds) {
+  // new documents, and stored ones whose file Fulcrum replaced
+  private static List<FileToCopy> filesToCopy(
+      List<FulcrumLiteratureEntry> fromFulcrum, Map<UUID, FulcrumDocument> storedById) {
     return fromFulcrum.stream()
         .flatMap(
             entry ->
                 firstAttachmentOf(entry)
-                    .filter(
-                        attachment ->
-                            !Objects.equals(
-                                attachment.id(), storedDocumentIds.get(entry.recordId())))
-                    .map(attachment -> new DocumentToCopy(citationOf(entry), attachment))
+                    .filter(attachment -> !isStored(attachment, storedById.get(entry.recordId())))
+                    .map(attachment -> new FileToCopy(entry, attachment))
                     .stream())
         .toList();
   }
 
-  // every entry should have exactly one file (PO), more are a mistake in Fulcrum to fix there
+  private static boolean isStored(
+      FulcrumAttachmentReference attachment, @Nullable FulcrumDocument stored) {
+    return stored != null && stored.file().attachmentId().equals(attachment.id());
+  }
+
+  // every document should have exactly one file (PO), more are a mistake in Fulcrum to fix there
   private static Optional<FulcrumAttachmentReference> firstAttachmentOf(
       FulcrumLiteratureEntry entry) {
     List<FulcrumAttachmentReference> attachments = entry.attachments();
     if (attachments.size() > 1) {
       log.warn(
-          "Fulcrum entry {} has {} files {}, only the first one is taken",
+          "Fulcrum Document {} has {} files {}, only the first one is taken",
           entry.recordId(),
           attachments.size(),
           attachments.stream().map(FulcrumAttachmentReference::id).toList());
@@ -210,18 +223,7 @@ public class FulcrumDocumentSyncService {
     return attachments.stream().findFirst();
   }
 
-  private static FulcrumCitation citationOf(FulcrumLiteratureEntry entry) {
-    return new FulcrumCitation(
-        entry.recordId(),
-        entry.number(),
-        entry.title(),
-        entry.authors(),
-        entry.year(),
-        entry.category(),
-        entry.keywords());
-  }
-
-  private record DocumentToCopy(FulcrumCitation citation, FulcrumAttachmentReference attachment) {}
+  private record FileToCopy(FulcrumLiteratureEntry entry, FulcrumAttachmentReference attachment) {}
 
   private record CopyCounts(int copied, int failed) {}
 }

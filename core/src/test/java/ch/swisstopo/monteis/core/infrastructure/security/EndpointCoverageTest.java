@@ -64,7 +64,7 @@ class EndpointCoverageTest {
           "GET /api/experiments/{id}/documents",
           "POST /api/experiments/{id}/documents",
           "GET /api/experiments/{id}/documents/{documentId}/content",
-          "GET /api/fulcrum-entries",
+          "GET /api/fulcrum-documents",
           "GET /api/fulcrum-documents/{documentId}/content",
           "GET /api/fulcrum-sync",
           "POST /api/fulcrum-sync",

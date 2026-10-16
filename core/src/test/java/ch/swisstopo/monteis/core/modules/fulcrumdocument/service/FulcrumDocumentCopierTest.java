@@ -8,15 +8,15 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.never;
 
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownloadClient;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry.FulcrumAttachmentReference;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumCitation;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryRepository;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,10 +26,10 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -38,23 +38,39 @@ class FulcrumDocumentCopierTest {
 
   private static final OffsetDateTime SEEN_AT =
       OffsetDateTime.of(2026, 10, 15, 2, 0, 0, 0, ZoneOffset.UTC);
+  private static final UUID RECORD_ID = UUID.randomUUID();
   private static final UUID ATTACHMENT_ID = UUID.randomUUID();
   private static final String FILE_NAME = "Jahns 03 2011 - DS Experiment.pdf";
   private static final byte[] CONTENT = "%PDF-1.7".getBytes(StandardCharsets.UTF_8);
-  private static final FulcrumCitation CITATION =
-      new FulcrumCitation(
-          UUID.randomUUID(), "2011-02", "DS Experiment", "Jahns E.", 2011, "TN", List.of());
+  private static final FulcrumLiteratureEntry ENTRY =
+      new FulcrumLiteratureEntry(
+          RECORD_ID,
+          "2011-02",
+          "DS Experiment",
+          "Jahns E.",
+          2011,
+          "TN",
+          List.of("RACOS"),
+          List.of(ATTACHMENT_ID),
+          List.of(FILE_NAME));
   private static final FulcrumAttachmentReference ATTACHMENT =
       new FulcrumAttachmentReference(ATTACHMENT_ID, FILE_NAME);
 
   @Mock private FulcrumAttachmentDownloadClient downloadClient;
   @Mock private FulcrumDocumentStorage storage;
-  @Mock private FulcrumEntryRepository entryRepository;
+  @Mock private FulcrumDocumentRepository documentRepository;
 
-  @InjectMocks private FulcrumDocumentCopier copier;
+  private FulcrumDocumentCopier copier;
+
+  @BeforeEach
+  void createCopier() {
+    copier =
+        new FulcrumDocumentCopier(
+            downloadClient, storage, documentRepository, new FulcrumLiteratureMapperImpl());
+  }
 
   @Test
-  void should_store_the_content_before_saving_the_entry() {
+  void should_store_the_file_before_saving_the_document() {
     // given
     given(downloadClient.download(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(CONTENT));
     List<byte[]> stored = new ArrayList<>();
@@ -63,39 +79,49 @@ class FulcrumDocumentCopierTest {
         .store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
 
     // when
-    boolean copied = copier.copyQuietly(CITATION, ATTACHMENT, SEEN_AT);
+    boolean copied = copier.copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
 
     // then
     assertThat(copied).isTrue();
     assertThat(stored).singleElement().isEqualTo(CONTENT);
-    InOrder order = inOrder(storage, entryRepository);
+    InOrder order = inOrder(storage, documentRepository);
     order.verify(storage).store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
     order
-        .verify(entryRepository)
-        .saveWithDocument(
-            CITATION,
-            new FulcrumDocument(
-                ATTACHMENT_ID, new DocumentMetadata(FILE_NAME, "application/pdf", CONTENT.length)),
+        .verify(documentRepository)
+        .saveSeen(
+            List.of(
+                new FulcrumDocument(
+                    RECORD_ID,
+                    "2011-02",
+                    "DS Experiment",
+                    "Jahns E.",
+                    2011,
+                    "TN",
+                    List.of("RACOS"),
+                    new FulcrumDocumentFile(
+                        ATTACHMENT_ID,
+                        new DocumentMetadata(FILE_NAME, "application/pdf", CONTENT.length)),
+                    null)),
             SEEN_AT);
   }
 
   @Test
-  void should_not_save_the_entry_when_the_download_fails() {
+  void should_not_save_the_document_when_the_download_fails() {
     // given
     given(downloadClient.download(ATTACHMENT_ID))
         .willThrow(new IllegalStateException("answered 404"));
 
     // when
-    boolean copied = copier.copyQuietly(CITATION, ATTACHMENT, SEEN_AT);
+    boolean copied = copier.copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
 
     // then
     assertThat(copied).isFalse();
     then(storage).shouldHaveNoInteractions();
-    then(entryRepository).shouldHaveNoInteractions();
+    then(documentRepository).shouldHaveNoInteractions();
   }
 
   @Test
-  void should_not_save_the_entry_when_storing_fails() {
+  void should_not_save_the_document_when_storing_fails() {
     // given
     given(downloadClient.download(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(CONTENT));
     willThrow(new IllegalStateException("S3 down"))
@@ -103,11 +129,11 @@ class FulcrumDocumentCopierTest {
         .store(eq(ATTACHMENT_ID), any(), any(Path.class));
 
     // when
-    boolean copied = copier.copyQuietly(CITATION, ATTACHMENT, SEEN_AT);
+    boolean copied = copier.copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
 
     // then
     assertThat(copied).isFalse();
-    then(entryRepository).should(never()).saveWithDocument(any(), any(), any());
+    then(documentRepository).shouldHaveNoInteractions();
   }
 
   @Test
@@ -116,7 +142,7 @@ class FulcrumDocumentCopierTest {
     given(downloadClient.download(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(new byte[0]));
 
     // when
-    boolean copied = copier.copyQuietly(CITATION, ATTACHMENT, SEEN_AT);
+    boolean copied = copier.copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
 
     // then
     assertThat(copied).isFalse();
@@ -124,13 +150,13 @@ class FulcrumDocumentCopierTest {
   }
 
   @Test
-  void should_derive_an_unknown_content_type_as_octet_stream() {
+  void should_store_an_unknown_file_type_as_octet_stream() {
     // given
     given(downloadClient.download(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(CONTENT));
 
     // when
     copier.copyQuietly(
-        CITATION, new FulcrumAttachmentReference(ATTACHMENT_ID, "notes.unknownext"), SEEN_AT);
+        ENTRY, new FulcrumAttachmentReference(ATTACHMENT_ID, "notes.unknownext"), SEEN_AT);
 
     // then
     then(storage)
