@@ -39,8 +39,8 @@ class RequestTimingFilterTest {
           public void doFilter(
               jakarta.servlet.ServletRequest req, jakarta.servlet.ServletResponse res) {
             // Simulate two statements taking 30ms in total
-            RequestTiming.record(20_000_000L, 500);
-            RequestTiming.record(10_000_000L, 1);
+            RequestTiming.recordStatement(20_000_000L, 500);
+            RequestTiming.recordStatement(10_000_000L, 1);
           }
         };
 
@@ -112,7 +112,7 @@ class RequestTimingFilterTest {
           public void doFilter(
               jakarta.servlet.ServletRequest req, jakarta.servlet.ServletResponse res)
               throws ServletException {
-            RequestTiming.record(5_000_000L, 3);
+            RequestTiming.recordStatement(5_000_000L, 3);
             throw new ServletException("boom");
           }
         };

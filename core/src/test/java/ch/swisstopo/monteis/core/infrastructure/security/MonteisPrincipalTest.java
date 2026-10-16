@@ -43,12 +43,13 @@ class MonteisPrincipalTest {
   void should_reject_broken_id_lists() {
     UUID subject = UUID.randomUUID();
     List<UUID> withNull = Arrays.asList(EXPERIMENT_A, null);
+    List<UUID> empty = List.of();
+    List<UUID> valid = List.of(EXPERIMENT_A);
 
     assertThrows(
         NullPointerException.class,
-        () -> new MonteisPrincipal(subject, "corrupt", withNull, List.of()));
+        () -> new MonteisPrincipal(subject, "corrupt", withNull, empty));
     assertThrows(
-        NullPointerException.class,
-        () -> new MonteisPrincipal(subject, "corrupt", List.of(EXPERIMENT_A), null));
+        NullPointerException.class, () -> new MonteisPrincipal(subject, "corrupt", valid, null));
   }
 }
