@@ -519,7 +519,7 @@
       }
     }
   },
-  "fulcrumDocument": {
+  "fulcrumEntry": {
     "number": {
       "label": "Number"
     },
@@ -535,36 +535,36 @@
     "category": {
       "label": "Category"
     },
-    "files": {
-      "label": "Files",
+    "documents": {
+      "label": "Documents",
       "view": "View {{fileName}}",
       "download": "Download {{fileName}}",
-      "menu": "{{count}} files",
+      "menu": "{{count}} documents",
       "viewAction": "View",
       "downloadAction": "Download",
       "error": {
-        "download": "The file could not be loaded."
+        "download": "The document could not be loaded."
       }
     },
     "removed": {
-      "document": "No longer available in Fulcrum. Its files stored in MONTEIS can still be viewed and downloaded here.",
-      "file": "No longer available in Fulcrum. The copy stored in MONTEIS can still be viewed and downloaded here.",
-      "someFiles": "Some files are no longer available in Fulcrum. Their copies stored in MONTEIS can still be viewed and downloaded here."
-    },
-    "sync": {
-      "refresh": "Refresh",
-      "running": "Sync with Fulcrum running...",
-      "lastSynced": "Last synced at {{finishedAt}}",
-      "never": "Not synced with Fulcrum yet",
-      "failed": "The last sync failed.",
-      "incomplete": "The last sync was incomplete, some documents or files could not be synced.",
-      "statusUnknown": "The sync status could not be loaded.",
-      "error": {
-        "start": "The sync with Fulcrum could not be started."
-      }
+      "entry": "No longer available in Fulcrum. Its documents stored in MONTEIS can still be viewed and downloaded here.",
+      "document": "No longer available in Fulcrum. The copy stored in MONTEIS can still be viewed and downloaded here.",
+      "someDocuments": "Some documents are no longer available in Fulcrum. Their copies stored in MONTEIS can still be viewed and downloaded here."
     },
     "error": {
-      "load": "The Fulcrum Documents could not be loaded."
+      "load": "The Fulcrum entries could not be loaded."
+    }
+  },
+  "fulcrumSync": {
+    "refresh": "Refresh",
+    "running": "Sync with Fulcrum running...",
+    "lastSynced": "Last synced at {{finishedAt}}",
+    "never": "Not synced with Fulcrum yet",
+    "failed": "The last sync failed.",
+    "incomplete": "The last sync was incomplete, some entries or documents could not be synced.",
+    "statusUnknown": "The sync status could not be loaded.",
+    "error": {
+      "start": "The sync with Fulcrum could not be started."
     }
   }
 }
