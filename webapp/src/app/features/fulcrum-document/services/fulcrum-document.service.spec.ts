@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FulcrumDocumentService } from './fulcrum-document.service';
 
 const ENTRY = { id: 'entry-1', title: 'Geology of Mont Terri' };
-const RUN = { id: 'run-1', status: 'RUNNING', startedAt: '2026-10-15T08:00:00Z' };
+const RUNNING = { running: true, lastSyncedAt: '2026-10-15T08:00:00Z' };
 
 describe('FulcrumDocumentService', () => {
   let api: Record<string, ReturnType<typeof vi.fn>>;
@@ -17,8 +17,8 @@ describe('FulcrumDocumentService', () => {
     api = {
       getFulcrumEntries: vi.fn(() => of([ENTRY])),
       downloadFulcrumDocument: vi.fn(() => of(new Blob(['%PDF']))),
-      getLatestFulcrumSyncRun: vi.fn(() => of(RUN)),
-      startFulcrumSync: vi.fn(() => of(RUN)),
+      getFulcrumSyncStatus: vi.fn(() => of(RUNNING)),
+      startFulcrumSync: vi.fn(() => of(RUNNING)),
     };
     TestBed.configureTestingModule({
       providers: [{ provide: FulcrumDocumentControllerService, useValue: api }],
@@ -39,20 +39,14 @@ describe('FulcrumDocumentService', () => {
     expect(skipsGlobalErrorToast(options)).toBe(true);
   });
 
-  it('reads the latest sync run', async () => {
-    await expect(service.getLatestSyncRun()).resolves.toEqual(RUN);
-    const [, , options] = api['getLatestFulcrumSyncRun'].mock.calls[0];
+  it('reads the sync status', async () => {
+    await expect(service.getSyncStatus()).resolves.toEqual(RUNNING);
+    const [, , options] = api['getFulcrumSyncStatus'].mock.calls[0];
     expect(skipsGlobalErrorToast(options)).toBe(true);
   });
 
-  it('has no latest sync run when none ever ran', async () => {
-    api['getLatestFulcrumSyncRun'].mockReturnValue(of(null));
-
-    await expect(service.getLatestSyncRun()).resolves.toBeUndefined();
-  });
-
   it('starts a sync without the global toast, a running one answers 409', async () => {
-    await expect(service.startSync()).resolves.toEqual(RUN);
+    await expect(service.startSync()).resolves.toEqual(RUNNING);
     const [, , options] = api['startFulcrumSync'].mock.calls[0];
     expect(skipsGlobalErrorToast(options)).toBe(true);
   });
