@@ -148,10 +148,33 @@ class SecurityConfigAuthorizationTest {
         .andExpect(status().isOk());
   }
 
+  // Spring answers HEAD with the GET handler, a HEAD has no body to compare
+  @ParameterizedTest
+  @EnumSource(PrivilegeLevel.class)
+  void should_apply_the_fulcrum_document_rule_to_head_requests(PrivilegeLevel level)
+      throws Exception {
+    List<PrivilegeLevel> documentReaders =
+        List.of(
+            PrivilegeLevel.EXPERIMENT_USER,
+            PrivilegeLevel.EXPERIMENT_PI,
+            PrivilegeLevel.MONTEIS_ADMIN);
+
+    var result =
+        mockMvc.perform(
+            withBearer(
+                request(
+                    HttpMethod.HEAD, "/api/fulcrum-documents/" + UUID.randomUUID() + "/content"),
+                givenDecodableToken(level)));
+
+    result.andExpect(documentReaders.contains(level) ? status().isOk() : status().isForbidden());
+  }
+
   @Test
   void should_require_authentication_for_reads() throws Exception {
     mockMvc.perform(get("/api/experiments")).andExpect(status().isUnauthorized());
     mockMvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
+    mockMvc.perform(get("/api/fulcrum-documents")).andExpect(status().isUnauthorized());
+    mockMvc.perform(get("/api/fulcrum-sync")).andExpect(status().isUnauthorized());
   }
 
   @Test

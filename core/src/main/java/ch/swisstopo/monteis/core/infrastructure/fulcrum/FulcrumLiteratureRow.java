@@ -8,7 +8,7 @@ import org.jspecify.annotations.Nullable;
 
 // hand-written like FulcrumSensor, Fulcrum leaves absent values as null so every component is
 // nullable
-public record FulcrumLiteratureEntry(
+public record FulcrumLiteratureRow(
     @JsonProperty("_record_id") UUID recordId,
     @JsonProperty("number") @Nullable String number,
     @JsonProperty("reference_title") @Nullable String title,

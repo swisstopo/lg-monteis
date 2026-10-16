@@ -59,12 +59,12 @@ describe('FulcrumSync', () => {
   it('shows when the last sync finished', async () => {
     const view = await render();
 
-    expect(view.status()).toBe('fulcrumSync.lastSynced');
+    expect(view.status()).toBe('fulcrumSync.lastSuccessfulSync');
     expect(view.refresh()?.disabled).toBe(false);
   });
 
   it('says so when no sync ever ran', async () => {
-    documentService.getSyncStatus.mockResolvedValue(syncStatus({ lastSyncedAt: undefined }));
+    documentService.getSyncStatus.mockResolvedValue(syncStatus({ lastSuccessfulSyncAt: undefined }));
 
     const view = await render();
 
@@ -84,7 +84,7 @@ describe('FulcrumSync', () => {
     const view = await render(false);
 
     expect(view.refresh()).toBeNull();
-    expect(view.status()).toBe('fulcrumSync.lastSynced');
+    expect(view.status()).toBe('fulcrumSync.lastSuccessfulSync');
   });
 
   it('runs a sync until it is no longer running, then reports it finished', async () => {
@@ -102,7 +102,7 @@ describe('FulcrumSync', () => {
     await view.settle();
     expect(documentService.getSyncStatus).toHaveBeenCalledTimes(3);
     expect(view.refresh()?.disabled).toBe(false);
-    expect(view.status()).toBe('fulcrumSync.lastSynced');
+    expect(view.status()).toBe('fulcrumSync.lastSuccessfulSync');
   });
 
   it('shows a running sync as running and disables the refresh', async () => {

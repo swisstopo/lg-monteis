@@ -36,5 +36,5 @@ export function fulcrumDocument(
 export function syncStatus(
   overrides: Partial<FulcrumSyncStatusResponseDto> = {},
 ): FulcrumSyncStatusResponseDto {
-  return { running: false, lastSyncedAt: '2026-10-15T08:03:12Z', ...overrides };
+  return { running: false, lastSuccessfulSyncAt: '2026-10-15T08:03:12Z', ...overrides };
 }

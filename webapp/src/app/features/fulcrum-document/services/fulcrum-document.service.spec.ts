@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FulcrumDocumentService } from './fulcrum-document.service';
 
 const DOCUMENT = { id: 'document-1', title: 'Geology of Mont Terri' };
-const RUNNING = { running: true, lastSyncedAt: '2026-10-15T08:00:00Z' };
+const RUNNING = { running: true, lastSuccessfulSyncAt: '2026-10-15T08:00:00Z' };
 
 describe('FulcrumDocumentService', () => {
   let api: Record<string, ReturnType<typeof vi.fn>>;
@@ -16,7 +16,7 @@ describe('FulcrumDocumentService', () => {
   beforeEach(() => {
     api = {
       getFulcrumDocuments: vi.fn(() => of([DOCUMENT])),
-      downloadFulcrumDocument: vi.fn(() => of(new Blob(['%PDF']))),
+      downloadFulcrumDocumentFile: vi.fn(() => of(new Blob(['%PDF']))),
       getFulcrumSyncStatus: vi.fn(() => of(RUNNING)),
       startFulcrumSync: vi.fn(() => of(RUNNING)),
     };
@@ -34,7 +34,7 @@ describe('FulcrumDocumentService', () => {
     const content = await service.getContent('document-1');
 
     expect(await content.text()).toBe('%PDF');
-    const [documentId, , , options] = api['downloadFulcrumDocument'].mock.calls[0];
+    const [documentId, , , options] = api['downloadFulcrumDocumentFile'].mock.calls[0];
     expect(documentId).toBe('document-1');
     expect(skipsGlobalErrorToast(options)).toBe(true);
   });

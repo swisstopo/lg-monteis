@@ -67,7 +67,7 @@ public class FulcrumDocumentController {
               mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
               schema = @Schema(type = "string", format = "binary")))
   @GetMapping(path = ApiPaths.FULCRUM_DOCUMENT_CONTENT)
-  public ResponseEntity<Resource> downloadFulcrumDocument(@PathVariable UUID documentId) {
+  public ResponseEntity<Resource> downloadFulcrumDocumentFile(@PathVariable UUID documentId) {
     FulcrumDocument document = documentService.getDocument(documentId);
     DocumentMetadata metadata = document.file().metadata();
     ContentDisposition disposition =
@@ -86,8 +86,9 @@ public class FulcrumDocumentController {
   @Operation(
       summary = "Get the Fulcrum sync status",
       description =
-          "Whether a sync is running right now, and when the last sync that reached Fulcrum"
-              + " started (null before the first one).")
+          "Whether a sync is running right now, and when the last successful sync started: it"
+              + " reached Fulcrum, saved every document and imported every file within its time"
+              + " budget (null before the first one).")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved the sync status")
   @GetMapping(path = ApiPaths.FULCRUM_SYNC, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<FulcrumSyncStatusResponseDto> getFulcrumSyncStatus() {
@@ -103,7 +104,8 @@ public class FulcrumDocumentController {
   @ApiResponse(responseCode = "202", description = "Sync started")
   @PostMapping(path = ApiPaths.FULCRUM_SYNC, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<FulcrumSyncStatusResponseDto> startFulcrumSync() {
+    syncService.startSyncInBackground();
     return ResponseEntity.status(HttpStatus.ACCEPTED)
-        .body(mapper.toStatusDto(syncService.startSyncInBackground()));
+        .body(mapper.toStatusDto(syncService.currentStatus()));
   }
 }

@@ -60,8 +60,9 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)
                     .access(allowIf(Capabilities::canCreateExperiment))
                     // the list is open to everyone signed in, a file and a refresh need
-                    // documents:read (MON-196 FR2.9)
-                    .requestMatchers(HttpMethod.GET, ApiPaths.FULCRUM_DOCUMENT_CONTENT)
+                    // documents:read (MON-196 FR2.9). every method of the file, Spring answers
+                    // HEAD with the GET handler
+                    .requestMatchers(ApiPaths.FULCRUM_DOCUMENT_CONTENT)
                     .access(allowIf(Capabilities::canAccessDocuments))
                     .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
                     .access(allowIf(Capabilities::canAccessDocuments))

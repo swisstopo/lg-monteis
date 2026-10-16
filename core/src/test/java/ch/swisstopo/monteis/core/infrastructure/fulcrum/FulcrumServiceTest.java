@@ -13,6 +13,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -116,6 +117,10 @@ class FulcrumServiceTest {
   }
 
   private void givenFulcrumIs(boolean enabled) {
+    givenFulcrumIs(enabled, 20000);
+  }
+
+  private void givenFulcrumIs(boolean enabled, int perPage) {
     String apiToken = "test-token";
     FulcrumProperties properties =
         new FulcrumProperties(
@@ -124,9 +129,10 @@ class FulcrumServiceTest {
             apiToken,
             TABLE,
             LITERATURE_TABLE,
-            20000,
+            perPage,
             Duration.ofSeconds(5),
-            Duration.ofSeconds(60));
+            Duration.ofSeconds(60),
+            List.of(URI.create("https://attachments.fulcrumapp-eu.com")));
 
     JsonMapper objectMapper = JsonMapper.builder().build();
 
@@ -284,7 +290,7 @@ class FulcrumServiceTest {
   }
 
   @Test
-  void getLiteratureToSync_asks_for_the_marked_entries_with_files_only() {
+  void findLiteratureMarkedForMonteis_asks_for_the_marked_rows_with_files_only() {
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
         .andExpect(
@@ -294,26 +300,64 @@ class FulcrumServiceTest {
                     + " synchronise_with_monteis = 'yes' AND document IS NOT NULL;"))
         .andRespond(withSuccess(rows(LITERATURE_ROW), MediaType.APPLICATION_JSON));
 
-    List<FulcrumLiteratureEntry> entries = service.getLiteratureToSync();
+    List<FulcrumLiteratureRow> rows = service.findLiteratureMarkedForMonteis();
 
-    assertThat(entries)
+    assertThat(rows)
         .singleElement()
         .satisfies(
-            entry -> {
-              assertThat(entry.recordId())
+            row -> {
+              assertThat(row.recordId())
                   .isEqualTo(UUID.fromString("221ae592-4527-4442-8294-8dc2c5be1168"));
-              assertThat(entry.number()).isEqualTo("2011-02");
-              assertThat(entry.title()).startsWith("DS Experiment: BDS-1");
-              assertThat(entry.authors()).isEqualTo("Jahns E.");
-              assertThat(entry.year()).isEqualTo(2011);
-              assertThat(entry.category()).isEqualTo("2 Mont Terri Technical Notes (TN)");
-              assertThat(entry.keywords()).containsExactly("Experiment DS", "RACOS");
-              assertThat(entry.attachments())
+              assertThat(row.number()).isEqualTo("2011-02");
+              assertThat(row.title()).startsWith("DS Experiment: BDS-1");
+              assertThat(row.authors()).isEqualTo("Jahns E.");
+              assertThat(row.year()).isEqualTo(2011);
+              assertThat(row.category()).isEqualTo("2 Mont Terri Technical Notes (TN)");
+              assertThat(row.keywords()).containsExactly("Experiment DS", "RACOS");
+              assertThat(row.attachments())
                   .singleElement()
-                  .extracting(FulcrumLiteratureEntry.FulcrumAttachmentReference::name)
+                  .extracting(FulcrumLiteratureRow.FulcrumAttachmentReference::name)
                   .isEqualTo("Jahns 03 2011 - DS Experiment.pdf");
             });
     server.verify();
+  }
+
+  @Test
+  void findLiteratureMarkedForMonteis_skips_a_row_it_cannot_read_and_keeps_the_others() {
+    server
+        .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
+        .andRespond(
+            withSuccess(
+                rows(
+                    """
+                    {
+                      "_record_id": "5b1f0c35-2a66-4d43-a2fe-1d3ff4b6a8b0",
+                      "year": "ca. 2011",
+                      "document": ["0e0c3a8e-5f3c-4a4f-9d1e-0c9a1b7f6e21"]
+                    }
+                    """,
+                    LITERATURE_ROW),
+                MediaType.APPLICATION_JSON));
+
+    List<FulcrumLiteratureRow> rows = service.findLiteratureMarkedForMonteis();
+
+    assertThat(rows)
+        .singleElement()
+        .extracting(FulcrumLiteratureRow::recordId)
+        .isEqualTo(UUID.fromString("221ae592-4527-4442-8294-8dc2c5be1168"));
+  }
+
+  @Test
+  void a_query_fails_when_fulcrum_fills_the_whole_page() {
+    // only the first page is fetched, the missing rows would otherwise look deleted
+    givenFulcrumIs(ENABLED, 2);
+    server
+        .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
+        .andRespond(withSuccess(rows(LITERATURE_ROW, LITERATURE_ROW), MediaType.APPLICATION_JSON));
+
+    assertThatThrownBy(() -> service.findLiteratureMarkedForMonteis())
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("monteis.fulcrum.per-page");
   }
 
   private static RequestMatcher sqlQuery(String expectedSql) {

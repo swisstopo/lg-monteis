@@ -37,7 +37,7 @@ public class FulcrumConfig {
                         .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE));
   }
 
-  static ClientHttpRequestFactory requestFactoryOf(FulcrumProperties properties) {
+  private static ClientHttpRequestFactory requestFactoryOf(FulcrumProperties properties) {
     return ClientHttpRequestFactoryBuilder.detect()
         .build(
             HttpClientSettings.defaults()

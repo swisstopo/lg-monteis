@@ -47,6 +47,7 @@ class S3FulcrumDocumentStorageIT {
             FULCRUM_KEY_PREFIX,
             Duration.ofSeconds(60),
             Duration.ofSeconds(30),
+            Duration.ofMinutes(10),
             URI.create(S3TestcontainersConfiguration.endpointOf(S3_MOCK)));
     s3 = new S3Config().s3Client(properties);
     storage = new S3FulcrumDocumentStorage(s3, properties);

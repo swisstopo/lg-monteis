@@ -552,8 +552,8 @@
   "fulcrumSync": {
     "refresh": "Refresh",
     "running": "Sync with Fulcrum running...",
-    "lastSynced": "Last synced at {{lastSyncedAt}}",
-    "never": "Not synced with Fulcrum yet",
+    "lastSuccessfulSync": "Last successful sync at {{lastSuccessfulSyncAt}}",
+    "never": "No successful sync with Fulcrum yet",
     "statusUnknown": "The sync status could not be loaded.",
     "error": {
       "start": "The sync with Fulcrum could not be started."

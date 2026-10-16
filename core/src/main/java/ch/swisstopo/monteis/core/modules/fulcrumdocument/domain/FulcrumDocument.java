@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.domain;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -22,10 +21,6 @@ public record FulcrumDocument(
 
   public FulcrumDocument {
     keywords = List.copyOf(keywords);
-  }
-
-  public Optional<OffsetDateTime> removedFromFulcrumAt() {
-    return Optional.ofNullable(removedAt);
   }
 
   public boolean isAvailableInFulcrum() {
