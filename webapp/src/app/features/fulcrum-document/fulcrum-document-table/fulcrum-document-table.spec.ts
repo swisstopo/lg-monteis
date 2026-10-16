@@ -2,11 +2,11 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { PermissionsService } from '@core/auth/permissions.service';
-import { FulcrumEntryResponseDto } from '@core/generated';
+import { FulcrumDocumentResponseDto } from '@core/generated';
 import { SYNC_POLL_INTERVAL_MS } from '@features/fulcrum-document/fulcrum-sync/fulcrum-sync';
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
 import {
-  fulcrumEntry,
+  fulcrumDocument,
   syncStatus,
 } from '@features/fulcrum-document/testing/fulcrum-document-fixtures';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -20,13 +20,13 @@ import FulcrumDocumentTable from './fulcrum-document-table';
 // main.ts registers these for the app, the test bed never runs it
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const CLAY = fulcrumEntry({
+const CLAY = fulcrumDocument({
   id: 'clay',
   number: 'TR 2019-04',
   title: 'Self-sealing of fractures in Opalinus Clay',
   keywords: ['hydrogeology'],
 });
-const GAS = fulcrumEntry({
+const GAS = fulcrumDocument({
   id: 'gas',
   number: 'TN 2021-11',
   title: 'Gas transport experiment',
@@ -37,14 +37,14 @@ const GAS = fulcrumEntry({
 
 describe('FulcrumDocumentTable', () => {
   let documentService: {
-    getEntries: ReturnType<typeof vi.fn>;
+    getDocuments: ReturnType<typeof vi.fn>;
     getSyncStatus: ReturnType<typeof vi.fn>;
     startSync: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     documentService = {
-      getEntries: vi.fn().mockResolvedValue([CLAY, GAS]),
+      getDocuments: vi.fn().mockResolvedValue([CLAY, GAS]),
       getSyncStatus: vi.fn().mockResolvedValue(syncStatus()),
       startSync: vi.fn().mockResolvedValue(syncStatus({ running: true })),
     };
@@ -72,7 +72,7 @@ describe('FulcrumDocumentTable', () => {
     return view;
   }
 
-  it('lists all Fulcrum entries', async () => {
+  it('lists all Fulcrum Documents', async () => {
     const view = await render();
 
     expect(view.titles()).toEqual([CLAY.title, GAS.title]);
@@ -101,24 +101,24 @@ describe('FulcrumDocumentTable', () => {
     expect(view.refreshButton()).toBeUndefined();
   });
 
-  it('reloads the entries once a sync finished', async () => {
+  it('reloads the documents once a sync finished', async () => {
     documentService.getSyncStatus
       .mockResolvedValueOnce(syncStatus())
       .mockResolvedValueOnce(syncStatus());
     const view = await render();
-    documentService.getEntries.mockResolvedValue([GAS]);
+    documentService.getDocuments.mockResolvedValue([GAS]);
 
     view.refreshButton()!.click();
 
-    await vi.waitFor(() => expect(documentService.getEntries).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(documentService.getDocuments).toHaveBeenCalledTimes(2));
     await vi.waitFor(async () => {
       await view.settle();
       expect(view.titles()).toEqual([GAS.title]);
     });
   });
 
-  it('shows an inline error when the entries cannot be loaded', async () => {
-    documentService.getEntries.mockRejectedValue(new Error('500'));
+  it('shows an inline error when the documents cannot be loaded', async () => {
+    documentService.getDocuments.mockRejectedValue(new Error('500'));
     TestBed.configureTestingModule({
       imports: [FulcrumDocumentTable],
       providers: [
@@ -156,7 +156,9 @@ class TableView {
   // what the grid is handed, its own rendering depends on the layout of the test page
   titles(): (string | undefined)[] {
     const table = this.fixture.debugElement.query(By.directive(Table));
-    const rows = (table?.componentInstance as Table<FulcrumEntryResponseDto> | undefined)?.rows();
+    const rows = (
+      table?.componentInstance as Table<FulcrumDocumentResponseDto> | undefined
+    )?.rows();
     return (rows ?? []).map((row) => row.title);
   }
 

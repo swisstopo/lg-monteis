@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import {
   FulcrumDocumentControllerService,
-  FulcrumEntryResponseDto,
+  FulcrumDocumentResponseDto,
   FulcrumSyncStatusResponseDto,
 } from '@core/generated';
 import { skipGlobalErrorToast } from '@core/http/http-context';
@@ -15,8 +15,8 @@ import { firstValueFrom } from 'rxjs';
 export class FulcrumDocumentService {
   private readonly api = inject(FulcrumDocumentControllerService);
 
-  getEntries(): Promise<FulcrumEntryResponseDto[]> {
-    return firstValueFrom(this.api.getFulcrumEntries());
+  getDocuments(): Promise<FulcrumDocumentResponseDto[]> {
+    return firstValueFrom(this.api.getFulcrumDocuments());
   }
 
   getContent(documentId: string): Promise<Blob> {
