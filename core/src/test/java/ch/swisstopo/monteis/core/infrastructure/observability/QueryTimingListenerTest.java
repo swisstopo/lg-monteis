@@ -1,6 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.observability;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -80,14 +82,16 @@ class QueryTimingListenerTest {
   @Test
   void should_not_fail_when_no_request_is_in_scope() {
     // Startup tasks and scheduled jobs run without a request; the listener must tolerate it
-    execute(new QueryTimingListener(), 2);
+    QueryTimingListener listener = new QueryTimingListener();
+
+    assertDoesNotThrow(() -> execute(listener, 2));
+    assertNull(RequestTiming.current());
   }
 
   private static void sleepAtLeast(long millis) {
-    try {
-      Thread.sleep(millis);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+    long deadline = System.nanoTime() + millis * 1_000_000;
+    while (System.nanoTime() < deadline) {
+      Thread.onSpinWait();
     }
   }
 }

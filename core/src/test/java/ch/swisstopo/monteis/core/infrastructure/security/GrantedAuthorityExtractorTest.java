@@ -79,22 +79,20 @@ class GrantedAuthorityExtractorTest {
 
   @Test
   void should_reject_experiment_write_without_experiment_read() {
+    List<String> roles = List.of("monteis-client:experiment:write");
+
     OAuth2AuthenticationException exception =
-        assertThrows(
-            OAuth2AuthenticationException.class,
-            () -> extractor.extract(SUBJECT, List.of("monteis-client:experiment:write")));
+        assertThrows(OAuth2AuthenticationException.class, () -> extractor.extract(SUBJECT, roles));
 
     assertEquals(OAuth2ErrorCodes.INVALID_TOKEN, exception.getError().getErrorCode());
   }
 
   @Test
   void should_reject_experiment_write_without_read_even_alongside_write_all() {
-    assertThrows(
-        OAuth2AuthenticationException.class,
-        () ->
-            extractor.extract(
-                SUBJECT,
-                List.of("monteis-client:experiment:write", "monteis-client:experiment:write:all")));
+    List<String> roles =
+        List.of("monteis-client:experiment:write", "monteis-client:experiment:write:all");
+
+    assertThrows(OAuth2AuthenticationException.class, () -> extractor.extract(SUBJECT, roles));
   }
 
   @Test
@@ -111,14 +109,12 @@ class GrantedAuthorityExtractorTest {
 
   @Test
   void should_log_a_rejection_at_warn_with_sub_and_role_names_only() {
+    List<String> roles =
+        List.of("monteis-client:experiment:write", "monteis-client:documents:read");
+
     try (LogCapture logs = LogCapture.of(GrantedAuthorityExtractor.class, Level.WARN)) {
       // when
-      assertThrows(
-          OAuth2AuthenticationException.class,
-          () ->
-              extractor.extract(
-                  SUBJECT,
-                  List.of("monteis-client:experiment:write", "monteis-client:documents:read")));
+      assertThrows(OAuth2AuthenticationException.class, () -> extractor.extract(SUBJECT, roles));
 
       // then: one line naming the sub and the offending roles, nothing else from the token
       assertEquals(1, logs.messages().size());

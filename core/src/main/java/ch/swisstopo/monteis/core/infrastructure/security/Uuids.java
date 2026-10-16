@@ -13,7 +13,7 @@ final class Uuids {
     }
     try {
       return Optional.of(UUID.fromString(value));
-    } catch (IllegalArgumentException e) {
+    } catch (IllegalArgumentException _) {
       return Optional.empty();
     }
   }

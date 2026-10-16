@@ -262,7 +262,7 @@ export class Giro3d implements AfterViewInit, OnDestroy {
     if (!instance || !this.sensorGroup) return;
     // not `traverse`: it starts at the group itself, so the group would remove itself from the
     // scene. and we mutate `children` while iterating it, hence the copy
-    for (const sensorObj of [...this.sensorGroup.children]) {
+    for (const sensorObj of this.sensorGroup.children.slice()) {
       sensorObj.removeFromParent();
       if (sensorObj instanceof Mesh) {
         sensorObj.geometry.dispose();
@@ -361,12 +361,7 @@ export class Giro3d implements AfterViewInit, OnDestroy {
     }
 
     function resetObjectColor(elem: Mesh) {
-      if (
-        elem &&
-        elem.material != null &&
-        !Array.isArray(elem.material) &&
-        'color' in elem.material
-      ) {
+      if (elem?.material != null && !Array.isArray(elem.material) && 'color' in elem.material) {
         elem.material.color = elem.userData['originalColor'].clone();
         elem.material.needsUpdate = true;
         instance.notifyChange(elem);

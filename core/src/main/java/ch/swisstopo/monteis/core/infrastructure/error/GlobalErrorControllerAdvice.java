@@ -323,13 +323,15 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
       RestClientResponseException e, HttpServletRequest request) {
     RequestErrorContext ctx = getErrorContext(request);
 
-    log.error(
-        "Upstream API failed with {} during {} {} [ErrorID: {}]: {}",
-        e.getStatusCode(),
-        ctx.method(),
-        ctx.uri(),
-        ctx.errorId(),
-        upstreamDetail(e));
+    if (log.isErrorEnabled()) {
+      log.error(
+          "Upstream API failed with {} during {} {} [ErrorID: {}]: {}",
+          e.getStatusCode(),
+          ctx.method(),
+          ctx.uri(),
+          ctx.errorId(),
+          upstreamDetail(e));
+    }
 
     ErrorDto payload = ErrorDto.global(Map.of(ERROR_ID, ctx.errorId()));
 

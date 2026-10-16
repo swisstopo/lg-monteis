@@ -60,17 +60,15 @@ class ExperimentDocumentServiceIT {
         .given(storage)
         .store(any(), any(), any(), any());
     String fileName = uniqueFileName();
+    DocumentMetadata metadata = pdfMetadata(fileName);
+    InputStream content = InputStream.nullInputStream();
 
     // when
     SecurityContextTestSupport.runAsAdmin(
         () ->
             assertThrows(
                 IllegalStateException.class,
-                () ->
-                    service.upload(
-                        SeedData.EXPERIMENT_ALPHA,
-                        pdfMetadata(fileName),
-                        InputStream.nullInputStream())));
+                () -> service.upload(SeedData.EXPERIMENT_ALPHA, metadata, content)));
 
     // then
     assertThat(countDocumentRows(fileName)).isZero();
@@ -80,6 +78,8 @@ class ExperimentDocumentServiceIT {
   void should_delete_the_stored_content_when_row_level_security_rejects_the_upload() {
     // given
     String fileName = uniqueFileName();
+    DocumentMetadata metadata = pdfMetadata(fileName);
+    InputStream content = InputStream.nullInputStream();
 
     // when: read but no write access, the insert policy rejects the row
     SecurityContextTestSupport.runAsUser(
@@ -87,11 +87,7 @@ class ExperimentDocumentServiceIT {
         () ->
             assertThrows(
                 PermissionDeniedDataAccessException.class,
-                () ->
-                    service.upload(
-                        SeedData.EXPERIMENT_ALPHA,
-                        pdfMetadata(fileName),
-                        InputStream.nullInputStream())));
+                () -> service.upload(SeedData.EXPERIMENT_ALPHA, metadata, content)));
 
     // then
     ArgumentCaptor<UUID> storedId = ArgumentCaptor.forClass(UUID.class);
