@@ -20,20 +20,20 @@ import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.stereotype.Service;
 
-// copies the file of one Fulcrum Document into MONTEIS: download -> temp file -> storage -> row.
+// imports the file of one Fulcrum Document into MONTEIS: download -> temp file -> storage -> row.
 // storage first and the row after, like an experiment document upload: a failure in between leaves
 // an object nobody sees, the next sync overwrites it under the same key
 @Service
-public class FulcrumDocumentCopier {
+public class FulcrumDocumentImportService {
 
-  private static final Logger log = LoggerFactory.getLogger(FulcrumDocumentCopier.class);
+  private static final Logger log = LoggerFactory.getLogger(FulcrumDocumentImportService.class);
 
   private final FulcrumAttachmentDownloadClient downloadClient;
   private final FulcrumDocumentStorage storage;
   private final FulcrumDocumentRepository documentRepository;
   private final FulcrumLiteratureMapper literatureMapper;
 
-  public FulcrumDocumentCopier(
+  public FulcrumDocumentImportService(
       FulcrumAttachmentDownloadClient downloadClient,
       FulcrumDocumentStorage storage,
       FulcrumDocumentRepository documentRepository,
@@ -44,8 +44,8 @@ public class FulcrumDocumentCopier {
     this.literatureMapper = literatureMapper;
   }
 
-  // one failed copy must not stop the others, the next sync tries it again
-  public boolean copyQuietly(
+  // one failed import must not stop the others, the next sync tries it again
+  public boolean importQuietly(
       FulcrumLiteratureEntry entry, FulcrumAttachmentReference attachment, OffsetDateTime seenAt) {
     Path download = null;
     try {
@@ -56,7 +56,7 @@ public class FulcrumDocumentCopier {
       return true;
     } catch (IOException | RuntimeException e) {
       log.warn(
-          "Could not copy file {} of Fulcrum Document {}", attachment.id(), entry.recordId(), e);
+          "Could not import file {} of Fulcrum Document {}", attachment.id(), entry.recordId(), e);
       return false;
     } finally {
       deleteQuietly(download);
