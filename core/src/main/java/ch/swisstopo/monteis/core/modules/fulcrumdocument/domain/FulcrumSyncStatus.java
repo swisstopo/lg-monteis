@@ -1,10 +1,6 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.domain;
 
-public enum FulcrumSyncStatus {
-  RUNNING,
-  SUCCEEDED,
-  // the entries are up to date, but some documents are still missing: out of time or a download
-  // failed
-  INCOMPLETE,
-  FAILED
-}
+import java.time.OffsetDateTime;
+
+// lastSyncedAt is when the last sync whose Fulcrum query succeeded started, null before the first
+public record FulcrumSyncStatus(boolean running, OffsetDateTime lastSyncedAt) {}
