@@ -91,7 +91,7 @@ public class FulcrumDocumentController {
   @ApiResponse(responseCode = "200", description = "Successfully retrieved the sync status")
   @GetMapping(path = ApiPaths.FULCRUM_SYNC, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<FulcrumSyncStatusResponseDto> getFulcrumSyncStatus() {
-    return ResponseEntity.ok(mapper.toStatusDto(syncService.getStatus()));
+    return ResponseEntity.ok(mapper.toStatusDto(syncService.currentStatus()));
   }
 
   @Operation(
@@ -104,6 +104,6 @@ public class FulcrumDocumentController {
   @PostMapping(path = ApiPaths.FULCRUM_SYNC, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<FulcrumSyncStatusResponseDto> startFulcrumSync() {
     return ResponseEntity.status(HttpStatus.ACCEPTED)
-        .body(mapper.toStatusDto(syncService.startSync()));
+        .body(mapper.toStatusDto(syncService.startSyncInBackground()));
   }
 }
