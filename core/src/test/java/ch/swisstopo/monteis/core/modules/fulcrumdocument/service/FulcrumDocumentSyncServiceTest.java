@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry;
@@ -14,8 +15,9 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry.F
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumCitation;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryRepository;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncLockRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatus;
 import java.time.Clock;
@@ -25,7 +27,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import net.javacrumbs.shedlock.core.LockConfiguration;
@@ -50,38 +51,37 @@ class FulcrumDocumentSyncServiceTest {
   private static final UUID ATTACHMENT_ID = UUID.fromString("22c52651-0b4b-48ca-bf8e-6594e935da0f");
   private static final String FILE_NAME = "Jahns 03 2011 - DS Experiment.pdf";
   private static final FulcrumLiteratureEntry ENTRY = entry(RECORD_ID, ATTACHMENT_ID);
-  private static final FulcrumCitation CITATION = citationOf(RECORD_ID);
   private static final FulcrumAttachmentReference ATTACHMENT =
       new FulcrumAttachmentReference(ATTACHMENT_ID, FILE_NAME);
 
   @Mock private FulcrumService fulcrumService;
   @Mock private FulcrumDocumentCopier documentCopier;
-  @Mock private FulcrumEntryRepository entryRepository;
+  @Mock private FulcrumDocumentRepository documentRepository;
   @Mock private FulcrumSyncLockRepository lockRepository;
   @Mock private LockProvider lockProvider;
   @Mock private SimpleLock lock;
   @Mock private Clock clock;
 
   @Test
-  void should_refresh_the_citations_of_known_entries_without_copying_again() {
+  void should_refresh_stored_documents_without_copying_their_file_again() {
     // given
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
-    given(entryRepository.findDocumentIdsByEntry()).willReturn(Map.of(RECORD_ID, ATTACHMENT_ID));
+    given(documentRepository.findAll()).willReturn(List.of(stored(ATTACHMENT_ID)));
 
     // when
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(entryRepository).should().saveSeenCitations(List.of(CITATION), SEEN_AT);
-    then(entryRepository).should().markRemovedUnlessSeenAt(SEEN_AT);
+    then(documentRepository).should().saveSeen(List.of(stored(ATTACHMENT_ID)), SEEN_AT);
+    then(documentRepository).should().markRemovedUnlessSeenAt(SEEN_AT);
     then(documentCopier).shouldHaveNoInteractions();
     then(lock).should().unlock();
   }
 
   @Test
-  void should_copy_the_document_of_a_new_entry() {
+  void should_copy_the_file_of_a_new_document() {
     // given
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
@@ -91,59 +91,56 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(entryRepository).should().saveSeenCitations(List.of(), SEEN_AT);
-    then(documentCopier).should().copyQuietly(CITATION, ATTACHMENT, SEEN_AT);
+    then(documentRepository).should().saveSeen(List.of(), SEEN_AT);
+    then(documentCopier).should().copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
   }
 
   @Test
-  void should_copy_a_replaced_file_and_count_its_entry_as_seen_right_away() {
+  void should_copy_a_replaced_file_and_count_its_document_as_seen_right_away() {
     // given
+    UUID oldAttachment = UUID.randomUUID();
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
-    given(entryRepository.findDocumentIdsByEntry())
-        .willReturn(Map.of(RECORD_ID, UUID.randomUUID()));
+    given(documentRepository.findAll()).willReturn(List.of(stored(oldAttachment)));
 
     // when
     service(ENABLED).syncUnlessRunning();
 
-    // then
-    then(entryRepository).should().saveSeenCitations(List.of(CITATION), SEEN_AT);
-    then(documentCopier).should().copyQuietly(CITATION, ATTACHMENT, SEEN_AT);
+    // then the document keeps its old file until the new one is copied
+    then(documentRepository).should().saveSeen(List.of(stored(oldAttachment)), SEEN_AT);
+    then(documentCopier).should().copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
   }
 
   @Test
-  void should_take_the_first_file_of_an_entry_with_several() {
+  void should_take_the_first_file_of_a_document_with_several() {
     // given
+    FulcrumLiteratureEntry withTwoFiles = entry(RECORD_ID, ATTACHMENT_ID, UUID.randomUUID());
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
-    given(fulcrumService.getLiteratureToSync())
-        .willReturn(List.of(entry(RECORD_ID, ATTACHMENT_ID, UUID.randomUUID())));
+    given(fulcrumService.getLiteratureToSync()).willReturn(List.of(withTwoFiles));
 
     // when
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(documentCopier).should().copyQuietly(CITATION, ATTACHMENT, SEEN_AT);
+    then(documentCopier).should().copyQuietly(withTwoFiles, ATTACHMENT, SEEN_AT);
   }
 
   @Test
-  void should_go_on_with_the_other_entries_when_one_copy_fails() {
+  void should_go_on_with_the_other_documents_when_one_copy_fails() {
     // given
-    UUID otherRecord = UUID.randomUUID();
-    UUID otherAttachment = UUID.randomUUID();
+    FulcrumLiteratureEntry broken = entry(UUID.randomUUID(), UUID.randomUUID());
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
-    given(fulcrumService.getLiteratureToSync())
-        .willReturn(List.of(entry(otherRecord, otherAttachment), ENTRY));
-    given(documentCopier.copyQuietly(eq(citationOf(otherRecord)), any(), eq(SEEN_AT)))
-        .willReturn(false);
+    given(fulcrumService.getLiteratureToSync()).willReturn(List.of(broken, ENTRY));
+    given(documentCopier.copyQuietly(eq(broken), any(), eq(SEEN_AT))).willReturn(false);
 
     // when
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(documentCopier).should().copyQuietly(CITATION, ATTACHMENT, SEEN_AT);
+    then(documentCopier).should().copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
   }
 
   @Test
@@ -159,7 +156,7 @@ class FulcrumDocumentSyncServiceTest {
 
     // then
     then(documentCopier).shouldHaveNoInteractions();
-    then(entryRepository).should().markRemovedUnlessSeenAt(SEEN_AT);
+    then(documentRepository).should().markRemovedUnlessSeenAt(SEEN_AT);
     then(lock).should().unlock();
   }
 
@@ -176,7 +173,7 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(entryRepository).shouldHaveNoInteractions();
+    then(documentRepository).shouldHaveNoInteractions();
     then(documentCopier).shouldHaveNoInteractions();
     then(lock).should().unlock();
   }
@@ -209,7 +206,7 @@ class FulcrumDocumentSyncServiceTest {
     // given
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
-    given(entryRepository.findLastSeenAt()).willReturn(Optional.of(SEEN_AT.minusDays(1)));
+    given(documentRepository.findLastSeenAt()).willReturn(Optional.of(SEEN_AT.minusDays(1)));
 
     // when
     FulcrumSyncStatus status = service(ENABLED).startSyncInBackground();
@@ -260,7 +257,7 @@ class FulcrumDocumentSyncServiceTest {
   void should_derive_the_status_from_the_lock_and_the_last_seen_entry() {
     // given
     given(lockRepository.isHeld(FulcrumDocumentSyncService.LOCK_NAME)).willReturn(false);
-    given(entryRepository.findLastSeenAt()).willReturn(Optional.empty());
+    given(documentRepository.findLastSeenAt()).willReturn(Optional.empty());
 
     // when / then
     assertThat(service(ENABLED).currentStatus()).isEqualTo(new FulcrumSyncStatus(false, null));
@@ -270,7 +267,8 @@ class FulcrumDocumentSyncServiceTest {
     return new FulcrumDocumentSyncService(
         fulcrumService,
         documentCopier,
-        entryRepository,
+        documentRepository,
+        new FulcrumLiteratureMapperImpl(),
         lockRepository,
         lockProvider,
         new SyncTaskExecutor(),
@@ -304,14 +302,17 @@ class FulcrumDocumentSyncServiceTest {
         Arrays.stream(attachmentIds).map(id -> FILE_NAME).toList());
   }
 
-  private static FulcrumCitation citationOf(UUID recordId) {
-    return new FulcrumCitation(
-        recordId,
+  private static FulcrumDocument stored(UUID attachmentId) {
+    return new FulcrumDocument(
+        RECORD_ID,
         "2011-02",
         "DS Experiment: BDS-1",
         "Jahns E.",
         2011,
         "2 Mont Terri Technical Notes (TN)",
-        List.of("Experiment DS", "RACOS"));
+        List.of("Experiment DS", "RACOS"),
+        new FulcrumDocumentFile(
+            attachmentId, new DocumentMetadata(FILE_NAME, "application/pdf", 8)),
+        null);
   }
 }
