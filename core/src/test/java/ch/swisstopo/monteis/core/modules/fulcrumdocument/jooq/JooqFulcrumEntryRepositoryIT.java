@@ -1,13 +1,13 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.jooq;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.groups.Tuple.tuple;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.itconfig.IT;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumAttachment;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntry;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryWithDocuments;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -19,120 +19,116 @@ import org.springframework.transaction.annotation.Transactional;
 // every test rolls back, markRemovedUnlessSeenAt touches the whole table
 @IT
 @Transactional
-class JooqFulcrumDocumentRepositoryIT {
+class JooqFulcrumEntryRepositoryIT {
 
   private static final OffsetDateTime FIRST_SYNC =
       OffsetDateTime.of(2026, 10, 14, 2, 0, 0, 0, ZoneOffset.UTC);
   private static final OffsetDateTime SECOND_SYNC = FIRST_SYNC.plusDays(1);
+  private static final DocumentMetadata REPORT =
+      new DocumentMetadata("report.pdf", "application/pdf", 42);
 
-  @Autowired private JooqFulcrumDocumentRepository repository;
+  @Autowired private JooqFulcrumEntryRepository entryRepository;
+  @Autowired private JooqFulcrumDocumentRepository documentRepository;
 
   @Test
-  void should_save_a_new_document_with_its_files_in_fulcrum_order() {
+  void should_save_a_new_entry_with_its_attachments_in_fulcrum_order() {
     // given
-    UUID documentId = UUID.randomUUID();
-    FulcrumDocument document = document(documentId, "2011-02", file(documentId), file(documentId));
+    UUID entryId = UUID.randomUUID();
+    FulcrumEntry entry = entry(entryId, "2011-02", attachment(entryId), attachment(entryId));
 
     // when
-    repository.saveSeen(List.of(document), FIRST_SYNC);
+    entryRepository.saveSeen(List.of(entry), FIRST_SYNC);
 
     // then
-    FulcrumDocument saved = findById(documentId);
-    assertThat(saved.number()).isEqualTo("2011-02");
-    assertThat(saved.keywords()).containsExactly("Experiment DS", "RACOS");
-    assertThat(saved.isAvailableInFulcrum()).isTrue();
-    assertThat(saved.files())
-        .extracting(FulcrumDocumentFile::id)
-        .containsExactly(document.files().get(0).id(), document.files().get(1).id());
-    assertThat(saved.files()).noneMatch(FulcrumDocumentFile::isStored);
+    FulcrumEntryWithDocuments saved = findById(entryId);
+    assertThat(saved.entry().number()).isEqualTo("2011-02");
+    assertThat(saved.entry().keywords()).containsExactly("Experiment DS", "RACOS");
+    assertThat(saved.entry().attachments()).isEqualTo(entry.attachments());
+    assertThat(saved.entry().isAvailableInFulcrum()).isTrue();
+    assertThat(saved.documents()).isEmpty();
   }
 
   @Test
-  void should_update_the_metadata_but_keep_the_stored_content() {
+  void should_update_a_known_entry() {
     // given
-    UUID documentId = UUID.randomUUID();
-    FulcrumDocumentFile file = file(documentId);
-    repository.saveSeen(List.of(document(documentId, "2011-02", file)), FIRST_SYNC);
-    repository.markStored(file.id(), 42);
+    UUID entryId = UUID.randomUUID();
+    entryRepository.saveSeen(List.of(entry(entryId, "2011-02")), FIRST_SYNC);
 
     // when
-    repository.saveSeen(List.of(document(documentId, "2011-03", file)), SECOND_SYNC);
+    entryRepository.saveSeen(List.of(entry(entryId, "2011-03")), SECOND_SYNC);
 
     // then
-    FulcrumDocument saved = findById(documentId);
-    assertThat(saved.number()).isEqualTo("2011-03");
-    assertThat(saved.files())
-        .singleElement()
-        .satisfies(
-            stored -> {
-              assertThat(stored.isStored()).isTrue();
-              assertThat(stored.sizeBytes()).isEqualTo(42);
-            });
+    assertThat(findById(entryId).entry().number()).isEqualTo("2011-03");
   }
 
   @Test
-  void should_keep_what_fulcrum_no_longer_returns_as_removed() {
+  void should_keep_an_entry_fulcrum_no_longer_returns_as_removed() {
     // given
     UUID keptId = UUID.randomUUID();
     UUID goneId = UUID.randomUUID();
-    FulcrumDocumentFile keptFile = file(keptId);
-    FulcrumDocumentFile droppedFile = file(keptId);
-    repository.saveSeen(
-        List.of(document(keptId, "1", keptFile, droppedFile), document(goneId, "2", file(goneId))),
-        FIRST_SYNC);
-    repository.saveSeen(List.of(document(keptId, "1", keptFile)), SECOND_SYNC);
+    entryRepository.saveSeen(List.of(entry(keptId, "1"), entry(goneId, "2")), FIRST_SYNC);
+    entryRepository.saveSeen(List.of(entry(keptId, "1")), SECOND_SYNC);
 
     // when
-    int removed = repository.markRemovedUnlessSeenAt(SECOND_SYNC);
+    int removed = entryRepository.markRemovedUnlessSeenAt(SECOND_SYNC);
 
     // then
     assertThat(removed).isEqualTo(1);
-    assertThat(findById(goneId).isAvailableInFulcrum()).isFalse();
-    assertThat(findById(goneId).files()).noneMatch(FulcrumDocumentFile::isAvailableInFulcrum);
-    FulcrumDocument kept = findById(keptId);
-    assertThat(kept.isAvailableInFulcrum()).isTrue();
-    assertThat(kept.files())
-        .extracting(FulcrumDocumentFile::id, FulcrumDocumentFile::isAvailableInFulcrum)
-        .containsExactlyInAnyOrder(tuple(keptFile.id(), true), tuple(droppedFile.id(), false));
+    assertThat(findById(goneId).entry().isAvailableInFulcrum()).isFalse();
+    assertThat(findById(keptId).entry().isAvailableInFulcrum()).isTrue();
   }
 
   @Test
-  void should_make_a_document_available_again_once_fulcrum_returns_it() {
+  void should_make_an_entry_available_again_once_fulcrum_returns_it() {
     // given
-    UUID documentId = UUID.randomUUID();
-    FulcrumDocumentFile file = file(documentId);
-    repository.saveSeen(List.of(document(documentId, "1", file)), FIRST_SYNC);
-    repository.markRemovedUnlessSeenAt(SECOND_SYNC);
+    UUID entryId = UUID.randomUUID();
+    entryRepository.saveSeen(List.of(entry(entryId, "1")), FIRST_SYNC);
+    entryRepository.markRemovedUnlessSeenAt(SECOND_SYNC);
 
     // when
-    repository.saveSeen(List.of(document(documentId, "1", file)), SECOND_SYNC);
+    entryRepository.saveSeen(List.of(entry(entryId, "1")), SECOND_SYNC);
 
     // then
-    FulcrumDocument saved = findById(documentId);
-    assertThat(saved.isAvailableInFulcrum()).isTrue();
-    assertThat(saved.files()).allMatch(FulcrumDocumentFile::isAvailableInFulcrum);
+    assertThat(findById(entryId).entry().isAvailableInFulcrum()).isTrue();
   }
 
   @Test
-  void should_only_hand_out_files_that_are_neither_stored_nor_removed() {
+  void should_hand_out_only_attachments_without_a_document_of_entries_in_fulcrum() {
     // given
-    UUID documentId = UUID.randomUUID();
-    FulcrumDocumentFile missing = file(documentId);
-    FulcrumDocumentFile stored = file(documentId);
-    FulcrumDocumentFile removed = file(documentId);
-    repository.saveSeen(List.of(document(documentId, "1", missing, stored, removed)), FIRST_SYNC);
-    repository.markStored(stored.id(), 1);
-    repository.saveSeen(List.of(document(documentId, "1", missing, stored)), SECOND_SYNC);
-    repository.markRemovedUnlessSeenAt(SECOND_SYNC);
+    UUID entryId = UUID.randomUUID();
+    UUID removedEntryId = UUID.randomUUID();
+    FulcrumAttachment missing = attachment(entryId);
+    FulcrumAttachment stored = attachment(entryId);
+    FulcrumAttachment ofRemovedEntry = attachment(removedEntryId);
+    entryRepository.saveSeen(
+        List.of(entry(entryId, "1", missing, stored), entry(removedEntryId, "2", ofRemovedEntry)),
+        FIRST_SYNC);
+    entryRepository.saveSeen(List.of(entry(entryId, "1", missing, stored)), SECOND_SYNC);
+    entryRepository.markRemovedUnlessSeenAt(SECOND_SYNC);
+    documentRepository.create(stored.id(), entryId, REPORT);
 
     // when
-    List<FulcrumDocumentFile> toStore = repository.findFilesToStore();
+    List<FulcrumAttachment> toStore = entryRepository.findAttachmentsToStore();
 
     // then
-    assertThat(toStore).extracting(FulcrumDocumentFile::id).contains(missing.id());
-    assertThat(toStore)
-        .extracting(FulcrumDocumentFile::id)
-        .doesNotContain(stored.id(), removed.id());
+    assertThat(toStore).contains(missing).doesNotContain(stored, ofRemovedEntry);
+  }
+
+  @Test
+  void should_list_the_documents_of_an_entry_in_attachment_order() {
+    // given
+    UUID entryId = UUID.randomUUID();
+    FulcrumAttachment first = attachment(entryId);
+    FulcrumAttachment second = attachment(entryId);
+    entryRepository.saveSeen(List.of(entry(entryId, "1", first, second)), FIRST_SYNC);
+    documentRepository.create(second.id(), entryId, REPORT);
+    documentRepository.create(first.id(), entryId, REPORT);
+
+    // when
+    List<FulcrumDocument> documents = findById(entryId).documents();
+
+    // then
+    assertThat(documents).extracting(FulcrumDocument::id).containsExactly(first.id(), second.id());
   }
 
   @Test
@@ -140,14 +136,12 @@ class JooqFulcrumDocumentRepositoryIT {
     // given
     UUID older = UUID.randomUUID();
     UUID newer = UUID.randomUUID();
-    repository.saveSeen(
-        List.of(document(older, "2011-02", file(older)), document(newer, "2015-17", file(newer))),
-        FIRST_SYNC);
+    entryRepository.saveSeen(List.of(entry(older, "2011-02"), entry(newer, "2015-17")), FIRST_SYNC);
 
     // when
     List<UUID> order =
-        repository.findAll().stream()
-            .map(FulcrumDocument::id)
+        entryRepository.findAllWithDocuments().stream()
+            .map(entryWithDocuments -> entryWithDocuments.entry().id())
             .filter(id -> id.equals(older) || id.equals(newer))
             .toList();
 
@@ -155,21 +149,15 @@ class JooqFulcrumDocumentRepositoryIT {
     assertThat(order).containsExactly(newer, older);
   }
 
-  @Test
-  void should_not_find_an_unknown_file() {
-    // when / then
-    assertThrows(ObjectNotFoundException.class, () -> repository.getFileById(UUID.randomUUID()));
-  }
-
-  private FulcrumDocument findById(UUID documentId) {
-    return repository.findAll().stream()
-        .filter(document -> document.id().equals(documentId))
+  private FulcrumEntryWithDocuments findById(UUID entryId) {
+    return entryRepository.findAllWithDocuments().stream()
+        .filter(entryWithDocuments -> entryWithDocuments.entry().id().equals(entryId))
         .findFirst()
         .orElseThrow();
   }
 
-  private static FulcrumDocument document(UUID id, String number, FulcrumDocumentFile... files) {
-    return new FulcrumDocument(
+  static FulcrumEntry entry(UUID id, String number, FulcrumAttachment... attachments) {
+    return new FulcrumEntry(
         id,
         number,
         "DS Experiment: BDS-1",
@@ -177,12 +165,11 @@ class JooqFulcrumDocumentRepositoryIT {
         2011,
         "2 Mont Terri Technical Notes (TN)",
         List.of("Experiment DS", "RACOS"),
-        null,
-        List.of(files));
+        List.of(attachments),
+        null);
   }
 
-  private static FulcrumDocumentFile file(UUID documentId) {
-    return new FulcrumDocumentFile(
-        UUID.randomUUID(), documentId, "report.pdf", "application/pdf", null, null, null);
+  static FulcrumAttachment attachment(UUID entryId) {
+    return new FulcrumAttachment(UUID.randomUUID(), entryId, "report.pdf");
   }
 }

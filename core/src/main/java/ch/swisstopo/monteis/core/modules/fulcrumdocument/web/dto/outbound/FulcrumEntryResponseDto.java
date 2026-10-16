@@ -3,7 +3,7 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.web.dto.outbound;
 import java.util.List;
 import java.util.UUID;
 
-public record FulcrumDocumentResponseDto(
+public record FulcrumEntryResponseDto(
     UUID id,
     String number,
     String title,
@@ -12,4 +12,4 @@ public record FulcrumDocumentResponseDto(
     String category,
     List<String> keywords,
     boolean availableInFulcrum,
-    List<FulcrumDocumentFileResponseDto> files) {}
+    List<FulcrumDocumentResponseDto> documents) {}

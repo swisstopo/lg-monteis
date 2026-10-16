@@ -1,17 +1,18 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachments;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry;
-import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry.FulcrumAttachmentReference;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
 import ch.swisstopo.monteis.core.infrastructure.security.SystemSecurityContext;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumAttachment;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntry;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncResult;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRun;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRunRepository;
@@ -26,7 +27,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.core.SimpleLock;
@@ -50,11 +50,9 @@ public class FulcrumDocumentSyncService {
 
   private static final Logger log = LoggerFactory.getLogger(FulcrumDocumentSyncService.class);
 
-  // column length of fulcrum_document_files.file_name
-  private static final int MAX_FILE_NAME_LENGTH = 255;
-
   private final FulcrumService fulcrumService;
   private final FulcrumAttachments fulcrumAttachments;
+  private final FulcrumEntryRepository entryRepository;
   private final FulcrumDocumentRepository documentRepository;
   private final FulcrumSyncRunRepository runRepository;
   private final FulcrumDocumentStorage storage;
@@ -67,6 +65,7 @@ public class FulcrumDocumentSyncService {
   public FulcrumDocumentSyncService(
       FulcrumService fulcrumService,
       FulcrumAttachments fulcrumAttachments,
+      FulcrumEntryRepository entryRepository,
       FulcrumDocumentRepository documentRepository,
       FulcrumSyncRunRepository runRepository,
       FulcrumDocumentStorage storage,
@@ -77,6 +76,7 @@ public class FulcrumDocumentSyncService {
       Clock clock) {
     this.fulcrumService = fulcrumService;
     this.fulcrumAttachments = fulcrumAttachments;
+    this.entryRepository = entryRepository;
     this.documentRepository = documentRepository;
     this.runRepository = runRepository;
     this.storage = storage;
@@ -152,27 +152,27 @@ public class FulcrumDocumentSyncService {
 
   private FulcrumSyncResult sync(FulcrumSyncRun run) {
     Instant deadline = clock.instant().plus(syncProperties.timeBudget());
-    List<FulcrumDocument> documents =
+    List<FulcrumEntry> entries =
         fulcrumService.getLiteratureToSync().stream()
-            .map(FulcrumDocumentSyncService::toDocument)
+            .map(FulcrumDocumentSyncService::toEntry)
             .toList();
-    documentRepository.saveSeen(documents, run.startedAt());
-    int removed = documentRepository.markRemovedUnlessSeenAt(run.startedAt());
+    entryRepository.saveSeen(entries, run.startedAt());
+    int removed = entryRepository.markRemovedUnlessSeenAt(run.startedAt());
+    documentRepository.reconcileWithEntries();
     log.info(
-        "Fulcrum Document sync {}: {} documents seen, {} newly removed in Fulcrum",
+        "Fulcrum Document sync {}: {} entries seen, {} newly removed in Fulcrum",
         run.id(),
-        documents.size(),
+        entries.size(),
         removed);
 
     int stored = 0;
     int failed = 0;
-    for (FulcrumDocumentFile file : documentRepository.findFilesToStore()) {
+    for (FulcrumAttachment attachment : entryRepository.findAttachmentsToStore()) {
       if (clock.instant().isAfter(deadline)) {
         log.info("Fulcrum Document sync {} ran out of time, the next run continues", run.id());
-        return new FulcrumSyncResult(
-            FulcrumSyncStatus.INCOMPLETE, documents.size(), stored, failed);
+        return new FulcrumSyncResult(FulcrumSyncStatus.INCOMPLETE, entries.size(), stored, failed);
       }
-      if (storeQuietly(file)) {
+      if (storeQuietly(attachment)) {
         stored++;
       } else {
         failed++;
@@ -180,22 +180,33 @@ public class FulcrumDocumentSyncService {
     }
     FulcrumSyncStatus status =
         failed == 0 ? FulcrumSyncStatus.SUCCEEDED : FulcrumSyncStatus.INCOMPLETE;
-    return new FulcrumSyncResult(status, documents.size(), stored, failed);
+    return new FulcrumSyncResult(status, entries.size(), stored, failed);
   }
 
-  // one failed file must not stop the others, the next run tries it again
-  private boolean storeQuietly(FulcrumDocumentFile file) {
+  // storage first and the row after, like an experiment document upload: a failure in between
+  // leaves an object nobody sees, the next run overwrites it under the same key. one failed
+  // attachment must not stop the others
+  private boolean storeQuietly(FulcrumAttachment attachment) {
     Path download = null;
     try {
       download = Files.createTempFile("fulcrum-document-", ".download");
-      try (InputStream content = fulcrumAttachments.open(file.id())) {
+      try (InputStream content = fulcrumAttachments.open(attachment.id())) {
         Files.copy(content, download, StandardCopyOption.REPLACE_EXISTING);
       }
-      storage.store(file.id(), file.contentType(), download);
-      documentRepository.markStored(file.id(), Files.size(download));
+      DocumentMetadata metadata =
+          DocumentMetadata.of(
+              fileNameOf(attachment.fileName()),
+              contentTypeOf(attachment.fileName()),
+              Files.size(download));
+      storage.store(attachment.id(), metadata.contentType(), download);
+      documentRepository.create(attachment.id(), attachment.entryId(), metadata);
       return true;
     } catch (IOException | RuntimeException e) {
-      log.warn("Could not store file {} of Fulcrum Document {}", file.id(), file.documentId(), e);
+      log.warn(
+          "Could not store attachment {} of Fulcrum entry {}",
+          attachment.id(),
+          attachment.entryId(),
+          e);
       return false;
     } finally {
       deleteQuietly(download);
@@ -213,8 +224,8 @@ public class FulcrumDocumentSyncService {
     }
   }
 
-  private static FulcrumDocument toDocument(FulcrumLiteratureEntry entry) {
-    return new FulcrumDocument(
+  private static FulcrumEntry toEntry(FulcrumLiteratureEntry entry) {
+    return new FulcrumEntry(
         entry.recordId(),
         entry.number(),
         entry.title(),
@@ -222,26 +233,18 @@ public class FulcrumDocumentSyncService {
         entry.year(),
         entry.category(),
         entry.keywords(),
-        null,
         entry.attachments().stream()
-            .map(attachment -> toFile(entry.recordId(), attachment))
-            .toList());
-  }
-
-  private static FulcrumDocumentFile toFile(
-      UUID documentId, FulcrumAttachmentReference attachment) {
-    return new FulcrumDocumentFile(
-        attachment.id(),
-        documentId,
-        fileNameOf(attachment.name()),
-        contentTypeOf(attachment.name()),
-        null,
-        null,
+            .map(
+                attachment ->
+                    new FulcrumAttachment(attachment.id(), entry.recordId(), attachment.name()))
+            .toList(),
         null);
   }
 
   private static String fileNameOf(String name) {
-    return name.length() <= MAX_FILE_NAME_LENGTH ? name : name.substring(0, MAX_FILE_NAME_LENGTH);
+    return name.length() <= DocumentMetadata.MAX_LENGTH
+        ? name
+        : name.substring(0, DocumentMetadata.MAX_LENGTH);
   }
 
   // Fulcrum serves every file as application/octet-stream, the browser could not show a pdf

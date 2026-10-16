@@ -74,7 +74,7 @@ class SecurityConfigAuthorizationTest {
     PrivilegeLevel[] documentReaders = {
       PrivilegeLevel.EXPERIMENT_USER, PrivilegeLevel.EXPERIMENT_PI, PrivilegeLevel.MONTEIS_ADMIN
     };
-    String fulcrumFile = "/api/fulcrum-documents/files/" + UUID.randomUUID() + "/content";
+    String fulcrumDocument = "/api/fulcrum-documents/" + UUID.randomUUID() + "/content";
     return Stream.of(
         Arguments.of(HttpMethod.GET, "/api/experiments", everyone),
         Arguments.of(HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT, everyone),
@@ -112,10 +112,10 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.PUT, "/api/other", adminOnly),
         Arguments.of(HttpMethod.PATCH, "/api/other", adminOnly),
         Arguments.of(HttpMethod.DELETE, "/api/other", adminOnly),
-        Arguments.of(HttpMethod.GET, "/api/fulcrum-documents", everyone),
-        Arguments.of(HttpMethod.GET, fulcrumFile, documentReaders),
-        Arguments.of(HttpMethod.GET, "/api/fulcrum-documents/sync", everyone),
-        Arguments.of(HttpMethod.POST, "/api/fulcrum-documents/sync", documentReaders),
+        Arguments.of(HttpMethod.GET, "/api/fulcrum-entries", everyone),
+        Arguments.of(HttpMethod.GET, fulcrumDocument, documentReaders),
+        Arguments.of(HttpMethod.GET, "/api/fulcrum-sync", everyone),
+        Arguments.of(HttpMethod.POST, "/api/fulcrum-sync", documentReaders),
         Arguments.of(HttpMethod.GET, "/api/measurements", everyone),
         Arguments.of(HttpMethod.GET, "/api/me", everyone));
   }
@@ -220,8 +220,8 @@ class SecurityConfigAuthorizationTest {
     @GetMapping({
       "/api/experiments",
       "/api/experiments/owners",
-      "/api/fulcrum-documents",
-      "/api/fulcrum-documents/sync",
+      "/api/fulcrum-entries",
+      "/api/fulcrum-sync",
       "/api/measurements",
       "/api/me",
       "/api/organisations",
@@ -241,12 +241,12 @@ class SecurityConfigAuthorizationTest {
       return "ok";
     }
 
-    @GetMapping("/api/fulcrum-documents/files/{fileId}/content")
-    public String fulcrumDocumentFile(@PathVariable String fileId) {
+    @GetMapping("/api/fulcrum-documents/{documentId}/content")
+    public String fulcrumDocument(@PathVariable String documentId) {
       return "ok";
     }
 
-    @PostMapping("/api/fulcrum-documents/sync")
+    @PostMapping("/api/fulcrum-sync")
     public String startFulcrumSync() {
       return "ok";
     }

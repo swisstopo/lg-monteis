@@ -1,26 +1,17 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.domain;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.UUID;
 
-// id is Fulcrum's record id. removedAt is set once Fulcrum stopped returning the entry, it stays in
-// MONTEIS as a backup
+// one file of a Fulcrum entry, its content lives in FulcrumDocumentStorage. id is Fulcrum's
+// attachment id. removedAt is set once no entry in Fulcrum lists it anymore
 public record FulcrumDocument(
     UUID id,
-    String number,
-    String title,
-    String authors,
-    Integer year,
-    String category,
-    List<String> keywords,
-    OffsetDateTime removedAt,
-    List<FulcrumDocumentFile> files) {
-
-  public FulcrumDocument {
-    keywords = List.copyOf(keywords);
-    files = List.copyOf(files);
-  }
+    UUID entryId,
+    DocumentMetadata metadata,
+    OffsetDateTime storedAt,
+    OffsetDateTime removedAt) {
 
   public boolean isAvailableInFulcrum() {
     return removedAt == null;
