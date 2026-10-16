@@ -2,12 +2,11 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.web;
 
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
-import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentService;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.dto.outbound.FulcrumEntryResponseDto;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.dto.outbound.FulcrumSyncRunResponseDto;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.dto.outbound.FulcrumSyncStatusResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,29 +32,26 @@ public class FulcrumDocumentController {
   private final FulcrumDocumentService documentService;
   private final FulcrumDocumentSyncService syncService;
   private final FulcrumDocumentWebMapper mapper;
-  private final CurrentUserProvider currentUserProvider;
 
   public FulcrumDocumentController(
       FulcrumDocumentService documentService,
       FulcrumDocumentSyncService syncService,
-      FulcrumDocumentWebMapper mapper,
-      CurrentUserProvider currentUserProvider) {
+      FulcrumDocumentWebMapper mapper) {
     this.documentService = documentService;
     this.syncService = syncService;
     this.mapper = mapper;
-    this.currentUserProvider = currentUserProvider;
   }
 
   @Operation(
-      summary = "Get the Fulcrum entries with their documents",
+      summary = "Get the Fulcrum entries",
       description =
-          "Retrieves all Fulcrum entries mirrored from Fulcrum with their stored documents,"
-              + " unpaged and sorted by number (newest first), then title. Entries and documents"
-              + " Fulcrum no longer has stay in the list with availableInFulcrum false.")
+          "Retrieves all Fulcrum entries mirrored from Fulcrum, each with its document, unpaged"
+              + " and sorted by number (newest first), then title. Entries Fulcrum no longer has"
+              + " stay in the list with availableInFulcrum false.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved Fulcrum entries")
   @GetMapping(path = ApiPaths.FULCRUM_ENTRIES, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<FulcrumEntryResponseDto>> getFulcrumEntries() {
-    return ResponseEntity.ok(mapper.toDtos(documentService.getEntriesWithDocuments()));
+    return ResponseEntity.ok(mapper.toDtos(documentService.getEntries()));
   }
 
   @Operation(
@@ -88,28 +84,26 @@ public class FulcrumDocumentController {
   }
 
   @Operation(
-      summary = "Get the latest Fulcrum sync",
-      description = "The most recent sync run, scheduled or manual. 204 when none ever ran.")
-  @ApiResponse(responseCode = "200", description = "Successfully retrieved the latest sync")
-  @ApiResponse(responseCode = "204", description = "No sync ran yet")
+      summary = "Get the Fulcrum sync status",
+      description =
+          "Whether a sync is running right now, and when the last sync that reached Fulcrum"
+              + " started (null before the first one).")
+  @ApiResponse(responseCode = "200", description = "Successfully retrieved the sync status")
   @GetMapping(path = ApiPaths.FULCRUM_SYNC, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<FulcrumSyncRunResponseDto> getLatestFulcrumSyncRun() {
-    return syncService
-        .findLatestRun()
-        .map(run -> ResponseEntity.ok(mapper.toRunDto(run)))
-        .orElseGet(() -> ResponseEntity.noContent().build());
+  public ResponseEntity<FulcrumSyncStatusResponseDto> getFulcrumSyncStatus() {
+    return ResponseEntity.ok(mapper.toStatusDto(syncService.getStatus()));
   }
 
   @Operation(
       summary = "Start a Fulcrum sync",
       description =
           "Starts loading the Fulcrum entries and documents from Fulcrum again, in the"
-              + " background. Poll the latest sync for its outcome. Requires documents:read.")
+              + " background. Poll the sync status until it no longer runs. Requires"
+              + " documents:read.")
   @ApiResponse(responseCode = "202", description = "Sync started")
   @PostMapping(path = ApiPaths.FULCRUM_SYNC, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<FulcrumSyncRunResponseDto> startFulcrumSync() {
-    String triggeredBy = currentUserProvider.requireCurrentUsername();
+  public ResponseEntity<FulcrumSyncStatusResponseDto> startFulcrumSync() {
     return ResponseEntity.status(HttpStatus.ACCEPTED)
-        .body(mapper.toRunDto(syncService.startSync(triggeredBy)));
+        .body(mapper.toStatusDto(syncService.startSync()));
   }
 }
