@@ -4,7 +4,6 @@ import {
   Component,
   DestroyRef,
   InjectionToken,
-  computed,
   inject,
   output,
   signal,
@@ -13,12 +12,11 @@ import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { PermissionsService } from '@core/auth/permissions.service';
-import { FulcrumSyncRunResponseDto } from '@core/generated';
+import { FulcrumSyncStatusResponseDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import StatusEnum = FulcrumSyncRunResponseDto.StatusEnum;
 
 export const SYNC_POLL_INTERVAL_MS = new InjectionToken<number>('SYNC_POLL_INTERVAL_MS', {
   factory: () => 5_000,
@@ -40,34 +38,24 @@ export class FulcrumSync {
   private readonly pollInterval = inject(SYNC_POLL_INTERVAL_MS);
   protected readonly permissions = inject(PermissionsService);
 
-  /** A run this view watched has ended, the Fulcrum entries changed. */
+  /** A sync this view watched has ended, the Fulcrum entries changed. */
   readonly finished = output<void>();
 
-  protected readonly latestRun = signal<FulcrumSyncRunResponseDto | undefined>(undefined);
+  protected readonly status = signal<FulcrumSyncStatusResponseDto | undefined>(undefined);
   protected readonly running = signal(false);
   protected readonly statusUnknown = signal(false);
-  protected readonly lastRunHintKey = computed(() => {
-    switch (this.latestRun()?.status) {
-      case StatusEnum.Failed:
-        return 'fulcrumSync.failed';
-      case StatusEnum.Incomplete:
-        return 'fulcrumSync.incomplete';
-      default:
-        return undefined;
-    }
-  });
 
   private destroyed = false;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => (this.destroyed = true));
-    void this.loadLatestRun();
+    void this.loadStatus();
   }
 
   async onRefresh(): Promise<void> {
     this.running.set(true);
     try {
-      this.latestRun.set(await this.documentService.startSync());
+      this.status.set(await this.documentService.startSync());
     } catch (error) {
       if (!isAlreadyRunning(error)) {
         this.running.set(false);
@@ -79,16 +67,16 @@ export class FulcrumSync {
   }
 
   // a 403 for a user without document access just leaves the status out
-  private async loadLatestRun(): Promise<void> {
+  private async loadStatus(): Promise<void> {
     try {
-      const run = await this.documentService.getLatestSyncRun();
-      this.latestRun.set(run);
-      if (run?.status === StatusEnum.Running) {
+      const status = await this.documentService.getSyncStatus();
+      this.status.set(status);
+      if (status.running) {
         this.running.set(true);
         await this.pollUntilFinished();
       }
     } catch {
-      this.latestRun.set(undefined);
+      this.status.set(undefined);
     }
   }
 
@@ -98,16 +86,16 @@ export class FulcrumSync {
       await new Promise((resolve) => setTimeout(resolve, this.pollInterval));
       if (this.destroyed) return;
 
-      let run: FulcrumSyncRunResponseDto | undefined;
+      let status: FulcrumSyncStatusResponseDto;
       try {
-        run = await this.documentService.getLatestSyncRun();
+        status = await this.documentService.getSyncStatus();
       } catch {
         this.running.set(false);
         this.statusUnknown.set(true);
         return;
       }
-      this.latestRun.set(run);
-      if (run?.status !== StatusEnum.Running) {
+      this.status.set(status);
+      if (!status.running) {
         this.running.set(false);
         this.finished.emit();
         return;

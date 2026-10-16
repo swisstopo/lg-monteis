@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import {
   FulcrumDocumentControllerService,
   FulcrumEntryResponseDto,
-  FulcrumSyncRunResponseDto,
+  FulcrumSyncStatusResponseDto,
 } from '@core/generated';
 import { skipGlobalErrorToast } from '@core/http/http-context';
 import { firstValueFrom } from 'rxjs';
@@ -27,15 +27,13 @@ export class FulcrumDocumentService {
     );
   }
 
-  // 204 when no sync ever ran, the client hands that on as a null body
-  async getLatestSyncRun(): Promise<FulcrumSyncRunResponseDto | undefined> {
-    const run = await firstValueFrom(
-      this.api.getLatestFulcrumSyncRun('body', false, { context: skipGlobalErrorToast() }),
+  getSyncStatus(): Promise<FulcrumSyncStatusResponseDto> {
+    return firstValueFrom(
+      this.api.getFulcrumSyncStatus('body', false, { context: skipGlobalErrorToast() }),
     );
-    return run ?? undefined;
   }
 
-  startSync(): Promise<FulcrumSyncRunResponseDto> {
+  startSync(): Promise<FulcrumSyncStatusResponseDto> {
     return firstValueFrom(
       this.api.startFulcrumSync('body', false, { context: skipGlobalErrorToast() }),
     );

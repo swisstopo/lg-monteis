@@ -1,7 +1,7 @@
 import {
   FulcrumDocumentResponseDto,
   FulcrumEntryResponseDto,
-  FulcrumSyncRunResponseDto,
+  FulcrumSyncStatusResponseDto,
 } from '@core/generated';
 
 export function fulcrumDocument(
@@ -13,7 +13,6 @@ export function fulcrumDocument(
     contentType: 'application/pdf',
     sizeBytes: 1024,
     viewable: true,
-    availableInFulcrum: true,
     ...overrides,
   };
 }
@@ -30,20 +29,13 @@ export function fulcrumEntry(
     category: 'Technical Report',
     keywords: ['hydrogeology'],
     availableInFulcrum: true,
-    documents: [fulcrumDocument()],
+    document: fulcrumDocument(),
     ...overrides,
   };
 }
 
-export function syncRun(
-  overrides: Partial<FulcrumSyncRunResponseDto> = {},
-): FulcrumSyncRunResponseDto {
-  return {
-    id: 'run-1',
-    status: 'SUCCEEDED',
-    startedAt: '2026-10-15T08:00:00Z',
-    finishedAt: '2026-10-15T08:03:12Z',
-    triggeredBy: 'alice',
-    ...overrides,
-  };
+export function syncStatus(
+  overrides: Partial<FulcrumSyncStatusResponseDto> = {},
+): FulcrumSyncStatusResponseDto {
+  return { running: false, lastSyncedAt: '2026-10-15T08:03:12Z', ...overrides };
 }

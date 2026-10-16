@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { FulcrumEntryResponseDto } from '@core/generated';
-import { FulcrumEntryDocuments } from '@features/fulcrum-document/fulcrum-entry-documents/fulcrum-entry-documents';
+import { FulcrumEntryDocument } from '@features/fulcrum-document/fulcrum-entry-document/fulcrum-entry-document';
 import { TranslateService } from '@ngx-translate/core';
 import { TableColumn } from '@ui/table/table.types';
 
@@ -48,12 +48,12 @@ export function createColumns(): TableColumn<FulcrumEntryResponseDto>[] {
       width: 180,
     },
     {
-      colId: 'documents',
-      headerName: translateService.translate('fulcrumEntry.documents.label')(),
+      colId: 'document',
+      headerName: translateService.translate('fulcrumEntry.document.label')(),
       sortable: false,
       filter: false,
-      cellRenderer: FulcrumEntryDocuments,
-      width: 140,
+      cellRenderer: FulcrumEntryDocument,
+      width: 120,
     },
   ];
 }

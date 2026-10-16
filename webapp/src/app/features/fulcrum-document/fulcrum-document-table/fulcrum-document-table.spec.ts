@@ -7,7 +7,7 @@ import { SYNC_POLL_INTERVAL_MS } from '@features/fulcrum-document/fulcrum-sync/f
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
 import {
   fulcrumEntry,
-  syncRun,
+  syncStatus,
 } from '@features/fulcrum-document/testing/fulcrum-document-fixtures';
 import { provideTranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
@@ -38,15 +38,15 @@ const GAS = fulcrumEntry({
 describe('FulcrumDocumentTable', () => {
   let documentService: {
     getEntries: ReturnType<typeof vi.fn>;
-    getLatestSyncRun: ReturnType<typeof vi.fn>;
+    getSyncStatus: ReturnType<typeof vi.fn>;
     startSync: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     documentService = {
       getEntries: vi.fn().mockResolvedValue([CLAY, GAS]),
-      getLatestSyncRun: vi.fn().mockResolvedValue(syncRun()),
-      startSync: vi.fn().mockResolvedValue(syncRun({ status: 'RUNNING' })),
+      getSyncStatus: vi.fn().mockResolvedValue(syncStatus()),
+      startSync: vi.fn().mockResolvedValue(syncStatus({ running: true })),
     };
   });
 
@@ -102,9 +102,9 @@ describe('FulcrumDocumentTable', () => {
   });
 
   it('reloads the entries once a sync finished', async () => {
-    documentService.getLatestSyncRun
-      .mockResolvedValueOnce(syncRun())
-      .mockResolvedValueOnce(syncRun({ status: 'SUCCEEDED' }));
+    documentService.getSyncStatus
+      .mockResolvedValueOnce(syncStatus())
+      .mockResolvedValueOnce(syncStatus());
     const view = await render();
     documentService.getEntries.mockResolvedValue([GAS]);
 

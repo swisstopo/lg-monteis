@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { FulcrumEntryDocuments } from '@features/fulcrum-document/fulcrum-entry-documents/fulcrum-entry-documents';
+import { FulcrumEntryDocument } from '@features/fulcrum-document/fulcrum-entry-document/fulcrum-entry-document';
 import { provideTranslateService } from '@ngx-translate/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createColumns } from './columns';
@@ -9,7 +9,7 @@ describe('fulcrum entry columns', () => {
     TestBed.configureTestingModule({ providers: [provideTranslateService()] });
   });
 
-  it('shows number, title, authors, year and category, then the documents', () => {
+  it('shows number, title, authors, year and category, then the document', () => {
     const columns = TestBed.runInInjectionContext(() => createColumns());
 
     expect(columns.map((column) => column.field ?? column.colId)).toEqual([
@@ -18,8 +18,8 @@ describe('fulcrum entry columns', () => {
       'authors',
       'year',
       'category',
-      'documents',
+      'document',
     ]);
-    expect(columns.at(-1)?.cellRenderer).toBe(FulcrumEntryDocuments);
+    expect(columns.at(-1)?.cellRenderer).toBe(FulcrumEntryDocument);
   });
 });
