@@ -6,7 +6,7 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FulcrumDocumentService } from './fulcrum-document.service';
 
-const ENTRY = { id: 'entry-1', title: 'Geology of Mont Terri' };
+const DOCUMENT = { id: 'document-1', title: 'Geology of Mont Terri' };
 const RUNNING = { running: true, lastSyncedAt: '2026-10-15T08:00:00Z' };
 
 describe('FulcrumDocumentService', () => {
@@ -15,7 +15,7 @@ describe('FulcrumDocumentService', () => {
 
   beforeEach(() => {
     api = {
-      getFulcrumEntries: vi.fn(() => of([ENTRY])),
+      getFulcrumDocuments: vi.fn(() => of([DOCUMENT])),
       downloadFulcrumDocument: vi.fn(() => of(new Blob(['%PDF']))),
       getFulcrumSyncStatus: vi.fn(() => of(RUNNING)),
       startFulcrumSync: vi.fn(() => of(RUNNING)),
@@ -26,8 +26,8 @@ describe('FulcrumDocumentService', () => {
     service = TestBed.inject(FulcrumDocumentService);
   });
 
-  it('lists the Fulcrum entries', async () => {
-    await expect(service.getEntries()).resolves.toEqual([ENTRY]);
+  it('lists the Fulcrum Documents', async () => {
+    await expect(service.getDocuments()).resolves.toEqual([DOCUMENT]);
   });
 
   it('fetches the content of a Fulcrum Document', async () => {

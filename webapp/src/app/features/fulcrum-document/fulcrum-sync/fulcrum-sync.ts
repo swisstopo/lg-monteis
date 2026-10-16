@@ -38,7 +38,7 @@ export class FulcrumSync {
   private readonly pollInterval = inject(SYNC_POLL_INTERVAL_MS);
   protected readonly permissions = inject(PermissionsService);
 
-  /** A sync this view watched has ended, the Fulcrum entries changed. */
+  /** A sync this view watched has ended, the Fulcrum Documents changed. */
   readonly finished = output<void>();
 
   protected readonly status = signal<FulcrumSyncStatusResponseDto | undefined>(undefined);

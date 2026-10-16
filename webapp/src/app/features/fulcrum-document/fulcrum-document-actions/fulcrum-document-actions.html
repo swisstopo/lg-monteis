@@ -1,0 +1,36 @@
+@if (document(); as document) {
+  @if (!document.availableInFulcrum) {
+    <mat-icon
+      class="removed"
+      data-testid="removed-from-fulcrum"
+      fontIcon="cloud_off"
+      [matTooltip]="'fulcrumDocument.removed' | translate"
+      [attr.aria-label]="'fulcrumDocument.removed' | translate"
+    ></mat-icon>
+  }
+  @if (permissions.canAccessDocuments()) {
+    @let fileName = document.file.fileName;
+    @if (document.file.viewable) {
+      <button
+        mat-icon-button
+        type="button"
+        data-testid="view-file"
+        [attr.aria-label]="'fulcrumDocument.file.view' | translate: { fileName }"
+        [matTooltip]="'fulcrumDocument.file.view' | translate: { fileName }"
+        (click)="view(document)"
+      >
+        <mat-icon fontIcon="visibility"></mat-icon>
+      </button>
+    }
+    <button
+      mat-icon-button
+      type="button"
+      data-testid="download-file"
+      [attr.aria-label]="'fulcrumDocument.file.download' | translate: { fileName }"
+      [matTooltip]="'fulcrumDocument.file.download' | translate: { fileName }"
+      (click)="download(document)"
+    >
+      <mat-icon fontIcon="download"></mat-icon>
+    </button>
+  }
+}

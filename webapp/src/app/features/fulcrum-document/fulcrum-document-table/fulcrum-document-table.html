@@ -2,8 +2,8 @@
   <app-table-header (searchAction)="onSearch($event)">
     <app-fulcrum-sync primary-action (finished)="onSyncFinished()"></app-fulcrum-sync>
   </app-table-header>
-  @if (entries.error()) {
-    <app-inline-error [message]="'fulcrumEntry.error.load' | translate"></app-inline-error>
+  @if (documents.error()) {
+    <app-inline-error [message]="'fulcrumDocument.error.load' | translate"></app-inline-error>
   } @else {
     <app-table
       class="custom-grid"
