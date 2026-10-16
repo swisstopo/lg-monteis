@@ -116,10 +116,7 @@ public class FulcrumService {
   private <T> List<T> query(String statement, TypeReference<FulcrumQueryResponse<T>> rowType) {
     log.debug("Querying Fulcrum: {}", statement);
 
-    if (properties.apiToken() == null || properties.apiToken().isBlank()) {
-      throw new FulcrumAuthenticationException(
-          "No Fulcrum API token configured (monteis.fulcrum.api-token)");
-    }
+    properties.requireEnabled();
 
     Object body = queryApi(statement);
 

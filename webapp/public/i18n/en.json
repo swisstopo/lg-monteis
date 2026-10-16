@@ -41,6 +41,7 @@
   "object.not-found": "The record does not exist or you are not allowed to see it.",
   "fulcrum.sensor.not-found": "Fulcrum holds no record with this Fulcrum ID. Check the ID in Fulcrum, or clear it and enter the coordinates manually.",
   "fulcrum.sync.alreadyRunning": "A sync with Fulcrum is already running.",
+  "fulcrum.disabled": "Fulcrum is switched off in this environment, nothing can be loaded from it.",
   "access.denied": "You are not allowed to change this record.",
   "validation": {
     "required": "There is a validation error with this field.",
