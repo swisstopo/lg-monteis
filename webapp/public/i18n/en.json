@@ -520,7 +520,7 @@
       }
     }
   },
-  "fulcrumEntry": {
+  "fulcrumDocument": {
     "number": {
       "label": "Number"
     },
@@ -536,17 +536,17 @@
     "category": {
       "label": "Category"
     },
-    "document": {
-      "label": "Document",
+    "file": {
+      "label": "File",
       "view": "View {{fileName}}",
       "download": "Download {{fileName}}",
       "error": {
-        "download": "The document could not be loaded."
+        "download": "The file could not be loaded."
       }
     },
-    "removed": "No longer available in Fulcrum. Its document stored in MONTEIS can still be viewed and downloaded here.",
+    "removed": "No longer available in Fulcrum. Its file stored in MONTEIS can still be viewed and downloaded here.",
     "error": {
-      "load": "The Fulcrum entries could not be loaded."
+      "load": "The Fulcrum Documents could not be loaded."
     }
   },
   "fulcrumSync": {
