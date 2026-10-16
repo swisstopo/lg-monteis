@@ -55,7 +55,7 @@ class FulcrumDocumentSyncServiceTest {
       new FulcrumAttachmentReference(ATTACHMENT_ID, FILE_NAME);
 
   @Mock private FulcrumService fulcrumService;
-  @Mock private FulcrumDocumentCopier documentCopier;
+  @Mock private FulcrumDocumentImportService importService;
   @Mock private FulcrumDocumentRepository documentRepository;
   @Mock private FulcrumSyncLockRepository lockRepository;
   @Mock private LockProvider lockProvider;
@@ -63,7 +63,7 @@ class FulcrumDocumentSyncServiceTest {
   @Mock private Clock clock;
 
   @Test
-  void should_refresh_stored_documents_without_copying_their_file_again() {
+  void should_refresh_stored_documents_without_importing_their_file_again() {
     // given
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
@@ -76,12 +76,12 @@ class FulcrumDocumentSyncServiceTest {
     // then
     then(documentRepository).should().saveSeen(List.of(stored(ATTACHMENT_ID)), SEEN_AT);
     then(documentRepository).should().markRemovedUnlessSeenAt(SEEN_AT);
-    then(documentCopier).shouldHaveNoInteractions();
+    then(importService).shouldHaveNoInteractions();
     then(lock).should().unlock();
   }
 
   @Test
-  void should_copy_the_file_of_a_new_document() {
+  void should_import_the_file_of_a_new_document() {
     // given
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
@@ -92,11 +92,11 @@ class FulcrumDocumentSyncServiceTest {
 
     // then
     then(documentRepository).should().saveSeen(List.of(), SEEN_AT);
-    then(documentCopier).should().copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    then(importService).should().importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
   }
 
   @Test
-  void should_copy_a_replaced_file_and_count_its_document_as_seen_right_away() {
+  void should_import_a_replaced_file_and_count_its_document_as_seen_right_away() {
     // given
     UUID oldAttachment = UUID.randomUUID();
     givenTheLockIsFree();
@@ -107,9 +107,9 @@ class FulcrumDocumentSyncServiceTest {
     // when
     service(ENABLED).syncUnlessRunning();
 
-    // then the document keeps its old file until the new one is copied
+    // then the document keeps its old file until the new one is imported
     then(documentRepository).should().saveSeen(List.of(stored(oldAttachment)), SEEN_AT);
-    then(documentCopier).should().copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    then(importService).should().importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
   }
 
   @Test
@@ -124,30 +124,30 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(documentCopier).should().copyQuietly(withTwoFiles, ATTACHMENT, SEEN_AT);
+    then(importService).should().importQuietly(withTwoFiles, ATTACHMENT, SEEN_AT);
   }
 
   @Test
-  void should_go_on_with_the_other_documents_when_one_copy_fails() {
+  void should_go_on_with_the_other_documents_when_one_import_fails() {
     // given
     FulcrumLiteratureEntry broken = entry(UUID.randomUUID(), UUID.randomUUID());
     givenTheLockIsFree();
     given(clock.instant()).willReturn(NOW);
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(broken, ENTRY));
-    given(documentCopier.copyQuietly(eq(broken), any(), eq(SEEN_AT))).willReturn(false);
+    given(importService.importQuietly(eq(broken), any(), eq(SEEN_AT))).willReturn(false);
 
     // when
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(documentCopier).should().copyQuietly(ENTRY, ATTACHMENT, SEEN_AT);
+    then(importService).should().importQuietly(ENTRY, ATTACHMENT, SEEN_AT);
   }
 
   @Test
-  void should_stop_copying_once_the_time_budget_is_used_up() {
+  void should_stop_importing_once_the_time_budget_is_used_up() {
     // given
     givenTheLockIsFree();
-    // lock, start of the sync, then the check before the one copy
+    // lock, start of the sync, then the check before the one import
     given(clock.instant()).willReturn(NOW, NOW, NOW.plus(Duration.ofMinutes(9)));
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
 
@@ -155,7 +155,7 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(documentCopier).shouldHaveNoInteractions();
+    then(importService).shouldHaveNoInteractions();
     then(documentRepository).should().markRemovedUnlessSeenAt(SEEN_AT);
     then(lock).should().unlock();
   }
@@ -174,7 +174,7 @@ class FulcrumDocumentSyncServiceTest {
 
     // then
     then(documentRepository).shouldHaveNoInteractions();
-    then(documentCopier).shouldHaveNoInteractions();
+    then(importService).shouldHaveNoInteractions();
     then(lock).should().unlock();
   }
 
@@ -266,7 +266,7 @@ class FulcrumDocumentSyncServiceTest {
   private FulcrumDocumentSyncService service(boolean enabled) {
     return new FulcrumDocumentSyncService(
         fulcrumService,
-        documentCopier,
+        importService,
         documentRepository,
         new FulcrumLiteratureMapperImpl(),
         lockRepository,

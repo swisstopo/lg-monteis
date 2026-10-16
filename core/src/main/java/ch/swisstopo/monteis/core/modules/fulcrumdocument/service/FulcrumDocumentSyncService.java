@@ -45,7 +45,7 @@ public class FulcrumDocumentSyncService {
   private static final Logger log = LoggerFactory.getLogger(FulcrumDocumentSyncService.class);
 
   private final FulcrumService fulcrumService;
-  private final FulcrumDocumentCopier documentCopier;
+  private final FulcrumDocumentImportService importService;
   private final FulcrumDocumentRepository documentRepository;
   private final FulcrumLiteratureMapper literatureMapper;
   private final FulcrumSyncLockRepository lockRepository;
@@ -57,7 +57,7 @@ public class FulcrumDocumentSyncService {
 
   public FulcrumDocumentSyncService(
       FulcrumService fulcrumService,
-      FulcrumDocumentCopier documentCopier,
+      FulcrumDocumentImportService importService,
       FulcrumDocumentRepository documentRepository,
       FulcrumLiteratureMapper literatureMapper,
       FulcrumSyncLockRepository lockRepository,
@@ -67,7 +67,7 @@ public class FulcrumDocumentSyncService {
       FulcrumDocumentSyncProperties syncProperties,
       Clock clock) {
     this.fulcrumService = fulcrumService;
-    this.documentCopier = documentCopier;
+    this.importService = importService;
     this.documentRepository = documentRepository;
     this.literatureMapper = literatureMapper;
     this.lockRepository = lockRepository;
@@ -140,17 +140,19 @@ public class FulcrumDocumentSyncService {
 
     refreshStoredDocuments(fromFulcrum, storedById, seenAt);
     int removed = documentRepository.markRemovedUnlessSeenAt(seenAt);
-    CopyCounts copied =
-        copyNewFiles(
-            filesToCopy(fromFulcrum, storedById), seenAt, start.plus(syncProperties.timeBudget()));
+    ImportCounts imported =
+        importNewFiles(
+            filesToImport(fromFulcrum, storedById),
+            seenAt,
+            start.plus(syncProperties.timeBudget()));
 
     log.info(
-        "Fulcrum Document sync: {} documents from Fulcrum, {} newly removed, {} files copied,"
+        "Fulcrum Document sync: {} documents from Fulcrum, {} newly removed, {} files imported,"
             + " {} failed",
         fromFulcrum.size(),
         removed,
-        copied.copied(),
-        copied.failed());
+        imported.imported(),
+        imported.failed());
   }
 
   private Map<UUID, FulcrumDocument> storedDocumentsById() {
@@ -173,33 +175,33 @@ public class FulcrumDocumentSyncService {
         seenAt);
   }
 
-  private CopyCounts copyNewFiles(
-      List<FileToCopy> filesToCopy, OffsetDateTime seenAt, Instant deadline) {
-    int copied = 0;
+  private ImportCounts importNewFiles(
+      List<FileToImport> filesToImport, OffsetDateTime seenAt, Instant deadline) {
+    int imported = 0;
     int failed = 0;
-    for (FileToCopy toCopy : filesToCopy) {
+    for (FileToImport toImport : filesToImport) {
       if (clock.instant().isAfter(deadline)) {
         log.info("Fulcrum Document sync ran out of time, the next one continues");
         break;
       }
-      if (documentCopier.copyQuietly(toCopy.entry(), toCopy.attachment(), seenAt)) {
-        copied++;
+      if (importService.importQuietly(toImport.entry(), toImport.attachment(), seenAt)) {
+        imported++;
       } else {
         failed++;
       }
     }
-    return new CopyCounts(copied, failed);
+    return new ImportCounts(imported, failed);
   }
 
   // new documents, and stored ones whose file Fulcrum replaced
-  private static List<FileToCopy> filesToCopy(
+  private static List<FileToImport> filesToImport(
       List<FulcrumLiteratureEntry> fromFulcrum, Map<UUID, FulcrumDocument> storedById) {
     return fromFulcrum.stream()
         .flatMap(
             entry ->
                 firstAttachmentOf(entry)
                     .filter(attachment -> !isStored(attachment, storedById.get(entry.recordId())))
-                    .map(attachment -> new FileToCopy(entry, attachment))
+                    .map(attachment -> new FileToImport(entry, attachment))
                     .stream())
         .toList();
   }
@@ -223,7 +225,8 @@ public class FulcrumDocumentSyncService {
     return attachments.stream().findFirst();
   }
 
-  private record FileToCopy(FulcrumLiteratureEntry entry, FulcrumAttachmentReference attachment) {}
+  private record FileToImport(
+      FulcrumLiteratureEntry entry, FulcrumAttachmentReference attachment) {}
 
-  private record CopyCounts(int copied, int failed) {}
+  private record ImportCounts(int imported, int failed) {}
 }
