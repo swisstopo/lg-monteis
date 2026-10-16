@@ -62,7 +62,7 @@ public class FulcrumStubConfiguration {
 
   /**
    * Token the stub is pointed at. The stub serves every request regardless of it, but
-   * FulcrumService refuses to send a request at all when no token is configured, so the e2e run
+   * FulcrumProperties refuses to start without a token while Fulcrum is enabled, so the e2e run
    * would otherwise depend on whatever {@code FULCRUM_API_TOKEN} the machine happens to export -
    * green on a developer box with a real token in docker/.env, red on CI where there is none.
    */

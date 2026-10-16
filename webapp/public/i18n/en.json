@@ -40,6 +40,8 @@
   "object.deleted": "The record no longer exists. It may have been deleted in the meantime.",
   "object.not-found": "The record does not exist or you are not allowed to see it.",
   "fulcrum.sensor.not-found": "Fulcrum holds no record with this Fulcrum ID. Check the ID in Fulcrum, or clear it and enter the coordinates manually.",
+  "fulcrum.sync.alreadyRunning": "A sync with Fulcrum is already running.",
+  "fulcrum.disabled": "Fulcrum is switched off in this environment, nothing can be loaded from it.",
   "access.denied": "You are not allowed to change this record.",
   "validation": {
     "required": "There is a validation error with this field.",
@@ -433,7 +435,8 @@
     "measurements-visualization": "3D View",
     "experiment": "Experiment",
     "admin": "Admin",
-    "organisation": "Organisations"
+    "organisation": "Organisations",
+    "fulcrumDocument": "Fulcrum Documents"
   },
   "chart": {
     "error": {
@@ -460,7 +463,8 @@
     "experiment": "Setup Experiment",
     "organisation": "Organisations",
     "measurements-table": "Measurements",
-    "measurements-visualization": "Measurements 3D View"
+    "measurements-visualization": "Measurements 3D View",
+    "fulcrumDocument": "Fulcrum Documents"
   },
   "tableHeader": {
     "search": "Search"
@@ -514,6 +518,45 @@
       "validation": {
         "maxLength": "Comment must be at most {{max}} characters long"
       }
+    }
+  },
+  "fulcrumDocument": {
+    "number": {
+      "label": "Number"
+    },
+    "title": {
+      "label": "Title"
+    },
+    "authors": {
+      "label": "Authors"
+    },
+    "year": {
+      "label": "Year"
+    },
+    "category": {
+      "label": "Category"
+    },
+    "file": {
+      "label": "File",
+      "view": "View {{fileName}}",
+      "download": "Download {{fileName}}",
+      "error": {
+        "download": "The file could not be loaded."
+      }
+    },
+    "removed": "No longer available in Fulcrum. Its file stored in MONTEIS can still be viewed and downloaded here.",
+    "error": {
+      "load": "The Fulcrum Documents could not be loaded."
+    }
+  },
+  "fulcrumSync": {
+    "refresh": "Refresh",
+    "running": "Sync with Fulcrum running...",
+    "lastSuccessfulSync": "Last successful sync at {{lastSuccessfulSyncAt}}",
+    "never": "No successful sync with Fulcrum yet",
+    "statusUnknown": "The sync status could not be loaded.",
+    "error": {
+      "start": "The sync with Fulcrum could not be started."
     }
   }
 }
