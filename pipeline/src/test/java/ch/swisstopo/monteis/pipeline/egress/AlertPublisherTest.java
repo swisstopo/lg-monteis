@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.pipeline.egress;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 
@@ -70,5 +72,19 @@ class AlertPublisherTest {
 
     // then
     then(kafkaTemplate).should().send(alertTopic, "deviceB", event);
+  }
+
+  @Test
+  void should_propagate_synchronous_send_failure_to_caller() {
+    // given
+    SensorBoundBreachedEvent event =
+        new SensorBoundBreachedEvent("deviceC", 200.0, 100.0, BoundType.UPPER, Instant.now());
+
+    // Simulate a synchronous failure
+    KafkaException sendFailure = new KafkaException("Topic sensor-alerts not present in metadata");
+    given(kafkaTemplate.send(alertTopic, event.sensorId(), event)).willThrow(sendFailure);
+
+    // when / then
+    assertThatThrownBy(() -> alertPublisher.handleBoundBreach(event)).isSameAs(sendFailure);
   }
 }
