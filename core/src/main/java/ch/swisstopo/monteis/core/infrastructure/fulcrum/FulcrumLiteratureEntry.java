@@ -4,19 +4,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.IntStream;
+import org.jspecify.annotations.Nullable;
 
 // hand-written like FulcrumSensor, Fulcrum leaves absent values as null so every component is
 // nullable
 public record FulcrumLiteratureEntry(
     @JsonProperty("_record_id") UUID recordId,
-    @JsonProperty("number") String number,
-    @JsonProperty("reference_title") String title,
-    @JsonProperty("author_sequence") String authors,
-    @JsonProperty("year") Integer year,
-    @JsonProperty("categories") String category,
-    @JsonProperty("keywords") List<String> keywords,
-    @JsonProperty("document") List<UUID> attachmentIds,
-    @JsonProperty("document_names") List<String> attachmentNames) {
+    @JsonProperty("number") @Nullable String number,
+    @JsonProperty("reference_title") @Nullable String title,
+    @JsonProperty("author_sequence") @Nullable String authors,
+    @JsonProperty("year") @Nullable Integer year,
+    @JsonProperty("categories") @Nullable String category,
+    @JsonProperty("keywords") @Nullable List<String> keywords,
+    @JsonProperty("document") @Nullable List<UUID> attachmentIds,
+    @JsonProperty("document_names") @Nullable List<String> attachmentNames) {
 
   public List<String> keywords() {
     return keywords == null ? List.of() : keywords;

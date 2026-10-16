@@ -18,9 +18,9 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumCitation;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntry;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryDetails;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatus;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentService;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService;
@@ -53,7 +53,7 @@ class FulcrumDocumentControllerTest {
           new DocumentMetadata("Jahns 03 2011 - DS Experiment.pdf", "application/pdf", 8));
   private static final FulcrumEntry ENTRY =
       new FulcrumEntry(
-          new FulcrumEntryDetails(
+          new FulcrumCitation(
               ENTRY_ID,
               "2011-02",
               "DS Experiment: BDS-1",
@@ -65,7 +65,7 @@ class FulcrumDocumentControllerTest {
           null);
   private static final FulcrumEntry REMOVED_ENTRY =
       new FulcrumEntry(
-          new FulcrumEntryDetails(UUID.randomUUID(), null, "notes", null, null, null, List.of()),
+          new FulcrumCitation(UUID.randomUUID(), null, "notes", null, null, null, List.of()),
           new FulcrumDocument(
               UUID.randomUUID(), new DocumentMetadata("notes.bin", "application/octet-stream", 3)),
           STARTED_AT);
@@ -148,7 +148,7 @@ class FulcrumDocumentControllerTest {
   @Test
   void should_show_the_sync_status_to_anyone_signed_in() throws Exception {
     // given
-    given(syncService.getStatus()).willReturn(new FulcrumSyncStatus(false, STARTED_AT));
+    given(syncService.currentStatus()).willReturn(new FulcrumSyncStatus(false, STARTED_AT));
 
     // when / then
     mockMvc
@@ -161,7 +161,7 @@ class FulcrumDocumentControllerTest {
   @Test
   void should_start_a_sync_for_a_caller_with_document_access() throws Exception {
     // given
-    given(syncService.startSync()).willReturn(new FulcrumSyncStatus(true, null));
+    given(syncService.startSyncInBackground()).willReturn(new FulcrumSyncStatus(true, null));
 
     // when / then
     mockMvc
@@ -189,7 +189,7 @@ class FulcrumDocumentControllerTest {
   @Test
   void should_answer_503_while_fulcrum_is_switched_off() throws Exception {
     // given
-    given(syncService.startSync()).willThrow(new FulcrumDisabledException());
+    given(syncService.startSyncInBackground()).willThrow(new FulcrumDisabledException());
 
     // when / then
     mockMvc
@@ -204,7 +204,7 @@ class FulcrumDocumentControllerTest {
   @Test
   void should_answer_409_while_a_sync_is_already_running() throws Exception {
     // given
-    given(syncService.startSync()).willThrow(new FulcrumSyncAlreadyRunningException());
+    given(syncService.startSyncInBackground()).willThrow(new FulcrumSyncAlreadyRunningException());
 
     // when / then
     mockMvc

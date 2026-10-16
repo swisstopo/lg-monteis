@@ -14,7 +14,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring", uses = ViewableContentTypes.class)
 public interface FulcrumDocumentWebMapper {
 
-  @Mapping(target = ".", source = "details")
+  @Mapping(target = ".", source = "citation")
   @Mapping(target = "document", source = "document")
   @Mapping(target = "availableInFulcrum", expression = "java(domain.isAvailableInFulcrum())")
   FulcrumEntryResponseDto toDto(FulcrumEntry domain);

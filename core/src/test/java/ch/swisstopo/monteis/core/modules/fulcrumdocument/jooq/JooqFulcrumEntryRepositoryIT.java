@@ -6,9 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.itconfig.IT;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumCitation;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntry;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryDetails;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -31,7 +31,7 @@ class JooqFulcrumEntryRepositoryIT {
   @Test
   void should_save_a_new_entry_with_its_document() {
     // given
-    FulcrumEntryDetails details = details(UUID.randomUUID(), "2011-02");
+    FulcrumCitation details = details(UUID.randomUUID(), "2011-02");
     FulcrumDocument document = document();
 
     // when
@@ -39,7 +39,7 @@ class JooqFulcrumEntryRepositoryIT {
 
     // then
     FulcrumEntry saved = findById(details.id());
-    assertThat(saved.details()).isEqualTo(details);
+    assertThat(saved.citation()).isEqualTo(details);
     assertThat(saved.document()).isEqualTo(document);
     assertThat(saved.isAvailableInFulcrum()).isTrue();
     assertThat(repository.getDocumentById(document.id())).isEqualTo(document);
@@ -54,11 +54,11 @@ class JooqFulcrumEntryRepositoryIT {
     repository.saveWithDocument(details(id, "2011-02"), document, FIRST_SYNC);
 
     // when
-    repository.saveSeenDetails(List.of(details(id, "2011-03")), SECOND_SYNC);
+    repository.saveSeenCitations(List.of(details(id, "2011-03")), SECOND_SYNC);
 
     // then
     FulcrumEntry saved = findById(id);
-    assertThat(saved.details().number()).isEqualTo("2011-03");
+    assertThat(saved.citation().number()).isEqualTo("2011-03");
     assertThat(saved.document()).isEqualTo(document);
   }
 
@@ -83,7 +83,7 @@ class JooqFulcrumEntryRepositoryIT {
     UUID gone = UUID.randomUUID();
     repository.saveWithDocument(details(kept, "1"), document(), FIRST_SYNC);
     repository.saveWithDocument(details(gone, "2"), document(), FIRST_SYNC);
-    repository.saveSeenDetails(List.of(details(kept, "1")), SECOND_SYNC);
+    repository.saveSeenCitations(List.of(details(kept, "1")), SECOND_SYNC);
 
     // when
     int removed = repository.markRemovedUnlessSeenAt(SECOND_SYNC);
@@ -102,7 +102,7 @@ class JooqFulcrumEntryRepositoryIT {
     repository.markRemovedUnlessSeenAt(SECOND_SYNC);
 
     // when
-    repository.saveSeenDetails(List.of(details(id, "1")), SECOND_SYNC);
+    repository.saveSeenCitations(List.of(details(id, "1")), SECOND_SYNC);
 
     // then
     assertThat(findById(id).isAvailableInFulcrum()).isTrue();
@@ -129,7 +129,7 @@ class JooqFulcrumEntryRepositoryIT {
     // when
     List<UUID> order =
         repository.findAll().stream()
-            .map(entry -> entry.details().id())
+            .map(entry -> entry.citation().id())
             .filter(id -> id.equals(older) || id.equals(newer))
             .toList();
 
@@ -146,13 +146,13 @@ class JooqFulcrumEntryRepositoryIT {
 
   private FulcrumEntry findById(UUID id) {
     return repository.findAll().stream()
-        .filter(entry -> entry.details().id().equals(id))
+        .filter(entry -> entry.citation().id().equals(id))
         .findFirst()
         .orElseThrow();
   }
 
-  private static FulcrumEntryDetails details(UUID id, String number) {
-    return new FulcrumEntryDetails(
+  private static FulcrumCitation details(UUID id, String number) {
+    return new FulcrumCitation(
         id,
         number,
         "DS Experiment: BDS-1",
