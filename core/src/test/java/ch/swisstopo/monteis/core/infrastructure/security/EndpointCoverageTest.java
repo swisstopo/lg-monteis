@@ -96,7 +96,6 @@ class EndpointCoverageTest {
   @MockitoBean private FulcrumDocumentService fulcrumDocumentService;
   @MockitoBean private FulcrumDocumentSyncService fulcrumDocumentSyncService;
   @MockitoBean private FulcrumDocumentWebMapper fulcrumDocumentWebMapper;
-  @MockitoBean private CurrentUserProvider currentUserProvider;
   @MockitoBean private SensorService sensorService;
   @MockitoBean private SensorWebMapper sensorWebMapper;
   @MockitoBean private SensorCsvExportQueryRepository sensorCsvExportQueryRepository;

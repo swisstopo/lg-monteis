@@ -17,14 +17,11 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureEntry;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumAttachment;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntry;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryDetails;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryRepository;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncResult;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRun;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRunRepository;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncLockRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatus;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -36,7 +33,9 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import net.javacrumbs.shedlock.core.LockConfiguration;
@@ -55,70 +54,49 @@ import org.springframework.web.client.RestClientResponseException;
 class FulcrumDocumentSyncServiceTest {
 
   private static final Instant NOW = Instant.parse("2026-10-15T00:00:00Z");
-  private static final OffsetDateTime STARTED_AT = NOW.atOffset(ZoneOffset.UTC);
-  private static final UUID RUN_ID = UUID.randomUUID();
+  private static final OffsetDateTime SEEN_AT = NOW.atOffset(ZoneOffset.UTC);
   private static final UUID RECORD_ID = UUID.fromString("221ae592-4527-4442-8294-8dc2c5be1168");
   private static final UUID ATTACHMENT_ID = UUID.fromString("22c52651-0b4b-48ca-bf8e-6594e935da0f");
   private static final String FILE_NAME = "Jahns 03 2011 - DS Experiment.pdf";
   private static final byte[] CONTENT = "%PDF-1.7".getBytes(StandardCharsets.UTF_8);
 
-  private static final FulcrumLiteratureEntry ENTRY =
-      new FulcrumLiteratureEntry(
-          RECORD_ID,
-          "2011-02",
-          "DS Experiment: BDS-1",
-          "Jahns E.",
-          2011,
-          "2 Mont Terri Technical Notes (TN)",
-          List.of("Experiment DS", "RACOS"),
-          List.of(ATTACHMENT_ID),
-          List.of(FILE_NAME));
+  private static final FulcrumLiteratureEntry ENTRY = entry(RECORD_ID, ATTACHMENT_ID);
+  private static final FulcrumEntryDetails DETAILS = detailsOf(RECORD_ID);
 
   @Mock private FulcrumService fulcrumService;
   @Mock private FulcrumAttachments fulcrumAttachments;
   @Mock private FulcrumEntryRepository entryRepository;
-  @Mock private FulcrumDocumentRepository documentRepository;
-  @Mock private FulcrumSyncRunRepository runRepository;
+  @Mock private FulcrumSyncLockRepository lockRepository;
   @Mock private FulcrumDocumentStorage storage;
   @Mock private LockProvider lockProvider;
   @Mock private SimpleLock lock;
   @Mock private Clock clock;
 
   @Test
-  void should_save_the_entries_as_seen_at_the_start_of_the_run() {
+  void should_update_the_details_of_known_entries_without_downloading_again() {
     // given
     givenTheLockIsFree();
-    givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
     given(clock.instant()).willReturn(NOW);
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
+    given(entryRepository.findDocumentIdsByEntry()).willReturn(Map.of(RECORD_ID, ATTACHMENT_ID));
 
     // when
     service("token").syncOnSchedule();
 
     // then
-    @SuppressWarnings("unchecked")
-    ArgumentCaptor<List<FulcrumEntry>> saved = ArgumentCaptor.forClass(List.class);
-    then(entryRepository).should().saveSeen(saved.capture(), eq(STARTED_AT));
-    FulcrumEntry entry = saved.getValue().getFirst();
-    assertThat(entry.id()).isEqualTo(RECORD_ID);
-    assertThat(entry.number()).isEqualTo("2011-02");
-    assertThat(entry.authors()).isEqualTo("Jahns E.");
-    assertThat(entry.keywords()).containsExactly("Experiment DS", "RACOS");
-    assertThat(entry.attachments())
-        .containsExactly(new FulcrumAttachment(ATTACHMENT_ID, RECORD_ID, FILE_NAME));
-    InOrder order = inOrder(entryRepository, documentRepository);
-    order.verify(entryRepository).markRemovedUnlessSeenAt(STARTED_AT);
-    order.verify(documentRepository).reconcileWithEntries();
+    then(entryRepository).should().saveSeenDetails(List.of(DETAILS), SEEN_AT);
+    then(entryRepository).should().markRemovedUnlessSeenAt(SEEN_AT);
+    then(fulcrumAttachments).shouldHaveNoInteractions();
+    then(entryRepository).should(never()).saveWithDocument(any(), any(), any());
+    then(lock).should().unlock();
   }
 
   @Test
-  void should_store_the_content_before_recording_the_document() throws Exception {
+  void should_store_the_document_of_a_new_entry_before_saving_the_entry() throws Exception {
     // given
     givenTheLockIsFree();
-    givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
     given(clock.instant()).willReturn(NOW);
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
-    given(entryRepository.findAttachmentsToStore()).willReturn(List.of(attachment(ATTACHMENT_ID)));
     given(fulcrumAttachments.open(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(CONTENT));
     List<byte[]> stored = new ArrayList<>();
     willAnswer(invocation -> stored.add(Files.readAllBytes(invocation.getArgument(2, Path.class))))
@@ -130,51 +108,84 @@ class FulcrumDocumentSyncServiceTest {
 
     // then
     assertThat(stored).singleElement().isEqualTo(CONTENT);
-    InOrder order = inOrder(storage, documentRepository);
+    InOrder order = inOrder(storage, entryRepository);
     order.verify(storage).store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
     order
-        .verify(documentRepository)
-        .create(
-            ATTACHMENT_ID,
-            RECORD_ID,
-            new DocumentMetadata(FILE_NAME, "application/pdf", CONTENT.length));
-    then(runRepository)
-        .should()
-        .finish(RUN_ID, new FulcrumSyncResult(FulcrumSyncStatus.SUCCEEDED, 1, 1, 0));
-    then(lock).should().unlock();
+        .verify(entryRepository)
+        .saveWithDocument(
+            DETAILS,
+            new FulcrumDocument(
+                ATTACHMENT_ID, new DocumentMetadata(FILE_NAME, "application/pdf", CONTENT.length)),
+            SEEN_AT);
+    then(entryRepository).should().saveSeenDetails(List.of(), SEEN_AT);
   }
 
   @Test
-  void should_go_on_with_the_other_attachments_when_one_fails() {
+  void should_switch_an_entry_to_its_replaced_file() {
     // given
-    UUID brokenId = UUID.randomUUID();
     givenTheLockIsFree();
-    givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
     given(clock.instant()).willReturn(NOW);
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
-    given(entryRepository.findAttachmentsToStore())
-        .willReturn(List.of(attachment(brokenId), attachment(ATTACHMENT_ID)));
-    given(fulcrumAttachments.open(brokenId)).willThrow(new IllegalStateException("answered 404"));
+    given(entryRepository.findDocumentIdsByEntry())
+        .willReturn(Map.of(RECORD_ID, UUID.randomUUID()));
+    given(fulcrumAttachments.open(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(CONTENT));
+
+    // when
+    service("token").syncOnSchedule();
+
+    // then the details count as seen right away, in case the new download fails
+    then(entryRepository).should().saveSeenDetails(List.of(DETAILS), SEEN_AT);
+    then(storage).should().store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
+    then(entryRepository).should().saveWithDocument(eq(DETAILS), any(), eq(SEEN_AT));
+  }
+
+  @Test
+  void should_take_the_first_file_of_an_entry_with_several() {
+    // given
+    UUID second = UUID.randomUUID();
+    givenTheLockIsFree();
+    given(clock.instant()).willReturn(NOW);
+    given(fulcrumService.getLiteratureToSync())
+        .willReturn(List.of(entry(RECORD_ID, ATTACHMENT_ID, second)));
     given(fulcrumAttachments.open(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(CONTENT));
 
     // when
     service("token").syncOnSchedule();
 
     // then
-    then(documentRepository).should(never()).create(eq(brokenId), any(), any());
-    then(documentRepository).should().create(eq(ATTACHMENT_ID), eq(RECORD_ID), any());
-    then(runRepository)
-        .should()
-        .finish(RUN_ID, new FulcrumSyncResult(FulcrumSyncStatus.INCOMPLETE, 1, 1, 1));
+    then(fulcrumAttachments).should(never()).open(second);
+    then(entryRepository).should().saveWithDocument(eq(DETAILS), any(), eq(SEEN_AT));
   }
 
   @Test
-  void should_not_record_an_empty_download() {
+  void should_go_on_with_the_other_entries_when_one_download_fails() {
+    // given
+    UUID brokenRecord = UUID.randomUUID();
+    UUID brokenAttachment = UUID.randomUUID();
+    givenTheLockIsFree();
+    given(clock.instant()).willReturn(NOW);
+    given(fulcrumService.getLiteratureToSync())
+        .willReturn(List.of(entry(brokenRecord, brokenAttachment), ENTRY));
+    given(fulcrumAttachments.open(brokenAttachment))
+        .willThrow(new IllegalStateException("answered 404"));
+    given(fulcrumAttachments.open(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(CONTENT));
+
+    // when
+    service("token").syncOnSchedule();
+
+    // then
+    then(entryRepository).should().saveWithDocument(eq(DETAILS), any(), eq(SEEN_AT));
+    then(entryRepository)
+        .should(never())
+        .saveWithDocument(eq(detailsOf(brokenRecord)), any(), any());
+  }
+
+  @Test
+  void should_not_save_an_entry_with_an_empty_file() {
     // given
     givenTheLockIsFree();
-    givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
     given(clock.instant()).willReturn(NOW);
-    given(entryRepository.findAttachmentsToStore()).willReturn(List.of(attachment(ATTACHMENT_ID)));
+    given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
     given(fulcrumAttachments.open(ATTACHMENT_ID)).willReturn(new ByteArrayInputStream(new byte[0]));
 
     // when
@@ -182,38 +193,30 @@ class FulcrumDocumentSyncServiceTest {
 
     // then
     then(storage).shouldHaveNoInteractions();
-    then(documentRepository).should(never()).create(any(), any(), any());
-    then(runRepository)
-        .should()
-        .finish(RUN_ID, new FulcrumSyncResult(FulcrumSyncStatus.INCOMPLETE, 0, 0, 1));
+    then(entryRepository).should(never()).saveWithDocument(any(), any(), any());
   }
 
   @Test
-  void should_stop_storing_documents_once_the_time_budget_is_used_up() {
+  void should_stop_downloading_once_the_time_budget_is_used_up() {
     // given
     givenTheLockIsFree();
-    givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
-    // lock, deadline, then the check before the one attachment
+    // lock, start of the sync, then the check before the one download
     given(clock.instant()).willReturn(NOW, NOW, NOW.plus(Duration.ofMinutes(9)));
     given(fulcrumService.getLiteratureToSync()).willReturn(List.of(ENTRY));
-    given(entryRepository.findAttachmentsToStore()).willReturn(List.of(attachment(ATTACHMENT_ID)));
 
     // when
     service("token").syncOnSchedule();
 
     // then
     then(fulcrumAttachments).shouldHaveNoInteractions();
-    then(runRepository)
-        .should()
-        .finish(RUN_ID, new FulcrumSyncResult(FulcrumSyncStatus.INCOMPLETE, 1, 0, 0));
+    then(entryRepository).should().markRemovedUnlessSeenAt(SEEN_AT);
     then(lock).should().unlock();
   }
 
   @Test
-  void should_fail_the_run_and_keep_the_entries_when_fulcrum_cannot_be_queried() {
+  void should_change_nothing_when_fulcrum_cannot_be_queried() {
     // given
     givenTheLockIsFree();
-    givenARunStartedBy(FulcrumSyncRun.TRIGGERED_BY_SCHEDULE);
     given(clock.instant()).willReturn(NOW);
     given(fulcrumService.getLiteratureToSync())
         .willThrow(
@@ -224,8 +227,6 @@ class FulcrumDocumentSyncServiceTest {
 
     // then
     then(entryRepository).shouldHaveNoInteractions();
-    then(documentRepository).shouldHaveNoInteractions();
-    then(runRepository).should().finish(RUN_ID, FulcrumSyncResult.failed());
     then(lock).should().unlock();
   }
 
@@ -249,26 +250,21 @@ class FulcrumDocumentSyncServiceTest {
     service("token").syncOnSchedule();
 
     // then
-    then(runRepository).shouldHaveNoInteractions();
     then(fulcrumService).shouldHaveNoInteractions();
   }
 
   @Test
-  void should_record_who_started_a_manual_sync() {
+  void should_report_a_started_sync_as_running() {
     // given
     givenTheLockIsFree();
-    givenARunStartedBy("experiment_pi");
     given(clock.instant()).willReturn(NOW);
+    given(entryRepository.findLastSeenAt()).willReturn(Optional.of(SEEN_AT.minusDays(1)));
 
     // when
-    FulcrumSyncRun run = service("token").startSync("experiment_pi");
+    FulcrumSyncStatus status = service("token").startSync();
 
     // then
-    assertThat(run.status()).isEqualTo(FulcrumSyncStatus.RUNNING);
-    assertThat(run.triggeredBy()).isEqualTo("experiment_pi");
-    then(runRepository)
-        .should()
-        .finish(RUN_ID, new FulcrumSyncResult(FulcrumSyncStatus.SUCCEEDED, 0, 0, 0));
+    assertThat(status).isEqualTo(new FulcrumSyncStatus(true, SEEN_AT.minusDays(1)));
     then(lock).should().unlock();
   }
 
@@ -279,20 +275,18 @@ class FulcrumDocumentSyncServiceTest {
     given(lockProvider.lock(any())).willReturn(Optional.empty());
 
     // when / then
-    assertThrows(
-        FulcrumSyncAlreadyRunningException.class, () -> service("token").startSync("alice"));
-    then(runRepository).shouldHaveNoInteractions();
+    assertThrows(FulcrumSyncAlreadyRunningException.class, () -> service("token").startSync());
+    then(fulcrumService).shouldHaveNoInteractions();
   }
 
   @Test
   void should_hold_the_lock_at_most_for_the_configured_duration() {
     // given
     givenTheLockIsFree();
-    givenARunStartedBy("alice");
     given(clock.instant()).willReturn(NOW);
 
     // when
-    service("token").startSync("alice");
+    service("token").startSync();
 
     // then
     ArgumentCaptor<LockConfiguration> configuration =
@@ -303,13 +297,22 @@ class FulcrumDocumentSyncServiceTest {
         .isEqualTo(NOW.plus(Duration.ofMinutes(10)));
   }
 
+  @Test
+  void should_derive_the_status_from_the_lock_and_the_last_seen_entry() {
+    // given
+    given(lockRepository.isHeld(FulcrumDocumentSyncService.LOCK_NAME)).willReturn(false);
+    given(entryRepository.findLastSeenAt()).willReturn(Optional.empty());
+
+    // when / then
+    assertThat(service("token").getStatus()).isEqualTo(new FulcrumSyncStatus(false, null));
+  }
+
   private FulcrumDocumentSyncService service(String apiToken) {
     return new FulcrumDocumentSyncService(
         fulcrumService,
         fulcrumAttachments,
         entryRepository,
-        documentRepository,
-        runRepository,
+        lockRepository,
         storage,
         lockProvider,
         new SyncTaskExecutor(),
@@ -329,21 +332,27 @@ class FulcrumDocumentSyncServiceTest {
     given(lockProvider.lock(any())).willReturn(Optional.of(lock));
   }
 
-  private void givenARunStartedBy(String triggeredBy) {
-    given(runRepository.start(triggeredBy))
-        .willReturn(
-            new FulcrumSyncRun(
-                RUN_ID,
-                FulcrumSyncStatus.RUNNING,
-                triggeredBy,
-                STARTED_AT,
-                null,
-                null,
-                null,
-                null));
+  private static FulcrumLiteratureEntry entry(UUID recordId, UUID... attachmentIds) {
+    return new FulcrumLiteratureEntry(
+        recordId,
+        "2011-02",
+        "DS Experiment: BDS-1",
+        "Jahns E.",
+        2011,
+        "2 Mont Terri Technical Notes (TN)",
+        List.of("Experiment DS", "RACOS"),
+        List.of(attachmentIds),
+        Arrays.stream(attachmentIds).map(id -> FILE_NAME).toList());
   }
 
-  private static FulcrumAttachment attachment(UUID id) {
-    return new FulcrumAttachment(id, RECORD_ID, FILE_NAME);
+  private static FulcrumEntryDetails detailsOf(UUID recordId) {
+    return new FulcrumEntryDetails(
+        recordId,
+        "2011-02",
+        "DS Experiment: BDS-1",
+        "Jahns E.",
+        2011,
+        "2 Mont Terri Technical Notes (TN)",
+        List.of("Experiment DS", "RACOS"));
   }
 }
