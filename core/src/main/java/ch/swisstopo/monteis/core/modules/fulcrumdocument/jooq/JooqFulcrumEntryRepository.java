@@ -4,10 +4,9 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.FULCRUM_ENTRIES;
 
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
-import ch.swisstopo.monteis.core.jooq.generated.tables.records.FulcrumEntriesRecord;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumCitation;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntry;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryDetails;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumEntryRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -24,9 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class JooqFulcrumEntryRepository implements FulcrumEntryRepository {
 
   private final DSLContext dsl;
+  private final FulcrumEntryJooqMapper mapper;
 
-  public JooqFulcrumEntryRepository(DSLContext dsl) {
+  public JooqFulcrumEntryRepository(DSLContext dsl, FulcrumEntryJooqMapper mapper) {
     this.dsl = dsl;
+    this.mapper = mapper;
   }
 
   @Override
@@ -35,7 +36,7 @@ public class JooqFulcrumEntryRepository implements FulcrumEntryRepository {
     return dsl.selectFrom(FULCRUM_ENTRIES)
         .orderBy(
             FULCRUM_ENTRIES.NUMBER.desc().nullsLast(), FULCRUM_ENTRIES.TITLE, FULCRUM_ENTRIES.ID)
-        .fetch(JooqFulcrumEntryRepository::toEntry);
+        .fetch(mapper::toEntry);
   }
 
   // Fulcrum may have moved the attachment to another entry, any of them holds the same content
@@ -45,7 +46,7 @@ public class JooqFulcrumEntryRepository implements FulcrumEntryRepository {
     return dsl.selectFrom(FULCRUM_ENTRIES)
         .where(FULCRUM_ENTRIES.ATTACHMENT_ID.eq(documentId))
         .limit(1)
-        .fetchOptional(JooqFulcrumEntryRepository::toDocument)
+        .fetchOptional(mapper::toDocument)
         .orElseThrow(() -> new ObjectNotFoundException(FulcrumDocument.class));
   }
 
@@ -59,23 +60,9 @@ public class JooqFulcrumEntryRepository implements FulcrumEntryRepository {
 
   @Override
   @Transactional
-  public void saveSeenDetails(List<FulcrumEntryDetails> details, OffsetDateTime seenAt) {
+  public void saveSeenCitations(List<FulcrumCitation> citations, OffsetDateTime seenAt) {
     List<Query> updates =
-        details.stream()
-            .map(
-                entry ->
-                    (Query)
-                        dsl.update(FULCRUM_ENTRIES)
-                            .set(FULCRUM_ENTRIES.NUMBER, entry.number())
-                            .set(FULCRUM_ENTRIES.TITLE, entry.title())
-                            .set(FULCRUM_ENTRIES.AUTHORS, entry.authors())
-                            .set(FULCRUM_ENTRIES.YEAR, entry.year())
-                            .set(FULCRUM_ENTRIES.CATEGORY, entry.category())
-                            .set(FULCRUM_ENTRIES.KEYWORDS, entry.keywords().toArray(String[]::new))
-                            .set(FULCRUM_ENTRIES.LAST_SEEN_AT, seenAt)
-                            .setNull(FULCRUM_ENTRIES.REMOVED_AT)
-                            .where(FULCRUM_ENTRIES.ID.eq(entry.id())))
-            .toList();
+        citations.stream().map(citation -> citationUpdate(citation, seenAt)).toList();
     if (!updates.isEmpty()) {
       dsl.batch(updates).execute();
     }
@@ -84,16 +71,16 @@ public class JooqFulcrumEntryRepository implements FulcrumEntryRepository {
   @Override
   @Transactional
   public void saveWithDocument(
-      FulcrumEntryDetails details, FulcrumDocument document, OffsetDateTime seenAt) {
+      FulcrumCitation citation, FulcrumDocument document, OffsetDateTime seenAt) {
     DocumentMetadata metadata = document.metadata();
     dsl.insertInto(FULCRUM_ENTRIES)
-        .set(FULCRUM_ENTRIES.ID, details.id())
-        .set(FULCRUM_ENTRIES.NUMBER, details.number())
-        .set(FULCRUM_ENTRIES.TITLE, details.title())
-        .set(FULCRUM_ENTRIES.AUTHORS, details.authors())
-        .set(FULCRUM_ENTRIES.YEAR, details.year())
-        .set(FULCRUM_ENTRIES.CATEGORY, details.category())
-        .set(FULCRUM_ENTRIES.KEYWORDS, details.keywords().toArray(String[]::new))
+        .set(FULCRUM_ENTRIES.ID, citation.id())
+        .set(FULCRUM_ENTRIES.NUMBER, citation.number())
+        .set(FULCRUM_ENTRIES.TITLE, citation.title())
+        .set(FULCRUM_ENTRIES.AUTHORS, citation.authors())
+        .set(FULCRUM_ENTRIES.YEAR, citation.year())
+        .set(FULCRUM_ENTRIES.CATEGORY, citation.category())
+        .set(FULCRUM_ENTRIES.KEYWORDS, citation.keywords().toArray(String[]::new))
         .set(FULCRUM_ENTRIES.ATTACHMENT_ID, document.id())
         .set(FULCRUM_ENTRIES.FILE_NAME, metadata.fileName())
         .set(FULCRUM_ENTRIES.CONTENT_TYPE, metadata.contentType())
@@ -130,32 +117,24 @@ public class JooqFulcrumEntryRepository implements FulcrumEntryRepository {
   @Override
   @Transactional(readOnly = true)
   public Optional<OffsetDateTime> findLastSeenAt() {
+    // max over no rows is one row holding null
     return Optional.ofNullable(
         dsl.select(DSL.max(FULCRUM_ENTRIES.LAST_SEEN_AT))
             .from(FULCRUM_ENTRIES)
-            .fetchOne()
+            .fetchSingle()
             .value1());
   }
 
-  private static FulcrumEntry toEntry(FulcrumEntriesRecord entryRecord) {
-    String[] keywords = entryRecord.getKeywords();
-    return new FulcrumEntry(
-        new FulcrumEntryDetails(
-            entryRecord.getId(),
-            entryRecord.getNumber(),
-            entryRecord.getTitle(),
-            entryRecord.getAuthors(),
-            entryRecord.getYear(),
-            entryRecord.getCategory(),
-            keywords == null ? List.of() : List.of(keywords)),
-        toDocument(entryRecord),
-        entryRecord.getRemovedAt());
-  }
-
-  private static FulcrumDocument toDocument(FulcrumEntriesRecord entryRecord) {
-    return new FulcrumDocument(
-        entryRecord.getAttachmentId(),
-        new DocumentMetadata(
-            entryRecord.getFileName(), entryRecord.getContentType(), entryRecord.getSizeBytes()));
+  private Query citationUpdate(FulcrumCitation citation, OffsetDateTime seenAt) {
+    return dsl.update(FULCRUM_ENTRIES)
+        .set(FULCRUM_ENTRIES.NUMBER, citation.number())
+        .set(FULCRUM_ENTRIES.TITLE, citation.title())
+        .set(FULCRUM_ENTRIES.AUTHORS, citation.authors())
+        .set(FULCRUM_ENTRIES.YEAR, citation.year())
+        .set(FULCRUM_ENTRIES.CATEGORY, citation.category())
+        .set(FULCRUM_ENTRIES.KEYWORDS, citation.keywords().toArray(String[]::new))
+        .set(FULCRUM_ENTRIES.LAST_SEEN_AT, seenAt)
+        .setNull(FULCRUM_ENTRIES.REMOVED_AT)
+        .where(FULCRUM_ENTRIES.ID.eq(citation.id()));
   }
 }
