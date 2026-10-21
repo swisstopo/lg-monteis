@@ -67,7 +67,7 @@ public class FulcrumDocumentSyncService {
     }
     Map<UUID, FulcrumDocument> storedById = storedDocumentsById();
 
-    int failedSaves = saveEachSynced(storedDocumentsAsFulcrumReturnedThem(fromFulcrum, storedById));
+    int failedSaves = saveEachSynced(storedDocumentsWithFulcrumMetadata(fromFulcrum, storedById));
     List<UUID> noLongerInFulcrum = idsNoLongerInFulcrum(storedById, fromFulcrum);
     documentRepository.markRemovedFromFulcrum(noLongerInFulcrum, start.atOffset(ZoneOffset.UTC));
     ImportCounts imports = importNewFiles(rowsWithFileToImport(fromFulcrum, storedById), deadline);
@@ -94,7 +94,7 @@ public class FulcrumDocumentSyncService {
   }
 
   // a replaced file is saved as synced too, the document keeps its old file until the new one is in
-  private List<FulcrumDocument> storedDocumentsAsFulcrumReturnedThem(
+  private List<FulcrumDocument> storedDocumentsWithFulcrumMetadata(
       List<FulcrumLiteratureRow> fromFulcrum, Map<UUID, FulcrumDocument> storedById) {
     return fromFulcrum.stream()
         .filter(row -> storedById.containsKey(row.recordId()))
