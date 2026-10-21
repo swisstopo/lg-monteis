@@ -13,37 +13,36 @@ class FulcrumLiteratureRowTest {
   private static final UUID SECOND = UUID.randomUUID();
 
   @Test
-  void should_pair_the_attachment_ids_with_their_names() {
+  void should_take_the_first_attachment_with_its_name() {
     // given
     FulcrumLiteratureRow row =
         row(List.of(FIRST, SECOND), List.of("TR2010-01 (3).pdf", "Seeska, Lux 10 2015.pdf"));
 
     // when / then
-    assertThat(row.attachments())
-        .containsExactly(
-            new FulcrumAttachmentReference(FIRST, "TR2010-01 (3).pdf"),
-            new FulcrumAttachmentReference(SECOND, "Seeska, Lux 10 2015.pdf"));
+    assertThat(row.firstAttachment())
+        .contains(new FulcrumAttachmentReference(FIRST, "TR2010-01 (3).pdf"));
+    assertThat(row.hasSeveralAttachments()).isTrue();
   }
 
   @Test
   void should_name_an_attachment_without_a_name_by_its_id() {
     // given
-    FulcrumLiteratureRow row = row(List.of(FIRST, SECOND), List.of("first.pdf"));
+    FulcrumLiteratureRow row = row(List.of(FIRST), List.of());
 
     // when / then
-    assertThat(row.attachments())
-        .containsExactly(
-            new FulcrumAttachmentReference(FIRST, "first.pdf"),
-            new FulcrumAttachmentReference(SECOND, SECOND.toString()));
+    assertThat(row.firstAttachment())
+        .contains(new FulcrumAttachmentReference(FIRST, FIRST.toString()));
+    assertThat(row.hasSeveralAttachments()).isFalse();
   }
 
   @Test
-  void should_have_no_attachments_and_no_keywords_when_fulcrum_sends_null() {
+  void should_have_no_attachment_and_no_keywords_when_fulcrum_sends_null() {
     // given
     FulcrumLiteratureRow row = row(null, null);
 
     // when / then
-    assertThat(row.attachments()).isEmpty();
+    assertThat(row.firstAttachment()).isEmpty();
+    assertThat(row.hasSeveralAttachments()).isFalse();
     assertThat(row.keywords()).isEmpty();
   }
 

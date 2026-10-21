@@ -115,7 +115,20 @@ public class FulcrumService {
             "SELECT %s FROM \"%s\" WHERE synchronise_with_monteis = 'yes' AND document IS NOT NULL;"
                 .formatted(LITERATURE_COLUMNS, properties.literatureTable()),
             RAW_ROWS);
-    return rows.stream().flatMap(row -> literatureRowOf(row).stream()).toList();
+    List<FulcrumLiteratureRow> literature =
+        rows.stream().flatMap(row -> literatureRowOf(row).stream()).toList();
+    literature.stream()
+        .filter(FulcrumLiteratureRow::hasSeveralAttachments)
+        .forEach(FulcrumService::warnAboutSeveralAttachments);
+    return literature;
+  }
+
+  // every document should have exactly one file (PO), more are a mistake in Fulcrum to fix there
+  private static void warnAboutSeveralAttachments(FulcrumLiteratureRow row) {
+    log.warn(
+        "Fulcrum Document {} has the files {}, only the first one is taken",
+        row.recordId(),
+        row.attachmentIds());
   }
 
   private Optional<FulcrumLiteratureRow> literatureRowOf(JsonNode row) {

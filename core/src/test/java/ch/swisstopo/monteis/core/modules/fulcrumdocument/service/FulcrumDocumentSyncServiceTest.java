@@ -14,7 +14,6 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentTooLarg
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
-import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow.FulcrumAttachmentReference;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
@@ -60,8 +59,6 @@ class FulcrumDocumentSyncServiceTest {
   private static final String FILE_NAME = "Jahns 03 2011 - DS Experiment.pdf";
   private static final String TITLE = "DS Experiment: BDS-1";
   private static final FulcrumLiteratureRow ROW = row(RECORD_ID, TITLE, ATTACHMENT_ID);
-  private static final FulcrumAttachmentReference ATTACHMENT =
-      new FulcrumAttachmentReference(ATTACHMENT_ID, FILE_NAME);
 
   @Mock private FulcrumService fulcrumService;
   @Mock private FulcrumDocumentImportService importService;
@@ -143,7 +140,7 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(importService).should().importFile(new FileToImport(ROW, ATTACHMENT));
+    then(importService).should().importFile(ROW);
     then(syncRepository).should().saveSuccessfulSync(SYNCED_AT);
   }
 
@@ -160,7 +157,7 @@ class FulcrumDocumentSyncServiceTest {
 
     // then the document keeps its old file until the new one is imported
     then(documentRepository).should().saveSynced(stored(oldAttachment));
-    then(importService).should().importFile(new FileToImport(ROW, ATTACHMENT));
+    then(importService).should().importFile(ROW);
   }
 
   @Test
@@ -174,7 +171,7 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(importService).should().importFile(new FileToImport(withTwoFiles, ATTACHMENT));
+    then(importService).should().importFile(withTwoFiles);
   }
 
   @Test
@@ -183,15 +180,13 @@ class FulcrumDocumentSyncServiceTest {
     FulcrumLiteratureRow broken = row(UUID.randomUUID(), TITLE, UUID.randomUUID());
     givenTheLockIsFree();
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(broken, ROW));
-    willThrow(new IllegalStateException("download failed"))
-        .given(importService)
-        .importFile(new FileToImport(broken, broken.attachments().getFirst()));
+    willThrow(new IllegalStateException("download failed")).given(importService).importFile(broken);
 
     // when
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(importService).should().importFile(new FileToImport(ROW, ATTACHMENT));
+    then(importService).should().importFile(ROW);
     then(syncRepository).should(never()).saveSuccessfulSync(any());
     assertThat(syncs("failed")).isEqualTo(1);
     assertThat(failedFiles()).isEqualTo(1);
@@ -226,7 +221,7 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(ROW));
     willThrow(new FulcrumAttachmentTooLargeException(ATTACHMENT_ID, DataSize.ofMegabytes(200)))
         .given(importService)
-        .importFile(new FileToImport(ROW, ATTACHMENT));
+        .importFile(ROW);
 
     // when
     service(ENABLED).syncUnlessRunning();
@@ -244,16 +239,14 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(ROW, second));
     willAnswer(invocation -> clock.advanceBy(TIME_BUDGET.plusSeconds(1)))
         .given(importService)
-        .importFile(new FileToImport(ROW, ATTACHMENT));
+        .importFile(ROW);
 
     // when
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(importService).should().importFile(new FileToImport(ROW, ATTACHMENT));
-    then(importService)
-        .should(never())
-        .importFile(new FileToImport(second, second.attachments().getFirst()));
+    then(importService).should().importFile(ROW);
+    then(importService).should(never()).importFile(second);
     then(syncRepository).should(never()).saveSuccessfulSync(any());
     then(lock).should().unlock();
   }
@@ -341,7 +334,7 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).startSyncInBackground();
 
     // then
-    then(importService).should().importFile(new FileToImport(ROW, ATTACHMENT));
+    then(importService).should().importFile(ROW);
     then(lock).should().unlock();
   }
 
