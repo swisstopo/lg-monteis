@@ -12,7 +12,7 @@ import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentDocumentWebMapper;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapper;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentService;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncRunner;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.FulcrumDocumentWebMapper;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.organisation.query.OrganisationCsvExportQueryRepository;
@@ -94,7 +94,7 @@ class EndpointCoverageTest {
   @MockitoBean private ExperimentDocumentService experimentDocumentService;
   @MockitoBean private ExperimentDocumentWebMapper experimentDocumentWebMapper;
   @MockitoBean private FulcrumDocumentService fulcrumDocumentService;
-  @MockitoBean private FulcrumDocumentSyncService fulcrumDocumentSyncService;
+  @MockitoBean private FulcrumDocumentSyncRunner fulcrumDocumentSyncRunner;
   @MockitoBean private FulcrumDocumentWebMapper fulcrumDocumentWebMapper;
   @MockitoBean private SensorService sensorService;
   @MockitoBean private SensorWebMapper sensorWebMapper;

@@ -24,7 +24,7 @@ import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatus;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentService;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncRunner;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -76,7 +76,7 @@ class FulcrumDocumentControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private FulcrumDocumentService documentService;
-  @MockitoBean private FulcrumDocumentSyncService syncService;
+  @MockitoBean private FulcrumDocumentSyncRunner syncRunner;
 
   @Test
   void should_list_the_documents_with_their_file_to_anyone_signed_in() throws Exception {
@@ -232,7 +232,7 @@ class FulcrumDocumentControllerTest {
   @Test
   void should_show_the_sync_status_to_anyone_signed_in() throws Exception {
     // given
-    given(syncService.currentStatus()).willReturn(new FulcrumSyncStatus(false, STARTED_AT));
+    given(syncRunner.currentStatus()).willReturn(new FulcrumSyncStatus(false, STARTED_AT));
 
     // when / then
     mockMvc
@@ -246,7 +246,7 @@ class FulcrumDocumentControllerTest {
   void should_start_a_sync_for_a_caller_with_document_access_and_report_it_running()
       throws Exception {
     // given
-    given(syncService.currentStatus()).willReturn(new FulcrumSyncStatus(true, null));
+    given(syncRunner.currentStatus()).willReturn(new FulcrumSyncStatus(true, null));
 
     // when / then
     mockMvc
@@ -257,7 +257,7 @@ class FulcrumDocumentControllerTest {
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.running").value(true));
 
-    then(syncService).should().startSyncInBackground();
+    then(syncRunner).should().startInBackground();
   }
 
   @Test
@@ -270,13 +270,13 @@ class FulcrumDocumentControllerTest {
                 .with(authentication(PrivilegeLevel.BASISROLLE.authentication())))
         .andExpect(status().isForbidden());
 
-    then(syncService).shouldHaveNoInteractions();
+    then(syncRunner).shouldHaveNoInteractions();
   }
 
   @Test
   void should_answer_503_while_fulcrum_is_switched_off() throws Exception {
     // given
-    willThrow(new FulcrumDisabledException()).given(syncService).startSyncInBackground();
+    willThrow(new FulcrumDisabledException()).given(syncRunner).startInBackground();
 
     // when / then
     mockMvc
@@ -291,7 +291,7 @@ class FulcrumDocumentControllerTest {
   @Test
   void should_answer_409_while_a_sync_is_already_running() throws Exception {
     // given
-    willThrow(new FulcrumSyncAlreadyRunningException()).given(syncService).startSyncInBackground();
+    willThrow(new FulcrumSyncAlreadyRunningException()).given(syncRunner).startInBackground();
 
     // when / then
     mockMvc
