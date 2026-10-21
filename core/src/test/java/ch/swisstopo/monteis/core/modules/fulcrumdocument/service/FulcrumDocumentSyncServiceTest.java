@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -17,7 +16,6 @@ import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRepository;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService.SyncOutcome;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -67,7 +65,7 @@ class FulcrumDocumentSyncServiceTest {
     given(documentRepository.findAll()).willReturn(List.of(stored(ATTACHMENT_ID)));
 
     // when
-    SyncOutcome outcome = service().sync(DEADLINE);
+    service().sync(DEADLINE);
 
     // then
     then(documentRepository)
@@ -76,7 +74,6 @@ class FulcrumDocumentSyncServiceTest {
     then(documentRepository).should().markRemovedFromFulcrum(List.of(), SYNCED_AT);
     then(importService).shouldHaveNoInteractions();
     then(syncRepository).should().saveSuccessfulSync(SYNCED_AT);
-    assertThat(outcome.isSuccessful()).isTrue();
   }
 
   @Test
@@ -100,12 +97,11 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of());
 
     // when
-    SyncOutcome outcome = service().sync(DEADLINE);
+    service().sync(DEADLINE);
 
     // then
     then(documentRepository).shouldHaveNoInteractions();
     then(syncRepository).should(never()).saveSuccessfulSync(any());
-    assertThat(outcome.isSuccessful()).isFalse();
   }
 
   @Test
@@ -159,13 +155,11 @@ class FulcrumDocumentSyncServiceTest {
         .importFulcrumDocument(broken);
 
     // when
-    SyncOutcome outcome = service().sync(DEADLINE);
+    service().sync(DEADLINE);
 
     // then
     then(importService).should().importFulcrumDocument(ROW);
     then(syncRepository).should(never()).saveSuccessfulSync(any());
-    assertThat(outcome.isSuccessful()).isFalse();
-    assertThat(outcome.failedDocuments()).isEqualTo(1);
   }
 
   @Test
@@ -181,12 +175,11 @@ class FulcrumDocumentSyncServiceTest {
         .saveSynced(stored(ATTACHMENT_ID));
 
     // when
-    SyncOutcome outcome = service().sync(DEADLINE);
+    service().sync(DEADLINE);
 
     // then
     then(documentRepository).should().saveSynced(other);
     then(syncRepository).should(never()).saveSuccessfulSync(any());
-    assertThat(outcome.failedDocuments()).isEqualTo(1);
   }
 
   @Test
@@ -198,11 +191,10 @@ class FulcrumDocumentSyncServiceTest {
         .importFulcrumDocument(ROW);
 
     // when
-    SyncOutcome outcome = service().sync(DEADLINE);
+    service().sync(DEADLINE);
 
     // then
     then(syncRepository).should().saveSuccessfulSync(SYNCED_AT);
-    assertThat(outcome.failedDocuments()).isZero();
   }
 
   @Test
@@ -215,13 +207,12 @@ class FulcrumDocumentSyncServiceTest {
         .importFulcrumDocument(ROW);
 
     // when
-    SyncOutcome outcome = service().sync(DEADLINE);
+    service().sync(DEADLINE);
 
     // then
     then(importService).should().importFulcrumDocument(ROW);
     then(importService).should(never()).importFulcrumDocument(second);
     then(syncRepository).should(never()).saveSuccessfulSync(any());
-    assertThat(outcome.imports().outOfTime()).isTrue();
   }
 
   @Test
