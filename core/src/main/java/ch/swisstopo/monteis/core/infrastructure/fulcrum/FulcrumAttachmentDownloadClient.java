@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
 import ch.swisstopo.monteis.contracts.fulcrum.Attachment;
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -12,6 +11,7 @@ import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.HttpClientSettings;
 import org.springframework.boot.http.client.HttpRedirects;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.client.RestClient;
@@ -43,8 +43,7 @@ public class FulcrumAttachmentDownloadClient {
             .build();
   }
 
-  // the caller closes the stream, it holds the connection to the attachment host. a file above
-  // maxSize is refused before the download when Fulcrum knows its size, and while reading otherwise
+  // the caller closes the stream, it holds the connection to the attachment host
   public InputStream download(UUID attachmentId, DataSize maxSize) {
     Attachment attachment =
         findAttachmentInFulcrum(attachmentId)
@@ -52,11 +51,8 @@ public class FulcrumAttachmentDownloadClient {
                 () ->
                     new IllegalStateException(
                         "Fulcrum has no attachment %s".formatted(attachmentId)));
-    if (attachment.getFileSize() != null && attachment.getFileSize() > maxSize.toBytes()) {
-      throw new FulcrumAttachmentTooLargeException(attachmentId, maxSize);
-    }
     URI url = allowedUrlOf(attachment, attachmentId);
-    return new SizeLimitedInputStream(contentAt(url, attachmentId), attachmentId, maxSize);
+    return streamFileFrom(url, attachmentId, maxSize);
   }
 
   private Optional<Attachment> findAttachmentInFulcrum(UUID attachmentId) {
@@ -84,22 +80,12 @@ public class FulcrumAttachmentDownloadClient {
   }
 
   // the url can be signed, RestClient's own messages would carry it into the log
-  private InputStream contentAt(URI url, UUID attachmentId) {
+  private InputStream streamFileFrom(URI url, UUID attachmentId, DataSize maxSize) {
     try {
       return attachmentUrlClient
           .get()
           .uri(url)
-          .exchange(
-              (request, response) -> {
-                if (!response.getStatusCode().is2xxSuccessful()) {
-                  response.close();
-                  throw new IllegalStateException(
-                      "Downloading Fulcrum attachment %s answered %s"
-                          .formatted(attachmentId, response.getStatusCode()));
-                }
-                return response.getBody();
-              },
-              false);
+          .exchange((request, response) -> openBodyOf(response, attachmentId, maxSize), false);
     } catch (RestClientException e) {
       throw new IllegalStateException(
           "Downloading Fulcrum attachment %s failed with %s"
@@ -107,42 +93,35 @@ public class FulcrumAttachmentDownloadClient {
     }
   }
 
-  // Fulcrum's file_size can be missing or wrong, the disk is protected while copying too
-  private static final class SizeLimitedInputStream extends FilterInputStream {
-
-    private final UUID attachmentId;
-    private final DataSize maxSize;
-    private long read;
-
-    private SizeLimitedInputStream(InputStream content, UUID attachmentId, DataSize maxSize) {
-      super(content);
-      this.attachmentId = attachmentId;
-      this.maxSize = maxSize;
+  // the body stays open for the caller, a rejected response is closed right here
+  private static InputStream openBodyOf(
+      ClientHttpResponse response, UUID attachmentId, DataSize maxSize) throws IOException {
+    try {
+      rejectUnusableDownload(response, attachmentId, maxSize);
+      return response.getBody();
+    } catch (RuntimeException | IOException e) {
+      response.close();
+      throw e;
     }
+  }
 
-    @Override
-    public int read() throws IOException {
-      int next = super.read();
-      if (next != -1) {
-        count(1);
-      }
-      return next;
+  // the http client reads no more than the content length, so the header caps the file on disk
+  // too. Fulcrum's file_size is not trusted for that, it can be missing or wrong
+  private static void rejectUnusableDownload(
+      ClientHttpResponse response, UUID attachmentId, DataSize maxSize) throws IOException {
+    if (!response.getStatusCode().is2xxSuccessful()) {
+      throw new IllegalStateException(
+          "Downloading Fulcrum attachment %s answered %s"
+              .formatted(attachmentId, response.getStatusCode()));
     }
-
-    @Override
-    public int read(byte[] buffer, int offset, int length) throws IOException {
-      int count = super.read(buffer, offset, length);
-      if (count > 0) {
-        count(count);
-      }
-      return count;
+    long length = response.getHeaders().getContentLength();
+    if (length < 0) {
+      throw new IllegalStateException(
+          "Downloading Fulcrum attachment %s answered without a content length"
+              .formatted(attachmentId));
     }
-
-    private void count(long bytes) {
-      read += bytes;
-      if (read > maxSize.toBytes()) {
-        throw new FulcrumAttachmentTooLargeException(attachmentId, maxSize);
-      }
+    if (length > maxSize.toBytes()) {
+      throw new FulcrumAttachmentTooLargeException(attachmentId, maxSize);
     }
   }
 }
