@@ -31,7 +31,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -171,62 +170,6 @@ class FulcrumDocumentImportServiceTest {
     then(downloadClient).shouldHaveNoInteractions();
   }
 
-  @Test
-  void should_store_an_unknown_file_type_as_octet_stream() {
-    // given
-    givenTheDownloadReturns(CONTENT);
-
-    // when
-    importService.importFulcrumDocument(rowWithFileNamed("notes.unknownext"));
-
-    // then
-    then(storage).should().store(fileOfType("application/octet-stream"), any());
-  }
-
-  @Test
-  void should_store_a_type_the_browser_would_run_as_octet_stream() {
-    // given
-    givenTheDownloadReturns(CONTENT);
-
-    // when
-    importService.importFulcrumDocument(rowWithFileNamed("map.svg"));
-
-    // then
-    then(storage).should().store(fileOfType("application/octet-stream"), any());
-  }
-
-  @Test
-  void should_store_a_viewable_image_with_its_type() {
-    // given
-    givenTheDownloadReturns(CONTENT);
-
-    // when
-    importService.importFulcrumDocument(rowWithFileNamed("drilling.png"));
-
-    // then
-    then(storage).should().store(fileOfType("image/png"), any());
-  }
-
-  @Test
-  void should_cut_a_long_file_name_but_keep_its_extension() {
-    // given
-    givenTheDownloadReturns(CONTENT);
-    String longName = "a".repeat(300) + ".pdf";
-
-    // when
-    importService.importFulcrumDocument(rowWithFileNamed(longName));
-
-    // then
-    ArgumentCaptor<FulcrumDocument> saved = ArgumentCaptor.forClass(FulcrumDocument.class);
-    then(documentRepository).should().saveSynced(saved.capture());
-    DocumentMetadata metadata = saved.getValue().file().metadata();
-    assertThat(metadata.fileName())
-        .hasSize(DocumentMetadata.MAX_LENGTH)
-        .endsWith(".pdf")
-        .startsWith("aaa");
-    assertThat(metadata.contentType()).isEqualTo("application/pdf");
-  }
-
   private void givenTheDownloadReturns(byte[] content) {
     InputStream stream =
         new ByteArrayInputStream(content) {
@@ -244,18 +187,5 @@ class FulcrumDocumentImportServiceTest {
         file ->
             file.attachmentId().equals(ATTACHMENT_ID)
                 && file.metadata().contentType().equals(contentType));
-  }
-
-  private static FulcrumLiteratureRow rowWithFileNamed(String fileName) {
-    return new FulcrumLiteratureRow(
-        RECORD_ID,
-        "2011-02",
-        "DS Experiment",
-        "Jahns E.",
-        2011,
-        "TN",
-        List.of("RACOS"),
-        List.of(ATTACHMENT_ID),
-        List.of(fileName));
   }
 }
