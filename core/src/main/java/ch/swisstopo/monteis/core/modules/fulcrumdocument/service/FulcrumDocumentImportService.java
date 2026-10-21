@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
 import ch.swisstopo.monteis.core.infrastructure.api.ViewableContentTypes;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownload;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownloadClient;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
@@ -9,14 +10,6 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow.Ful
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.stereotype.Service;
@@ -25,8 +18,6 @@ import org.springframework.stereotype.Service;
 // an object nobody sees, the next sync overwrites it under the same key
 @Service
 public class FulcrumDocumentImportService {
-
-  private static final Logger log = LoggerFactory.getLogger(FulcrumDocumentImportService.class);
 
   // a longer tail after the last dot is part of the name, not an extension
   private static final int MAX_EXTENSION_LENGTH = 10;
@@ -57,34 +48,26 @@ public class FulcrumDocumentImportService {
                 () ->
                     new IllegalArgumentException(
                         "Fulcrum Document %s has no file".formatted(row.recordId())));
-    try {
-      Path download = Files.createTempFile("fulcrum-document-", ".download");
-      try {
-        downloadTo(download, attachment);
-        FulcrumDocumentFile file = fileOf(attachment, download);
-        storage.store(file.attachmentId(), file.metadata().contentType(), download);
-        documentRepository.saveSynced(literatureMapper.toDocument(row, file));
-      } finally {
-        deleteQuietly(download);
-      }
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    FulcrumDocumentFile file = copyIntoStorage(attachment);
+    documentRepository.saveSynced(literatureMapper.toDocument(row, file));
   }
 
-  private void downloadTo(Path download, FulcrumAttachmentReference attachment) throws IOException {
-    try (InputStream content =
+  // streamed from Fulcrum straight into storage. a failed upload is not retried from here, nothing
+  // was saved, so the next sync imports the file again
+  private FulcrumDocumentFile copyIntoStorage(FulcrumAttachmentReference attachment) {
+    try (FulcrumAttachmentDownload download =
         downloadClient.download(attachment.id(), syncProperties.maxFileSize())) {
-      Files.copy(content, download, StandardCopyOption.REPLACE_EXISTING);
+      FulcrumDocumentFile file = fileOf(attachment, download.sizeBytes());
+      storage.store(file, download.content());
+      return file;
     }
   }
 
-  private static FulcrumDocumentFile fileOf(FulcrumAttachmentReference attachment, Path download)
-      throws IOException {
+  private static FulcrumDocumentFile fileOf(FulcrumAttachmentReference attachment, long sizeBytes) {
     return new FulcrumDocumentFile(
         attachment.id(),
         DocumentMetadata.of(
-            fileNameOf(attachment.name()), contentTypeOf(attachment.name()), Files.size(download)));
+            fileNameOf(attachment.name()), contentTypeOf(attachment.name()), sizeBytes));
   }
 
   // the extension survives, it is what the content type and the user's os go by
@@ -105,13 +88,5 @@ public class FulcrumDocumentImportService {
         .map(MediaType::toString)
         .filter(ViewableContentTypes::isViewable)
         .orElse(MediaType.APPLICATION_OCTET_STREAM_VALUE);
-  }
-
-  private static void deleteQuietly(Path file) {
-    try {
-      Files.deleteIfExists(file);
-    } catch (IOException e) {
-      log.warn("Could not delete the temporary download {}", file, e);
-    }
   }
 }
