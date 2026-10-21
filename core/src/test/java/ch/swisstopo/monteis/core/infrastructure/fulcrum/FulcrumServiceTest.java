@@ -11,8 +11,10 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withUnauthorizedRequest;
 
+import ch.qos.logback.classic.Level;
 import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import ch.swisstopo.monteis.core.itconfig.LogCapture;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -311,12 +313,33 @@ class FulcrumServiceTest {
               assertThat(row.year()).isEqualTo(2011);
               assertThat(row.category()).isEqualTo("2 Mont Terri Technical Notes (TN)");
               assertThat(row.keywords()).containsExactly("Experiment DS", "RACOS");
-              assertThat(row.attachments())
-                  .singleElement()
+              assertThat(row.firstAttachment())
+                  .get()
                   .extracting(FulcrumLiteratureRow.FulcrumAttachmentReference::name)
                   .isEqualTo("Jahns 03 2011 - DS Experiment.pdf");
             });
     server.verify();
+  }
+
+  @Test
+  void findLiteratureMarkedForMonteis_warns_about_a_row_with_several_files() {
+    String withTwoFiles =
+        LITERATURE_ROW.replace(
+            "\"document\": [\"22c52651-0b4b-48ca-bf8e-6594e935da0f\"]",
+            "\"document\": [\"22c52651-0b4b-48ca-bf8e-6594e935da0f\","
+                + " \"5f0d7a39-4c1e-4b8e-9a51-3c2f1b0e7d64\"]");
+    server
+        .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
+        .andRespond(withSuccess(rows(withTwoFiles), MediaType.APPLICATION_JSON));
+
+    try (LogCapture logs = LogCapture.of(FulcrumService.class, Level.WARN)) {
+      service.findLiteratureMarkedForMonteis();
+
+      assertThat(logs.messages())
+          .singleElement()
+          .asString()
+          .contains("221ae592-4527-4442-8294-8dc2c5be1168", "only the first one is taken");
+    }
   }
 
   @Test

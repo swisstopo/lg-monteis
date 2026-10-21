@@ -3,7 +3,6 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentTooLargeException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
-import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow.FulcrumAttachmentReference;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
@@ -20,7 +19,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -166,7 +164,7 @@ public class FulcrumDocumentSyncService {
     documentRepository.markRemovedFromFulcrum(noLongerInFulcrum, start.atOffset(ZoneOffset.UTC));
     ImportCounts imports =
         importNewFiles(
-            filesToImport(fromFulcrum, storedById), start.plus(syncProperties.timeBudget()));
+            rowsWithFileToImport(fromFulcrum, storedById), start.plus(syncProperties.timeBudget()));
 
     SyncOutcome outcome =
         new SyncOutcome(fromFulcrum.size(), failedSaves, noLongerInFulcrum.size(), imports);
@@ -225,64 +223,42 @@ public class FulcrumDocumentSyncService {
   }
 
   // a file too large is skipped on purpose and not counted as failed, it would fail every sync
-  private ImportCounts importNewFiles(List<FileToImport> filesToImport, Instant deadline) {
+  private ImportCounts importNewFiles(List<FulcrumLiteratureRow> rowsToImport, Instant deadline) {
     int imported = 0;
     int skipped = 0;
     int failed = 0;
-    for (FileToImport toImport : filesToImport) {
+    for (FulcrumLiteratureRow row : rowsToImport) {
       if (clock.instant().isAfter(deadline)) {
         log.info("Fulcrum Document sync ran out of time, the next one continues");
         return new ImportCounts(imported, skipped, failed, true);
       }
       try {
-        importService.importFile(toImport);
+        importService.importFile(row);
         imported++;
       } catch (FulcrumAttachmentTooLargeException e) {
         skipped++;
-        log.warn(
-            "Skipping the file of Fulcrum Document {}: {}",
-            toImport.row().recordId(),
-            e.getMessage());
+        log.warn("Skipping the file of Fulcrum Document {}: {}", row.recordId(), e.getMessage());
       } catch (RuntimeException e) {
         failed++;
-        log.warn(
-            "Could not import file {} of Fulcrum Document {}",
-            toImport.attachment().id(),
-            toImport.row().recordId(),
-            e);
+        log.warn("Could not import the file of Fulcrum Document {}", row.recordId(), e);
       }
     }
     return new ImportCounts(imported, skipped, failed, false);
   }
 
-  private static List<FileToImport> filesToImport(
+  // a new document, or a stored one whose file Fulcrum replaced
+  private static List<FulcrumLiteratureRow> rowsWithFileToImport(
       List<FulcrumLiteratureRow> fromFulcrum, Map<UUID, FulcrumDocument> storedById) {
     return fromFulcrum.stream()
-        .flatMap(
-            row ->
-                firstAttachmentOf(row)
-                    .filter(attachment -> !isStored(attachment, storedById.get(row.recordId())))
-                    .map(attachment -> new FileToImport(row, attachment))
-                    .stream())
+        .filter(row -> hasFileNotStoredYet(row, storedById.get(row.recordId())))
         .toList();
   }
 
-  // every document should have exactly one file (PO), more are a mistake in Fulcrum to fix there
-  private static Optional<FulcrumAttachmentReference> firstAttachmentOf(FulcrumLiteratureRow row) {
-    List<FulcrumAttachmentReference> attachments = row.attachments();
-    if (attachments.size() > 1) {
-      log.warn(
-          "Fulcrum Document {} has {} files {}, only the first one is taken",
-          row.recordId(),
-          attachments.size(),
-          attachments.stream().map(FulcrumAttachmentReference::id).toList());
-    }
-    return attachments.stream().findFirst();
-  }
-
-  private static boolean isStored(
-      FulcrumAttachmentReference attachment, @Nullable FulcrumDocument stored) {
-    return stored != null && stored.file().attachmentId().equals(attachment.id());
+  private static boolean hasFileNotStoredYet(
+      FulcrumLiteratureRow row, @Nullable FulcrumDocument stored) {
+    return row.firstAttachment()
+        .map(attachment -> stored == null || !stored.file().attachmentId().equals(attachment.id()))
+        .orElse(false);
   }
 
   private static Counter syncCounter(MeterRegistry meterRegistry, String outcome) {
