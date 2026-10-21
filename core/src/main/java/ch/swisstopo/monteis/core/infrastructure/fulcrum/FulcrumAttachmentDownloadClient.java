@@ -3,7 +3,6 @@ package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 import ch.swisstopo.monteis.contracts.fulcrum.Attachment;
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,8 +42,7 @@ public class FulcrumAttachmentDownloadClient {
             .build();
   }
 
-  // the caller closes the stream, it holds the connection to the attachment host
-  public InputStream download(UUID attachmentId, DataSize maxSize) {
+  public FulcrumAttachmentDownload download(UUID attachmentId, DataSize maxSize) {
     Attachment attachment =
         findAttachmentInFulcrum(attachmentId)
             .orElseThrow(
@@ -80,7 +78,7 @@ public class FulcrumAttachmentDownloadClient {
   }
 
   // the url can be signed, RestClient's own messages would carry it into the log
-  private InputStream streamFileFrom(URI url, UUID attachmentId, DataSize maxSize) {
+  private FulcrumAttachmentDownload streamFileFrom(URI url, UUID attachmentId, DataSize maxSize) {
     try {
       return attachmentUrlClient
           .get()
@@ -94,11 +92,12 @@ public class FulcrumAttachmentDownloadClient {
   }
 
   // the body stays open for the caller, a rejected response is closed right here
-  private static InputStream openBodyOf(
+  private static FulcrumAttachmentDownload openBodyOf(
       ClientHttpResponse response, UUID attachmentId, DataSize maxSize) throws IOException {
     try {
       rejectUnusableDownload(response, attachmentId, maxSize);
-      return response.getBody();
+      return new FulcrumAttachmentDownload(
+          response.getBody(), response.getHeaders().getContentLength());
     } catch (RuntimeException | IOException e) {
       response.close();
       throw e;
