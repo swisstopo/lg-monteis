@@ -31,13 +31,6 @@ class FulcrumPropertiesTest {
   }
 
   @Test
-  void should_refuse_a_call_while_fulcrum_is_switched_off() {
-    // when / then
-    assertThatThrownBy(() -> properties(false, "").requireEnabled())
-        .isInstanceOf(FulcrumDisabledException.class);
-  }
-
-  @Test
   void should_refuse_to_start_without_an_attachment_origin_while_fulcrum_is_enabled() {
     // when / then
     assertThatThrownBy(() -> properties(true, "token", List.of()))

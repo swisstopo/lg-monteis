@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
@@ -88,7 +89,9 @@ public class FulcrumDocumentSyncRunner {
   // the lock is taken right here so the caller learns at once that a sync is running, the sync
   // itself continues in the background and releases it
   public void startInBackground() {
-    fulcrumProperties.requireEnabled();
+    if (!fulcrumProperties.enabled()) {
+      throw new FulcrumDisabledException();
+    }
     SimpleLock lock =
         syncLock.tryAcquire(Duration.ZERO).orElseThrow(FulcrumSyncAlreadyRunningException::new);
     try {
