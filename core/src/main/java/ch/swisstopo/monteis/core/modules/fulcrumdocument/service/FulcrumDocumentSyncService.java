@@ -3,18 +3,11 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentTooLargeException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
-import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
-import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
-import ch.swisstopo.monteis.core.infrastructure.security.SystemSecurityContext;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRepository;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatus;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -23,13 +16,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import net.javacrumbs.shedlock.core.SimpleLock;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.task.TaskExecutor;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 // mirrors the Fulcrum literature into MONTEIS (ADR "Fulcrum Documents spiegeln statt On-Demand
@@ -37,28 +26,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class FulcrumDocumentSyncService {
 
-  public static final String SYNC_METRIC = "monteis.fulcrum.documents.sync";
-  public static final String FAILED_FILES_METRIC = "monteis.fulcrum.documents.sync.failed.files";
-
   private static final Logger log = LoggerFactory.getLogger(FulcrumDocumentSyncService.class);
-
-  // every pod fires at the same time, one whose clock lags a few seconds would otherwise take the
-  // lock right after a quick sync on another pod released it and sync a second time
-  private static final Duration SCHEDULED_SYNC_KEPT_AT_LEAST_FOR = Duration.ofMinutes(1);
 
   private final FulcrumService fulcrumService;
   private final FulcrumDocumentImportService importService;
   private final FulcrumDocumentRepository documentRepository;
   private final FulcrumSyncRepository syncRepository;
   private final FulcrumLiteratureMapper literatureMapper;
-  private final FulcrumSyncLock syncLock;
-  private final TaskExecutor taskExecutor;
-  private final FulcrumProperties fulcrumProperties;
   private final FulcrumDocumentSyncProperties syncProperties;
   private final Clock clock;
-  private final Counter successfulSyncs;
-  private final Counter failedSyncs;
-  private final Counter failedFiles;
 
   public FulcrumDocumentSyncService(
       FulcrumService fulcrumService,
@@ -66,90 +42,27 @@ public class FulcrumDocumentSyncService {
       FulcrumDocumentRepository documentRepository,
       FulcrumSyncRepository syncRepository,
       FulcrumLiteratureMapper literatureMapper,
-      FulcrumSyncLock syncLock,
-      @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
-      FulcrumProperties fulcrumProperties,
       FulcrumDocumentSyncProperties syncProperties,
-      Clock clock,
-      MeterRegistry meterRegistry) {
+      Clock clock) {
     this.fulcrumService = fulcrumService;
     this.importService = importService;
     this.documentRepository = documentRepository;
     this.syncRepository = syncRepository;
     this.literatureMapper = literatureMapper;
-    this.syncLock = syncLock;
-    this.taskExecutor = taskExecutor;
-    this.fulcrumProperties = fulcrumProperties;
     this.syncProperties = syncProperties;
     this.clock = clock;
-    this.successfulSyncs = syncCounter(meterRegistry, "success");
-    this.failedSyncs = syncCounter(meterRegistry, "failed");
-    this.failedFiles =
-        Counter.builder(FAILED_FILES_METRIC)
-            .description("Fulcrum Documents whose file or metadata could not be saved")
-            .register(meterRegistry);
   }
 
-  public FulcrumSyncStatus currentStatus() {
-    return new FulcrumSyncStatus(
-        syncLock.isSyncRunning(), syncRepository.findLastSuccessfulSyncAt().orElse(null));
-  }
-
-  // a switched off Fulcrum would log a failed sync each night
-  @Scheduled(cron = "${monteis.fulcrum.documents.sync-cron}", zone = "Europe/Zurich")
-  public void syncUnlessRunning() {
-    if (!fulcrumProperties.enabled()) {
-      log.info("Fulcrum is switched off, skipping the Fulcrum Document sync");
-      return;
-    }
-    syncLock
-        .tryAcquire(SCHEDULED_SYNC_KEPT_AT_LEAST_FOR)
-        .ifPresentOrElse(
-            this::syncAndRelease,
-            () -> log.info("Fulcrum Document sync already running, skipping this one"));
-  }
-
-  // the lock is taken right here so the caller learns at once that a sync is running, the sync
-  // itself continues in the background and releases it
-  public void startSyncInBackground() {
-    fulcrumProperties.requireEnabled();
-    SimpleLock lock =
-        syncLock.tryAcquire(Duration.ZERO).orElseThrow(FulcrumSyncAlreadyRunningException::new);
-    try {
-      taskExecutor.execute(() -> syncAndRelease(lock));
-    } catch (RuntimeException e) {
-      lock.unlock();
-      throw e;
-    }
-  }
-
-  private void syncAndRelease(SimpleLock lock) {
-    try {
-      SystemSecurityContext.runAsSystem(this::syncQuietly);
-    } finally {
-      lock.unlock();
-    }
-  }
-
-  // the only place a failed sync ends up, besides the log the metrics tell operations about it
-  private void syncQuietly() {
+  public SyncOutcome sync() {
     Instant start = clock.instant();
-    try {
-      SyncOutcome outcome = sync(start);
-      failedFiles.increment(outcome.failedSaves() + outcome.imports().failed());
-      if (outcome.isSuccessful()) {
-        syncRepository.saveSuccessfulSync(start.atOffset(ZoneOffset.UTC));
-        successfulSyncs.increment();
-      } else {
-        failedSyncs.increment();
-      }
-    } catch (RuntimeException e) {
-      failedSyncs.increment();
-      log.error("Fulcrum Document sync failed", e);
+    SyncOutcome outcome = syncFrom(start);
+    if (outcome.isSuccessful()) {
+      syncRepository.saveSuccessfulSync(start.atOffset(ZoneOffset.UTC));
     }
+    return outcome;
   }
 
-  private SyncOutcome sync(Instant start) {
+  private SyncOutcome syncFrom(Instant start) {
     List<FulcrumLiteratureRow> fromFulcrum = fulcrumService.findLiteratureMarkedForMonteis();
     if (fromFulcrum.isEmpty()) {
       log.warn(
@@ -261,25 +174,22 @@ public class FulcrumDocumentSyncService {
         .orElse(false);
   }
 
-  private static Counter syncCounter(MeterRegistry meterRegistry, String outcome) {
-    return Counter.builder(SYNC_METRIC)
-        .description("Finished Fulcrum Document syncs by outcome")
-        .tag("outcome", outcome)
-        .register(meterRegistry);
-  }
-
-  private record ImportCounts(int imported, int skipped, int failed, boolean outOfTime) {}
+  public record ImportCounts(int imported, int skipped, int failed, boolean outOfTime) {}
 
   // successful: Fulcrum returned the literature, every document and file got in and the sync
   // finished within its time budget. a file skipped as too large does not count against it
-  private record SyncOutcome(
+  public record SyncOutcome(
       int fromFulcrum, int failedSaves, int newlyRemoved, ImportCounts imports) {
 
     static final SyncOutcome NOTHING_FROM_FULCRUM =
         new SyncOutcome(0, 0, 0, new ImportCounts(0, 0, 0, false));
 
-    boolean isSuccessful() {
+    public boolean isSuccessful() {
       return fromFulcrum > 0 && failedSaves == 0 && imports.failed() == 0 && !imports.outOfTime();
+    }
+
+    public int failedDocuments() {
+      return failedSaves + imports.failed();
     }
   }
 }
