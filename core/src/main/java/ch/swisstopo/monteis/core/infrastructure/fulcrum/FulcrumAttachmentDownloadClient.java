@@ -49,7 +49,7 @@ public class FulcrumAttachmentDownloadClient {
                 () ->
                     new IllegalStateException(
                         "Fulcrum has no attachment %s".formatted(attachmentId)));
-    URI url = allowedUrlOf(attachment, attachmentId);
+    URI url = extractValidatedUrl(attachment);
     return streamFileFrom(url, attachmentId, maxSize);
   }
 
@@ -62,17 +62,19 @@ public class FulcrumAttachmentDownloadClient {
     }
   }
 
-  private URI allowedUrlOf(Attachment attachment, UUID attachmentId) {
+  private URI extractValidatedUrl(Attachment attachment) {
     URI url = attachment.getUrl();
     if (url == null) {
       throw new IllegalStateException(
-          "Fulcrum attachment %s has no download url".formatted(attachmentId));
+          "Fulcrum attachment %s has no download url".formatted(attachment.getId()));
     }
     if (!properties.isAttachmentOrigin(url)) {
       throw new IllegalStateException(
           "Fulcrum attachment %s points to %s, not to one of %s"
               .formatted(
-                  attachmentId, FulcrumProperties.originOf(url), properties.attachmentOrigins()));
+                  attachment.getId(),
+                  FulcrumProperties.originOf(url),
+                  properties.attachmentOrigins()));
     }
     return url;
   }
