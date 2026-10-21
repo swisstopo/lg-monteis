@@ -140,7 +140,7 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(importService).should().importFile(ROW);
+    then(importService).should().importFulcrumDocument(ROW);
     then(syncRepository).should().saveSuccessfulSync(SYNCED_AT);
   }
 
@@ -157,7 +157,7 @@ class FulcrumDocumentSyncServiceTest {
 
     // then the document keeps its old file until the new one is imported
     then(documentRepository).should().saveSynced(stored(oldAttachment));
-    then(importService).should().importFile(ROW);
+    then(importService).should().importFulcrumDocument(ROW);
   }
 
   @Test
@@ -171,7 +171,7 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(importService).should().importFile(withTwoFiles);
+    then(importService).should().importFulcrumDocument(withTwoFiles);
   }
 
   @Test
@@ -180,13 +180,15 @@ class FulcrumDocumentSyncServiceTest {
     FulcrumLiteratureRow broken = row(UUID.randomUUID(), TITLE, UUID.randomUUID());
     givenTheLockIsFree();
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(broken, ROW));
-    willThrow(new IllegalStateException("download failed")).given(importService).importFile(broken);
+    willThrow(new IllegalStateException("download failed"))
+        .given(importService)
+        .importFulcrumDocument(broken);
 
     // when
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(importService).should().importFile(ROW);
+    then(importService).should().importFulcrumDocument(ROW);
     then(syncRepository).should(never()).saveSuccessfulSync(any());
     assertThat(syncs("failed")).isEqualTo(1);
     assertThat(failedFiles()).isEqualTo(1);
@@ -221,7 +223,7 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(ROW));
     willThrow(new FulcrumAttachmentTooLargeException(ATTACHMENT_ID, DataSize.ofMegabytes(200)))
         .given(importService)
-        .importFile(ROW);
+        .importFulcrumDocument(ROW);
 
     // when
     service(ENABLED).syncUnlessRunning();
@@ -239,14 +241,14 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(ROW, second));
     willAnswer(invocation -> clock.advanceBy(TIME_BUDGET.plusSeconds(1)))
         .given(importService)
-        .importFile(ROW);
+        .importFulcrumDocument(ROW);
 
     // when
     service(ENABLED).syncUnlessRunning();
 
     // then
-    then(importService).should().importFile(ROW);
-    then(importService).should(never()).importFile(second);
+    then(importService).should().importFulcrumDocument(ROW);
+    then(importService).should(never()).importFulcrumDocument(second);
     then(syncRepository).should(never()).saveSuccessfulSync(any());
     then(lock).should().unlock();
   }
@@ -334,7 +336,7 @@ class FulcrumDocumentSyncServiceTest {
     service(ENABLED).startSyncInBackground();
 
     // then
-    then(importService).should().importFile(ROW);
+    then(importService).should().importFulcrumDocument(ROW);
     then(lock).should().unlock();
   }
 
