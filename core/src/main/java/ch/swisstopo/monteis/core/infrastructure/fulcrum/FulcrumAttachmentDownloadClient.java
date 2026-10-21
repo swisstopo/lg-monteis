@@ -6,7 +6,6 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
@@ -48,7 +47,7 @@ public class FulcrumAttachmentDownloadClient {
   // maxSize is refused before the download when Fulcrum knows its size, and while reading otherwise
   public InputStream download(UUID attachmentId, DataSize maxSize) {
     Attachment attachment =
-        attachmentOf(attachmentId)
+        findAttachmentInFulcrum(attachmentId)
             .orElseThrow(
                 () ->
                     new IllegalStateException(
@@ -60,7 +59,7 @@ public class FulcrumAttachmentDownloadClient {
     return new SizeLimitedInputStream(contentAt(url, attachmentId), attachmentId, maxSize);
   }
 
-  private Optional<Attachment> attachmentOf(UUID attachmentId) {
+  private Optional<Attachment> findAttachmentInFulcrum(UUID attachmentId) {
     try {
       return Optional.ofNullable(fulcrumApi.getSingleAttachment(attachmentId.toString(), null))
           .map(ResponseEntity::getBody);
@@ -75,20 +74,13 @@ public class FulcrumAttachmentDownloadClient {
       throw new IllegalStateException(
           "Fulcrum attachment %s has no download url".formatted(attachmentId));
     }
-    String origin = originOf(url);
-    if (properties.attachmentOrigins().stream()
-        .map(FulcrumAttachmentDownloadClient::originOf)
-        .noneMatch(origin::equals)) {
+    if (!properties.isAttachmentOrigin(url)) {
       throw new IllegalStateException(
           "Fulcrum attachment %s points to %s, not to one of %s"
-              .formatted(attachmentId, origin, properties.attachmentOrigins()));
+              .formatted(
+                  attachmentId, FulcrumProperties.originOf(url), properties.attachmentOrigins()));
     }
     return url;
-  }
-
-  // the authority keeps any user info, so user@host is refused as another origin than host
-  private static String originOf(URI url) {
-    return (url.getScheme() + "://" + url.getRawAuthority()).toLowerCase(Locale.ROOT);
   }
 
   // the url can be signed, RestClient's own messages would carry it into the log
