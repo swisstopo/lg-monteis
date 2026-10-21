@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -42,6 +43,46 @@ class FulcrumPropertiesTest {
     assertThatThrownBy(() -> properties(true, "token", List.of()))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("monteis.fulcrum.attachment-origins");
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "https://attachments.fulcrumapp-eu.com/files",
+        "https://attachments.fulcrumapp-eu.com?a=b",
+        "attachments.fulcrumapp-eu.com"
+      })
+  void should_refuse_to_start_with_an_attachment_origin_that_is_more_than_an_origin(
+      String attachmentOrigin) {
+    // when / then
+    assertThatThrownBy(() -> properties(true, "token", List.of(URI.create(attachmentOrigin))))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("monteis.fulcrum.attachment-origins");
+  }
+
+  @Test
+  void should_match_a_url_on_an_attachment_origin_regardless_of_case_and_path() {
+    // given
+    FulcrumProperties properties =
+        properties(true, "token", List.of(URI.create("https://Attachments.fulcrumapp-eu.com/")));
+
+    // when / then
+    assertThat(
+            properties.isAttachmentOrigin(
+                URI.create("HTTPS://attachments.fulcrumapp-eu.com/s3/file.pdf?signature=x")))
+        .isTrue();
+  }
+
+  @Test
+  void should_not_match_a_url_with_user_info_on_an_attachment_origin() {
+    // given
+    FulcrumProperties properties = properties(true, "token");
+
+    // when / then
+    assertThat(
+            properties.isAttachmentOrigin(
+                URI.create("https://user@attachments.fulcrumapp-eu.com/file.pdf")))
+        .isFalse();
   }
 
   private static FulcrumProperties properties(boolean enabled, String apiToken) {
