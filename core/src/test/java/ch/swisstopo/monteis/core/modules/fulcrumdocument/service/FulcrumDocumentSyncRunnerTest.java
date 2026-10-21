@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRepository;
@@ -15,8 +16,11 @@ import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocument
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService.SyncOutcome;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.URI;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import net.javacrumbs.shedlock.core.SimpleLock;
@@ -28,11 +32,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.core.task.TaskRejectedException;
+import org.springframework.util.unit.DataSize;
 
 @ExtendWith(MockitoExtension.class)
 class FulcrumDocumentSyncRunnerTest {
 
-  private static final OffsetDateTime SYNCED_AT = OffsetDateTime.parse("2026-10-15T00:00:00Z");
+  private static final Instant NOW = Instant.parse("2026-10-15T00:00:00Z");
+  private static final OffsetDateTime SYNCED_AT = NOW.atOffset(ZoneOffset.UTC);
+  private static final Duration TIME_BUDGET = Duration.ofMinutes(8);
+  private static final Instant DEADLINE = NOW.plus(TIME_BUDGET);
   private static final boolean ENABLED = true;
   private static final boolean DISABLED = false;
   private static final SyncOutcome SUCCESSFUL = new SyncOutcome(1, 0, 0, imports(1, 0));
@@ -54,13 +62,13 @@ class FulcrumDocumentSyncRunnerTest {
   void should_run_the_sync_and_release_the_lock() {
     // given
     givenTheLockIsFree();
-    given(syncService.sync()).willReturn(SUCCESSFUL);
+    given(syncService.sync(DEADLINE)).willReturn(SUCCESSFUL);
 
     // when
     runner(ENABLED).runUnlessRunning();
 
     // then
-    then(syncService).should().sync();
+    then(syncService).should().sync(DEADLINE);
     assertThat(syncs("success")).isEqualTo(1);
     then(lock).should().unlock();
   }
@@ -69,7 +77,7 @@ class FulcrumDocumentSyncRunnerTest {
   void should_count_a_sync_with_failed_documents_as_failed() {
     // given
     givenTheLockIsFree();
-    given(syncService.sync()).willReturn(TWO_DOCUMENTS_FAILED);
+    given(syncService.sync(DEADLINE)).willReturn(TWO_DOCUMENTS_FAILED);
 
     // when
     runner(ENABLED).runUnlessRunning();
@@ -83,7 +91,7 @@ class FulcrumDocumentSyncRunnerTest {
   void should_count_a_sync_that_crashed_as_failed_and_release_the_lock() {
     // given
     givenTheLockIsFree();
-    given(syncService.sync()).willThrow(new IllegalStateException("connection lost"));
+    given(syncService.sync(DEADLINE)).willThrow(new IllegalStateException("connection lost"));
 
     // when
     runner(ENABLED).runUnlessRunning();
@@ -131,13 +139,13 @@ class FulcrumDocumentSyncRunnerTest {
   void should_run_a_background_sync_and_release_its_lock_right_after() {
     // given
     given(syncLock.tryAcquire(Duration.ZERO)).willReturn(Optional.of(lock));
-    given(syncService.sync()).willReturn(SUCCESSFUL);
+    given(syncService.sync(DEADLINE)).willReturn(SUCCESSFUL);
 
     // when
     runner(ENABLED).startInBackground();
 
     // then
-    then(syncService).should().sync();
+    then(syncService).should().sync(DEADLINE);
     then(lock).should().unlock();
   }
 
@@ -214,6 +222,9 @@ class FulcrumDocumentSyncRunnerTest {
             Duration.ofSeconds(5),
             Duration.ofSeconds(60),
             List.of(URI.create("https://attachments.fulcrumapp-eu.com"))),
+        new FulcrumDocumentSyncProperties(
+            TIME_BUDGET, Duration.ofMinutes(2), DataSize.ofMegabytes(200)),
+        Clock.fixed(NOW, ZoneOffset.UTC),
         meterRegistry);
   }
 

@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
 import ch.swisstopo.monteis.core.infrastructure.security.SystemSecurityContext;
@@ -8,6 +9,7 @@ import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatu
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService.SyncOutcome;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Clock;
 import java.time.Duration;
 import net.javacrumbs.shedlock.core.SimpleLock;
 import org.slf4j.Logger;
@@ -35,6 +37,8 @@ public class FulcrumDocumentSyncRunner {
   private final FulcrumSyncRepository syncRepository;
   private final TaskExecutor taskExecutor;
   private final FulcrumProperties fulcrumProperties;
+  private final FulcrumDocumentSyncProperties syncProperties;
+  private final Clock clock;
   private final Counter successfulSyncs;
   private final Counter failedSyncs;
   private final Counter failedFiles;
@@ -45,12 +49,16 @@ public class FulcrumDocumentSyncRunner {
       FulcrumSyncRepository syncRepository,
       @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
       FulcrumProperties fulcrumProperties,
+      FulcrumDocumentSyncProperties syncProperties,
+      Clock clock,
       MeterRegistry meterRegistry) {
     this.syncService = syncService;
     this.syncLock = syncLock;
     this.syncRepository = syncRepository;
     this.taskExecutor = taskExecutor;
     this.fulcrumProperties = fulcrumProperties;
+    this.syncProperties = syncProperties;
+    this.clock = clock;
     this.successfulSyncs = syncCounter(meterRegistry, "success");
     this.failedSyncs = syncCounter(meterRegistry, "failed");
     this.failedFiles =
@@ -102,7 +110,7 @@ public class FulcrumDocumentSyncRunner {
   // the only place a failed sync ends up, besides the log the metrics tell operations about it
   private void runQuietly() {
     try {
-      SyncOutcome outcome = syncService.sync();
+      SyncOutcome outcome = syncService.sync(clock.instant().plus(syncProperties.timeBudget()));
       failedFiles.increment(outcome.failedDocuments());
       (outcome.isSuccessful() ? successfulSyncs : failedSyncs).increment();
     } catch (RuntimeException e) {
