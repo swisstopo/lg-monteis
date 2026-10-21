@@ -39,7 +39,7 @@ class FulcrumAttachmentDownloadClientTest {
   private int attachmentStatus = 200;
   private int downloadStatus = 200;
   private String downloadUrl;
-  private String fileSize = String.valueOf(CONTENT.length);
+  private boolean sendContentLength = true;
 
   @BeforeEach
   void startServer() throws IOException {
@@ -124,24 +124,21 @@ class FulcrumAttachmentDownloadClientTest {
   }
 
   @Test
-  void should_refuse_a_file_fulcrum_reports_as_too_large_before_downloading_it() {
+  void should_refuse_a_file_larger_than_allowed_before_reading_it() {
     // when / then
     assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, DataSize.ofBytes(4)))
         .isInstanceOf(FulcrumAttachmentTooLargeException.class);
-    assertThat(tokensSentToS3).isEmpty();
   }
 
   @Test
-  void should_stop_reading_a_file_larger_than_allowed_when_fulcrum_reports_no_size()
-      throws IOException {
+  void should_fail_when_the_download_answers_without_a_content_length() {
     // given
-    fileSize = "null";
+    sendContentLength = false;
 
     // when / then
-    try (InputStream content = client(true).download(ATTACHMENT_ID, DataSize.ofBytes(4))) {
-      assertThatThrownBy(content::readAllBytes)
-          .isInstanceOf(FulcrumAttachmentTooLargeException.class);
-    }
+    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, MAX_SIZE))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("without a content length");
   }
 
   @Test
@@ -218,10 +215,9 @@ class FulcrumAttachmentDownloadClientTest {
     try (exchange) {
       byte[] body =
           """
-          {"id": "%s", "name": "GC-A Experiment.pdf", "file_size": %s, "url": %s}
+          {"id": "%s", "name": "GC-A Experiment.pdf", "url": %s}
           """
-              .formatted(
-                  ATTACHMENT_ID, fileSize, downloadUrl == null ? "null" : "\"" + downloadUrl + "\"")
+              .formatted(ATTACHMENT_ID, downloadUrl == null ? "null" : "\"" + downloadUrl + "\"")
               .getBytes(StandardCharsets.UTF_8);
       exchange.getResponseHeaders().set("Content-Type", "application/json");
       exchange.sendResponseHeaders(attachmentStatus, attachmentStatus == 200 ? body.length : -1);
@@ -235,11 +231,19 @@ class FulcrumAttachmentDownloadClientTest {
     try (exchange) {
       tokensSentToS3.add(exchange.getRequestHeaders().getFirst(FulcrumConfig.API_TOKEN_HEADER));
       exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
-      exchange.sendResponseHeaders(downloadStatus, downloadStatus == 200 ? CONTENT.length : -1);
+      exchange.sendResponseHeaders(downloadStatus, downloadLengthOf(downloadStatus));
       if (downloadStatus == 200) {
         exchange.getResponseBody().write(CONTENT);
       }
     }
+  }
+
+  // 0 makes HttpServer send the body chunked, without a content length
+  private long downloadLengthOf(int status) {
+    if (status != 200) {
+      return -1;
+    }
+    return sendContentLength ? CONTENT.length : 0;
   }
 
   private void redirectToDownload(HttpExchange exchange) throws IOException {
