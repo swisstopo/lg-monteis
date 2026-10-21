@@ -70,7 +70,7 @@ public class FulcrumDocumentSyncService {
     int failedSaves = saveEachSynced(storedDocumentsWithFulcrumMetadata(fromFulcrum, storedById));
     List<UUID> noLongerInFulcrum = idsNoLongerInFulcrum(storedById, fromFulcrum);
     documentRepository.markRemovedFromFulcrum(noLongerInFulcrum, start.atOffset(ZoneOffset.UTC));
-    ImportCounts imports = importNewFiles(rowsWithFileToImport(fromFulcrum, storedById), deadline);
+    ImportCounts imports = importNewFiles(rowsWithNewFile(fromFulcrum, storedById), deadline);
 
     SyncOutcome outcome =
         new SyncOutcome(fromFulcrum.size(), failedSaves, noLongerInFulcrum.size(), imports);
@@ -153,7 +153,7 @@ public class FulcrumDocumentSyncService {
   }
 
   // a new document, or a stored one whose file Fulcrum replaced
-  private static List<FulcrumLiteratureRow> rowsWithFileToImport(
+  private static List<FulcrumLiteratureRow> rowsWithNewFile(
       List<FulcrumLiteratureRow> fromFulcrum, Map<UUID, FulcrumDocument> storedById) {
     return fromFulcrum.stream()
         .filter(row -> hasFileNotStoredYet(row, storedById.get(row.recordId())))
