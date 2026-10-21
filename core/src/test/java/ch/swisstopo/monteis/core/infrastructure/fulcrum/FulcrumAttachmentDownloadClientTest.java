@@ -7,7 +7,6 @@ import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -59,18 +58,19 @@ class FulcrumAttachmentDownloadClientTest {
   @Test
   void should_download_the_content_from_the_url_fulcrum_hands_out() throws IOException {
     // when
-    try (InputStream content = client(true).download(ATTACHMENT_ID, MAX_SIZE)) {
+    try (FulcrumAttachmentDownload download = client(true).download(ATTACHMENT_ID, MAX_SIZE)) {
 
       // then
-      assertThat(content.readAllBytes()).isEqualTo(CONTENT);
+      assertThat(download.sizeBytes()).isEqualTo(CONTENT.length);
+      assertThat(download.content().readAllBytes()).isEqualTo(CONTENT);
     }
   }
 
   @Test
   void should_not_send_the_api_token_to_s3() throws IOException {
     // when
-    try (InputStream content = client(true).download(ATTACHMENT_ID, MAX_SIZE)) {
-      content.readAllBytes();
+    try (FulcrumAttachmentDownload download = client(true).download(ATTACHMENT_ID, MAX_SIZE)) {
+      download.content().readAllBytes();
     }
 
     // then

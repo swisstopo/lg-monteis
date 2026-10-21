@@ -3,7 +3,7 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
@@ -12,6 +12,7 @@ import static org.mockito.Mockito.inOrder;
 
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownload;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownloadClient;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentTooLargeException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
@@ -21,9 +22,8 @@ import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentF
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +62,7 @@ class FulcrumDocumentImportServiceTest {
   @Mock private FulcrumDocumentRepository documentRepository;
 
   private FulcrumDocumentImportService importService;
+  private boolean downloadClosed;
 
   @BeforeEach
   void createImportService() {
@@ -76,28 +77,23 @@ class FulcrumDocumentImportServiceTest {
   }
 
   @Test
-  void should_store_the_file_before_saving_the_document_and_delete_the_download() {
+  void should_store_the_file_before_saving_the_document_and_close_the_download() {
     // given
     givenTheDownloadReturns(CONTENT);
     List<byte[]> stored = new ArrayList<>();
-    List<Path> downloads = new ArrayList<>();
     willAnswer(
-            invocation -> {
-              Path download = invocation.getArgument(2, Path.class);
-              downloads.add(download);
-              return stored.add(Files.readAllBytes(download));
-            })
+            invocation -> stored.add(invocation.getArgument(1, InputStream.class).readAllBytes()))
         .given(storage)
-        .store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
+        .store(fileOfType("application/pdf"), any());
 
     // when
     importService.importFulcrumDocument(ROW);
 
     // then
     assertThat(stored).singleElement().isEqualTo(CONTENT);
-    assertThat(downloads).singleElement().matches(Files::notExists);
+    assertThat(downloadClosed).isTrue();
     InOrder order = inOrder(storage, documentRepository);
-    order.verify(storage).store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
+    order.verify(storage).store(fileOfType("application/pdf"), any());
     order
         .verify(documentRepository)
         .saveSynced(
@@ -143,26 +139,12 @@ class FulcrumDocumentImportServiceTest {
   void should_not_save_the_document_when_storing_fails() {
     // given
     givenTheDownloadReturns(CONTENT);
-    willThrow(new IllegalStateException("S3 down"))
-        .given(storage)
-        .store(eq(ATTACHMENT_ID), any(), any(Path.class));
+    willThrow(new IllegalStateException("S3 down")).given(storage).store(any(), any());
 
     // when / then
     assertThrows(IllegalStateException.class, () -> importService.importFulcrumDocument(ROW));
     then(documentRepository).shouldHaveNoInteractions();
-  }
-
-  @Test
-  void should_delete_the_download_when_saving_the_document_fails() {
-    // given
-    givenTheDownloadReturns(CONTENT);
-    ArgumentCaptor<Path> download = ArgumentCaptor.forClass(Path.class);
-    willThrow(new IllegalStateException("db down")).given(documentRepository).saveSynced(any());
-
-    // when / then
-    assertThrows(IllegalStateException.class, () -> importService.importFulcrumDocument(ROW));
-    then(storage).should().store(eq(ATTACHMENT_ID), eq("application/pdf"), download.capture());
-    assertThat(download.getValue()).doesNotExist();
+    assertThat(downloadClosed).isTrue();
   }
 
   @Test
@@ -198,9 +180,7 @@ class FulcrumDocumentImportServiceTest {
     importService.importFulcrumDocument(rowWithFileNamed("notes.unknownext"));
 
     // then
-    then(storage)
-        .should()
-        .store(eq(ATTACHMENT_ID), eq("application/octet-stream"), any(Path.class));
+    then(storage).should().store(fileOfType("application/octet-stream"), any());
   }
 
   @Test
@@ -212,9 +192,7 @@ class FulcrumDocumentImportServiceTest {
     importService.importFulcrumDocument(rowWithFileNamed("map.svg"));
 
     // then
-    then(storage)
-        .should()
-        .store(eq(ATTACHMENT_ID), eq("application/octet-stream"), any(Path.class));
+    then(storage).should().store(fileOfType("application/octet-stream"), any());
   }
 
   @Test
@@ -226,7 +204,7 @@ class FulcrumDocumentImportServiceTest {
     importService.importFulcrumDocument(rowWithFileNamed("drilling.png"));
 
     // then
-    then(storage).should().store(eq(ATTACHMENT_ID), eq("image/png"), any(Path.class));
+    then(storage).should().store(fileOfType("image/png"), any());
   }
 
   @Test
@@ -250,8 +228,22 @@ class FulcrumDocumentImportServiceTest {
   }
 
   private void givenTheDownloadReturns(byte[] content) {
+    InputStream stream =
+        new ByteArrayInputStream(content) {
+          @Override
+          public void close() {
+            downloadClosed = true;
+          }
+        };
     given(downloadClient.download(ATTACHMENT_ID, MAX_FILE_SIZE))
-        .willReturn(new ByteArrayInputStream(content));
+        .willReturn(new FulcrumAttachmentDownload(stream, content.length));
+  }
+
+  private static FulcrumDocumentFile fileOfType(String contentType) {
+    return argThat(
+        file ->
+            file.attachmentId().equals(ATTACHMENT_ID)
+                && file.metadata().contentType().equals(contentType));
   }
 
   private static FulcrumLiteratureRow rowWithFileNamed(String fileName) {

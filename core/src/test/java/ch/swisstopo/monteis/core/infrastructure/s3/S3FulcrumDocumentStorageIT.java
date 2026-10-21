@@ -3,19 +3,19 @@ package ch.swisstopo.monteis.core.infrastructure.s3;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.itconfig.S3TestcontainersConfiguration;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -34,8 +34,6 @@ class S3FulcrumDocumentStorageIT {
 
   private static S3Client s3;
   private static S3FulcrumDocumentStorage storage;
-
-  @TempDir private Path tempDir;
 
   @BeforeAll
   static void createStorage() {
@@ -64,7 +62,7 @@ class S3FulcrumDocumentStorageIT {
     UUID documentId = UUID.randomUUID();
 
     // when
-    storage.store(documentId, "application/pdf", download());
+    storage.store(pdf(documentId), new ByteArrayInputStream(CONTENT));
 
     // then
     try (InputStream loaded = storage.load(documentId)) {
@@ -78,7 +76,7 @@ class S3FulcrumDocumentStorageIT {
     UUID documentId = UUID.randomUUID();
 
     // when
-    storage.store(documentId, "application/pdf", download());
+    storage.store(pdf(documentId), new ByteArrayInputStream(CONTENT));
 
     // then
     HeadObjectResponse head =
@@ -97,7 +95,8 @@ class S3FulcrumDocumentStorageIT {
     assertThrows(NoSuchKeyException.class, () -> storage.load(UUID.randomUUID()));
   }
 
-  private Path download() throws IOException {
-    return Files.write(tempDir.resolve("download"), CONTENT);
+  private static FulcrumDocumentFile pdf(UUID documentId) {
+    return new FulcrumDocumentFile(
+        documentId, new DocumentMetadata("report.pdf", "application/pdf", CONTENT.length));
   }
 }
