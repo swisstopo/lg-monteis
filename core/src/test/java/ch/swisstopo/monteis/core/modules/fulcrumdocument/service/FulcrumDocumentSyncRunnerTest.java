@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
@@ -12,9 +13,6 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatus;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService.ImportCounts;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService.SyncOutcome;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -24,7 +22,6 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import net.javacrumbs.shedlock.core.SimpleLock;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -43,61 +40,35 @@ class FulcrumDocumentSyncRunnerTest {
   private static final Instant DEADLINE = NOW.plus(TIME_BUDGET);
   private static final boolean ENABLED = true;
   private static final boolean DISABLED = false;
-  private static final SyncOutcome SUCCESSFUL = new SyncOutcome(1, 0, 0, imports(1, 0));
-  private static final SyncOutcome TWO_DOCUMENTS_FAILED = new SyncOutcome(3, 1, 0, imports(1, 1));
 
   @Mock private FulcrumDocumentSyncService syncService;
   @Mock private FulcrumSyncLock syncLock;
   @Mock private FulcrumSyncRepository syncRepository;
   @Mock private SimpleLock lock;
 
-  private SimpleMeterRegistry meterRegistry;
-
-  @BeforeEach
-  void setUp() {
-    meterRegistry = new SimpleMeterRegistry();
-  }
-
   @Test
   void should_run_the_sync_and_release_the_lock() {
     // given
     givenTheLockIsFree();
-    given(syncService.sync(DEADLINE)).willReturn(SUCCESSFUL);
 
     // when
     runner(ENABLED).runUnlessRunning();
 
     // then
     then(syncService).should().sync(DEADLINE);
-    assertThat(syncs("success")).isEqualTo(1);
     then(lock).should().unlock();
   }
 
   @Test
-  void should_count_a_sync_with_failed_documents_as_failed() {
+  void should_release_the_lock_when_the_sync_crashes() {
     // given
     givenTheLockIsFree();
-    given(syncService.sync(DEADLINE)).willReturn(TWO_DOCUMENTS_FAILED);
+    willThrow(new IllegalStateException("connection lost")).given(syncService).sync(DEADLINE);
 
     // when
     runner(ENABLED).runUnlessRunning();
 
     // then
-    assertThat(syncs("failed")).isEqualTo(1);
-    assertThat(failedFiles()).isEqualTo(2);
-  }
-
-  @Test
-  void should_count_a_sync_that_crashed_as_failed_and_release_the_lock() {
-    // given
-    givenTheLockIsFree();
-    given(syncService.sync(DEADLINE)).willThrow(new IllegalStateException("connection lost"));
-
-    // when
-    runner(ENABLED).runUnlessRunning();
-
-    // then
-    assertThat(syncs("failed")).isEqualTo(1);
     then(lock).should().unlock();
   }
 
@@ -139,7 +110,6 @@ class FulcrumDocumentSyncRunnerTest {
   void should_run_a_background_sync_and_release_its_lock_right_after() {
     // given
     given(syncLock.tryAcquire(Duration.ZERO)).willReturn(Optional.of(lock));
-    given(syncService.sync(DEADLINE)).willReturn(SUCCESSFUL);
 
     // when
     runner(ENABLED).startInBackground();
@@ -224,23 +194,10 @@ class FulcrumDocumentSyncRunnerTest {
             List.of(URI.create("https://attachments.fulcrumapp-eu.com"))),
         new FulcrumDocumentSyncProperties(
             TIME_BUDGET, Duration.ofMinutes(2), DataSize.ofMegabytes(200)),
-        Clock.fixed(NOW, ZoneOffset.UTC),
-        meterRegistry);
+        Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private void givenTheLockIsFree() {
     given(syncLock.tryAcquire(any())).willReturn(Optional.of(lock));
-  }
-
-  private double syncs(String outcome) {
-    return meterRegistry.counter(FulcrumDocumentSyncRunner.SYNC_METRIC, "outcome", outcome).count();
-  }
-
-  private double failedFiles() {
-    return meterRegistry.counter(FulcrumDocumentSyncRunner.FAILED_FILES_METRIC).count();
-  }
-
-  private static ImportCounts imports(int imported, int failed) {
-    return new ImportCounts(imported, 0, failed, false);
   }
 }

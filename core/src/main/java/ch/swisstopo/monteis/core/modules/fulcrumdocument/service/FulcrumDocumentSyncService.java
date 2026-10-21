@@ -50,13 +50,11 @@ public class FulcrumDocumentSyncService {
   }
 
   // files not imported by the deadline are left to the next sync
-  public SyncOutcome sync(Instant deadline) {
+  public void sync(Instant deadline) {
     Instant start = clock.instant();
-    SyncOutcome outcome = syncFrom(start, deadline);
-    if (outcome.isSuccessful()) {
+    if (syncFrom(start, deadline).isSuccessful()) {
       syncRepository.saveSuccessfulSync(start.atOffset(ZoneOffset.UTC));
     }
-    return outcome;
   }
 
   private SyncOutcome syncFrom(Instant start, Instant deadline) {
@@ -169,22 +167,18 @@ public class FulcrumDocumentSyncService {
         .orElse(false);
   }
 
-  public record ImportCounts(int imported, int skipped, int failed, boolean outOfTime) {}
+  private record ImportCounts(int imported, int skipped, int failed, boolean outOfTime) {}
 
   // successful: Fulcrum returned the literature, every document and file got in and the sync
   // finished within its time budget. a file skipped as too large does not count against it
-  public record SyncOutcome(
+  private record SyncOutcome(
       int fromFulcrum, int failedSaves, int newlyRemoved, ImportCounts imports) {
 
     static final SyncOutcome NOTHING_FROM_FULCRUM =
         new SyncOutcome(0, 0, 0, new ImportCounts(0, 0, 0, false));
 
-    public boolean isSuccessful() {
+    boolean isSuccessful() {
       return fromFulcrum > 0 && failedSaves == 0 && imports.failed() == 0 && !imports.outOfTime();
-    }
-
-    public int failedDocuments() {
-      return failedSaves + imports.failed();
     }
   }
 }
