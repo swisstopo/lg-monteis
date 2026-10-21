@@ -233,7 +233,7 @@ public class FulcrumDocumentSyncService {
         return new ImportCounts(imported, skipped, failed, true);
       }
       try {
-        importService.importFile(row);
+        importService.importFulcrumDocument(row);
         imported++;
       } catch (FulcrumAttachmentTooLargeException e) {
         skipped++;

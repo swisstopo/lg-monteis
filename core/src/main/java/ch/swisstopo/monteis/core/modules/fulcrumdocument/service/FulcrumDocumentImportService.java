@@ -50,7 +50,7 @@ public class FulcrumDocumentImportService {
     this.syncProperties = syncProperties;
   }
 
-  public void importFile(FulcrumLiteratureRow row) {
+  public void importFulcrumDocument(FulcrumLiteratureRow row) {
     FulcrumAttachmentReference attachment =
         row.firstAttachment()
             .orElseThrow(
