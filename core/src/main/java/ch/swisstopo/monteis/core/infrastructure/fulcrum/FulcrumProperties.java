@@ -37,12 +37,6 @@ public record FulcrumProperties(
         attachmentOrigins.stream().map(FulcrumProperties::requireOnlyOrigin).toList();
   }
 
-  public void requireEnabled() {
-    if (!enabled) {
-      throw new FulcrumDisabledException();
-    }
-  }
-
   public boolean isAttachmentOrigin(URI url) {
     return attachmentOrigins.contains(originOf(url));
   }
