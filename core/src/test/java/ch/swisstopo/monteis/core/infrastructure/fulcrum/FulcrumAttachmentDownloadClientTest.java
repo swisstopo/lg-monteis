@@ -206,11 +206,7 @@ class FulcrumAttachmentDownloadClientTest {
             Duration.ofSeconds(5),
             Duration.ofSeconds(5),
             List.of(URI.create(baseUrl())));
-    RestClient apiClient =
-        RestClient.builder()
-            .baseUrl(properties.baseUrl())
-            .defaultHeader(FulcrumConfig.API_TOKEN_HEADER, TOKEN)
-            .build();
+    RestClient apiClient = RestClient.builder().apply(FulcrumConfig.configure(properties)).build();
     DefaultApi fulcrumApi =
         HttpServiceProxyFactory.builderFor(RestClientAdapter.create(apiClient))
             .build()
