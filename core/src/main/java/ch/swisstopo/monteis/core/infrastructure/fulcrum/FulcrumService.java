@@ -133,8 +133,6 @@ public class FulcrumService {
   private <T> List<T> query(String statement, TypeReference<FulcrumQueryResponse<T>> rowType) {
     log.debug("Querying Fulcrum: {}", statement);
 
-    properties.requireEnabled();
-
     Object body = queryApi(statement);
 
     if (body == null) {

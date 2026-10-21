@@ -136,10 +136,7 @@ class FulcrumServiceTest {
 
     JsonMapper objectMapper = JsonMapper.builder().build();
 
-    RestClient.Builder builder =
-        RestClient.builder()
-            .baseUrl(properties.baseUrl())
-            .defaultHeader(FulcrumConfig.API_TOKEN_HEADER, properties.apiToken());
+    RestClient.Builder builder = RestClient.builder().apply(FulcrumConfig.configure(properties));
     server = MockRestServiceServer.bindTo(builder).build();
 
     DefaultApi api =

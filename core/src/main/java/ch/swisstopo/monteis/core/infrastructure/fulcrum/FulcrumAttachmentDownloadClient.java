@@ -47,7 +47,6 @@ public class FulcrumAttachmentDownloadClient {
   // the caller closes the stream, it holds the connection to the attachment host. a file above
   // maxSize is refused before the download when Fulcrum knows its size, and while reading otherwise
   public InputStream download(UUID attachmentId, DataSize maxSize) {
-    properties.requireEnabled();
     Attachment attachment =
         attachmentOf(attachmentId)
             .orElseThrow(
