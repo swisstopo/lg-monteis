@@ -91,7 +91,7 @@ class FulcrumDocumentImportServiceTest {
         .store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
 
     // when
-    importService.importFile(ROW);
+    importService.importFulcrumDocument(ROW);
 
     // then
     assertThat(stored).singleElement().isEqualTo(CONTENT);
@@ -122,7 +122,7 @@ class FulcrumDocumentImportServiceTest {
         .willThrow(new IllegalStateException("answered 404"));
 
     // when / then
-    assertThrows(IllegalStateException.class, () -> importService.importFile(ROW));
+    assertThrows(IllegalStateException.class, () -> importService.importFulcrumDocument(ROW));
     then(storage).shouldHaveNoInteractions();
     then(documentRepository).shouldHaveNoInteractions();
   }
@@ -134,7 +134,8 @@ class FulcrumDocumentImportServiceTest {
         .willThrow(new FulcrumAttachmentTooLargeException(ATTACHMENT_ID, MAX_FILE_SIZE));
 
     // when / then
-    assertThrows(FulcrumAttachmentTooLargeException.class, () -> importService.importFile(ROW));
+    assertThrows(
+        FulcrumAttachmentTooLargeException.class, () -> importService.importFulcrumDocument(ROW));
     then(storage).shouldHaveNoInteractions();
   }
 
@@ -147,7 +148,7 @@ class FulcrumDocumentImportServiceTest {
         .store(eq(ATTACHMENT_ID), any(), any(Path.class));
 
     // when / then
-    assertThrows(IllegalStateException.class, () -> importService.importFile(ROW));
+    assertThrows(IllegalStateException.class, () -> importService.importFulcrumDocument(ROW));
     then(documentRepository).shouldHaveNoInteractions();
   }
 
@@ -159,7 +160,7 @@ class FulcrumDocumentImportServiceTest {
     willThrow(new IllegalStateException("db down")).given(documentRepository).saveSynced(any());
 
     // when / then
-    assertThrows(IllegalStateException.class, () -> importService.importFile(ROW));
+    assertThrows(IllegalStateException.class, () -> importService.importFulcrumDocument(ROW));
     then(storage).should().store(eq(ATTACHMENT_ID), eq("application/pdf"), download.capture());
     assertThat(download.getValue()).doesNotExist();
   }
@@ -170,7 +171,8 @@ class FulcrumDocumentImportServiceTest {
     givenTheDownloadReturns(new byte[0]);
 
     // when / then
-    assertThrows(ObjectBusinessValidationException.class, () -> importService.importFile(ROW));
+    assertThrows(
+        ObjectBusinessValidationException.class, () -> importService.importFulcrumDocument(ROW));
     then(storage).shouldHaveNoInteractions();
   }
 
@@ -182,7 +184,8 @@ class FulcrumDocumentImportServiceTest {
             RECORD_ID, "2011-02", "DS Experiment", "Jahns E.", 2011, "TN", null, null, null);
 
     // when / then
-    assertThrows(IllegalArgumentException.class, () -> importService.importFile(withoutFile));
+    assertThrows(
+        IllegalArgumentException.class, () -> importService.importFulcrumDocument(withoutFile));
     then(downloadClient).shouldHaveNoInteractions();
   }
 
@@ -192,7 +195,7 @@ class FulcrumDocumentImportServiceTest {
     givenTheDownloadReturns(CONTENT);
 
     // when
-    importService.importFile(rowWithFileNamed("notes.unknownext"));
+    importService.importFulcrumDocument(rowWithFileNamed("notes.unknownext"));
 
     // then
     then(storage)
@@ -206,7 +209,7 @@ class FulcrumDocumentImportServiceTest {
     givenTheDownloadReturns(CONTENT);
 
     // when
-    importService.importFile(rowWithFileNamed("map.svg"));
+    importService.importFulcrumDocument(rowWithFileNamed("map.svg"));
 
     // then
     then(storage)
@@ -220,7 +223,7 @@ class FulcrumDocumentImportServiceTest {
     givenTheDownloadReturns(CONTENT);
 
     // when
-    importService.importFile(rowWithFileNamed("drilling.png"));
+    importService.importFulcrumDocument(rowWithFileNamed("drilling.png"));
 
     // then
     then(storage).should().store(eq(ATTACHMENT_ID), eq("image/png"), any(Path.class));
@@ -233,7 +236,7 @@ class FulcrumDocumentImportServiceTest {
     String longName = "a".repeat(300) + ".pdf";
 
     // when
-    importService.importFile(rowWithFileNamed(longName));
+    importService.importFulcrumDocument(rowWithFileNamed(longName));
 
     // then
     ArgumentCaptor<FulcrumDocument> saved = ArgumentCaptor.forClass(FulcrumDocument.class);
