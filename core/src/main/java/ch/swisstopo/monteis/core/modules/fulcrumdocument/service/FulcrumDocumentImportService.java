@@ -4,6 +4,7 @@ import ch.swisstopo.monteis.core.infrastructure.api.ViewableContentTypes;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownloadClient;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow.FulcrumAttachmentReference;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
@@ -49,14 +50,20 @@ public class FulcrumDocumentImportService {
     this.syncProperties = syncProperties;
   }
 
-  public void importFile(FileToImport toImport) {
+  public void importFile(FulcrumLiteratureRow row) {
+    FulcrumAttachmentReference attachment =
+        row.firstAttachment()
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "Fulcrum Document %s has no file".formatted(row.recordId())));
     try {
       Path download = Files.createTempFile("fulcrum-document-", ".download");
       try {
-        downloadTo(download, toImport.attachment());
-        FulcrumDocumentFile file = fileOf(toImport.attachment(), download);
+        downloadTo(download, attachment);
+        FulcrumDocumentFile file = fileOf(attachment, download);
         storage.store(file.attachmentId(), file.metadata().contentType(), download);
-        documentRepository.saveSynced(literatureMapper.toDocument(toImport.row(), file));
+        documentRepository.saveSynced(literatureMapper.toDocument(row, file));
       } finally {
         deleteQuietly(download);
       }

@@ -16,7 +16,6 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownloa
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentTooLargeException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
-import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow.FulcrumAttachmentReference;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
@@ -57,8 +56,6 @@ class FulcrumDocumentImportServiceTest {
           List.of("RACOS"),
           List.of(ATTACHMENT_ID),
           List.of(FILE_NAME));
-  private static final FulcrumAttachmentReference ATTACHMENT =
-      new FulcrumAttachmentReference(ATTACHMENT_ID, FILE_NAME);
 
   @Mock private FulcrumAttachmentDownloadClient downloadClient;
   @Mock private FulcrumDocumentStorage storage;
@@ -94,7 +91,7 @@ class FulcrumDocumentImportServiceTest {
         .store(eq(ATTACHMENT_ID), eq("application/pdf"), any(Path.class));
 
     // when
-    importService.importFile(new FileToImport(ROW, ATTACHMENT));
+    importService.importFile(ROW);
 
     // then
     assertThat(stored).singleElement().isEqualTo(CONTENT);
@@ -125,9 +122,7 @@ class FulcrumDocumentImportServiceTest {
         .willThrow(new IllegalStateException("answered 404"));
 
     // when / then
-    assertThrows(
-        IllegalStateException.class,
-        () -> importService.importFile(new FileToImport(ROW, ATTACHMENT)));
+    assertThrows(IllegalStateException.class, () -> importService.importFile(ROW));
     then(storage).shouldHaveNoInteractions();
     then(documentRepository).shouldHaveNoInteractions();
   }
@@ -139,9 +134,7 @@ class FulcrumDocumentImportServiceTest {
         .willThrow(new FulcrumAttachmentTooLargeException(ATTACHMENT_ID, MAX_FILE_SIZE));
 
     // when / then
-    assertThrows(
-        FulcrumAttachmentTooLargeException.class,
-        () -> importService.importFile(new FileToImport(ROW, ATTACHMENT)));
+    assertThrows(FulcrumAttachmentTooLargeException.class, () -> importService.importFile(ROW));
     then(storage).shouldHaveNoInteractions();
   }
 
@@ -154,9 +147,7 @@ class FulcrumDocumentImportServiceTest {
         .store(eq(ATTACHMENT_ID), any(), any(Path.class));
 
     // when / then
-    assertThrows(
-        IllegalStateException.class,
-        () -> importService.importFile(new FileToImport(ROW, ATTACHMENT)));
+    assertThrows(IllegalStateException.class, () -> importService.importFile(ROW));
     then(documentRepository).shouldHaveNoInteractions();
   }
 
@@ -168,9 +159,7 @@ class FulcrumDocumentImportServiceTest {
     willThrow(new IllegalStateException("db down")).given(documentRepository).saveSynced(any());
 
     // when / then
-    assertThrows(
-        IllegalStateException.class,
-        () -> importService.importFile(new FileToImport(ROW, ATTACHMENT)));
+    assertThrows(IllegalStateException.class, () -> importService.importFile(ROW));
     then(storage).should().store(eq(ATTACHMENT_ID), eq("application/pdf"), download.capture());
     assertThat(download.getValue()).doesNotExist();
   }
@@ -181,10 +170,20 @@ class FulcrumDocumentImportServiceTest {
     givenTheDownloadReturns(new byte[0]);
 
     // when / then
-    assertThrows(
-        ObjectBusinessValidationException.class,
-        () -> importService.importFile(new FileToImport(ROW, ATTACHMENT)));
+    assertThrows(ObjectBusinessValidationException.class, () -> importService.importFile(ROW));
     then(storage).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_refuse_a_row_without_a_file_before_downloading_anything() {
+    // given
+    FulcrumLiteratureRow withoutFile =
+        new FulcrumLiteratureRow(
+            RECORD_ID, "2011-02", "DS Experiment", "Jahns E.", 2011, "TN", null, null, null);
+
+    // when / then
+    assertThrows(IllegalArgumentException.class, () -> importService.importFile(withoutFile));
+    then(downloadClient).shouldHaveNoInteractions();
   }
 
   @Test
@@ -193,8 +192,7 @@ class FulcrumDocumentImportServiceTest {
     givenTheDownloadReturns(CONTENT);
 
     // when
-    importService.importFile(
-        new FileToImport(ROW, new FulcrumAttachmentReference(ATTACHMENT_ID, "notes.unknownext")));
+    importService.importFile(rowWithFileNamed("notes.unknownext"));
 
     // then
     then(storage)
@@ -208,8 +206,7 @@ class FulcrumDocumentImportServiceTest {
     givenTheDownloadReturns(CONTENT);
 
     // when
-    importService.importFile(
-        new FileToImport(ROW, new FulcrumAttachmentReference(ATTACHMENT_ID, "map.svg")));
+    importService.importFile(rowWithFileNamed("map.svg"));
 
     // then
     then(storage)
@@ -223,8 +220,7 @@ class FulcrumDocumentImportServiceTest {
     givenTheDownloadReturns(CONTENT);
 
     // when
-    importService.importFile(
-        new FileToImport(ROW, new FulcrumAttachmentReference(ATTACHMENT_ID, "drilling.png")));
+    importService.importFile(rowWithFileNamed("drilling.png"));
 
     // then
     then(storage).should().store(eq(ATTACHMENT_ID), eq("image/png"), any(Path.class));
@@ -237,8 +233,7 @@ class FulcrumDocumentImportServiceTest {
     String longName = "a".repeat(300) + ".pdf";
 
     // when
-    importService.importFile(
-        new FileToImport(ROW, new FulcrumAttachmentReference(ATTACHMENT_ID, longName)));
+    importService.importFile(rowWithFileNamed(longName));
 
     // then
     ArgumentCaptor<FulcrumDocument> saved = ArgumentCaptor.forClass(FulcrumDocument.class);
@@ -254,5 +249,18 @@ class FulcrumDocumentImportServiceTest {
   private void givenTheDownloadReturns(byte[] content) {
     given(downloadClient.download(ATTACHMENT_ID, MAX_FILE_SIZE))
         .willReturn(new ByteArrayInputStream(content));
+  }
+
+  private static FulcrumLiteratureRow rowWithFileNamed(String fileName) {
+    return new FulcrumLiteratureRow(
+        RECORD_ID,
+        "2011-02",
+        "DS Experiment",
+        "Jahns E.",
+        2011,
+        "TN",
+        List.of("RACOS"),
+        List.of(ATTACHMENT_ID),
+        List.of(fileName));
   }
 }
