@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentTooLargeException;
-import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
@@ -33,7 +32,6 @@ public class FulcrumDocumentSyncService {
   private final FulcrumDocumentRepository documentRepository;
   private final FulcrumSyncRepository syncRepository;
   private final FulcrumLiteratureMapper literatureMapper;
-  private final FulcrumDocumentSyncProperties syncProperties;
   private final Clock clock;
 
   public FulcrumDocumentSyncService(
@@ -42,27 +40,26 @@ public class FulcrumDocumentSyncService {
       FulcrumDocumentRepository documentRepository,
       FulcrumSyncRepository syncRepository,
       FulcrumLiteratureMapper literatureMapper,
-      FulcrumDocumentSyncProperties syncProperties,
       Clock clock) {
     this.fulcrumService = fulcrumService;
     this.importService = importService;
     this.documentRepository = documentRepository;
     this.syncRepository = syncRepository;
     this.literatureMapper = literatureMapper;
-    this.syncProperties = syncProperties;
     this.clock = clock;
   }
 
-  public SyncOutcome sync() {
+  // files not imported by the deadline are left to the next sync
+  public SyncOutcome sync(Instant deadline) {
     Instant start = clock.instant();
-    SyncOutcome outcome = syncFrom(start);
+    SyncOutcome outcome = syncFrom(start, deadline);
     if (outcome.isSuccessful()) {
       syncRepository.saveSuccessfulSync(start.atOffset(ZoneOffset.UTC));
     }
     return outcome;
   }
 
-  private SyncOutcome syncFrom(Instant start) {
+  private SyncOutcome syncFrom(Instant start, Instant deadline) {
     List<FulcrumLiteratureRow> fromFulcrum = fulcrumService.findLiteratureMarkedForMonteis();
     if (fromFulcrum.isEmpty()) {
       log.warn(
@@ -75,9 +72,7 @@ public class FulcrumDocumentSyncService {
     int failedSaves = saveEachSynced(storedDocumentsAsFulcrumReturnedThem(fromFulcrum, storedById));
     List<UUID> noLongerInFulcrum = idsNoLongerInFulcrum(storedById, fromFulcrum);
     documentRepository.markRemovedFromFulcrum(noLongerInFulcrum, start.atOffset(ZoneOffset.UTC));
-    ImportCounts imports =
-        importNewFiles(
-            rowsWithFileToImport(fromFulcrum, storedById), start.plus(syncProperties.timeBudget()));
+    ImportCounts imports = importNewFiles(rowsWithFileToImport(fromFulcrum, storedById), deadline);
 
     SyncOutcome outcome =
         new SyncOutcome(fromFulcrum.size(), failedSaves, noLongerInFulcrum.size(), imports);

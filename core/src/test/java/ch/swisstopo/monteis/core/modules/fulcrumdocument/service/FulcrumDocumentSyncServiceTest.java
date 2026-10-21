@@ -11,7 +11,6 @@ import static org.mockito.Mockito.never;
 
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentTooLargeException;
-import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
@@ -41,7 +40,7 @@ class FulcrumDocumentSyncServiceTest {
 
   private static final Instant NOW = Instant.parse("2026-10-15T00:00:00Z");
   private static final OffsetDateTime SYNCED_AT = NOW.atOffset(ZoneOffset.UTC);
-  private static final Duration TIME_BUDGET = Duration.ofMinutes(8);
+  private static final Instant DEADLINE = NOW.plus(Duration.ofMinutes(8));
   private static final UUID RECORD_ID = UUID.fromString("221ae592-4527-4442-8294-8dc2c5be1168");
   private static final UUID ATTACHMENT_ID = UUID.fromString("22c52651-0b4b-48ca-bf8e-6594e935da0f");
   private static final String FILE_NAME = "Jahns 03 2011 - DS Experiment.pdf";
@@ -68,7 +67,7 @@ class FulcrumDocumentSyncServiceTest {
     given(documentRepository.findAll()).willReturn(List.of(stored(ATTACHMENT_ID)));
 
     // when
-    SyncOutcome outcome = service().sync();
+    SyncOutcome outcome = service().sync(DEADLINE);
 
     // then
     then(documentRepository)
@@ -89,7 +88,7 @@ class FulcrumDocumentSyncServiceTest {
     given(documentRepository.findAll()).willReturn(List.of(stored(ATTACHMENT_ID), alreadyRemoved));
 
     // when
-    service().sync();
+    service().sync(DEADLINE);
 
     // then
     then(documentRepository).should().markRemovedFromFulcrum(List.of(RECORD_ID), SYNCED_AT);
@@ -101,7 +100,7 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of());
 
     // when
-    SyncOutcome outcome = service().sync();
+    SyncOutcome outcome = service().sync(DEADLINE);
 
     // then
     then(documentRepository).shouldHaveNoInteractions();
@@ -115,7 +114,7 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(ROW));
 
     // when
-    service().sync();
+    service().sync(DEADLINE);
 
     // then
     then(importService).should().importFulcrumDocument(ROW);
@@ -130,7 +129,7 @@ class FulcrumDocumentSyncServiceTest {
     given(documentRepository.findAll()).willReturn(List.of(stored(oldAttachment)));
 
     // when
-    service().sync();
+    service().sync(DEADLINE);
 
     // then the document keeps its old file until the new one is imported
     then(documentRepository).should().saveSynced(stored(oldAttachment));
@@ -144,7 +143,7 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(withTwoFiles));
 
     // when
-    service().sync();
+    service().sync(DEADLINE);
 
     // then
     then(importService).should().importFulcrumDocument(withTwoFiles);
@@ -160,7 +159,7 @@ class FulcrumDocumentSyncServiceTest {
         .importFulcrumDocument(broken);
 
     // when
-    SyncOutcome outcome = service().sync();
+    SyncOutcome outcome = service().sync(DEADLINE);
 
     // then
     then(importService).should().importFulcrumDocument(ROW);
@@ -182,7 +181,7 @@ class FulcrumDocumentSyncServiceTest {
         .saveSynced(stored(ATTACHMENT_ID));
 
     // when
-    SyncOutcome outcome = service().sync();
+    SyncOutcome outcome = service().sync(DEADLINE);
 
     // then
     then(documentRepository).should().saveSynced(other);
@@ -199,7 +198,7 @@ class FulcrumDocumentSyncServiceTest {
         .importFulcrumDocument(ROW);
 
     // when
-    SyncOutcome outcome = service().sync();
+    SyncOutcome outcome = service().sync(DEADLINE);
 
     // then
     then(syncRepository).should().saveSuccessfulSync(SYNCED_AT);
@@ -207,16 +206,16 @@ class FulcrumDocumentSyncServiceTest {
   }
 
   @Test
-  void should_stop_importing_once_the_time_budget_is_used_up() {
+  void should_stop_importing_once_the_deadline_is_passed() {
     // given
     FulcrumLiteratureRow second = row(UUID.randomUUID(), TITLE, UUID.randomUUID());
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(ROW, second));
-    willAnswer(invocation -> clock.advanceBy(TIME_BUDGET.plusSeconds(1)))
+    willAnswer(invocation -> clock.advanceBy(Duration.ofMinutes(8).plusSeconds(1)))
         .given(importService)
         .importFulcrumDocument(ROW);
 
     // when
-    SyncOutcome outcome = service().sync();
+    SyncOutcome outcome = service().sync(DEADLINE);
 
     // then
     then(importService).should().importFulcrumDocument(ROW);
@@ -233,7 +232,7 @@ class FulcrumDocumentSyncServiceTest {
             new RestClientResponseException("bad gateway", 502, "Bad Gateway", null, null, null));
 
     // when / then
-    assertThrows(RestClientResponseException.class, () -> service().sync());
+    assertThrows(RestClientResponseException.class, () -> service().sync(DEADLINE));
     then(documentRepository).shouldHaveNoInteractions();
     then(importService).shouldHaveNoInteractions();
     then(syncRepository).shouldHaveNoInteractions();
@@ -249,7 +248,7 @@ class FulcrumDocumentSyncServiceTest {
         .markRemovedFromFulcrum(List.of(), SYNCED_AT);
 
     // when / then
-    assertThrows(IllegalStateException.class, () -> service().sync());
+    assertThrows(IllegalStateException.class, () -> service().sync(DEADLINE));
     then(documentRepository).should().saveSynced(stored(ATTACHMENT_ID));
     then(syncRepository).should(never()).saveSuccessfulSync(any());
   }
@@ -261,8 +260,6 @@ class FulcrumDocumentSyncServiceTest {
         documentRepository,
         syncRepository,
         new FulcrumLiteratureMapperImpl(),
-        new FulcrumDocumentSyncProperties(
-            TIME_BUDGET, Duration.ofMinutes(2), DataSize.ofMegabytes(200)),
         clock);
   }
 
@@ -333,7 +330,7 @@ class FulcrumDocumentSyncServiceTest {
         null);
   }
 
-  // the time budget is checked against the clock before each import, an import moves it on
+  // the deadline is checked against the clock before each import, an import moves it on
   private static final class MutableClock extends Clock {
 
     private Instant now;
