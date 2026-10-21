@@ -4,7 +4,7 @@ import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentService;
-import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncService;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncRunner;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.dto.outbound.FulcrumDocumentResponseDto;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.dto.outbound.FulcrumSyncStatusResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,15 +30,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class FulcrumDocumentController {
 
   private final FulcrumDocumentService documentService;
-  private final FulcrumDocumentSyncService syncService;
+  private final FulcrumDocumentSyncRunner syncRunner;
   private final FulcrumDocumentWebMapper mapper;
 
   public FulcrumDocumentController(
       FulcrumDocumentService documentService,
-      FulcrumDocumentSyncService syncService,
+      FulcrumDocumentSyncRunner syncRunner,
       FulcrumDocumentWebMapper mapper) {
     this.documentService = documentService;
-    this.syncService = syncService;
+    this.syncRunner = syncRunner;
     this.mapper = mapper;
   }
 
@@ -92,7 +92,7 @@ public class FulcrumDocumentController {
   @ApiResponse(responseCode = "200", description = "Successfully retrieved the sync status")
   @GetMapping(path = ApiPaths.FULCRUM_SYNC, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<FulcrumSyncStatusResponseDto> getFulcrumSyncStatus() {
-    return ResponseEntity.ok(mapper.toStatusDto(syncService.currentStatus()));
+    return ResponseEntity.ok(mapper.toStatusDto(syncRunner.currentStatus()));
   }
 
   @Operation(
@@ -104,8 +104,8 @@ public class FulcrumDocumentController {
   @ApiResponse(responseCode = "202", description = "Sync started")
   @PostMapping(path = ApiPaths.FULCRUM_SYNC, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<FulcrumSyncStatusResponseDto> startFulcrumSync() {
-    syncService.startSyncInBackground();
+    syncRunner.startInBackground();
     return ResponseEntity.status(HttpStatus.ACCEPTED)
-        .body(mapper.toStatusDto(syncService.currentStatus()));
+        .body(mapper.toStatusDto(syncRunner.currentStatus()));
   }
 }
