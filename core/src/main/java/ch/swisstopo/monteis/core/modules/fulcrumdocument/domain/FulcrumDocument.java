@@ -26,4 +26,8 @@ public record FulcrumDocument(
   public boolean isAvailableInFulcrum() {
     return removedAt == null;
   }
+
+  public boolean hasFile(UUID attachmentId) {
+    return file.attachmentId().equals(attachmentId);
+  }
 }

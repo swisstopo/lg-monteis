@@ -10,12 +10,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -65,40 +60,25 @@ public class FulcrumDocumentSyncService {
               + " sync does not count as successful");
       return SyncOutcome.NOTHING_FROM_FULCRUM;
     }
-    Map<UUID, FulcrumDocument> storedById = storedDocumentsById();
+    FulcrumDocumentComparison comparison =
+        FulcrumDocumentComparison.of(fromFulcrum, documentRepository.findAll());
 
-    int failedSaves = saveEachSynced(storedDocumentsWithFulcrumMetadata(fromFulcrum, storedById));
-    List<UUID> noLongerInFulcrum = idsNoLongerInFulcrum(storedById, fromFulcrum);
+    int failedSaves = saveEachSynced(storedDocumentsWithFulcrumMetadata(comparison));
+    List<UUID> noLongerInFulcrum = comparison.idsNoLongerInFulcrum();
     documentRepository.markRemovedFromFulcrum(noLongerInFulcrum, start.atOffset(ZoneOffset.UTC));
-    ImportCounts imports = importNewFiles(rowsWithNewFile(fromFulcrum, storedById), deadline);
+    ImportCounts imports = importNewFiles(comparison.rowsWithNewFile(), deadline);
 
     SyncOutcome outcome =
         new SyncOutcome(fromFulcrum.size(), failedSaves, noLongerInFulcrum.size(), imports);
-    log.info(
-        "Fulcrum Document sync: {} documents from Fulcrum, {} failed to save, {} newly removed,"
-            + " {} files imported, {} skipped as too large, {} failed{}, successful: {}",
-        outcome.fromFulcrum(),
-        outcome.failedSaves(),
-        outcome.newlyRemoved(),
-        imports.imported(),
-        imports.skipped(),
-        imports.failed(),
-        imports.outOfTime() ? ", ran out of time" : "",
-        outcome.isSuccessful());
+    log.info("Fulcrum Document sync: {}", outcome.summary());
     return outcome;
-  }
-
-  private Map<UUID, FulcrumDocument> storedDocumentsById() {
-    return documentRepository.findAll().stream()
-        .collect(Collectors.toMap(FulcrumDocument::id, Function.identity()));
   }
 
   // a replaced file is saved as synced too, the document keeps its old file until the new one is in
   private List<FulcrumDocument> storedDocumentsWithFulcrumMetadata(
-      List<FulcrumLiteratureRow> fromFulcrum, Map<UUID, FulcrumDocument> storedById) {
-    return fromFulcrum.stream()
-        .filter(row -> storedById.containsKey(row.recordId()))
-        .map(row -> literatureMapper.toDocument(row, storedById.get(row.recordId()).file()))
+      FulcrumDocumentComparison comparison) {
+    return comparison.rowsOfStoredDocuments().stream()
+        .map(storedRow -> literatureMapper.toDocument(storedRow.row(), storedRow.document().file()))
         .toList();
   }
 
@@ -114,18 +94,6 @@ public class FulcrumDocumentSyncService {
       }
     }
     return failed;
-  }
-
-  // stored documents still available that Fulcrum did not return this time
-  private static List<UUID> idsNoLongerInFulcrum(
-      Map<UUID, FulcrumDocument> storedById, List<FulcrumLiteratureRow> fromFulcrum) {
-    Set<UUID> inFulcrum =
-        fromFulcrum.stream().map(FulcrumLiteratureRow::recordId).collect(Collectors.toSet());
-    return storedById.values().stream()
-        .filter(FulcrumDocument::isAvailableInFulcrum)
-        .map(FulcrumDocument::id)
-        .filter(id -> !inFulcrum.contains(id))
-        .toList();
   }
 
   // a file too large is skipped on purpose and not counted as failed, it would fail every sync
@@ -152,21 +120,6 @@ public class FulcrumDocumentSyncService {
     return new ImportCounts(imported, skipped, failed, false);
   }
 
-  // a new document, or a stored one whose file Fulcrum replaced
-  private static List<FulcrumLiteratureRow> rowsWithNewFile(
-      List<FulcrumLiteratureRow> fromFulcrum, Map<UUID, FulcrumDocument> storedById) {
-    return fromFulcrum.stream()
-        .filter(row -> hasFileNotStoredYet(row, storedById.get(row.recordId())))
-        .toList();
-  }
-
-  private static boolean hasFileNotStoredYet(
-      FulcrumLiteratureRow row, @Nullable FulcrumDocument stored) {
-    return row.firstAttachment()
-        .map(attachment -> stored == null || !stored.file().attachmentId().equals(attachment.id()))
-        .orElse(false);
-  }
-
   private record ImportCounts(int imported, int skipped, int failed, boolean outOfTime) {}
 
   // successful: Fulcrum returned the literature, every document and file got in and the sync
@@ -179,6 +132,20 @@ public class FulcrumDocumentSyncService {
 
     boolean isSuccessful() {
       return fromFulcrum > 0 && failedSaves == 0 && imports.failed() == 0 && !imports.outOfTime();
+    }
+
+    String summary() {
+      return ("%d documents from Fulcrum, %d failed to save, %d newly removed, %d files imported,"
+              + " %d skipped as too large, %d failed%s, successful: %s")
+          .formatted(
+              fromFulcrum,
+              failedSaves,
+              newlyRemoved,
+              imports.imported(),
+              imports.skipped(),
+              imports.failed(),
+              imports.outOfTime() ? ", ran out of time" : "",
+              isSuccessful());
     }
   }
 }
