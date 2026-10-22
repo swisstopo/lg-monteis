@@ -18,6 +18,7 @@ describe('matchesSearch', () => {
   });
 
   it.each([
+    ['file name', 'REPORT.pdf'],
     ['number', 'tr 2008'],
     ['title', 'OPALINUS'],
     ['authors', 'thury'],

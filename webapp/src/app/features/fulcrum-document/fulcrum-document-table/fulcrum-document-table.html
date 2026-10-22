@@ -1,6 +1,6 @@
 <div class="metrics-panel">
   <app-table-header (searchAction)="onSearch($event)">
-    <app-fulcrum-sync read-action (finished)="onSyncFinished()"></app-fulcrum-sync>
+    <app-fulcrum-sync read-action></app-fulcrum-sync>
 
     @if (permissions.canAccessDocuments()) {
       <button

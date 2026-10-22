@@ -99,8 +99,7 @@ public class FulcrumDocumentController {
       summary = "Start a Fulcrum sync",
       description =
           "Starts loading the Fulcrum Documents and their files from Fulcrum again, in the"
-              + " background. Poll the sync status until it no longer runs. Requires"
-              + " documents:read.")
+              + " background. Requires documents:read.")
   @ApiResponse(responseCode = "202", description = "Sync started")
   @PostMapping(path = ApiPaths.FULCRUM_SYNC, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<FulcrumSyncStatusResponseDto> startFulcrumSync() {
