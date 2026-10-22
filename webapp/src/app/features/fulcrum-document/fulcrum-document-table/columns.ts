@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { FulcrumDocumentResponseDto } from '@core/generated';
-import { FulcrumDocumentActions } from '@features/fulcrum-document/fulcrum-document-actions/fulcrum-document-actions';
+import { FulcrumDocumentFileName } from '@features/fulcrum-document/fulcrum-document-file-name/fulcrum-document-file-name';
 import { TranslateService } from '@ngx-translate/core';
 import { TableColumn } from '@ui/table/table.types';
 
@@ -8,6 +8,15 @@ export function createColumns(): TableColumn<FulcrumDocumentResponseDto>[] {
   const translateService = inject(TranslateService);
 
   return [
+    {
+      field: 'file.fileName',
+      headerName: translateService.translate('fulcrumDocument.file.label')(),
+      sortable: true,
+      filter: 'agTextColumnFilter',
+      cellRenderer: FulcrumDocumentFileName,
+      flex: 2,
+      minWidth: 200,
+    },
     {
       field: 'number',
       headerName: translateService.translate('fulcrumDocument.number.label')(),
@@ -46,14 +55,6 @@ export function createColumns(): TableColumn<FulcrumDocumentResponseDto>[] {
       sortable: true,
       filter: 'agTextColumnFilter',
       width: 180,
-    },
-    {
-      colId: 'file',
-      headerName: translateService.translate('fulcrumDocument.file.label')(),
-      sortable: false,
-      filter: false,
-      cellRenderer: FulcrumDocumentActions,
-      width: 120,
     },
   ];
 }

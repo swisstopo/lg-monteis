@@ -21,6 +21,6 @@ mat-spinner {
   --mat-progress-spinner-active-indicator-color: currentColor;
   display: inline-block;
   vertical-align: top;
-  margin-inline-start: var(--mat-button-filled-icon-offset, -8px);
-  margin-inline-end: var(--mat-button-filled-icon-spacing, 8px);
+  margin-inline-start: var(--mat-button-text-icon-offset, -4px);
+  margin-inline-end: var(--mat-button-text-icon-spacing, 8px);
 }
