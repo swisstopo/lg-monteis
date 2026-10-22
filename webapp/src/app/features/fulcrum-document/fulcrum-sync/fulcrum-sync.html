@@ -1,7 +1,7 @@
 <span class="sync-status" data-testid="sync-status">
-  @if (statusUnknown()) {
+  @if (status.error()) {
     <span class="hint">{{ 'fulcrumSync.statusUnknown' | translate }}</span>
-  } @else if (status(); as status) {
+  } @else if (status.value(); as status) {
     @if (status.running) {
       {{ 'fulcrumSync.running' | translate }}
     } @else if (status.lastSuccessfulSyncAt) {

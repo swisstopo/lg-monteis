@@ -47,8 +47,11 @@ class FulcrumPropertiesTest {
       })
   void should_refuse_to_start_with_an_attachment_origin_that_is_more_than_an_origin(
       String attachmentOrigin) {
+    // given
+    List<URI> attachmentOrigins = List.of(URI.create(attachmentOrigin));
+
     // when / then
-    assertThatThrownBy(() -> properties(true, "token", List.of(URI.create(attachmentOrigin))))
+    assertThatThrownBy(() -> properties(true, "token", attachmentOrigins))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("monteis.fulcrum.attachment-origins");
   }
@@ -79,8 +82,7 @@ class FulcrumPropertiesTest {
   }
 
   private static FulcrumProperties properties(boolean enabled, String apiToken) {
-    return properties(
-        enabled, apiToken, List.of(URI.create("https://content.fulcrumapp-eu.com")));
+    return properties(enabled, apiToken, List.of(URI.create("https://content.fulcrumapp-eu.com")));
   }
 
   private static FulcrumProperties properties(

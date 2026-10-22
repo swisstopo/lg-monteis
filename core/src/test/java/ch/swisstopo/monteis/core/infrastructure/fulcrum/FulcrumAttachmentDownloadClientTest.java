@@ -80,9 +80,10 @@ class FulcrumAttachmentDownloadClientTest {
   void should_fail_when_the_download_is_refused() {
     // given
     downloadStatus = 403;
+    FulcrumAttachmentDownloadClient client = client(true);
 
     // when / then
-    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, MAX_SIZE))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("403");
   }
@@ -91,9 +92,10 @@ class FulcrumAttachmentDownloadClientTest {
   void should_not_download_from_an_origin_fulcrum_should_not_point_to() {
     // given
     downloadUrl = "http://169.254.169.254/latest/meta-data/";
+    FulcrumAttachmentDownloadClient client = client(true);
 
     // when / then
-    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, MAX_SIZE))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("not to one of");
     assertThat(tokensSentToS3).isEmpty();
@@ -103,9 +105,10 @@ class FulcrumAttachmentDownloadClientTest {
   void should_not_download_from_the_attachment_host_with_user_info() {
     // given
     downloadUrl = "http://attacker@localhost:" + server.getAddress().getPort() + "/s3/x";
+    FulcrumAttachmentDownloadClient client = client(true);
 
     // when / then
-    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, MAX_SIZE))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
         .isInstanceOf(IllegalStateException.class);
     assertThat(tokensSentToS3).isEmpty();
   }
@@ -114,9 +117,10 @@ class FulcrumAttachmentDownloadClientTest {
   void should_not_follow_a_redirect() {
     // given
     downloadUrl = baseUrl() + "/elsewhere/" + ATTACHMENT_ID;
+    FulcrumAttachmentDownloadClient client = client(true);
 
     // when / then
-    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, MAX_SIZE))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("302");
     assertThat(tokensSentToS3).isEmpty();
@@ -124,8 +128,12 @@ class FulcrumAttachmentDownloadClientTest {
 
   @Test
   void should_refuse_a_file_larger_than_allowed_before_reading_it() {
+    // given
+    FulcrumAttachmentDownloadClient client = client(true);
+    DataSize tooSmall = DataSize.ofBytes(4);
+
     // when / then
-    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, DataSize.ofBytes(4)))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, tooSmall))
         .isInstanceOf(FulcrumAttachmentTooLargeException.class);
   }
 
@@ -133,9 +141,10 @@ class FulcrumAttachmentDownloadClientTest {
   void should_fail_when_the_download_answers_without_a_content_length() {
     // given
     sendContentLength = false;
+    FulcrumAttachmentDownloadClient client = client(true);
 
     // when / then
-    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, MAX_SIZE))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("without a content length");
   }
@@ -144,9 +153,10 @@ class FulcrumAttachmentDownloadClientTest {
   void should_fail_when_fulcrum_hands_out_no_url() {
     // given
     downloadUrl = null;
+    FulcrumAttachmentDownloadClient client = client(true);
 
     // when / then
-    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, MAX_SIZE))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("no download url");
   }
@@ -155,9 +165,10 @@ class FulcrumAttachmentDownloadClientTest {
   void should_translate_a_forbidden_token_into_an_authentication_failure() {
     // given
     attachmentStatus = 403;
+    FulcrumAttachmentDownloadClient client = client(true);
 
     // when / then
-    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, MAX_SIZE))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
         .isInstanceOf(FulcrumAuthenticationException.class)
         .hasMessageContaining("403");
   }
@@ -166,9 +177,10 @@ class FulcrumAttachmentDownloadClientTest {
   void should_pass_on_any_other_fulcrum_error() {
     // given
     attachmentStatus = 500;
+    FulcrumAttachmentDownloadClient client = client(true);
 
     // when / then
-    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, MAX_SIZE))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
         .isInstanceOf(RestClientResponseException.class);
   }
 
@@ -176,17 +188,21 @@ class FulcrumAttachmentDownloadClientTest {
   void should_translate_a_rejected_token_into_an_authentication_failure() {
     // given
     attachmentStatus = 401;
+    FulcrumAttachmentDownloadClient client = client(true);
 
     // when / then
-    assertThatThrownBy(() -> client(true).download(ATTACHMENT_ID, MAX_SIZE))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
         .isInstanceOf(FulcrumAuthenticationException.class)
         .hasMessageContaining("401");
   }
 
   @Test
   void should_not_call_fulcrum_while_it_is_switched_off() {
+    // given
+    FulcrumAttachmentDownloadClient client = client(false);
+
     // when / then
-    assertThatThrownBy(() -> client(false).download(ATTACHMENT_ID, MAX_SIZE))
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
         .isInstanceOf(FulcrumDisabledException.class);
   }
 
