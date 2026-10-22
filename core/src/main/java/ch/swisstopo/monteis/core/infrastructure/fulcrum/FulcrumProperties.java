@@ -20,7 +20,7 @@ public record FulcrumProperties(
     @DefaultValue("20000") int perPage,
     @DefaultValue("5s") Duration connectTimeout,
     @DefaultValue("60s") Duration readTimeout,
-    @DefaultValue("https://attachments.fulcrumapp-eu.com") List<URI> attachmentOrigins) {
+    @DefaultValue("https://content.fulcrumapp-eu.com") List<URI> attachmentOrigins) {
 
   public FulcrumProperties {
     if (enabled && (apiToken == null || apiToken.isBlank())) {

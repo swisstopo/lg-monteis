@@ -191,7 +191,7 @@ class FulcrumDocumentSyncRunnerTest {
             20000,
             Duration.ofSeconds(5),
             Duration.ofSeconds(60),
-            List.of(URI.create("https://attachments.fulcrumapp-eu.com"))),
+            List.of(URI.create("https://content.fulcrumapp-eu.com"))),
         new FulcrumDocumentSyncProperties(
             TIME_BUDGET, Duration.ofMinutes(2), DataSize.ofMegabytes(200)),
         Clock.fixed(NOW, ZoneOffset.UTC));
