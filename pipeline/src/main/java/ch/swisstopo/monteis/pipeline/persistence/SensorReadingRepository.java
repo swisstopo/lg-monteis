@@ -5,11 +5,8 @@ import static org.jooq.impl.DSL.excluded;
 import ch.swisstopo.monteis.pipeline.jooq.generated.Tables;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
-import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.Row7;
@@ -42,7 +39,7 @@ public class SensorReadingRepository {
             Tables.SENSOR_READING.VERSION,
             Tables.SENSOR_READING.STATUS);
 
-    for (SensorReadingRecord sensorReadingRecord : deduplicateByConflictKey(dbRecords)) {
+    for (SensorReadingRecord sensorReadingRecord : dbRecords) {
       insertQuery =
           insertQuery.values(
               sensorReadingRecord.getTimestamp(),
@@ -66,22 +63,6 @@ public class SensorReadingRepository {
         .set(Tables.SENSOR_READING.STATUS, excluded(Tables.SENSOR_READING.STATUS))
         .execute();
   }
-
-  // Keep last record per timestamp.
-  private static List<SensorReadingRecord> deduplicateByConflictKey(
-      List<SensorReadingRecord> dbRecords) {
-    Map<ConflictKey, SensorReadingRecord> lastByKey = new LinkedHashMap<>();
-    for (SensorReadingRecord sensorReadingRecord : dbRecords) {
-      ConflictKey key =
-          new ConflictKey(
-              sensorReadingRecord.getTimestamp().toInstant(), sensorReadingRecord.getDasKey());
-      lastByKey.remove(key);
-      lastByKey.put(key, sensorReadingRecord);
-    }
-    return List.copyOf(lastByKey.values());
-  }
-
-  private record ConflictKey(Instant timestamp, String dasKey) {}
 
   // --- Reprocessing backlog: two independent matches, run as separate scans rather than one
   // OR'd query (see HistoricalReadingChunkProcessor) to keep each one a plain index scan that

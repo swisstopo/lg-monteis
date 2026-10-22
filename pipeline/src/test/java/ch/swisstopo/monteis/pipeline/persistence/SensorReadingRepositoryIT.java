@@ -74,39 +74,6 @@ class SensorReadingRepositoryIT {
   }
 
   @Test
-  void upsertBatch_should_keep_last_record_when_batch_contains_duplicate_conflict_key() {
-    // given
-    var ts = OffsetDateTime.parse("2026-06-24T10:00:00Z");
-    var sensorParameterId = UUID.randomUUID();
-    var first =
-        new SensorReadingRecord(
-            ts, "sensor-dup", 10.0, 9.0, (short) 1, RangeCategory.correct, sensorParameterId);
-    var second =
-        new SensorReadingRecord(
-            ts, "sensor-dup", 20.0, 19.0, (short) 1, RangeCategory.correct, sensorParameterId);
-    var other =
-        new SensorReadingRecord(
-            ts, "sensor-other", 5.0, 4.0, (short) 1, RangeCategory.correct, sensorParameterId);
-
-    // when
-    repo.upsertBatch(List.of(first, other, second));
-
-    // then
-    var rows =
-        ctx.selectFrom(Tables.SENSOR_READING)
-            .where(Tables.SENSOR_READING.DAS_KEY.eq("sensor-dup"))
-            .fetch();
-    assertThat(rows).hasSize(1);
-    assertThat(rows.getFirst().getRawValue()).isEqualTo(20.0);
-    assertThat(
-            ctx.fetchExists(
-                ctx.selectOne()
-                    .from(Tables.SENSOR_READING)
-                    .where(Tables.SENSOR_READING.DAS_KEY.eq("sensor-other"))))
-        .isTrue();
-  }
-
-  @Test
   void upsertBatch_should_leave_sensor_parameter_id_null_when_unresolved() {
     // given: mirrors a cache-miss at ingest time (DEFAULT_ACTIVE_CONFIG placeholder)
     var ts = OffsetDateTime.parse("2026-06-24T10:00:00Z");
