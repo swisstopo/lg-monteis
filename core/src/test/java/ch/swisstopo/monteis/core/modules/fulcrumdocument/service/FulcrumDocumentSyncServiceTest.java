@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 
@@ -20,7 +19,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
@@ -50,11 +48,11 @@ class FulcrumDocumentSyncServiceTest {
   @Mock private FulcrumDocumentRepository documentRepository;
   @Mock private FulcrumSyncRepository syncRepository;
 
-  private MutableClock clock;
+  @Mock private Clock clock;
 
   @BeforeEach
   void setUp() {
-    clock = new MutableClock(NOW);
+    given(clock.instant()).willReturn(NOW);
   }
 
   @Test
@@ -202,9 +200,8 @@ class FulcrumDocumentSyncServiceTest {
     // given
     FulcrumLiteratureRow second = row(UUID.randomUUID(), TITLE, UUID.randomUUID());
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(ROW, second));
-    willAnswer(invocation -> clock.advanceBy(Duration.ofMinutes(8).plusSeconds(1)))
-        .given(importService)
-        .importFulcrumDocument(ROW);
+    // start, check before first import, check before second import
+    given(clock.instant()).willReturn(NOW, NOW, DEADLINE.plusSeconds(1));
 
     // when
     service().sync(DEADLINE);
@@ -321,35 +318,5 @@ class FulcrumDocumentSyncServiceTest {
         new FulcrumDocumentFile(
             attachmentId, new DocumentMetadata(FILE_NAME, "application/pdf", 8)),
         null);
-  }
-
-  // deadline checked before each import, an import advances the clock
-  private static final class MutableClock extends Clock {
-
-    private Instant now;
-
-    private MutableClock(Instant now) {
-      this.now = now;
-    }
-
-    private Void advanceBy(Duration duration) {
-      now = now.plus(duration);
-      return null;
-    }
-
-    @Override
-    public Instant instant() {
-      return now;
-    }
-
-    @Override
-    public ZoneId getZone() {
-      return ZoneOffset.UTC;
-    }
-
-    @Override
-    public Clock withZone(ZoneId zone) {
-      return this;
-    }
   }
 }
