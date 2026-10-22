@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.timeout;
 
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.contracts.SensorParameterConfig;
@@ -18,6 +19,7 @@ import ch.swisstopo.monteis.pipeline.transformation.standardization.SIStandardiz
 import ch.swisstopo.monteis.pipeline.transformation.validation.BoundsValidator;
 import java.time.Clock;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,16 +34,23 @@ class BoundBreachAlertingFailureTest {
 
   @Mock private KafkaTemplate<String, SensorBoundBreachedEvent> kafkaTemplate;
 
+  private AlertPublisher alertPublisher;
+
   private TransformationOrchestrator orchestrator;
 
   @BeforeEach
   void setUp() {
-    AlertPublisher alertPublisher = new AlertPublisher(kafkaTemplate, "sensor-alerts");
+    alertPublisher = new AlertPublisher(kafkaTemplate, "sensor-alerts", 10);
     ApplicationEventPublisher synchronousEventPublisher =
         event -> alertPublisher.handleBoundBreach((SensorBoundBreachedEvent) event);
     BoundsValidator boundsValidator =
         new BoundsValidator(synchronousEventPublisher, Clock.systemUTC());
     orchestrator = new TransformationOrchestrator(new SIStandardizer(), boundsValidator);
+  }
+
+  @AfterEach
+  void tearDown() {
+    alertPublisher.destroy();
   }
 
   @Test
@@ -71,7 +80,7 @@ class BoundBreachAlertingFailureTest {
             ProcessingOrigin.INGEST);
 
     // then
-    then(kafkaTemplate).should().send(eq("sensor-alerts"), anyString(), any());
+    then(kafkaTemplate).should(timeout(1000)).send(eq("sensor-alerts"), anyString(), any());
     assertThat(result.getRawValue()).isEqualTo(3059.774);
     assertThat(result.getStatus()).isEqualTo(RangeCategory.too_high);
   }
