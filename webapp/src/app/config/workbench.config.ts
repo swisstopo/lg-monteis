@@ -18,7 +18,13 @@ const baseLayout = (factory: WorkbenchLayoutFactory) =>
     .activatePart('measurements-menu')
     .addPart('setup-menu', { dockTo: 'left-top' }, { label: '%menu.setup', icon: 'settings' })
     .navigatePart('setup-menu', ['setup-menu'])
-    .activatePart('setup-menu');
+    .activatePart('setup-menu')
+    .addPart(
+      'knowledge-menu',
+      { dockTo: 'left-top' },
+      { label: '%menu.knowledge', icon: 'menu_book' },
+    )
+    .navigatePart('knowledge-menu', ['knowledge-menu']);
 
 const adminLayout = (factory: WorkbenchLayoutFactory) =>
   baseLayout(factory)

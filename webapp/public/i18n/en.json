@@ -436,7 +436,8 @@
     "experiment": "Experiment",
     "admin": "Admin",
     "organisation": "Organisations",
-    "fulcrumDocument": "Fulcrum Documents"
+    "fulcrumDocument": "Fulcrum Documents",
+    "knowledge": "Knowledge"
   },
   "chart": {
     "error": {

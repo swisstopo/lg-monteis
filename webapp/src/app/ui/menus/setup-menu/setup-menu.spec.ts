@@ -32,8 +32,7 @@ async function render(): Promise<HTMLElement> {
 }
 
 // Sensor reads are open to every user (row-level security filters them), so the entries are
-// always shown; the write actions are gated inside the tables instead. Every user sees the list of
-// Fulcrum Documents, only their files need document access.
+// always shown; the write actions are gated inside the tables instead.
 describe('SetupMenu', () => {
   it('shows the Sensor entry', async () => {
     const element = await render();
@@ -47,12 +46,5 @@ describe('SetupMenu', () => {
 
     const experimentEntry = element.querySelector('[data-testid="setup-menu-experiment-entry"]');
     expect(experimentEntry?.textContent).toContain('/experiment-table');
-  });
-
-  it('shows the Fulcrum Documents entry', async () => {
-    const element = await render();
-
-    const entry = element.querySelector('[data-testid="setup-menu-fulcrum-document-entry"]');
-    expect(entry?.textContent).toContain('/fulcrum-document-table');
   });
 });
