@@ -8,10 +8,8 @@ import java.util.Objects;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-// checked once when the context starts, so no caller has to check the token itself. without a
-// token Fulcrum is switched off explicitly (enabled=false), not by leaving the token empty.
-// attachmentOrigins (scheme, host and port) are the only places a file is downloaded from, the
-// download url comes from Fulcrum's answer and is not trusted to point anywhere else
+// empty token rejected, switch off via enabled=false. download url comes from Fulcrum's answer,
+// only attachmentOrigins trusted
 @ConfigurationProperties("monteis.fulcrum")
 public record FulcrumProperties(
     @DefaultValue("true") boolean enabled,
@@ -41,7 +39,7 @@ public record FulcrumProperties(
     return attachmentOrigins.contains(originOf(url));
   }
 
-  // the authority keeps any user info, so user@host is refused as another origin than host
+  // authority keeps user info, so user@host != host
   static URI originOf(URI url) {
     return URI.create((url.getScheme() + "://" + url.getRawAuthority()).toLowerCase(Locale.ROOT));
   }

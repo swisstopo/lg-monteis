@@ -170,7 +170,7 @@ class FulcrumDocumentControllerTest {
         .andExpect(content().bytes(new byte[] {1, 2, 3}));
   }
 
-  // only a bug or a hand deleted object gets here, S3 is written before the row
+  // only bug or hand-deleted object, S3 written before row
   @Test
   void should_answer_500_when_the_file_is_missing_in_storage() throws Exception {
     // given

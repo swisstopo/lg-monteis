@@ -10,8 +10,8 @@ import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentR
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
 import org.springframework.stereotype.Service;
 
-// storage first and the row after, like an experiment document upload: a failure in between leaves
-// an object nobody sees, the next sync overwrites it under the same key
+// storage before row (like experiment uploads): failure between leaves invisible object, next
+// sync overwrites same key
 @Service
 public class FulcrumDocumentImportService {
 
@@ -45,8 +45,6 @@ public class FulcrumDocumentImportService {
     documentRepository.saveSynced(literatureMapper.toDocument(row, file));
   }
 
-  // streamed from Fulcrum straight into storage. a failed upload is not retried from here, nothing
-  // was saved, so the next sync imports the file again
   private FulcrumDocumentFile copyIntoStorage(FulcrumAttachmentReference attachment) {
     try (FulcrumAttachmentDownload download =
         downloadClient.download(attachment.id(), syncProperties.maxFileSize())) {

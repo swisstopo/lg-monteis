@@ -16,9 +16,6 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.support.RestClientHttpServiceGroupConfigurer;
 import org.springframework.web.service.registry.ImportHttpServices;
 
-// callers get DefaultApi, generated from the Fulcrum spec, as an HTTP service group: endpoint
-// paths and parameters are whatever the spec says, an upstream rename becomes a compile error.
-// error responses are not translated, GlobalErrorControllerAdvice decodes RestClient's exception
 @Configuration
 @ImportHttpServices(group = FulcrumConfig.GROUP, types = DefaultApi.class)
 public class FulcrumConfig {
@@ -26,8 +23,7 @@ public class FulcrumConfig {
   public static final String GROUP = "fulcrum";
   public static final String API_TOKEN_HEADER = "X-ApiToken";
 
-  // the timeouts come from FulcrumProperties like those of FulcrumAttachmentDownloadClient, this
-  // runs after Boot's own group configurer and replaces its request factory
+  // runs after Boot's group configurer, replaces its request factory to apply our timeouts
   @Bean
   RestClientHttpServiceGroupConfigurer fulcrumGroupConfigurer(FulcrumProperties properties) {
     return groups ->
@@ -40,8 +36,7 @@ public class FulcrumConfig {
                         .apply(configure(properties)));
   }
 
-  // while Fulcrum is switched off every call is refused here, so no caller has to check it. tests
-  // build their client with this too and keep their own request factory
+  // refuses every call while Fulcrum off, callers need no check. tests reuse it with own factory
   static Consumer<RestClient.Builder> configure(FulcrumProperties properties) {
     return builder -> {
       builder

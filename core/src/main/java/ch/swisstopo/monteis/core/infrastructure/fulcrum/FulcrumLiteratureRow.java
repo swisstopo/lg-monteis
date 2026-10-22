@@ -6,8 +6,6 @@ import java.util.Optional;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
-// hand-written like FulcrumSensor, Fulcrum leaves absent values as null so every component is
-// nullable
 public record FulcrumLiteratureRow(
     @JsonProperty("_record_id") UUID recordId,
     @JsonProperty("number") @Nullable String number,
@@ -23,8 +21,7 @@ public record FulcrumLiteratureRow(
     return keywords == null ? List.of() : keywords;
   }
 
-  // document and document_names are parallel arrays. a missing name would otherwise drop the
-  // file, the id still downloads
+  // parallel arrays. missing name must not drop the file, id still downloads
   public Optional<FulcrumAttachmentReference> firstAttachment() {
     if (attachmentIds == null || attachmentIds.isEmpty()) {
       return Optional.empty();

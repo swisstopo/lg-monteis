@@ -107,8 +107,7 @@ public class FulcrumService {
         "SELECT %s FROM \"%s\";".formatted(SENSOR_COLUMNS, properties.sensorTable()), SENSOR_ROWS);
   }
 
-  // rows without a file are of no use in the overview, the PO wants them ignored. a row Fulcrum
-  // sends in an unexpected shape is skipped, one bad row must not keep every other one from syncing
+  // rows without file useless in overview (PO). malformed rows skipped, one must not block rest
   public List<FulcrumLiteratureRow> findLiteratureMarkedForMonteis() {
     List<JsonNode> rows =
         query(
@@ -123,7 +122,7 @@ public class FulcrumService {
     return literature;
   }
 
-  // every document should have exactly one file (PO), more are a mistake in Fulcrum to fix there
+  // one file per document expected (PO), more = data error in Fulcrum
   private static void warnAboutSeveralAttachments(FulcrumLiteratureRow row) {
     log.warn(
         "Fulcrum Document {} has the files {}, only the first one is taken",
@@ -155,7 +154,7 @@ public class FulcrumService {
     // The spec types this response as an empty object (see FulcrumSpecTest), so the generated
     // signature can only promise Object and the row envelope is converted here.
     List<T> rows = objectMapper.convertValue(body, rowType).rows();
-    // only the first page is fetched, a full one means rows are missing and would look deleted
+    // only first page fetched, full page => missing rows would look deleted
     if (rows.size() >= properties.perPage()) {
       throw new IllegalStateException(
           "Fulcrum returned a full page of %d rows, raise monteis.fulcrum.per-page"
