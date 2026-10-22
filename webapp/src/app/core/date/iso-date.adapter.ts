@@ -45,7 +45,7 @@ export class IsoDateAdapter extends NativeDateAdapter {
    */
   override parseTime(value: unknown, parseFormat: string | string[]): Date | null {
     if (typeof value === 'string' && value.trim()) {
-      const parsed = value.trim().match(ISO_TIME_REGEX);
+      const parsed = ISO_TIME_REGEX.exec(value.trim());
       if (parsed) {
         const [, rawHours, rawMinutes, rawSeconds] = parsed;
         const hours = Number(rawHours);

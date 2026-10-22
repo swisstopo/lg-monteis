@@ -37,7 +37,7 @@ public final class RequestTiming {
   }
 
   /** Records one statement. A no-op when no request is in scope. */
-  static void record(long nanos, long rowsFetched) {
+  static void recordStatement(long nanos, long rowsFetched) {
     RequestTiming timing = CURRENT.get();
     if (timing == null) {
       return;
