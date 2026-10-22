@@ -69,7 +69,7 @@ public class FulcrumDocumentSyncService {
 
     SyncOutcome outcome =
         new SyncOutcome(fromFulcrum.size(), failedSaves, noLongerInFulcrum.size(), imports);
-    log.info("Fulcrum Document sync: {}", outcome.summary());
+    log.atInfo().setMessage("Fulcrum Document sync: {}").addArgument(outcome::summary).log();
     return outcome;
   }
 

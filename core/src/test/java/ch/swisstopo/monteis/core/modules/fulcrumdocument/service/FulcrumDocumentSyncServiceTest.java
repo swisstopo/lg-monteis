@@ -221,9 +221,10 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis())
         .willThrow(
             new RestClientResponseException("bad gateway", 502, "Bad Gateway", null, null, null));
+    FulcrumDocumentSyncService service = service();
 
     // when / then
-    assertThrows(RestClientResponseException.class, () -> service().sync(DEADLINE));
+    assertThrows(RestClientResponseException.class, () -> service.sync(DEADLINE));
     then(documentRepository).shouldHaveNoInteractions();
     then(importService).shouldHaveNoInteractions();
     then(syncRepository).shouldHaveNoInteractions();
@@ -237,9 +238,10 @@ class FulcrumDocumentSyncServiceTest {
     willThrow(new IllegalStateException("connection lost"))
         .given(documentRepository)
         .markRemovedFromFulcrum(List.of(), SYNCED_AT);
+    FulcrumDocumentSyncService service = service();
 
     // when / then
-    assertThrows(IllegalStateException.class, () -> service().sync(DEADLINE));
+    assertThrows(IllegalStateException.class, () -> service.sync(DEADLINE));
     then(documentRepository).should().saveSynced(stored(ATTACHMENT_ID));
     then(syncRepository).should(never()).saveSuccessfulSync(any());
   }

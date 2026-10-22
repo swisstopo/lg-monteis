@@ -156,8 +156,11 @@ class JooqFulcrumDocumentRepositoryIT {
 
   @Test
   void should_not_find_an_unknown_document() {
+    // given
+    UUID unknownId = UUID.randomUUID();
+
     // when / then
-    assertThrows(ObjectNotFoundException.class, () -> repository.getById(UUID.randomUUID()));
+    assertThrows(ObjectNotFoundException.class, () -> repository.getById(unknownId));
   }
 
   private static FulcrumDocument document(

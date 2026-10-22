@@ -71,7 +71,7 @@ class S3FulcrumDocumentStorageIT {
   }
 
   @Test
-  void should_key_by_document_id_apart_from_the_experiment_documents() throws IOException {
+  void should_key_by_document_id_apart_from_the_experiment_documents() {
     // given
     UUID documentId = UUID.randomUUID();
 
@@ -91,8 +91,11 @@ class S3FulcrumDocumentStorageIT {
 
   @Test
   void should_fail_to_load_a_document_that_was_never_stored() {
+    // given
+    UUID unknownId = UUID.randomUUID();
+
     // when / then
-    assertThrows(NoSuchKeyException.class, () -> storage.load(UUID.randomUUID()));
+    assertThrows(NoSuchKeyException.class, () -> storage.load(unknownId));
   }
 
   private static FulcrumDocumentFile pdf(UUID documentId) {
