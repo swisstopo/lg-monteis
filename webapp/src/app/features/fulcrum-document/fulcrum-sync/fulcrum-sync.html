@@ -15,7 +15,7 @@
   }
 </span>
 @if (permissions.canAccessDocuments()) {
-  <button matButton="filled" type="button" [disabled]="running()" (click)="onRefresh()">
+  <button matButton="text" type="button" [disabled]="running()" (click)="onRefresh()">
     @if (running()) {
       <mat-spinner diameter="16"></mat-spinner>
     } @else {

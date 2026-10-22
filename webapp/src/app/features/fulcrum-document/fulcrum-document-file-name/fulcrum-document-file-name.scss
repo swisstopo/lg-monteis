@@ -1,15 +1,16 @@
 :host {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   height: 100%;
 }
 
-[mat-icon-button] {
-  --mat-icon-button-state-layer-size: 32px;
-  padding: 4px;
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .removed {
+  flex-shrink: 0;
   color: var(--mat-sys-error);
 }

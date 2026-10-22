@@ -538,9 +538,7 @@
       "label": "Category"
     },
     "file": {
-      "label": "File",
-      "view": "View {{fileName}}",
-      "download": "Download {{fileName}}",
+      "label": "File Name",
       "error": {
         "download": "The file could not be loaded."
       }
@@ -548,6 +546,10 @@
     "removed": "No longer available in Fulcrum. Its file stored in MONTEIS can still be viewed and downloaded here.",
     "error": {
       "load": "The Fulcrum Documents could not be loaded."
+    },
+    "tableHeader": {
+      "download": "Download",
+      "view": "View"
     }
   },
   "fulcrumSync": {
