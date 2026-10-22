@@ -9,7 +9,7 @@ import { firstValueFrom } from 'rxjs';
 
 /**
  * Content and sync requests skip the global error toast: the table toasts a failed download itself,
- * a sync that is already running is no error, and a toast per failed status poll would bury the UI.
+ * a sync that is already running is no error, and the sync view shows a failed status itself.
  */
 @Injectable({ providedIn: 'root' })
 export class FulcrumDocumentService {

@@ -1,13 +1,5 @@
 import { DatePipe } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  InjectionToken,
-  inject,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
@@ -17,10 +9,6 @@ import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-
-export const SYNC_POLL_INTERVAL_MS = new InjectionToken<number>('SYNC_POLL_INTERVAL_MS', {
-  factory: () => 5_000,
-});
 
 const ALREADY_RUNNING = 'fulcrum.sync.alreadyRunning';
 
@@ -35,71 +23,37 @@ export class FulcrumSync {
   private readonly documentService = inject(FulcrumDocumentService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
-  private readonly pollInterval = inject(SYNC_POLL_INTERVAL_MS);
   protected readonly permissions = inject(PermissionsService);
 
-  /** A sync this view watched has ended, the Fulcrum Documents changed. */
-  readonly finished = output<void>();
-
   protected readonly status = signal<FulcrumSyncStatusResponseDto | undefined>(undefined);
-  protected readonly running = signal(false);
   protected readonly statusUnknown = signal(false);
-
-  private destroyed = false;
+  protected readonly starting = signal(false);
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => (this.destroyed = true));
     void this.loadStatus();
   }
 
   async onRefresh(): Promise<void> {
-    this.running.set(true);
+    this.starting.set(true);
     try {
-      this.status.set(await this.documentService.startSync());
+      await this.documentService.startSync();
+      this.toastService.success(this.translateService.translate('fulcrumSync.started')());
     } catch (error) {
-      if (!isAlreadyRunning(error)) {
-        this.running.set(false);
+      if (isAlreadyRunning(error)) {
+        this.toastService.warning(this.translateService.translate(ALREADY_RUNNING)());
+      } else {
         this.toastStartErrors(error);
-        return;
       }
+    } finally {
+      this.starting.set(false);
     }
-    await this.pollUntilFinished();
   }
 
-  // a 403 for a user without document access just leaves the status out
   private async loadStatus(): Promise<void> {
     try {
-      const status = await this.documentService.getSyncStatus();
-      this.status.set(status);
-      if (status.running) {
-        this.running.set(true);
-        await this.pollUntilFinished();
-      }
+      this.status.set(await this.documentService.getSyncStatus());
     } catch {
-      this.status.set(undefined);
-    }
-  }
-
-  private async pollUntilFinished(): Promise<void> {
-    this.statusUnknown.set(false);
-    while (!this.destroyed) {
-      await new Promise((resolve) => setTimeout(resolve, this.pollInterval));
-      if (this.destroyed) return;
-
-      let status: FulcrumSyncStatusResponseDto;
-      try {
-        status = await this.documentService.getSyncStatus();
-      } catch {
-        this.running.set(false);
-        this.statusUnknown.set(true);
-        return;
-      }
-      this.status.set(status);
-      if (!status.running) {
-        this.running.set(false);
-        this.finished.emit();
-        return;
-      }
+      this.statusUnknown.set(true);
     }
   }
 

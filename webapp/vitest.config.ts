@@ -25,6 +25,8 @@ export default defineConfig({
     exclude: ['e2e/**', 'node_modules/**'],
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
+    // busy CI runner can need > 60s default to boot a spec iframe, read by @vitest/browser orchestrator
+    env: { VITEST_BROWSER_IFRAME_TIMEOUT: '180000' },
     browser: {
       provider: playwright(),
       enabled: true,

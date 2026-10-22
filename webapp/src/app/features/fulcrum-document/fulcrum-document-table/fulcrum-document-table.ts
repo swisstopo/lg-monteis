@@ -71,10 +71,6 @@ export default class FulcrumDocumentTable {
     this.searchTerm.set(term);
   }
 
-  onSyncFinished(): void {
-    this.documents.reload();
-  }
-
   onSelectionChanged(rows: FulcrumDocumentResponseDto[]): void {
     this.selectedDocument.set(rows[0]);
   }
