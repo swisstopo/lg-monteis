@@ -127,9 +127,10 @@ class FulcrumDocumentSyncRunnerTest {
         task -> {
           throw new TaskRejectedException("queue full");
         };
+    FulcrumDocumentSyncRunner runner = runner(ENABLED, rejecting);
 
     // when / then
-    assertThrows(TaskRejectedException.class, () -> runner(ENABLED, rejecting).startInBackground());
+    assertThrows(TaskRejectedException.class, runner::startInBackground);
     then(lock).should().unlock();
     then(syncService).shouldHaveNoInteractions();
   }
@@ -138,17 +139,20 @@ class FulcrumDocumentSyncRunnerTest {
   void should_refuse_a_background_sync_while_another_one_runs() {
     // given
     given(syncLock.tryAcquire(any())).willReturn(Optional.empty());
+    FulcrumDocumentSyncRunner runner = runner(ENABLED);
 
     // when / then
-    assertThrows(
-        FulcrumSyncAlreadyRunningException.class, () -> runner(ENABLED).startInBackground());
+    assertThrows(FulcrumSyncAlreadyRunningException.class, runner::startInBackground);
     then(syncService).shouldHaveNoInteractions();
   }
 
   @Test
   void should_refuse_a_background_sync_while_fulcrum_is_switched_off() {
+    // given
+    FulcrumDocumentSyncRunner runner = runner(DISABLED);
+
     // when / then
-    assertThrows(FulcrumDisabledException.class, () -> runner(DISABLED).startInBackground());
+    assertThrows(FulcrumDisabledException.class, runner::startInBackground);
     then(syncLock).shouldHaveNoInteractions();
   }
 

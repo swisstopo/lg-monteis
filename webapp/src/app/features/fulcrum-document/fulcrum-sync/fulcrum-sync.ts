@@ -1,10 +1,9 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, resource, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { PermissionsService } from '@core/auth/permissions.service';
-import { FulcrumSyncStatusResponseDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
@@ -25,13 +24,10 @@ export class FulcrumSync {
   private readonly translateService = inject(TranslateService);
   protected readonly permissions = inject(PermissionsService);
 
-  protected readonly status = signal<FulcrumSyncStatusResponseDto | undefined>(undefined);
-  protected readonly statusUnknown = signal(false);
+  protected readonly status = resource({
+    loader: () => this.documentService.getSyncStatus(),
+  });
   protected readonly starting = signal(false);
-
-  constructor() {
-    void this.loadStatus();
-  }
 
   async onRefresh(): Promise<void> {
     this.starting.set(true);
@@ -46,14 +42,6 @@ export class FulcrumSync {
       }
     } finally {
       this.starting.set(false);
-    }
-  }
-
-  private async loadStatus(): Promise<void> {
-    try {
-      this.status.set(await this.documentService.getSyncStatus());
-    } catch {
-      this.statusUnknown.set(true);
     }
   }
 

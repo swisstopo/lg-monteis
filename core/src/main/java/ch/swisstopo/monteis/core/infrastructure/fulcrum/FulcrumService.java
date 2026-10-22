@@ -55,7 +55,7 @@ public class FulcrumService {
   private static final String SENSOR_COLUMNS =
       String.join(
           ", ",
-          "_record_id",
+          RECORD_ID,
           "_title",
           "system_or_component_category_and_type",
           "fx_point_with_offset",
@@ -65,7 +65,7 @@ public class FulcrumService {
   private static final String LITERATURE_COLUMNS =
       String.join(
           ", ",
-          "_record_id",
+          RECORD_ID,
           "number",
           "reference_title",
           "author_sequence",
