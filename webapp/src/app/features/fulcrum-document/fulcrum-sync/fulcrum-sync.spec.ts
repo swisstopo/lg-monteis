@@ -64,7 +64,9 @@ describe('FulcrumSync', () => {
   });
 
   it('says so when no sync ever ran', async () => {
-    documentService.getSyncStatus.mockResolvedValue(syncStatus({ lastSuccessfulSyncAt: undefined }));
+    documentService.getSyncStatus.mockResolvedValue(
+      syncStatus({ lastSuccessfulSyncAt: undefined }),
+    );
 
     const view = await render();
 
