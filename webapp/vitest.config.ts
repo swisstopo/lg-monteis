@@ -20,6 +20,8 @@ export default defineConfig({
       },
     ],
   },
+  // scan drops type-only imports, Angular plugin keeps them: found mid-run => re-bundle reloads open spec iframes
+  optimizeDeps: { include: ['@angular/router'] },
   test: {
     include: ['src/**/*.spec.ts'],
     exclude: ['e2e/**', 'node_modules/**'],
