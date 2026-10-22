@@ -11,8 +11,7 @@ import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.core.SimpleLock;
 import org.springframework.stereotype.Component;
 
-// every sync, scheduled or manual, holds this lock from start to finish, so only one pod syncs at a
-// time and the lock tells whether a sync is running
+// held by every sync start to finish, so it also tells whether a sync runs
 @Component
 public class FulcrumSyncLock {
 
@@ -32,7 +31,6 @@ public class FulcrumSyncLock {
     this.clock = clock;
   }
 
-  // keptAtLeastFor holds the lock past a quick sync, from the time it was taken
   public Optional<SimpleLock> tryAcquire(Duration keptAtLeastFor) {
     return lockProvider.lock(
         new LockConfiguration(

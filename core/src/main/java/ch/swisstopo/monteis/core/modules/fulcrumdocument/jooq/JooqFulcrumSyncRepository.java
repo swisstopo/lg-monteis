@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class JooqFulcrumSyncRepository implements FulcrumSyncRepository {
 
-  // ShedLock writes the db time in utc into plain TIMESTAMP columns (usingDbTime)
+  // ShedLock writes utc db time into plain TIMESTAMP (usingDbTime)
   private static final Field<LocalDateTime> NOW_UTC =
       DSL.field("timezone('utc', now())", LocalDateTime.class);
 
@@ -28,7 +28,7 @@ public class JooqFulcrumSyncRepository implements FulcrumSyncRepository {
     this.dsl = dsl;
   }
 
-  // unlocking sets lock_until to now, a pod that died leaves it until lockAtMostFor runs out
+  // unlock sets lock_until = now, dead pod holds it until lockAtMostFor
   @Override
   @Transactional(readOnly = true)
   public boolean isSyncRunning() {

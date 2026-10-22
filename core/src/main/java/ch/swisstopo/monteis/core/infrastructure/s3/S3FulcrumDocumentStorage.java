@@ -10,8 +10,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-// keyed by Fulcrum's attachment id under its own prefix, so the files never mix with the
-// experiment documents and can always be fetched from Fulcrum again
 @Component
 public class S3FulcrumDocumentStorage implements FulcrumDocumentStorage {
 

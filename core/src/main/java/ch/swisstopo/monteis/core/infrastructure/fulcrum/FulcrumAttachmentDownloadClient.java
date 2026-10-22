@@ -17,9 +17,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
-// Fulcrum's attachment endpoint only answers with metadata and the url of the content. the url
-// client has no base url and no token, and it follows no redirects: the url comes from Fulcrum's
-// answer, so only one on an attachment origin is fetched
+// url comes from Fulcrum's answer: fetched without token (must not reach content host), no
+// redirects (could leave attachment origins)
 @Component
 public class FulcrumAttachmentDownloadClient {
 
@@ -79,7 +78,7 @@ public class FulcrumAttachmentDownloadClient {
     return url;
   }
 
-  // the url can be signed, RestClient's own messages would carry it into the log
+  // url may be signed, RestClient's messages would log it
   private FulcrumAttachmentDownload streamFileFrom(URI url, UUID attachmentId, DataSize maxSize) {
     try {
       return attachmentUrlClient
@@ -93,7 +92,7 @@ public class FulcrumAttachmentDownloadClient {
     }
   }
 
-  // the body stays open for the caller, a rejected response is closed right here
+  // exchange keeps response open for streaming, rejected one must be closed or leaks its connection
   private static FulcrumAttachmentDownload openBodyOf(
       ClientHttpResponse response, UUID attachmentId, DataSize maxSize) throws IOException {
     try {
@@ -106,8 +105,8 @@ public class FulcrumAttachmentDownloadClient {
     }
   }
 
-  // the http client reads no more than the content length, so the header caps the file on disk
-  // too. Fulcrum's file_size is not trusted for that, it can be missing or wrong
+  // http client reads at most content length, so header caps file on disk. file_size untrusted,
+  // may be missing or wrong
   private static void rejectUnusableDownload(
       ClientHttpResponse response, UUID attachmentId, DataSize maxSize) throws IOException {
     if (!response.getStatusCode().is2xxSuccessful()) {

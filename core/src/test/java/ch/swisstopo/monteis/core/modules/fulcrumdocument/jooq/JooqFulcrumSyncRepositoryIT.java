@@ -19,8 +19,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-// against the real LockProvider, the repository has to read what ShedLock writes. ShedLock commits
-// on its own connection, so the rows are removed after each test instead of rolled back
+// real LockProvider: must read what ShedLock writes. ShedLock commits on own connection, so rows
+// deleted after each test, no rollback
 @IT
 class JooqFulcrumSyncRepositoryIT {
 

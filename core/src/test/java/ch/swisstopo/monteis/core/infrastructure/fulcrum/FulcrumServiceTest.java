@@ -369,7 +369,7 @@ class FulcrumServiceTest {
 
   @Test
   void a_query_fails_when_fulcrum_fills_the_whole_page() {
-    // only the first page is fetched, the missing rows would otherwise look deleted
+    // only first page fetched, missing rows would look deleted
     givenFulcrumIs(ENABLED, 2);
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))

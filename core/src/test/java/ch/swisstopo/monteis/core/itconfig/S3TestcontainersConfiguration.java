@@ -21,8 +21,7 @@ public class S3TestcontainersConfiguration {
 
   public static final String BUCKET = "monteis-e2e-documents";
   private static final int PORT = 9090;
-  // without a limit the image's memory calculator sizes the jvm by the host's free memory and
-  // refuses to start when that is near zero, same limit as the s3 service of docker/compose.yml
+  // else jvm memory calculator sizes by host's free memory, fails near zero. same as compose s3
   private static final long MEMORY_LIMIT_BYTES = 512L * 1024 * 1024;
   private static final Logger log = LoggerFactory.getLogger(S3TestcontainersConfiguration.class);
 

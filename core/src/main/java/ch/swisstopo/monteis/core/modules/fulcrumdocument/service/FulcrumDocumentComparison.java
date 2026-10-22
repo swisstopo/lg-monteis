@@ -10,7 +10,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-// a row and a stored document belong together when the row's record id is the document's id
 record FulcrumDocumentComparison(
     List<FulcrumLiteratureRow> fromFulcrum, Map<UUID, FulcrumDocument> storedById) {
 
@@ -27,7 +26,7 @@ record FulcrumDocumentComparison(
         .toList();
   }
 
-  // stored documents still available that Fulcrum did not return this time
+  // already removed excluded, keep first removedAt
   List<UUID> idsNoLongerInFulcrum() {
     Set<UUID> inFulcrum =
         fromFulcrum.stream().map(FulcrumLiteratureRow::recordId).collect(Collectors.toSet());
@@ -38,7 +37,6 @@ record FulcrumDocumentComparison(
         .toList();
   }
 
-  // a new document, or a stored one whose file Fulcrum replaced
   List<FulcrumLiteratureRow> rowsWithNewFile() {
     return fromFulcrum.stream().filter(this::hasNewFile).toList();
   }

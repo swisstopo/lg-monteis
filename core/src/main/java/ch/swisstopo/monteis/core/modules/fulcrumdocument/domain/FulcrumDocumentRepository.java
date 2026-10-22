@@ -11,8 +11,6 @@ public interface FulcrumDocumentRepository {
 
   FulcrumDocument getById(UUID id);
 
-  // inserts a new document or updates a known one, metadata and file alike, as Fulcrum delivered
-  // it. a removed one becomes available again. only once its file is in storage
   void saveSynced(FulcrumDocument document);
 
   void markRemovedFromFulcrum(Collection<UUID> documentIds, OffsetDateTime removedAt);

@@ -127,7 +127,7 @@ class FulcrumDocumentSyncServiceTest {
     // when
     service().sync(DEADLINE);
 
-    // then the document keeps its old file until the new one is imported
+    // then keeps old file until new one imported
     then(documentRepository).should().saveSynced(stored(oldAttachment));
     then(importService).should().importFulcrumDocument(ROW);
   }
@@ -321,7 +321,7 @@ class FulcrumDocumentSyncServiceTest {
         null);
   }
 
-  // the deadline is checked against the clock before each import, an import moves it on
+  // deadline checked before each import, an import advances the clock
   private static final class MutableClock extends Clock {
 
     private Instant now;

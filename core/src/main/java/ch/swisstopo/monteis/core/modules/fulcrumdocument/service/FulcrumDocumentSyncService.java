@@ -15,8 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-// mirrors the Fulcrum literature into MONTEIS (ADR "Fulcrum Documents spiegeln statt On-Demand
-// abrufen"). no transaction around a sync, it would hold a db connection for minutes
+// one tx per save, not per sync: else one connection held for minutes of downloads, and one failed
+// save aborts the postgres tx and rolls back all
 @Service
 public class FulcrumDocumentSyncService {
 
@@ -44,7 +44,6 @@ public class FulcrumDocumentSyncService {
     this.clock = clock;
   }
 
-  // files not imported by the deadline are left to the next sync
   public void sync(Instant deadline) {
     Instant start = clock.instant();
     if (syncFrom(start, deadline).isSuccessful()) {
@@ -74,7 +73,7 @@ public class FulcrumDocumentSyncService {
     return outcome;
   }
 
-  // a replaced file is saved as synced too, the document keeps its old file until the new one is in
+  // replaced file: document keeps old file until new one is in
   private List<FulcrumDocument> storedDocumentsWithFulcrumMetadata(
       FulcrumDocumentComparison comparison) {
     return comparison.rowsOfStoredDocuments().stream()
@@ -82,7 +81,7 @@ public class FulcrumDocumentSyncService {
         .toList();
   }
 
-  // one document that does not fit the table must not keep the others from being saved
+  // one unsavable document must not block the others
   private int saveEachSynced(List<FulcrumDocument> documents) {
     int failed = 0;
     for (FulcrumDocument document : documents) {
@@ -96,7 +95,7 @@ public class FulcrumDocumentSyncService {
     return failed;
   }
 
-  // a file too large is skipped on purpose and not counted as failed, it would fail every sync
+  // too large = skipped, not failed, else every sync fails
   private ImportCounts importNewFiles(List<FulcrumLiteratureRow> rowsToImport, Instant deadline) {
     int imported = 0;
     int skipped = 0;
@@ -122,8 +121,7 @@ public class FulcrumDocumentSyncService {
 
   private record ImportCounts(int imported, int skipped, int failed, boolean outOfTime) {}
 
-  // successful: Fulcrum returned the literature, every document and file got in and the sync
-  // finished within its time budget. a file skipped as too large does not count against it
+  // too-large skips don't count against success
   private record SyncOutcome(
       int fromFulcrum, int failedSaves, int newlyRemoved, ImportCounts imports) {
 

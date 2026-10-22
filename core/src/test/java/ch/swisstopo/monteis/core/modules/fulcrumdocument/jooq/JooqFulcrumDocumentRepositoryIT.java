@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-// every test rolls back, findAll looks at the whole table
 @IT
 @Transactional
 class JooqFulcrumDocumentRepositoryIT {

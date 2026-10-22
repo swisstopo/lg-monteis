@@ -16,15 +16,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 
-// runs the sync under the conditions its callers need: Fulcrum switched on, one pod at a time
-// (ShedLock), as the system user (no request user on a scheduled or background thread)
 @Service
 public class FulcrumDocumentSyncRunner {
 
   private static final Logger log = LoggerFactory.getLogger(FulcrumDocumentSyncRunner.class);
 
-  // every pod fires at the same time, one whose clock lags a few seconds would otherwise take the
-  // lock right after a quick sync on another pod released it and sync a second time
+  // pods fire together, lagging clock would retake lock after a quick sync and sync twice
   private static final Duration SCHEDULED_SYNC_KEPT_AT_LEAST_FOR = Duration.ofMinutes(1);
 
   private final FulcrumDocumentSyncService syncService;
@@ -57,7 +54,7 @@ public class FulcrumDocumentSyncRunner {
         syncLock.isSyncRunning(), syncRepository.findLastSuccessfulSyncAt().orElse(null));
   }
 
-  // a switched off Fulcrum would log a failed sync each night
+  // disabled Fulcrum would log a failed sync nightly
   public void runUnlessRunning() {
     if (!fulcrumProperties.enabled()) {
       log.info("Fulcrum is switched off, skipping the Fulcrum Document sync");
@@ -70,8 +67,7 @@ public class FulcrumDocumentSyncRunner {
             () -> log.info("Fulcrum Document sync already running, skipping this one"));
   }
 
-  // the lock is taken right here so the caller learns at once that a sync is running, the sync
-  // itself continues in the background and releases it
+  // lock taken here so caller learns at once, background sync releases it
   public void startInBackground() {
     if (!fulcrumProperties.enabled()) {
       throw new FulcrumDisabledException();
@@ -94,7 +90,7 @@ public class FulcrumDocumentSyncRunner {
     }
   }
 
-  // the only place a crashed sync ends up, the sync itself logs how it went
+  // only catch for a crashed sync, sync logs its own outcome
   private void runQuietly() {
     try {
       syncService.sync(clock.instant().plus(syncProperties.timeBudget()));
