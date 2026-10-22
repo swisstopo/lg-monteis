@@ -22,7 +22,9 @@ describe('experiment columns', () => {
   });
 
   function ownerColumn() {
-    const columns = TestBed.runInInjectionContext(() => createColumns(new DatePipe('en-US')));
+    const columns = TestBed.runInInjectionContext(() =>
+      createColumns(new DatePipe('en-US'), (id) => id),
+    );
     return columns.find((column) => column.field === 'owners')!;
   }
 
