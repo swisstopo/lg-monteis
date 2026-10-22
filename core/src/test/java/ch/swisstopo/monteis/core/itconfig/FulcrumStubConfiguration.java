@@ -3,9 +3,13 @@ package ch.swisstopo.monteis.core.itconfig;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,6 +44,9 @@ public class FulcrumStubConfiguration {
   public static final double STUB_Z = 512;
 
   private static final String QUERY_PATH = "/v2/query";
+  private static final String ATTACHMENTS_PATH = "/v2/attachments/";
+  private static final String FILES_PATH = "/files/";
+  private static final String LITERATURE_TABLE = "\"Mont Terri Literature\"";
   private static final String STATEMENT_PARAMETER = "q";
 
   /** Matches the {@code _record_id = '<uuid>'} filter FulcrumService builds into its SQL. */
@@ -52,10 +59,12 @@ public class FulcrumStubConfiguration {
   @Bean
   FulcrumStub fulcrumStub() throws IOException {
     HttpServer server = HttpServer.create(new InetSocketAddress(ANY_FREE_PORT), DEFAULT_BACKLOG);
+    FulcrumStub stub = new FulcrumStub(server);
     server.createContext(QUERY_PATH, FulcrumStubConfiguration::handleQuery);
+    server.createContext(ATTACHMENTS_PATH, exchange -> handleAttachment(exchange, stub.baseUrl()));
+    server.createContext(FILES_PATH, FulcrumStubConfiguration::handleFile);
     server.start();
 
-    FulcrumStub stub = new FulcrumStub(server);
     log.info("Fulcrum stub listening on {}{}", stub.baseUrl(), QUERY_PATH);
     return stub;
   }
@@ -73,25 +82,72 @@ public class FulcrumStubConfiguration {
     return registry -> {
       registry.add("monteis.fulcrum.base-url", fulcrumStub::baseUrl);
       registry.add("monteis.fulcrum.api-token", () -> STUB_API_TOKEN);
+      registry.add("monteis.fulcrum.attachment-origins", fulcrumStub::baseUrl);
     };
   }
 
   private static void handleQuery(HttpExchange exchange) throws IOException {
     try (exchange) {
-      UUID recordId = recordIdOf(exchange.getRequestURI());
-      String body =
-          recordId == null || UNKNOWN_RECORD_ID.equals(recordId)
-              ? emptyResponse()
-              : sensorResponse(recordId);
+      String body = queryResponseFor(exchange.getRequestURI());
       log.warn(body);
-
-      byte[] payload = body.getBytes(StandardCharsets.UTF_8);
-      exchange.getResponseHeaders().set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-      exchange.sendResponseHeaders(HttpStatus.OK.value(), payload.length);
-      exchange.getResponseBody().write(payload);
+      sendJson(exchange, body);
     } catch (Exception ex) {
       log.warn("Error:", ex);
     }
+  }
+
+  private static String queryResponseFor(URI requestUri) {
+    String rawQuery = Objects.requireNonNullElse(requestUri.getRawQuery(), "");
+    if (UriUtils.decode(rawQuery, StandardCharsets.UTF_8).contains(LITERATURE_TABLE)) {
+      return literatureResponse();
+    }
+    UUID recordId = recordIdOf(requestUri);
+    return recordId == null || UNKNOWN_RECORD_ID.equals(recordId)
+        ? emptyResponse()
+        : sensorResponse(recordId);
+  }
+
+  private static void handleAttachment(HttpExchange exchange, String baseUrl) throws IOException {
+    try (exchange) {
+      Optional<StubAttachment> attachment =
+          StubAttachment.byId(lastPathSegmentOf(exchange.getRequestURI()));
+      if (attachment.isEmpty()) {
+        exchange.sendResponseHeaders(HttpStatus.NOT_FOUND.value(), -1);
+        return;
+      }
+      sendJson(exchange, attachmentResponse(attachment.get(), baseUrl));
+    } catch (Exception ex) {
+      log.warn("Error:", ex);
+    }
+  }
+
+  // fixed length => Content-Length header, which the download client requires
+  private static void handleFile(HttpExchange exchange) throws IOException {
+    try (exchange) {
+      Optional<StubAttachment> attachment =
+          StubAttachment.byId(lastPathSegmentOf(exchange.getRequestURI()));
+      if (attachment.isEmpty()) {
+        exchange.sendResponseHeaders(HttpStatus.NOT_FOUND.value(), -1);
+        return;
+      }
+      byte[] content = attachment.get().content();
+      exchange.sendResponseHeaders(HttpStatus.OK.value(), content.length);
+      exchange.getResponseBody().write(content);
+    } catch (Exception ex) {
+      log.warn("Error:", ex);
+    }
+  }
+
+  private static void sendJson(HttpExchange exchange, String body) throws IOException {
+    byte[] payload = body.getBytes(StandardCharsets.UTF_8);
+    exchange.getResponseHeaders().set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+    exchange.sendResponseHeaders(HttpStatus.OK.value(), payload.length);
+    exchange.getResponseBody().write(payload);
+  }
+
+  private static String lastPathSegmentOf(URI requestUri) {
+    String path = requestUri.getPath();
+    return path.substring(path.lastIndexOf('/') + 1);
   }
 
   static UUID recordIdOf(URI requestUri) {
@@ -140,6 +196,98 @@ public class FulcrumStubConfiguration {
     }
     """
         .formatted(recordId, STUB_X, STUB_Y, STUB_Z);
+  }
+
+  private static String literatureResponse() {
+    return """
+    {
+      "rows": [
+        {
+          "_record_id": "6f1c2a0e-1d4b-4e8a-9c3f-000000000001",
+          "number": "E2E-001",
+          "reference_title": "Self-sealing of fractures in Opalinus Clay",
+          "author_sequence": "Bossart, P.; Thury, M.",
+          "year": 2019,
+          "categories": "Technical Report",
+          "keywords": ["hydrogeology", "swelling"],
+          "document": ["%s"],
+          "document_names": ["%s"]
+        },
+        {
+          "_record_id": "6f1c2a0e-1d4b-4e8a-9c3f-000000000002",
+          "number": "E2E-002",
+          "reference_title": "Gas permeability of the excavation damaged zone",
+          "author_sequence": "Marschall, P.",
+          "year": 2008,
+          "categories": "Data Report",
+          "keywords": ["gas"],
+          "document": ["%s"],
+          "document_names": ["%s"]
+        },
+        {
+          "_record_id": "6f1c2a0e-1d4b-4e8a-9c3f-000000000003",
+          "number": "E2E-003",
+          "reference_title": "Long-term monitoring of the EZ-B niche",
+          "author_sequence": "Nussbaum, C.",
+          "year": 2021,
+          "categories": "Technical Note",
+          "keywords": ["monitoring"],
+          "document": ["%s", "%s"],
+          "document_names": ["%s", "%s"]
+        }
+      ]
+    }
+    """
+        .formatted(
+            StubAttachment.OPALINUS_REPORT.id,
+            StubAttachment.OPALINUS_REPORT.fileName,
+            StubAttachment.GAS_MEASUREMENTS.id,
+            StubAttachment.GAS_MEASUREMENTS.fileName,
+            StubAttachment.NICHE_MONITORING.id,
+            StubAttachment.NICHE_MONITORING_APPENDIX.id,
+            StubAttachment.NICHE_MONITORING.fileName,
+            StubAttachment.NICHE_MONITORING_APPENDIX.fileName);
+  }
+
+  private static String attachmentResponse(StubAttachment attachment, String baseUrl) {
+    return """
+    {"id": "%s", "name": "%s", "url": "%s%s%s"}
+    """
+        .formatted(attachment.id, attachment.fileName, baseUrl, FILES_PATH, attachment.id);
+  }
+
+  /**
+   * Files of the literature rows, kept in sync with webapp/e2e/fulcrum-document. The appendix is
+   * the second attachment of its row, the sync takes only the first, so it is never downloaded.
+   */
+  private enum StubAttachment {
+    OPALINUS_REPORT("7a2d3b1f-2e5c-4f9b-8d4a-000000000001", "e2e-opalinus-report.pdf"),
+    GAS_MEASUREMENTS("7a2d3b1f-2e5c-4f9b-8d4a-000000000002", "e2e-gas-measurements.xlsx"),
+    NICHE_MONITORING("7a2d3b1f-2e5c-4f9b-8d4a-000000000003", "e2e-niche-monitoring.pdf"),
+    NICHE_MONITORING_APPENDIX(
+        "7a2d3b1f-2e5c-4f9b-8d4a-000000000004", "e2e-niche-monitoring-appendix.pdf");
+
+    private final String id;
+    private final String fileName;
+
+    StubAttachment(String id, String fileName) {
+      this.id = id;
+      this.fileName = fileName;
+    }
+
+    static Optional<StubAttachment> byId(String id) {
+      return Arrays.stream(values()).filter(attachment -> attachment.id.equals(id)).findFirst();
+    }
+
+    byte[] content() throws IOException {
+      try (InputStream content =
+          FulcrumStubConfiguration.class.getResourceAsStream("/fulcrum-stub/" + fileName)) {
+        if (content == null) {
+          throw new IllegalStateException("No stub file for " + fileName);
+        }
+        return content.readAllBytes();
+      }
+    }
   }
 
   public record FulcrumStub(HttpServer server) implements AutoCloseable {
