@@ -23,8 +23,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
-// against a local http server: the client builds its own request factory from the builder, which
-// would replace a MockRestServiceServer
+// local http server: client builds own request factory, would replace MockRestServiceServer
 class FulcrumAttachmentDownloadClientTest {
 
   private static final UUID ATTACHMENT_ID = UUID.fromString("7de093d3-94b1-4fb1-a86a-bf3658003cda");
@@ -238,7 +237,7 @@ class FulcrumAttachmentDownloadClientTest {
     }
   }
 
-  // 0 makes HttpServer send the body chunked, without a content length
+  // 0 => HttpServer sends chunked, no content length
   private long downloadLengthOf(int status) {
     if (status != 200) {
       return -1;

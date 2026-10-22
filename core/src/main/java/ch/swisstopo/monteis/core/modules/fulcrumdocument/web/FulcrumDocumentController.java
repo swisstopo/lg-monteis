@@ -75,7 +75,7 @@ public class FulcrumDocumentController {
             .filename(metadata.fileName(), StandardCharsets.UTF_8)
             .build();
     MediaType contentType = MediaType.parseMediaType(metadata.contentType());
-    // opened last: if building the headers throws, no S3 connection is left open
+    // opened last: header failure leaves no S3 connection open
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
         .contentType(contentType)

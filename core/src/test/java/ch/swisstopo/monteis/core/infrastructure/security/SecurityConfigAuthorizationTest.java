@@ -148,7 +148,7 @@ class SecurityConfigAuthorizationTest {
         .andExpect(status().isOk());
   }
 
-  // Spring answers HEAD with the GET handler, a HEAD has no body to compare
+  // HEAD served by GET handler, no body to compare
   @ParameterizedTest
   @EnumSource(PrivilegeLevel.class)
   void should_apply_the_fulcrum_document_rule_to_head_requests(PrivilegeLevel level)

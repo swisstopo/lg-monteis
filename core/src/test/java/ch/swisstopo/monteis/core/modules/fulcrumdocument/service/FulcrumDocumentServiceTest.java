@@ -52,7 +52,7 @@ class FulcrumDocumentServiceTest {
     assertThat(service.openFileContent(document(null))).isSameAs(content);
   }
 
-  // the backup is the point of keeping a removed document (PO)
+  // backup is why removed documents are kept (PO)
   @Test
   void should_still_open_the_file_of_a_document_fulcrum_no_longer_has() {
     // given

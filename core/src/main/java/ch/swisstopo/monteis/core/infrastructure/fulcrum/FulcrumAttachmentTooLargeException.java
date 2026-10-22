@@ -3,8 +3,8 @@ package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 import java.util.UUID;
 import org.springframework.util.unit.DataSize;
 
-// not a failed download: the file is skipped on purpose, every sync until someone shrinks it in
-// Fulcrum or raises monteis.fulcrum.documents.max-file-size
+// skipped on purpose, not failed: would fail every sync until shrunk in Fulcrum or
+// monteis.fulcrum.documents.max-file-size raised
 public class FulcrumAttachmentTooLargeException extends RuntimeException {
 
   public FulcrumAttachmentTooLargeException(UUID attachmentId, DataSize maxSize) {
