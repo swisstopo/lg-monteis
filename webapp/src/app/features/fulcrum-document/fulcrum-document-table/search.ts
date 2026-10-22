@@ -6,6 +6,7 @@ export function matchesSearch(document: FulcrumDocumentResponseDto, term: string
   if (words.length === 0) return true;
 
   const text = [
+    document.file.fileName,
     document.number,
     document.title,
     document.authors,

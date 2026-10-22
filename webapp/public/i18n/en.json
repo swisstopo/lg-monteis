@@ -554,6 +554,7 @@
   },
   "fulcrumSync": {
     "refresh": "Refresh",
+    "started": "Sync with Fulcrum started. New documents appear when you reopen the overview.",
     "running": "Sync with Fulcrum running...",
     "lastSuccessfulSync": "Last successful sync at {{lastSuccessfulSyncAt}}",
     "never": "No successful sync with Fulcrum yet",

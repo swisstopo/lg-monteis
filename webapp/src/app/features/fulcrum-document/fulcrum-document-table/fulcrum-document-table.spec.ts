@@ -4,7 +4,6 @@ import { By } from '@angular/platform-browser';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { FulcrumDocumentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
-import { SYNC_POLL_INTERVAL_MS } from '@features/fulcrum-document/fulcrum-sync/fulcrum-sync';
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
 import {
   fulcrumDocument,
@@ -72,7 +71,6 @@ describe('FulcrumDocumentTable', () => {
       providers: [
         provideTranslateService(),
         WorkbenchView,
-        { provide: SYNC_POLL_INTERVAL_MS, useValue: 1 },
         { provide: FulcrumDocumentService, useValue: documentService },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
@@ -179,22 +177,6 @@ describe('FulcrumDocumentTable', () => {
     await vi.waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith('fulcrumDocument.file.error.download'),
     );
-  });
-
-  it('reloads the documents once a sync finished', async () => {
-    documentService.getSyncStatus
-      .mockResolvedValueOnce(syncStatus())
-      .mockResolvedValueOnce(syncStatus());
-    const view = await render();
-    documentService.getDocuments.mockResolvedValue([GAS]);
-
-    view.refreshButton()!.click();
-
-    await vi.waitFor(() => expect(documentService.getDocuments).toHaveBeenCalledTimes(2));
-    await vi.waitFor(async () => {
-      await view.settle();
-      expect(view.titles()).toEqual([GAS.title]);
-    });
   });
 
   it('shows an inline error when the documents cannot be loaded', async () => {
