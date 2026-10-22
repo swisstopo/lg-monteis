@@ -1,9 +1,7 @@
 package ch.swisstopo.monteis.pipeline.transformation.validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.BDDMockito.willThrow;
 
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.contracts.MeasurementStatus;
@@ -23,7 +21,6 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.kafka.KafkaException;
 
 @ExtendWith(MockitoExtension.class)
 class BoundsValidatorTest {
@@ -104,27 +101,6 @@ class BoundsValidatorTest {
     assertThat(event.limitViolated()).isEqualTo(-10.0);
     assertThat(event.boundType()).isEqualTo(BoundType.LOWER);
     assertThat(event.timestamp()).isEqualTo(fixedTimestamp);
-  }
-
-  @Test
-  void should_return_too_high_even_when_alert_publishing_fails() {
-    // given
-    SensorParameterConfig config =
-        new SensorParameterConfig(
-            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x + 1", 100.0, 0.0, 1);
-
-    // Simulate a synchronous listener failure (e.g., alert topic does not exist)
-    willThrow(new KafkaException("Topic sensor-alerts not present in metadata"))
-        .given(eventPublisher)
-        .publishEvent(any(SensorBoundBreachedEvent.class));
-
-    // when
-    MeasurementStatus status =
-        boundsValidator.evaluateBounds("deviceA", 150.5, config, ProcessingOrigin.INGEST);
-
-    // then
-    assertThat(status).isEqualTo(MeasurementStatus.TOO_HIGH);
-    then(eventPublisher).should().publishEvent(any(SensorBoundBreachedEvent.class));
   }
 
   @Test

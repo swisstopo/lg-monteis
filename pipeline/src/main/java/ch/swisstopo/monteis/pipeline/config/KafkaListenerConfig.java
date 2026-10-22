@@ -1,11 +1,15 @@
 package ch.swisstopo.monteis.pipeline.config;
 
+import org.apache.kafka.common.TopicPartition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.util.backoff.FixedBackOff;
 
 @Configuration
 public class KafkaListenerConfig {
@@ -16,7 +20,8 @@ public class KafkaListenerConfig {
    */
   @Bean("manualAckFactory")
   public ConcurrentKafkaListenerContainerFactory<String, Object> manualAckFactory(
-      ConsumerFactory<String, Object> consumerFactory) {
+      ConsumerFactory<String, Object> consumerFactory,
+      KafkaTemplate<String, Object> kafkaTemplate) {
 
     ConcurrentKafkaListenerContainerFactory<String, Object> factory =
         new ConcurrentKafkaListenerContainerFactory<>();
@@ -27,7 +32,24 @@ public class KafkaListenerConfig {
     // Manuelles Acknowledgment erzwungen
     factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
 
+    factory.setCommonErrorHandler(deadLetterErrorHandler(kafkaTemplate));
+
     return factory;
+  }
+
+  /**
+   * Retries a failing record twice with 1s backoff, then publishes it to {@code <topic>-dlt} and
+   * commits it, instead of dropping it after Spring's default 10 retries. The DLT partition is left
+   * to the producer, so the DLT does not need as many partitions as the source topic. If the DLT
+   * publish itself fails, the record is not committed and is retried.
+   */
+  private static DefaultErrorHandler deadLetterErrorHandler(
+      KafkaTemplate<String, Object> kafkaTemplate) {
+    DeadLetterPublishingRecoverer recoverer =
+        new DeadLetterPublishingRecoverer(
+            kafkaTemplate,
+            (consumerRecord, ex) -> new TopicPartition(consumerRecord.topic() + "-dlt", -1));
+    return new DefaultErrorHandler(recoverer, new FixedBackOff(1000L, 2L));
   }
 
   /**

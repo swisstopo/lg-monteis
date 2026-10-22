@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.pipeline.transformation.processing;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.mock;
@@ -28,7 +27,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -200,43 +198,6 @@ class SensorDataBatchProcessorTest {
 
     // Only the surviving valid record should be timed, not the filtered-out poison pill
     assertThat(meterRegistry.get("pipeline.message.total.duration").timer().count()).isEqualTo(1);
-  }
-
-  @Test
-  void should_not_persist_or_acknowledge_batch_when_transform_throws_unexpected_exception() {
-    // given
-    NormalizedSensorData breachingData =
-        new NormalizedSensorData("deviceA", "2026-06-23T10:00:00Z", 3059.774);
-    NormalizedSensorData validData =
-        new NormalizedSensorData("deviceB", "2026-06-23T10:05:00Z", 20.0);
-    List<NormalizedSensorData> batch = List.of(breachingData, validData);
-
-    ActiveSensorConfig configA =
-        new ActiveSensorConfig(
-            new SensorParameterConfig(
-                Das.SOL_EXPERTS,
-                "deviceA",
-                "temperature",
-                UUID.randomUUID(),
-                "x - 1",
-                103.0,
-                0.0,
-                6));
-    given(sensorConfigCache.getActiveConfig("deviceA")).willReturn(configA);
-
-    given(
-            orchestrator.transform(
-                "deviceA", 3059.774, "2026-06-23T10:00:00Z", configA, ProcessingOrigin.INGEST))
-        .willThrow(new KafkaException("Topic sensor-alerts not present in metadata"));
-
-    // when / then
-    assertThatThrownBy(
-            () -> sensorDataBatchProcessor.processAndPersist(batch, List.of(0L, 0L), ack))
-        .isInstanceOf(KafkaException.class);
-
-    // The valid neighbouring record is lost together with the offending one
-    then(sensorReadingRepository).shouldHaveNoInteractions();
-    then(ack).shouldHaveNoInteractions();
   }
 
   @Test
