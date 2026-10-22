@@ -41,9 +41,9 @@ class FulcrumPropertiesTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-        "https://attachments.fulcrumapp-eu.com/files",
-        "https://attachments.fulcrumapp-eu.com?a=b",
-        "attachments.fulcrumapp-eu.com"
+        "https://content.fulcrumapp-eu.com/files",
+        "https://content.fulcrumapp-eu.com?a=b",
+        "content.fulcrumapp-eu.com"
       })
   void should_refuse_to_start_with_an_attachment_origin_that_is_more_than_an_origin(
       String attachmentOrigin) {
@@ -62,7 +62,7 @@ class FulcrumPropertiesTest {
     // when / then
     assertThat(
             properties.isAttachmentOrigin(
-                URI.create("HTTPS://attachments.fulcrumapp-eu.com/s3/file.pdf?signature=x")))
+                URI.create("HTTPS://content.fulcrumapp-eu.com/s3/file.pdf?signature=x")))
         .isTrue();
   }
 
@@ -74,13 +74,13 @@ class FulcrumPropertiesTest {
     // when / then
     assertThat(
             properties.isAttachmentOrigin(
-                URI.create("https://user@attachments.fulcrumapp-eu.com/file.pdf")))
+                URI.create("https://user@content.fulcrumapp-eu.com/file.pdf")))
         .isFalse();
   }
 
   private static FulcrumProperties properties(boolean enabled, String apiToken) {
     return properties(
-        enabled, apiToken, List.of(URI.create("https://attachments.fulcrumapp-eu.com")));
+        enabled, apiToken, List.of(URI.create("https://content.fulcrumapp-eu.com")));
   }
 
   private static FulcrumProperties properties(

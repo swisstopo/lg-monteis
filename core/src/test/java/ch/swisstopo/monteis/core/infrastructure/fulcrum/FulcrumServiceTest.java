@@ -134,7 +134,7 @@ class FulcrumServiceTest {
             perPage,
             Duration.ofSeconds(5),
             Duration.ofSeconds(60),
-            List.of(URI.create("https://attachments.fulcrumapp-eu.com")));
+            List.of(URI.create("https://content.fulcrumapp-eu.com")));
 
     JsonMapper objectMapper = JsonMapper.builder().build();
 
