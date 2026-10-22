@@ -60,13 +60,19 @@ test.describe(`as ${label(SEED_USERS.admin)}`, () => {
     await expect(dataRows(page)).toHaveCount(0);
   });
 
+  // headless browsers hand a pdf to no viewer, its tab never commits the blob: URL
   test('views a pdf in a new tab', async ({ page }) => {
     await selectDocument(page, STUB_FILES.opalinusReport);
 
     const tab = page.context().waitForEvent('page');
+    const content = page.waitForResponse((response) =>
+      new URL(response.url()).pathname.endsWith('/content'),
+    );
     await page.getByRole('button', { name: 'View', exact: true }).click();
 
-    await expect(await tab).toHaveURL(/^blob:/);
+    expect(await tab).toBeTruthy();
+    expect((await content).ok()).toBe(true);
+    await expect(page.getByText('The file could not be loaded.')).toHaveCount(0);
   });
 
   test('only downloads a file the browser must not show', async ({ page }) => {
