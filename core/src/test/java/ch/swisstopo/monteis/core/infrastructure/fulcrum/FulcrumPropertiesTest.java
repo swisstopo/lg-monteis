@@ -60,7 +60,7 @@ class FulcrumPropertiesTest {
   void should_match_a_url_on_an_attachment_origin_regardless_of_case_and_path() {
     // given
     FulcrumProperties properties =
-        properties(true, "token", List.of(URI.create("https://Attachments.fulcrumapp-eu.com/")));
+        properties(true, "token", List.of(URI.create("https://Content.fulcrumapp-eu.com/")));
 
     // when / then
     assertThat(
