@@ -71,6 +71,10 @@ class SecurityConfigAuthorizationTest {
     };
     String sensor = "/api/sensors/" + UUID.randomUUID();
     String organisation = "/api/organisations/" + UUID.randomUUID();
+    PrivilegeLevel[] documentReaders = {
+      PrivilegeLevel.EXPERIMENT_USER, PrivilegeLevel.EXPERIMENT_PI, PrivilegeLevel.MONTEIS_ADMIN
+    };
+    String fulcrumDocument = "/api/fulcrum-documents/" + UUID.randomUUID() + "/content";
     return Stream.of(
         Arguments.of(HttpMethod.GET, "/api/experiments", everyone),
         Arguments.of(HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT, everyone),
@@ -108,6 +112,10 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.PUT, "/api/other", adminOnly),
         Arguments.of(HttpMethod.PATCH, "/api/other", adminOnly),
         Arguments.of(HttpMethod.DELETE, "/api/other", adminOnly),
+        Arguments.of(HttpMethod.GET, "/api/fulcrum-documents", everyone),
+        Arguments.of(HttpMethod.GET, fulcrumDocument, documentReaders),
+        Arguments.of(HttpMethod.GET, "/api/fulcrum-sync", everyone),
+        Arguments.of(HttpMethod.POST, "/api/fulcrum-sync", documentReaders),
         Arguments.of(HttpMethod.GET, "/api/measurements", everyone),
         Arguments.of(HttpMethod.GET, "/api/me", everyone));
   }
@@ -140,10 +148,33 @@ class SecurityConfigAuthorizationTest {
         .andExpect(status().isOk());
   }
 
+  // HEAD served by GET handler, no body to compare
+  @ParameterizedTest
+  @EnumSource(PrivilegeLevel.class)
+  void should_apply_the_fulcrum_document_rule_to_head_requests(PrivilegeLevel level)
+      throws Exception {
+    List<PrivilegeLevel> documentReaders =
+        List.of(
+            PrivilegeLevel.EXPERIMENT_USER,
+            PrivilegeLevel.EXPERIMENT_PI,
+            PrivilegeLevel.MONTEIS_ADMIN);
+
+    var result =
+        mockMvc.perform(
+            withBearer(
+                request(
+                    HttpMethod.HEAD, "/api/fulcrum-documents/" + UUID.randomUUID() + "/content"),
+                givenDecodableToken(level)));
+
+    result.andExpect(documentReaders.contains(level) ? status().isOk() : status().isForbidden());
+  }
+
   @Test
   void should_require_authentication_for_reads() throws Exception {
     mockMvc.perform(get("/api/experiments")).andExpect(status().isUnauthorized());
     mockMvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
+    mockMvc.perform(get("/api/fulcrum-documents")).andExpect(status().isUnauthorized());
+    mockMvc.perform(get("/api/fulcrum-sync")).andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -212,6 +243,8 @@ class SecurityConfigAuthorizationTest {
     @GetMapping({
       "/api/experiments",
       "/api/experiments/owners",
+      "/api/fulcrum-documents",
+      "/api/fulcrum-sync",
       "/api/measurements",
       "/api/me",
       "/api/organisations",
@@ -228,6 +261,16 @@ class SecurityConfigAuthorizationTest {
       "/api/sensors/{id}"
     })
     public String readOne(@PathVariable String id) {
+      return "ok";
+    }
+
+    @GetMapping("/api/fulcrum-documents/{documentId}/content")
+    public String fulcrumDocument(@PathVariable String documentId) {
+      return "ok";
+    }
+
+    @PostMapping("/api/fulcrum-sync")
+    public String startFulcrumSync() {
       return "ok";
     }
 

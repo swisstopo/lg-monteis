@@ -31,8 +31,8 @@ async function render(): Promise<HTMLElement> {
   return fixture.nativeElement as HTMLElement;
 }
 
-// Sensor reads are open to every user (row-level security filters them), so both entries are
-// always shown; the sensor write actions are gated inside the table instead.
+// Sensor reads are open to every user (row-level security filters them), so the entries are
+// always shown; the write actions are gated inside the tables instead.
 describe('SetupMenu', () => {
   it('shows the Sensor entry', async () => {
     const element = await render();

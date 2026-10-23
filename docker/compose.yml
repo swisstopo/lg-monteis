@@ -208,6 +208,8 @@ services:
     image: adobe/s3mock:5.2.3
     container_name: monteis-s3
     profiles: [ core ]
+    # the image sizes its jvm by the host's free memory without a limit, and won't start when that is near zero
+    mem_limit: 512m
     environment:
       COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: monteis-local-documents
       COM_ADOBE_TESTING_S3MOCK_STORE_REGION: eu-central-1

@@ -1,53 +1,63 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import java.util.function.Consumer;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.HttpClientSettings;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpRequest;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.support.RestClientAdapter;
-import org.springframework.web.service.invoker.HttpServiceProxyFactory;
+import org.springframework.web.client.support.RestClientHttpServiceGroupConfigurer;
+import org.springframework.web.service.registry.ImportHttpServices;
 
-/**
- * Wiring of the Fulcrum HTTP client.
- *
- * <p>Callers get {@link DefaultApi}, the {@code @HttpExchange} interface generated from the
- * Fulcrum OpenAPI spec, rather than a {@link RestClient}: endpoint paths, query parameter names
- * and their defaults are then whatever the spec says, and an upstream rename becomes a
- * compilation error instead of a request that quietly 404s.
- *
- * <p>Everything the spec cannot express lives here - the host to talk to, the API token and the
- * timeouts. Error responses are deliberately not translated: RestClient raises its own
- * {@code RestClientResponseException} carrying the response body, which
- * {@code GlobalErrorControllerAdvice} decodes into the spec's {@code BadRequestResponse}, so the
- * error contract stays in the one place that owns error handling.
- */
 @Configuration
+@ImportHttpServices(group = FulcrumConfig.GROUP, types = DefaultApi.class)
 public class FulcrumConfig {
 
+  public static final String GROUP = "fulcrum";
   public static final String API_TOKEN_HEADER = "X-ApiToken";
 
+  // runs after Boot's group configurer, replaces its request factory to apply our timeouts
   @Bean
-  DefaultApi fulcrumApi(RestClient.Builder builder, FulcrumProperties properties) {
-    return HttpServiceProxyFactory.builderFor(
-            RestClientAdapter.create(fulcrumRestClient(builder, properties)))
-        .build()
-        .createClient(DefaultApi.class);
+  RestClientHttpServiceGroupConfigurer fulcrumGroupConfigurer(FulcrumProperties properties) {
+    return groups ->
+        groups
+            .filterByName(GROUP)
+            .forEachClient(
+                (group, builder) ->
+                    builder
+                        .requestFactory(requestFactoryOf(properties))
+                        .apply(configure(properties)));
   }
 
-  private RestClient fulcrumRestClient(RestClient.Builder builder, FulcrumProperties properties) {
-    HttpClientSettings settings =
-        HttpClientSettings.defaults()
-            .withTimeouts(properties.connectTimeout(), properties.readTimeout());
+  // refuses every call while Fulcrum off, callers need no check. tests reuse it with own factory
+  static Consumer<RestClient.Builder> configure(FulcrumProperties properties) {
+    return builder -> {
+      builder
+          .baseUrl(properties.baseUrl())
+          .defaultHeader(API_TOKEN_HEADER, properties.apiToken())
+          .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+      if (!properties.enabled()) {
+        builder.requestInterceptor(FulcrumConfig::refuseCall);
+      }
+    };
+  }
 
-    return builder
-        .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings))
-        .baseUrl(properties.baseUrl())
-        .defaultHeader(API_TOKEN_HEADER, properties.apiToken())
-        .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-        .build();
+  private static ClientHttpRequestFactory requestFactoryOf(FulcrumProperties properties) {
+    return ClientHttpRequestFactoryBuilder.detect()
+        .build(
+            HttpClientSettings.defaults()
+                .withTimeouts(properties.connectTimeout(), properties.readTimeout()));
+  }
+
+  private static ClientHttpResponse refuseCall(
+      HttpRequest request, byte[] body, ClientHttpRequestExecution execution) {
+    throw new FulcrumDisabledException();
   }
 }

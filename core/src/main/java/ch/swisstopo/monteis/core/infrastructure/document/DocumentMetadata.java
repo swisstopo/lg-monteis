@@ -1,15 +1,11 @@
-package ch.swisstopo.monteis.core.modules.experiment.domain;
+package ch.swisstopo.monteis.core.infrastructure.document;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import java.util.Map;
 
-/**
- * Name, content type and size of a document's file, without its content. The constructor holds the
- * rules every document has, so none can be built without them.
- */
 public record DocumentMetadata(String fileName, String contentType, long sizeBytes) {
 
-  // column length of experiment_documents.file_name and .content_type
+  // column length of file_name and content_type in experiment_documents and fulcrum_documents
   public static final int MAX_LENGTH = 255;
 
   public DocumentMetadata {
