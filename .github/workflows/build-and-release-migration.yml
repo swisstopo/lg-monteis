@@ -19,7 +19,7 @@ permissions:
 jobs:
   evaluate-version:
     name: Evaluate Tag for migration
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     env:
       SERVICE: migration
     outputs:
@@ -51,7 +51,7 @@ jobs:
     needs: evaluate-version
     # Execute only when there are unreleased changes in the scoped paths.
     if: needs.evaluate-version.outputs.is_tagged == 'false' && needs.evaluate-version.outputs.changed == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write # required for: git push tag
       id-token: write # required for: aws-actions/amazon-ecr-login

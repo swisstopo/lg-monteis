@@ -34,7 +34,7 @@ on:
 jobs:
   deploy:
     name: Deploy webapp ${{ inputs.version }} to ${{ inputs.stage }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # Resolves stage-scoped variables (and any protection rules) from this GitHub
     # Environment. Staging/prod can require reviewers here without workflow changes.
     environment: ${{ inputs.stage }}
