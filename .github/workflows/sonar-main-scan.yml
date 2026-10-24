@@ -22,7 +22,7 @@ jobs:
   # noinspection YAMLSchemaValidation
   sonar-main-analysis:
     name: SonarQube Main Branch Scan
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout main branch
