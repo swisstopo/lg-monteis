@@ -102,6 +102,9 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.GET, sensor, everyone),
         Arguments.of(HttpMethod.POST, "/api/sensors", adminOnly),
         Arguments.of(HttpMethod.PUT, sensor, adminOnly),
+        Arguments.of(HttpMethod.GET, sensor + "/documents", everyone),
+        // the filter chain lets every caller through, SensorDocumentService decides
+        Arguments.of(HttpMethod.POST, sensor + "/documents", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/all", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/csv", everyone),
@@ -258,6 +261,7 @@ class SecurityConfigAuthorizationTest {
       "/api/experiments/{id}",
       "/api/experiments/{id}/documents",
       "/api/organisations/{id}",
+      "/api/sensors/{id}/documents",
       "/api/sensors/{id}"
     })
     public String readOne(@PathVariable String id) {
@@ -289,7 +293,7 @@ class SecurityConfigAuthorizationTest {
       return "ok";
     }
 
-    @PostMapping("/api/experiments/{id}/documents")
+    @PostMapping({"/api/experiments/{id}/documents", "/api/sensors/{id}/documents"})
     public String uploadDocument(@PathVariable String id) {
       return "ok";
     }

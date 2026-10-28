@@ -51,7 +51,7 @@ class UploadSizeLimitTest {
 
   // the webapp refuses a too large file before uploading it, with this copy of the limit
   private static final Path WEBAPP_LIMIT =
-      Path.of("../webapp/src/app/features/experiment/experiment-documents/max-document-size.ts");
+      Path.of("../webapp/src/app/ui/documents/max-document-size.ts");
 
   @Value("${spring.servlet.multipart.max-file-size}")
   private DataSize maxFileSize;

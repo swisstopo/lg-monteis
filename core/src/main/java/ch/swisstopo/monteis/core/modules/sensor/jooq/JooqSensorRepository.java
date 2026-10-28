@@ -249,6 +249,23 @@ public class JooqSensorRepository implements SensorRepository {
     return sensorOpt;
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public void requireVisible(UUID id) {
+    if (!dsl.fetchExists(SENSORS, SENSORS.ID.eq(id))) {
+      throw new ObjectNotFoundException(Sensor.class);
+    }
+  }
+
+  // same function as the sensor_documents insert policy: flag, check and policy can't drift
+  @Override
+  @Transactional(readOnly = true)
+  public boolean canUploadDocumentsTo(UUID id) {
+    return dsl.select(DSL.function("can_upload_sensor_documents", Boolean.class, DSL.val(id)))
+        .fetchSingle()
+        .value1();
+  }
+
   /**
    * Mirrors {@code sensors.main_experiment} into the {@code experiment_sensor} join table, which is
    * what {@code can_access_sensor()} (row-level security) and the experiments grid's sensor count
