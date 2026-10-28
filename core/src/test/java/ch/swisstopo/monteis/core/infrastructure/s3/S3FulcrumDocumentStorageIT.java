@@ -42,6 +42,7 @@ class S3FulcrumDocumentStorageIT {
             S3TestcontainersConfiguration.BUCKET,
             "eu-central-1",
             "experiment-documents/",
+            "sensor-documents/",
             FULCRUM_KEY_PREFIX,
             Duration.ofSeconds(60),
             Duration.ofSeconds(30),

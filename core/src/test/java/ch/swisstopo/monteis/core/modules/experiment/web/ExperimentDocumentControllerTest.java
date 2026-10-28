@@ -68,7 +68,6 @@ class ExperimentDocumentControllerTest {
         .perform(get(DOCUMENTS, ASSIGNED_EXPERIMENT).with(jwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(DOCUMENT.id().toString()))
-        .andExpect(jsonPath("$[0].experimentId").value(ASSIGNED_EXPERIMENT.toString()))
         .andExpect(jsonPath("$[0].fileName").value("Bericht Mai.pdf"))
         .andExpect(jsonPath("$[0].contentType").value("application/pdf"))
         .andExpect(jsonPath("$[0].sizeBytes").value(CONTENT.length))

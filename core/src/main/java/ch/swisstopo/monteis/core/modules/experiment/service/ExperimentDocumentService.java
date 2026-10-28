@@ -1,10 +1,11 @@
 package ch.swisstopo.monteis.core.modules.experiment.service;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentKey;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentStorage;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentRepository;
+import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentStorage;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import java.io.InputStream;
 import java.util.List;
@@ -21,13 +22,13 @@ public class ExperimentDocumentService {
 
   private final ExperimentRepository experimentRepository;
   private final ExperimentDocumentRepository documentRepository;
-  private final DocumentStorage storage;
+  private final ExperimentDocumentStorage storage;
   private final CurrentUserProvider currentUserProvider;
 
   public ExperimentDocumentService(
       ExperimentRepository experimentRepository,
       ExperimentDocumentRepository documentRepository,
-      DocumentStorage storage,
+      ExperimentDocumentStorage storage,
       CurrentUserProvider currentUserProvider) {
     this.experimentRepository = experimentRepository;
     this.documentRepository = documentRepository;
@@ -43,12 +44,12 @@ public class ExperimentDocumentService {
       UUID experimentId, DocumentMetadata metadata, InputStream content) {
     String uploadedBy = currentUserProvider.requireCurrentUsername();
     experimentRepository.requireVisible(experimentId);
-    UUID documentId = documentRepository.nextId();
-    storage.store(experimentId, documentId, metadata, content);
+    DocumentKey key = new DocumentKey(experimentId, documentRepository.nextId());
+    storage.store(key, metadata, content);
     try {
-      return documentRepository.create(documentId, experimentId, metadata, uploadedBy);
+      return documentRepository.create(key.documentId(), experimentId, metadata, uploadedBy);
     } catch (RuntimeException e) {
-      deleteStored(experimentId, documentId, e);
+      deleteStored(key, e);
       throw e;
     }
   }
@@ -64,18 +65,18 @@ public class ExperimentDocumentService {
   }
 
   public InputStream openContent(ExperimentDocument document) {
-    return storage.load(document);
+    return storage.load(document.key());
   }
 
-  private void deleteStored(UUID experimentId, UUID documentId, RuntimeException cause) {
+  private void deleteStored(DocumentKey key, RuntimeException cause) {
     try {
-      storage.delete(experimentId, documentId);
+      storage.delete(key);
     } catch (RuntimeException e) {
       cause.addSuppressed(e);
       log.warn(
           "could not delete the orphaned document {} of experiment {}",
-          documentId,
-          experimentId,
+          key.documentId(),
+          key.ownerId(),
           e);
     }
   }

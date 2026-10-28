@@ -17,7 +17,8 @@ import org.springframework.validation.annotation.Validated;
 public record DocumentStorageProperties(
     @NotBlank String bucket,
     @DefaultValue("eu-central-1") String region,
-    @DefaultValue("experiment-documents/") String keyPrefix,
+    @DefaultValue("experiment-documents/") String experimentDocumentKeyPrefix,
+    @DefaultValue("sensor-documents/") String sensorDocumentKeyPrefix,
     @DefaultValue("fulcrum-documents/") String fulcrumDocumentKeyPrefix,
     @DefaultValue("60s") Duration callTimeout,
     @DefaultValue("30s") Duration attemptTimeout,

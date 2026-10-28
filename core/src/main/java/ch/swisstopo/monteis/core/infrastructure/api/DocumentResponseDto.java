@@ -1,11 +1,10 @@
-package ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound;
+package ch.swisstopo.monteis.core.infrastructure.api;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-public record ExperimentDocumentResponseDto(
+public record DocumentResponseDto(
     UUID id,
-    UUID experimentId,
     String fileName,
     String contentType,
     long sizeBytes,
