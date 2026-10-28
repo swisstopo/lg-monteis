@@ -22,6 +22,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { MatDivider } from '@angular/material/list';
 import { MatSelect } from '@angular/material/select';
+import { PermissionsService } from '@core/auth/permissions.service';
 import {
   ExperimentResponseDto,
   FormulaResponseDto,
@@ -35,11 +36,14 @@ import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { Das, getDasMetadata, getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
+import { SensorDocumentSource } from '@features/sensor/services/sensor-document.source';
 import { SensorService } from '@features/sensor/services/sensor.service';
 import { translate, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DialogLayout, DialogMode } from '@ui/dialog/dialog-layout';
 import { SubmitButton } from '@ui/dialog/submit-button';
 import { DismissButton } from '@ui/dismiss-button/dismiss-button';
+import { DocumentSource } from '@ui/documents/document-source';
+import { Documents } from '@ui/documents/documents';
 
 // Canonical 8-4-4-4-12 form, the only shape java.util.UUID round-trips. Deliberately not
 // version-restricted: the backend accepts any UUID here, and Fulcrum owns the ids we store.
@@ -154,6 +158,7 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
 @Component({
   selector: 'app-sensor-edit',
   standalone: true,
+  providers: [{ provide: DocumentSource, useExisting: SensorDocumentSource }],
   imports: [
     MatError,
     MatFormField,
@@ -173,6 +178,7 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
     MatAutocompleteTrigger,
     TranslatePipe,
     MatDivider,
+    Documents,
   ],
   templateUrl: './sensor-edit.html',
   styleUrl: './sensor-edit.scss',
@@ -186,7 +192,9 @@ export default class SensorEdit {
   readonly dialogRef = inject<MatDialogRef<SensorEdit>>(MatDialogRef, {
     optional: true,
   });
+  private readonly permissions = inject(PermissionsService);
   readonly sensorId = input<string | undefined>(undefined);
+  readonly viewOnly = input(false);
 
   readonly unitValues = Object.values(WriteSensorParameterDto.UnitEnum) as Unit[];
   readonly unitMetadata = getUnitMetadata();
@@ -199,12 +207,17 @@ export default class SensorEdit {
 
   readonly saveError = this.sensorService.error;
   sensor = signal<SensorResponseDto | undefined>(undefined);
-  // no view mode yet, sensors have no read-only dialog
-  protected readonly mode = computed<DialogMode>(() => (this.sensorId() ? 'edit' : 'create'));
-  title = computed(() =>
-    this.sensorId()
-      ? this.translateService.translate('sensor.edit.title.edit')()
-      : this.translateService.translate('sensor.edit.title.create')(),
+  // without admin rights it is view whatever the caller asked for, the backend would reject a save
+  protected readonly mode = computed<DialogMode>(() => {
+    if (!this.sensorId()) return 'create';
+    if (this.viewOnly()) return 'view';
+    return this.permissions.isAdmin() ? 'edit' : 'view';
+  });
+  protected readonly readOnly = computed(() => this.mode() === 'view');
+  title = computed(() => this.translateService.translate(`sensor.edit.title.${this.mode()}`)());
+  // a PI may upload to a sensor of their experiment without being allowed to edit it
+  protected readonly canUploadDocuments = computed(
+    () => this.sensor()?.canUploadDocuments ?? false,
   );
 
   private readonly syncSelectedSensor = effect(() => {
@@ -258,6 +271,7 @@ export default class SensorEdit {
   readonly sensorForm = form(
     this.formModel,
     (schema) => {
+      disabled(schema, this.readOnly);
       required(schema.dasSensorAlias, {
         message: translate('sensor.dasSensorAlias.validation.required')(),
       });

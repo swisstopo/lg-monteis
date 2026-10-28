@@ -5,15 +5,15 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_DOCUMEN
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentKey;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.itconfig.SeedData;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentStorage;
+import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentStorage;
 import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
@@ -36,7 +36,7 @@ class ExperimentDocumentServiceIT {
   @Autowired private ExperimentDocumentService service;
   @Autowired private DSLContext dsl;
   @Autowired private PlatformTransactionManager transactionManager;
-  @MockitoBean private DocumentStorage storage;
+  @MockitoBean private ExperimentDocumentStorage storage;
 
   @Test
   void should_commit_the_document_row_when_its_content_is_stored() {
@@ -58,7 +58,7 @@ class ExperimentDocumentServiceIT {
     // given
     willThrow(new IllegalStateException("S3 unavailable"))
         .given(storage)
-        .store(any(), any(), any(), any());
+        .store(any(), any(), any());
     String fileName = uniqueFileName();
     DocumentMetadata metadata = pdfMetadata(fileName);
     InputStream content = InputStream.nullInputStream();
@@ -90,9 +90,10 @@ class ExperimentDocumentServiceIT {
                 () -> service.upload(SeedData.EXPERIMENT_ALPHA, metadata, content)));
 
     // then
-    ArgumentCaptor<UUID> storedId = ArgumentCaptor.forClass(UUID.class);
-    then(storage).should().store(eq(SeedData.EXPERIMENT_ALPHA), storedId.capture(), any(), any());
-    then(storage).should().delete(SeedData.EXPERIMENT_ALPHA, storedId.getValue());
+    ArgumentCaptor<DocumentKey> storedKey = ArgumentCaptor.forClass(DocumentKey.class);
+    then(storage).should().store(storedKey.capture(), any(), any());
+    assertThat(storedKey.getValue().ownerId()).isEqualTo(SeedData.EXPERIMENT_ALPHA);
+    then(storage).should().delete(storedKey.getValue());
     assertThat(countDocumentRows(fileName)).isZero();
   }
 

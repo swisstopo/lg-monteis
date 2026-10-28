@@ -95,8 +95,8 @@ public interface SensorWebMapper {
   AlarmLimits toDomain(AlarmLimitsDto dto);
 
   // --- Outbound Domain -> API Serialization DTO Mappings ---
-  @Mapping(target = "das", source = "DAS")
-  SensorResponseDto toDto(Sensor domain, @Context LocalDate today);
+  @Mapping(target = "das", source = "domain.DAS")
+  SensorResponseDto toDto(Sensor domain, boolean canUploadDocuments, @Context LocalDate today);
 
   // New mapping for the nested parameters
   SensorParameterResponseDto toDto(SensorParameter domain);

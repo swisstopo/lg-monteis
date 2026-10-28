@@ -41,15 +41,17 @@ import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
-import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentOwnerList } from '@features/experiment/owners/experiment-owner-list';
 import { ExperimentOwnerPicker } from '@features/experiment/owners/experiment-owner-picker';
 import { ownerIdsOf, sameIds } from '@features/experiment/owners/owner-ids';
+import { ExperimentDocumentSource } from '@features/experiment/services/experiment-document.source';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DialogLayout, DialogMode } from '@ui/dialog/dialog-layout';
 import { SubmitButton } from '@ui/dialog/submit-button';
 import { DismissButton } from '@ui/dismiss-button/dismiss-button';
+import { DocumentSource } from '@ui/documents/document-source';
+import { Documents } from '@ui/documents/documents';
 import { FieldErrors } from '@ui/field-errors/field-errors';
 import { experimentSchema, toFormModel, toWriteDto } from './experiment-form';
 
@@ -57,7 +59,10 @@ const OWNER_IDS_FIELD = 'ownerIds';
 
 @Component({
   selector: 'app-experiment-dialog',
-  providers: [provideNativeDateAdapter()],
+  providers: [
+    provideNativeDateAdapter(),
+    { provide: DocumentSource, useExisting: ExperimentDocumentSource },
+  ],
   imports: [
     DialogLayout,
     SubmitButton,
@@ -78,7 +83,7 @@ const OWNER_IDS_FIELD = 'ownerIds';
     FormField,
     FormRoot,
     TranslatePipe,
-    ExperimentDocuments,
+    Documents,
     ExperimentOwnerList,
     ExperimentOwnerPicker,
     FieldErrors,

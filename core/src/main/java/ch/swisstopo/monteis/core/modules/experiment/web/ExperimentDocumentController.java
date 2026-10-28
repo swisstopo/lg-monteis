@@ -1,10 +1,10 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
+import ch.swisstopo.monteis.core.infrastructure.api.DocumentResponseDto;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentDocumentService;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentDocumentResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -47,7 +47,7 @@ public class ExperimentDocumentController {
       description = "Retrieves the metadata of all documents of an experiment, newest first.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved documents")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<List<ExperimentDocumentResponseDto>> getDocuments(
+  public ResponseEntity<List<DocumentResponseDto>> getDocuments(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID experimentId) {
     return ResponseEntity.ok(mapper.toDtos(service.getDocuments(experimentId)));
   }
@@ -61,7 +61,7 @@ public class ExperimentDocumentController {
   @PostMapping(
       consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ExperimentDocumentResponseDto> uploadDocument(
+  public ResponseEntity<DocumentResponseDto> uploadDocument(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID experimentId,
       @RequestPart("file") MultipartFile file)
       throws IOException {
