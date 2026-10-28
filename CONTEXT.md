@@ -15,6 +15,12 @@ _Avoid_: Stammdaten, metadata
 A file a PI uploaded to a specific Experiment.
 _Avoid_: Document (alone)
 
+## Sensors
+
+**Sensor document**:
+A file an admin or a PI of one of the Sensor's Experiments uploaded to a specific Sensor; everyone who can see the Sensor can see it.
+_Avoid_: Document (alone), Attachment, Experiment document
+
 ## Documents from Fulcrum
 
 **Fulcrum Document**:
