@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
 import { ExperimentOwnerDto, ExperimentResponseDto } from '@core/generated';
+import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { ownerDisplayName } from '@features/experiment/owners/owner-name';
 import { OwnersCellRenderer } from '@features/experiment/owners/owners-cell-renderer';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
@@ -16,6 +17,7 @@ export function createColumns(
 ): TableColumn<ExperimentResponseDto>[] {
   const translateService = inject(TranslateService);
   const experimentService = inject(ExperimentService);
+  const organisationService = inject(OrganisationService);
 
   return [
     {
@@ -102,8 +104,18 @@ export function createColumns(
     {
       field: 'organisationIds',
       headerName: translateService.translate('experiment.organisations.label')(),
-      sortable: false,
-      filter: false,
+      sortable: true,
+      filter: MultiSelectFilter,
+      filterParams: {
+        valuesProvider: async () => {
+          const organisations = await organisationService.findAllOrganisations();
+          return organisations
+            .map((organisation) => organisation.name)
+            .filter((name): name is string => !!name)
+            .map((name) => ({ displayName: name, value: name }));
+        },
+        blankOptionLabel: translateService.translate('experiment.organisations.none')(),
+      },
       valueFormatter: (params) => (params.value ?? []).map(organisationName).join(', '),
       tooltip: (params) => (params.value ?? []).map(organisationName).join(', '),
     },

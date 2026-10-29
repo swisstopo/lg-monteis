@@ -55,9 +55,11 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
     // Reuses JooqExperimentRepository's colId->Field map so the export honors exactly the same
     // filter/sort semantics as the grid.
     ExperimentOwnerFilter.Split ownerFilter = ExperimentOwnerFilter.split(exportRequest);
+    ExperimentOrganisationFilter.Split organisationFilter =
+        ExperimentOrganisationFilter.split(ownerFilter.requestWithoutOwnersColumn());
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
         PagedRequestJooqTranslator.translate(
-            ownerFilter.requestWithoutOwnersColumn(),
+            organisationFilter.requestWithoutOrganisationsColumn(),
             JooqExperimentRepository.COLUMNS_BY_COL_ID,
             EXPERIMENTS.ID.asc());
 
@@ -74,7 +76,11 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
                 EXPERIMENTS.COMMENT,
                 EXPERIMENTS.ID)
             .from(EXPERIMENTS)
-            .where(criteria.condition().and(ownerFilter.ownerCondition()))
+            .where(
+                criteria
+                    .condition()
+                    .and(ownerFilter.ownerCondition())
+                    .and(organisationFilter.organisationCondition()))
             .orderBy(criteria.sortFields())
             .limit(exportRequest.limit())
             .fetchLazy()) {

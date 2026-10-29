@@ -341,7 +341,8 @@
       "notSaved": "Experiment saved, but the owners were not changed: Keycloak is unavailable or refused the lookup. Please try again later."
     },
     "organisations": {
-      "label": "Organisations"
+      "label": "Organisations",
+      "none": "No organisation"
     },
     "success": "Experiment saved successfully.",
     "error": {

@@ -28,6 +28,10 @@ export class OrganisationService {
     this.loadedOrganisations.hasValue() ? this.loadedOrganisations.value() : [],
   );
 
+  findAllOrganisations(): Promise<OrganisationResponseDto[]> {
+    return firstValueFrom(this.api.getAllOrganisations());
+  }
+
   getOrganisation(id: string): Promise<OrganisationResponseDto> {
     return firstValueFrom(this.api.getOrganisation(id));
   }
