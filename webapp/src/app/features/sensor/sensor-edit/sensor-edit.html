@@ -322,7 +322,7 @@
   </form>
 
   @if (sensorId(); as sensorId) {
-    <app-documents [ownerId]="sensorId" [readOnly]="!canUploadDocuments()" />
+    <app-documents [parentId]="sensorId" [readOnly]="!canUploadDocuments()" />
   }
 
   <app-dismiss-button dialog-action-dismiss [kind]="readOnly() ? 'close' : 'cancel'" />

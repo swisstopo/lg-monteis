@@ -24,14 +24,14 @@ export class Documents {
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
 
-  readonly ownerId = input.required<string>();
+  readonly parentId = input.required<string>();
   readonly readOnly = input(false);
 
   protected readonly uploading = signal(false);
 
   protected readonly documents = resource({
-    params: () => this.ownerId(),
-    loader: ({ params: ownerId }) => this.source.list(ownerId),
+    params: () => this.parentId(),
+    loader: ({ params: parentId }) => this.source.list(parentId),
   });
 
   // one after the other, so each failed file gets its own toast
@@ -75,7 +75,7 @@ export class Documents {
       return;
     }
     try {
-      await this.source.upload(this.ownerId(), file);
+      await this.source.upload(this.parentId(), file);
     } catch (error) {
       this.toastUploadErrors(error, file.name);
     }
@@ -101,6 +101,6 @@ export class Documents {
   }
 
   private contentOf(document: DocumentResponseDto): Promise<Blob> {
-    return this.source.content(this.ownerId(), document.id!);
+    return this.source.content(this.parentId(), document.id!);
   }
 }

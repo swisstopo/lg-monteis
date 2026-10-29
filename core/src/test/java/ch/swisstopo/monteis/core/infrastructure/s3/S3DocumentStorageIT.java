@@ -133,7 +133,7 @@ class S3DocumentStorageIT {
         request ->
             request
                 .bucket(S3TestcontainersConfiguration.BUCKET)
-                .key(keyPrefix + key.ownerId() + "/" + key.documentId()));
+                .key(keyPrefix + key.parentId() + "/" + key.documentId()));
   }
 
   private static InputStream pdfContent() {
