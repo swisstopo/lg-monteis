@@ -8,6 +8,7 @@ import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReading
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Row7;
 import org.jooq.SelectConditionStep;
@@ -64,61 +65,46 @@ public class SensorReadingRepository {
         .execute();
   }
 
-  // --- Reprocessing backlog: two independent matches, run as separate scans rather than one
-  // OR'd query (see HistoricalReadingChunkProcessor) to keep each one a plain index scan that
-  // satisfies ORDER BY timestamp DESC for free, instead of forcing a BitmapOr + local Sort - the
-  // exact regression sensor_reading_sensor_time_idx's comment (V1) already measured and designed
-  // around for a single column.
+  // --- Reprocessing backlog: scoped by das_key, the composite DAS key a reading was ingested under
+  // (same key as SensorConfigCache and the sensor-config topic). sensor_parameter_id is read here
+  // only to detect stale rows. Both queries use sensor_reading_das_key_time_idx
+  // (das_key, timestamp DESC), which serves ORDER BY timestamp DESC.
+  //
+  // A row is stale when it was produced by an older config version for this key, or by a different
+  // (or no) sensor parameter's config: rows ingested before the config was known
+  // (sensor_parameter_id NULL) and keys remapped to another sensor parameter.
 
-  /**
-   * Rows already tagged with this sensor_parameter_id - survives any number of past/future DAS-key
-   * remaps, since the id never changes for a given sensor parameter.
-   */
-  public boolean checkOldSensorDataById(UUID sensorParameterId, short version) {
-    return ctx.fetchExists(
-        ctx.selectOne()
-            .from(Tables.SENSOR_READING)
-            .where(Tables.SENSOR_READING.SENSOR_PARAMETER_ID.eq(sensorParameterId))
-            .and(Tables.SENSOR_READING.VERSION.lt(version)));
+  private static Condition staleForDasKey(String dasKey, UUID sensorParameterId, short version) {
+    return Tables.SENSOR_READING
+        .DAS_KEY
+        .eq(dasKey)
+        .and(
+            Tables.SENSOR_READING
+                .VERSION
+                .lt(version)
+                .or(Tables.SENSOR_READING.SENSOR_PARAMETER_ID.isDistinctFrom(sensorParameterId)));
   }
 
-  /**
-   * Rows ingested under the current DAS key before this parameter's config was ever known
-   * (sensor_parameter_id still NULL) - the one-time backfill path.
-   */
-  public boolean checkOldSensorDataByDasKeyUnbackfilled(String dasKey, short version) {
+  public boolean checkStaleSensorDataByDasKey(
+      String dasKey, UUID sensorParameterId, short version) {
     return ctx.fetchExists(
         ctx.selectOne()
             .from(Tables.SENSOR_READING)
-            .where(Tables.SENSOR_READING.DAS_KEY.eq(dasKey))
-            .and(Tables.SENSOR_READING.SENSOR_PARAMETER_ID.isNull())
-            .and(Tables.SENSOR_READING.VERSION.lt(version)));
+            .where(staleForDasKey(dasKey, sensorParameterId, version)));
   }
 
   // The cursor (previous chunk's oldest timestamp) lets each call seek straight to where the
-  // last one left off via the matching (*, timestamp DESC) index, instead of re-scanning past
+  // last one left off via the (das_key, timestamp DESC) index, instead of re-scanning past
   // every already-reprocessed row on every chunk.
-  public List<SensorReadingRecord> fetchOldSensorDataById(
-      UUID sensorParameterId, short version, int limit, OffsetDateTime cursorTimestamp) {
+  public List<SensorReadingRecord> fetchStaleSensorDataByDasKey(
+      String dasKey,
+      UUID sensorParameterId,
+      short version,
+      int limit,
+      OffsetDateTime cursorTimestamp) {
     SelectConditionStep<SensorReadingRecord> query =
         ctx.selectFrom(Tables.SENSOR_READING)
-            .where(Tables.SENSOR_READING.SENSOR_PARAMETER_ID.eq(sensorParameterId))
-            .and(Tables.SENSOR_READING.VERSION.lt(version));
-
-    if (cursorTimestamp != null) {
-      query = query.and(Tables.SENSOR_READING.TIMESTAMP.lt(cursorTimestamp));
-    }
-
-    return query.orderBy(Tables.SENSOR_READING.TIMESTAMP.desc()).limit(limit).fetch();
-  }
-
-  public List<SensorReadingRecord> fetchOldSensorDataByDasKeyUnbackfilled(
-      String dasKey, short version, int limit, OffsetDateTime cursorTimestamp) {
-    SelectConditionStep<SensorReadingRecord> query =
-        ctx.selectFrom(Tables.SENSOR_READING)
-            .where(Tables.SENSOR_READING.DAS_KEY.eq(dasKey))
-            .and(Tables.SENSOR_READING.SENSOR_PARAMETER_ID.isNull())
-            .and(Tables.SENSOR_READING.VERSION.lt(version));
+            .where(staleForDasKey(dasKey, sensorParameterId, version));
 
     if (cursorTimestamp != null) {
       query = query.and(Tables.SENSOR_READING.TIMESTAMP.lt(cursorTimestamp));

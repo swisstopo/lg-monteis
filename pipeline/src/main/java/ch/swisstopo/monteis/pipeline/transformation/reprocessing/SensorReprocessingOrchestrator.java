@@ -45,64 +45,36 @@ public class SensorReprocessingOrchestrator {
 
     reprocessingRunTimer.record(
         () -> {
-          int totalProcessed = 0;
-          totalProcessed +=
-              reprocessById(activeSensorConfig, config.getSensorParameterId(), version);
-          totalProcessed += reprocessByDasKeyUnbackfilled(activeSensorConfig, dasKey, version);
+          int totalProcessed =
+              reprocessByDasKey(activeSensorConfig, dasKey, config.getSensorParameterId(), version);
 
           if (totalProcessed > 0) {
             log.info(
-                "Successfully reprocessed {} historical records for sensor parameter {} (DAS key"
+                "Successfully reprocessed {} historical records for DAS key {} (sensor parameter"
                     + " {})",
                 totalProcessed,
-                config.getSensorParameterId(),
-                dasKey);
+                dasKey,
+                config.getSensorParameterId());
           }
         });
   }
 
-  private int reprocessById(
-      ActiveSensorConfig activeSensorConfig, UUID sensorParameterId, short version) {
-    if (!sensorReadingRepository.checkOldSensorDataById(sensorParameterId, version)) {
-      log.debug(
-          "No outdated records found by sensor_parameter_id {}. Skipping.", sensorParameterId);
+  private int reprocessByDasKey(
+      ActiveSensorConfig activeSensorConfig, String dasKey, UUID sensorParameterId, short version) {
+    if (!sensorReadingRepository.checkStaleSensorDataByDasKey(dasKey, sensorParameterId, version)) {
+      log.debug("No outdated records found for DAS key {}. Skipping.", dasKey);
       return 0;
     }
 
     log.info(
-        "Outdated records found by sensor_parameter_id! Initiating iterative batch reprocessing"
-            + " for {}",
-        sensorParameterId);
-
-    int totalProcessed = 0;
-    int currentBatchSize;
-    OffsetDateTime cursor = null;
-    do {
-      ChunkProcessingResult result = chunkService.processNextChunkById(activeSensorConfig, cursor);
-      currentBatchSize = result.processedCount();
-      cursor = result.cursor();
-      totalProcessed += currentBatchSize;
-    } while (currentBatchSize > 0);
-
-    return totalProcessed;
-  }
-
-  private int reprocessByDasKeyUnbackfilled(
-      ActiveSensorConfig activeSensorConfig, String dasKey, short version) {
-    if (!sensorReadingRepository.checkOldSensorDataByDasKeyUnbackfilled(dasKey, version)) {
-      log.debug("No unbackfilled records found for DAS key {}. Skipping.", dasKey);
-      return 0;
-    }
-
-    log.info(
-        "Unbackfilled records found! Initiating iterative batch backfill for DAS key {}", dasKey);
+        "Outdated records found! Initiating iterative batch reprocessing for DAS key {}", dasKey);
 
     int totalProcessed = 0;
     int currentBatchSize;
     OffsetDateTime cursor = null;
     do {
       ChunkProcessingResult result =
-          chunkService.processNextChunkByDasKeyUnbackfilled(activeSensorConfig, dasKey, cursor);
+          chunkService.processNextChunk(activeSensorConfig, dasKey, cursor);
       currentBatchSize = result.processedCount();
       cursor = result.cursor();
       totalProcessed += currentBatchSize;
