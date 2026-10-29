@@ -39,7 +39,7 @@ describe('SensorDocumentSource', () => {
   });
 
   it('fetches the content of a document', async () => {
-    const content = await service.content('sensor-1', 'document-1');
+    const content = await service.fetchContent('sensor-1', 'document-1');
 
     expect(await content.text()).toBe('%PDF');
     const [sensorId, documentId, , , options] = api['downloadSensorDocument'].mock.calls[0];

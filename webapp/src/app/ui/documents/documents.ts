@@ -101,6 +101,6 @@ export class Documents {
   }
 
   private contentOf(document: DocumentResponseDto): Promise<Blob> {
-    return this.source.content(this.parentId(), document.id!);
+    return this.source.fetchContent(this.parentId(), document.id!);
   }
 }
