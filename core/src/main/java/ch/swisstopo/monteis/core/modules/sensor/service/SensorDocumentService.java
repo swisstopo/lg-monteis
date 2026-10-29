@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,13 +36,10 @@ public class SensorDocumentService {
     this.currentUserProvider = currentUserProvider;
   }
 
-  // checked here, not in the filter chain: the token holds experiment ids, the sensor's
-  // experiments are only in the db. before S3, a refused upload must not store anything.
   // no transaction around the upload, as for experiment documents
   public SensorDocument upload(UUID sensorId, DocumentMetadata metadata, InputStream content) {
     String uploadedBy = currentUserProvider.requireCurrentUsername();
     sensorRepository.requireVisible(sensorId);
-    requireWritableExperimentOf(sensorId);
     DocumentKey key = new DocumentKey(sensorId, documentRepository.nextId());
     storage.store(key, metadata, content);
     try {
@@ -66,12 +62,6 @@ public class SensorDocumentService {
 
   public InputStream openContent(SensorDocument document) {
     return storage.load(document.key());
-  }
-
-  private void requireWritableExperimentOf(UUID sensorId) {
-    if (!sensorRepository.canWriteAnExperimentOf(sensorId)) {
-      throw new AccessDeniedException("May not upload documents to sensor " + sensorId);
-    }
   }
 
   private void deleteStored(DocumentKey key, RuntimeException cause) {

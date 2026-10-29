@@ -32,7 +32,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.PermissionDeniedDataAccessException;
-import org.springframework.security.access.AccessDeniedException;
 
 @ExtendWith(MockitoExtension.class)
 class SensorDocumentServiceTest {
@@ -53,11 +52,10 @@ class SensorDocumentServiceTest {
   @InjectMocks private SensorDocumentService service;
 
   @Test
-  void should_check_the_permission_then_store_the_content_before_recording_the_upload() {
+  void should_check_visibility_then_store_the_content_before_recording_the_upload() {
     // given
     InputStream content = new ByteArrayInputStream(new byte[4]);
     given(currentUserProvider.requireCurrentUsername()).willReturn("alice");
-    given(sensorRepository.canWriteAnExperimentOf(SENSOR_ID)).willReturn(true);
     given(documentRepository.nextId()).willReturn(DOCUMENT_ID);
     given(documentRepository.create(DOCUMENT_ID, SENSOR_ID, METADATA, "alice"))
         .willReturn(DOCUMENT);
@@ -69,7 +67,6 @@ class SensorDocumentServiceTest {
     assertSame(DOCUMENT, uploaded);
     InOrder order = inOrder(sensorRepository, documentRepository, storage);
     order.verify(sensorRepository).requireVisible(SENSOR_ID);
-    order.verify(sensorRepository).canWriteAnExperimentOf(SENSOR_ID);
     order.verify(documentRepository).nextId();
     order.verify(storage).store(KEY, METADATA, content);
     order.verify(documentRepository).create(DOCUMENT_ID, SENSOR_ID, METADATA, "alice");
@@ -92,26 +89,12 @@ class SensorDocumentServiceTest {
   }
 
   @Test
-  void should_refuse_an_upload_the_caller_may_not_make_before_storing_anything() {
-    // given
-    given(sensorRepository.canWriteAnExperimentOf(SENSOR_ID)).willReturn(false);
-
-    // when / then
-    assertThrows(
-        AccessDeniedException.class,
-        () -> service.upload(SENSOR_ID, METADATA, InputStream.nullInputStream()));
-    then(documentRepository).shouldHaveNoInteractions();
-    then(storage).shouldHaveNoInteractions();
-  }
-
-  @Test
   void should_delete_the_stored_content_when_row_level_security_rejects_the_upload() {
     // given
     PermissionDeniedDataAccessException rejection =
         new PermissionDeniedDataAccessException("rls", null);
     IllegalStateException deleteFailure = new IllegalStateException("S3 unavailable");
     given(currentUserProvider.requireCurrentUsername()).willReturn("alice");
-    given(sensorRepository.canWriteAnExperimentOf(SENSOR_ID)).willReturn(true);
     given(documentRepository.nextId()).willReturn(DOCUMENT_ID);
     given(documentRepository.create(DOCUMENT_ID, SENSOR_ID, METADATA, "alice"))
         .willThrow(rejection);
