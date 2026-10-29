@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
 import static ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport.callAsAdmin;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -12,8 +11,6 @@ import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.itconfig.SeedData;
 import java.util.List;
 import java.util.UUID;
-import org.jooq.DSLContext;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,16 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 class JooqSensorRepositoryAccessIT {
 
   @Autowired private JooqSensorRepository repository;
-  @Autowired private DSLContext dsl;
 
-  private UUID alphaSensor;
-  private UUID betaSensor;
-
-  @BeforeEach
-  void findSeededSensors() {
-    alphaSensor = sensorOf(SeedData.EXPERIMENT_ALPHA);
-    betaSensor = sensorOf(SeedData.EXPERIMENT_BETA);
-  }
+  private final UUID alphaSensor = SeedData.SENSOR_ONLY_IN_ALPHA;
+  private final UUID betaSensor = SeedData.SENSOR_ONLY_IN_BETA;
 
   @Test
   void should_let_a_writer_upload_documents_to_the_sensors_of_their_experiment_only() {
@@ -70,17 +60,5 @@ class JooqSensorRepositoryAccessIT {
           assertThrows(
               ObjectNotFoundException.class, () -> repository.requireVisible(UUID.randomUUID()));
         });
-  }
-
-  // the seeded experiments share no sensors
-  private UUID sensorOf(UUID experimentId) {
-    return callAsAdmin(
-        () ->
-            dsl.select(EXPERIMENT_SENSOR.SENSOR_ID)
-                .from(EXPERIMENT_SENSOR)
-                .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(experimentId))
-                .limit(1)
-                .fetchSingle()
-                .value1());
   }
 }
