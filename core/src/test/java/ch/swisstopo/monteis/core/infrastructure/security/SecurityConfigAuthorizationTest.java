@@ -103,8 +103,8 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.POST, "/api/sensors", adminOnly),
         Arguments.of(HttpMethod.PUT, sensor, adminOnly),
         Arguments.of(HttpMethod.GET, sensor + "/documents", everyone),
-        // the filter chain lets every caller through, SensorDocumentService decides
-        Arguments.of(HttpMethod.POST, sensor + "/documents", everyone),
+        // write grant only, the insert policy decides per sensor
+        Arguments.of(HttpMethod.POST, sensor + "/documents", assignedExperiment),
         Arguments.of(HttpMethod.GET, "/api/organisations", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/all", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/csv", everyone),

@@ -33,6 +33,7 @@ public class SensorDocumentService {
     this.currentUserProvider = currentUserProvider;
   }
 
+  // the filter chain only checks the write grant, the insert policy decides per sensor
   public SensorDocument upload(UUID sensorId, DocumentMetadata metadata, InputStream content) {
     String uploadedBy = currentUserProvider.requireCurrentUsername();
     sensorRepository.requireVisible(sensorId);

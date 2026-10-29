@@ -6,9 +6,9 @@ import java.util.UUID;
 
 /**
  * Repository for the metadata of {@link SensorDocument}s. Row-level security alone decides which
- * documents a caller reads (those of sensors they may read). Inserts are checked twice: the
- * controller and the sensor_documents_insert policy both call can_write_an_experiment_of_sensor.
- * Nobody may update or delete a document.
+ * documents a caller reads (those of sensors they may read). Inserts are decided by the
+ * sensor_documents_insert policy (can_write_an_experiment_of_sensor), the filter chain only checks
+ * the experiment write grant. Nobody may update or delete a document.
  */
 public interface SensorDocumentRepository {
   UUID nextId();
