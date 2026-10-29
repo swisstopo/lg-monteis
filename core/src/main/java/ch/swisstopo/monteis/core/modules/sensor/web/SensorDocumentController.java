@@ -51,7 +51,7 @@ public class SensorDocumentController {
       description = "Retrieves the metadata of all documents of a sensor, newest first.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved documents")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<List<DocumentResponseDto>> getDocuments(@PathVariable UUID id) {
+  public ResponseEntity<List<DocumentResponseDto>> getSensorDocuments(@PathVariable UUID id) {
     return ResponseEntity.ok(mapper.toDtos(service.getDocuments(id)));
   }
 
@@ -64,7 +64,7 @@ public class SensorDocumentController {
   @PostMapping(
       consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<DocumentResponseDto> uploadDocument(
+  public ResponseEntity<DocumentResponseDto> uploadSensorDocument(
       @PathVariable UUID id, @RequestPart("file") MultipartFile file) throws IOException {
     DocumentMetadata metadata = mapper.toMetadata(file);
     requireWritableExperimentOf(id);
@@ -85,7 +85,7 @@ public class SensorDocumentController {
               mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
               schema = @Schema(type = "string", format = "binary")))
   @GetMapping(path = "{documentId}/content")
-  public ResponseEntity<Resource> downloadDocument(
+  public ResponseEntity<Resource> downloadSensorDocument(
       @PathVariable UUID id, @PathVariable UUID documentId) {
     SensorDocument document = service.getDocument(id, documentId);
     DocumentMetadata metadata = document.metadata();
