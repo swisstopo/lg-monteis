@@ -8,8 +8,9 @@
 -- Whoever may read a sensor may read its documents. Whoever may update one of
 -- the sensor's experiments may add documents to it, an admin or global editor
 -- any. Deleting and updating documents is out of scope, so there is no UPDATE or
--- DELETE policy and RLS rejects both. The application checks the same function
--- before it uploads to S3 (SensorDocumentService).
+-- DELETE policy and RLS rejects both. The filter chain only checks the experiment
+-- write grant, this policy decides per sensor; a refused insert deletes the file
+-- the application already stored in S3.
 -- -----------------------------------------------------------------------------
 
 CREATE FUNCTION can_write_an_experiment_of_sensor(target_sensor_id uuid) RETURNS boolean AS $$

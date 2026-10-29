@@ -101,6 +101,11 @@ public record Capabilities(
     return isAdmin() || grants.contains(Grant.EXPERIMENT_WRITE_ALL);
   }
 
+  /** Admins, global editors and PIs; which experiments, row-level security decides. */
+  public boolean canWriteExperiments() {
+    return canWriteAllExperiments() || grants.contains(Grant.EXPERIMENT_WRITE);
+  }
+
   /** Whoever may write every experiment, plus the system context. */
   public boolean canReadAllExperiments() {
     return canWriteAllExperiments() || grants.contains(Grant.SYSTEM_READ_ALL);

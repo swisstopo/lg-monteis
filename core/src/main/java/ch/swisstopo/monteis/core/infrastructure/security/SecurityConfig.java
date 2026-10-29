@@ -57,9 +57,9 @@ public class SecurityConfig {
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
                     .access(experimentWrite)
-                    // SensorDocumentController checks it, sensor's experiments only in the db
+                    // grant only, the insert policy of sensor_documents decides per sensor
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
-                    .authenticated()
+                    .access(allowIf(Capabilities::canWriteExperiments))
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)
                     .access(allowIf(Capabilities::canCreateExperiment))
                     // all methods: Spring answers HEAD via GET handler
