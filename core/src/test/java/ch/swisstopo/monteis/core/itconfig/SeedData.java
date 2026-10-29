@@ -17,5 +17,13 @@ public final class SeedData {
   public static final UUID EXPERIMENT_GAMMA =
       UUID.fromString("00000000-0000-7000-8000-000000000303");
 
+  /** "TEMP-1", linked to Alpha only. */
+  public static final UUID SENSOR_ONLY_IN_ALPHA =
+      UUID.fromString("00000000-0000-7000-8000-000000000201");
+
+  /** "DISP-2", linked to Beta only. "PRESS-1&2" is linked to both. */
+  public static final UUID SENSOR_ONLY_IN_BETA =
+      UUID.fromString("00000000-0000-7000-8000-000000000203");
+
   private SeedData() {}
 }

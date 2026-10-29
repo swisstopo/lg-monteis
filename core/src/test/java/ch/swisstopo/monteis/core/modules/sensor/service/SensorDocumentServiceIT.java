@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.service;
 
 import static ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport.callAsAdmin;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_DOCUMENTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -37,7 +36,7 @@ class SensorDocumentServiceIT {
   @Test
   void should_let_a_pi_of_the_sensors_experiment_upload_a_document() {
     // given
-    UUID sensorId = sensorOf(SeedData.EXPERIMENT_ALPHA);
+    UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
     String fileName = uniqueFileName();
 
     // when
@@ -53,7 +52,7 @@ class SensorDocumentServiceIT {
   @Test
   void should_refuse_a_pi_of_another_experiment_before_storing_anything() {
     // given
-    UUID sensorId = sensorOf(SeedData.EXPERIMENT_ALPHA);
+    UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
     String fileName = uniqueFileName();
     DocumentMetadata metadata = pdfMetadata(fileName);
     InputStream content = InputStream.nullInputStream();
@@ -77,7 +76,7 @@ class SensorDocumentServiceIT {
     willThrow(new IllegalStateException("S3 unavailable"))
         .given(storage)
         .store(any(), any(), any());
-    UUID sensorId = sensorOf(SeedData.EXPERIMENT_ALPHA);
+    UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
     String fileName = uniqueFileName();
 
     // when
@@ -99,18 +98,6 @@ class SensorDocumentServiceIT {
 
   private static DocumentMetadata pdfMetadata(String fileName) {
     return new DocumentMetadata(fileName, "application/pdf", 4);
-  }
-
-  // the seeded experiments share no sensors
-  private UUID sensorOf(UUID experimentId) {
-    return inTransactionAsAdmin(
-        () ->
-            dsl.select(EXPERIMENT_SENSOR.SENSOR_ID)
-                .from(EXPERIMENT_SENSOR)
-                .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(experimentId))
-                .limit(1)
-                .fetchSingle()
-                .value1());
   }
 
   private int countDocumentRows(String fileName) {

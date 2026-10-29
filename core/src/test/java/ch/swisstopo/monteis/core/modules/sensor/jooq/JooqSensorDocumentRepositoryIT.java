@@ -1,7 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.jooq;
 
 import static ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport.callAsAdmin;
-import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_SENSOR;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_DOCUMENTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -36,7 +35,7 @@ class JooqSensorDocumentRepositoryIT {
   @Transactional
   void should_create_a_document_under_the_given_id_uploaded_now_by_the_given_user() {
     // given
-    UUID sensorId = sensorOf(SeedData.EXPERIMENT_ALPHA);
+    UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
     UUID documentId = callAsAdmin(repository::nextId);
 
     // when
@@ -61,10 +60,10 @@ class JooqSensorDocumentRepositoryIT {
   void should_list_the_documents_of_a_sensor_newest_first() {
     // given: the older one is inserted last, so it has the higher id, the order must come from
     // the upload time (both would share now() of the test transaction otherwise)
-    UUID sensorId = sensorOf(SeedData.EXPERIMENT_ALPHA);
+    UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
     SensorDocument newer = createAsAdmin(sensorId);
     UUID older = insertDocumentUploadedAt(sensorId, OffsetDateTime.now().minusDays(1));
-    createAsAdmin(sensorOf(SeedData.EXPERIMENT_BETA));
+    createAsAdmin(SeedData.SENSOR_ONLY_IN_BETA);
 
     // when
     List<SensorDocument> documents = callAsAdmin(() -> repository.findBySensorId(sensorId));
@@ -77,8 +76,8 @@ class JooqSensorDocumentRepositoryIT {
   @Transactional
   void should_not_find_a_document_under_another_sensor() {
     // given
-    SensorDocument document = createAsAdmin(sensorOf(SeedData.EXPERIMENT_ALPHA));
-    UUID otherSensorId = sensorOf(SeedData.EXPERIMENT_BETA);
+    SensorDocument document = createAsAdmin(SeedData.SENSOR_ONLY_IN_ALPHA);
+    UUID otherSensorId = SeedData.SENSOR_ONLY_IN_BETA;
 
     // when / then
     assertThrows(
@@ -90,8 +89,8 @@ class JooqSensorDocumentRepositoryIT {
   @Transactional
   void should_hide_the_documents_of_a_sensor_the_user_may_not_read() {
     // given
-    UUID readable = sensorOf(SeedData.EXPERIMENT_ALPHA);
-    UUID hidden = sensorOf(SeedData.EXPERIMENT_BETA);
+    UUID readable = SeedData.SENSOR_ONLY_IN_ALPHA;
+    UUID hidden = SeedData.SENSOR_ONLY_IN_BETA;
     SensorDocument readableDocument = createAsAdmin(readable);
     UUID hiddenDocumentId = createAsAdmin(hidden).id();
 
@@ -112,7 +111,7 @@ class JooqSensorDocumentRepositoryIT {
   @Transactional
   void should_let_a_writer_of_one_of_the_sensors_experiments_add_documents() {
     // given
-    UUID sensorId = sensorOf(SeedData.EXPERIMENT_ALPHA);
+    UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
 
     // when / then
     SecurityContextTestSupport.runAsUser(
@@ -134,7 +133,7 @@ class JooqSensorDocumentRepositoryIT {
   @Transactional
   void should_reject_an_upload_by_a_writer_of_another_experiment() {
     // given
-    UUID sensorId = sensorOf(SeedData.EXPERIMENT_ALPHA);
+    UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
 
     // when / then: the WITH CHECK of sensor_documents_insert aborts the transaction, so this is
     // the last statement of the test
@@ -155,7 +154,7 @@ class JooqSensorDocumentRepositoryIT {
   @Transactional
   void should_reject_updating_and_deleting_a_document_even_for_an_admin() {
     // given
-    SensorDocument document = createAsAdmin(sensorOf(SeedData.EXPERIMENT_ALPHA));
+    SensorDocument document = createAsAdmin(SeedData.SENSOR_ONLY_IN_ALPHA);
 
     // when: no UPDATE or DELETE policy, RLS filters every row out
     int updated =
@@ -182,18 +181,6 @@ class JooqSensorDocumentRepositoryIT {
         () ->
             repository.create(
                 repository.nextId(), sensorId, REPORT, SecurityContextTestSupport.USERNAME));
-  }
-
-  // the seeded experiments share no sensors
-  private UUID sensorOf(UUID experimentId) {
-    return callAsAdmin(
-        () ->
-            dsl.select(EXPERIMENT_SENSOR.SENSOR_ID)
-                .from(EXPERIMENT_SENSOR)
-                .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(experimentId))
-                .limit(1)
-                .fetchSingle()
-                .value1());
   }
 
   private UUID insertDocumentUploadedAt(UUID sensorId, OffsetDateTime uploadedAt) {
