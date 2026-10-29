@@ -14,9 +14,9 @@ describe('SensorDocumentSource', () => {
 
   beforeEach(() => {
     api = {
-      getDocuments: vi.fn(() => of([DOCUMENT])),
-      uploadDocument: vi.fn(() => of(DOCUMENT)),
-      downloadDocument: vi.fn(() => of(new Blob(['%PDF']))),
+      getSensorDocuments: vi.fn(() => of([DOCUMENT])),
+      uploadSensorDocument: vi.fn(() => of(DOCUMENT)),
+      downloadSensorDocument: vi.fn(() => of(new Blob(['%PDF']))),
     };
     TestBed.configureTestingModule({
       providers: [{ provide: SensorDocumentControllerService, useValue: api }],
@@ -26,14 +26,14 @@ describe('SensorDocumentSource', () => {
 
   it('lists the documents of a sensor', async () => {
     await expect(service.list('sensor-1')).resolves.toEqual([DOCUMENT]);
-    expect(api['getDocuments']).toHaveBeenCalledWith('sensor-1');
+    expect(api['getSensorDocuments']).toHaveBeenCalledWith('sensor-1');
   });
 
   it('uploads a file to a sensor', async () => {
     const file = new File(['%PDF'], 'report.pdf');
 
     await expect(service.upload('sensor-1', file)).resolves.toEqual(DOCUMENT);
-    const [sensorId, sentFile, , , options] = api['uploadDocument'].mock.calls[0];
+    const [sensorId, sentFile, , , options] = api['uploadSensorDocument'].mock.calls[0];
     expect([sensorId, sentFile]).toEqual(['sensor-1', file]);
     expect(skipsGlobalErrorToast(options)).toBe(true);
   });
@@ -42,7 +42,7 @@ describe('SensorDocumentSource', () => {
     const content = await service.content('sensor-1', 'document-1');
 
     expect(await content.text()).toBe('%PDF');
-    const [sensorId, documentId, , , options] = api['downloadDocument'].mock.calls[0];
+    const [sensorId, documentId, , , options] = api['downloadSensorDocument'].mock.calls[0];
     expect([sensorId, documentId]).toEqual(['sensor-1', 'document-1']);
     expect(skipsGlobalErrorToast(options)).toBe(true);
   });

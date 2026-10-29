@@ -10,12 +10,12 @@ export class SensorDocumentSource extends DocumentSource {
   private readonly api = inject(SensorDocumentControllerService);
 
   list(sensorId: string): Promise<DocumentResponseDto[]> {
-    return firstValueFrom(this.api.getDocuments(sensorId));
+    return firstValueFrom(this.api.getSensorDocuments(sensorId));
   }
 
   upload(sensorId: string, file: File): Promise<DocumentResponseDto> {
     return firstValueFrom(
-      this.api.uploadDocument(sensorId, file, 'body', false, {
+      this.api.uploadSensorDocument(sensorId, file, 'body', false, {
         context: skipGlobalErrorToast(),
       }),
     );
@@ -23,7 +23,7 @@ export class SensorDocumentSource extends DocumentSource {
 
   content(sensorId: string, documentId: string): Promise<Blob> {
     return firstValueFrom(
-      this.api.downloadDocument(sensorId, documentId, 'body', false, {
+      this.api.downloadSensorDocument(sensorId, documentId, 'body', false, {
         context: skipGlobalErrorToast(),
       }),
     );
