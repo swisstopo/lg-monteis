@@ -639,6 +639,16 @@ class JooqExperimentRepositoryIT {
                 InvalidPagedRequestException.class, () -> repository.getExperiments(request)));
   }
 
+  private List<UUID> idsSortedBy(String colId, SortDirection direction, String namePrefix) {
+    PagedRequest request =
+        new PagedRequest(
+            0,
+            1000,
+            List.of(new SortModelItem(colId, direction)),
+            Map.of("name", new TextFilterModel("startsWith", namePrefix, null)));
+    return repository.getExperiments(request).rows().stream().map(Experiment::getId).toList();
+  }
+
   private Set<UUID> idsMatchingOwnerFilter(String... ownerIds) {
     PagedRequest request =
         new PagedRequest(
@@ -667,6 +677,73 @@ class JooqExperimentRepositoryIT {
   }
 
   // --- Organisations ---
+
+  @Test
+  @Transactional
+  void should_filter_experiments_by_organisation_including_experiments_without_organisation() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID swisstopo = createOrganisationWithDsl("Org filter swisstopo");
+          UUID eth = createOrganisationWithDsl("Org filter ETH");
+          UUID ofSwisstopo = createDefaultExperiment("ORG-FILTER-SWISSTOPO");
+          UUID ofEth = createDefaultExperiment("ORG-FILTER-ETH");
+          UUID withoutOrganisation = createDefaultExperiment("ORG-FILTER-NONE");
+          linkOrganisation(ofSwisstopo, swisstopo);
+          linkOrganisation(ofEth, eth);
+
+          Set<UUID> bySwisstopo = idsMatchingOrganisationFilter("Org filter swisstopo");
+          Set<UUID> bySwisstopoOrNone = idsMatchingOrganisationFilter("Org filter swisstopo", null);
+
+          assertEquals(Set.of(ofSwisstopo), bySwisstopo);
+          assertEquals(Set.of(ofSwisstopo, withoutOrganisation), bySwisstopoOrNone);
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_sort_experiments_by_their_alphabetically_first_organisation() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID alpha = createOrganisationWithDsl("Org sort Alpha");
+          UUID beta = createOrganisationWithDsl("Org sort Beta");
+          UUID gamma = createOrganisationWithDsl("Org sort Gamma");
+          UUID ofGamma = createDefaultExperiment("ORG-SORT-GAMMA");
+          UUID ofBetaAndGamma = createDefaultExperiment("ORG-SORT-BETA-GAMMA");
+          UUID ofAlpha = createDefaultExperiment("ORG-SORT-ALPHA");
+          UUID withoutOrganisation = createDefaultExperiment("ORG-SORT-NONE");
+          linkOrganisation(ofGamma, gamma);
+          linkOrganisation(ofBetaAndGamma, gamma);
+          linkOrganisation(ofBetaAndGamma, beta);
+          linkOrganisation(ofAlpha, alpha);
+
+          List<UUID> ascending = idsSortedBy("organisationIds", SortDirection.ASC, "ORG-SORT-");
+
+          assertEquals(List.of(ofAlpha, ofBetaAndGamma, ofGamma, withoutOrganisation), ascending);
+        });
+  }
+
+  private void linkOrganisation(UUID experimentId, UUID organisationId) {
+    dsl.insertInto(EXPERIMENT_ORGANISATION)
+        .set(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, experimentId)
+        .set(EXPERIMENT_ORGANISATION.ORGANISATION_ID, organisationId)
+        .execute();
+  }
+
+  private Set<UUID> idsMatchingOrganisationFilter(String... organisationNames) {
+    PagedRequest request =
+        new PagedRequest(
+            0,
+            1000,
+            List.of(),
+            Map.of(
+                "name",
+                new TextFilterModel("startsWith", "ORG-FILTER-", null),
+                "organisationIds",
+                new SetFilterModel("set", new HashSet<>(Arrays.asList(organisationNames)))));
+    Set<UUID> ids = new HashSet<>();
+    repository.getExperiments(request).rows().forEach(e -> ids.add(e.getId()));
+    return ids;
+  }
 
   @Test
   @Transactional
