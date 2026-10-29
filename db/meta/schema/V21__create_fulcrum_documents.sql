@@ -22,7 +22,7 @@
 
 CREATE TABLE fulcrum_documents (
     id            UUID PRIMARY KEY,
-    number        TEXT,
+    number        VARCHAR(100),
     title         TEXT,
     authors       TEXT,
     year          INTEGER,
