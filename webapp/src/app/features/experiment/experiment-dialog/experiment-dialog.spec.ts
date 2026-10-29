@@ -21,7 +21,7 @@ import { ExperimentDialog } from './experiment-dialog';
 
 @Component({ selector: 'app-documents', template: '' })
 class DocumentsStub {
-  readonly ownerId = input.required<string>();
+  readonly parentId = input.required<string>();
   readonly readOnly = input(false);
 }
 
@@ -189,7 +189,7 @@ describe('ExperimentDialog', () => {
     it('shows the documents with upload', async () => {
       const { documents } = await setup({ experimentId: 'experiment-1' });
 
-      expect(documents()?.ownerId()).toBe('experiment-1');
+      expect(documents()?.parentId()).toBe('experiment-1');
       expect(documents()?.readOnly()).toBe(false);
     });
 

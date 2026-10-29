@@ -10,7 +10,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 /**
- * Keeps each document under {@code <keyPrefix><ownerId>/<documentId>}, one subclass per owner
+ * Keeps each document under {@code <keyPrefix><parentId>/<documentId>}, one subclass per parent
  * sets the prefix. The file name is not part of the key, two uploads with the same name would
  * overwrite each other and the user would decide what the key looks like.
  */
@@ -50,6 +50,6 @@ public abstract class S3DocumentStorage {
   }
 
   private String objectKeyOf(DocumentKey key) {
-    return keyPrefix + key.ownerId() + "/" + key.documentId();
+    return keyPrefix + key.parentId() + "/" + key.documentId();
   }
 }

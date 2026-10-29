@@ -72,7 +72,7 @@ public class SensorDocumentService {
       log.warn(
           "could not delete the orphaned document {} of sensor {}",
           key.documentId(),
-          key.ownerId(),
+          key.parentId(),
           e);
     }
   }

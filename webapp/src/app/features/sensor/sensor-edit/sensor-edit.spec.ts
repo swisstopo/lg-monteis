@@ -14,7 +14,7 @@ import SensorEdit from './sensor-edit';
 
 @Component({ selector: 'app-documents', template: '' })
 class DocumentsStub {
-  readonly ownerId = input.required<string>();
+  readonly parentId = input.required<string>();
   readonly readOnly = input(false);
 }
 
@@ -108,7 +108,7 @@ describe('SensorEdit', () => {
   it('lists the documents of the sensor, read-only without upload permission', async () => {
     const { documents } = await setup({ sensorId: 'sensor-1' });
 
-    expect(documents()?.ownerId()).toBe('sensor-1');
+    expect(documents()?.parentId()).toBe('sensor-1');
     expect(documents()?.readOnly()).toBe(true);
   });
 

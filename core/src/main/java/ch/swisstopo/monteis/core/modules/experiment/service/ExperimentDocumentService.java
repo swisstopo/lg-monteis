@@ -76,7 +76,7 @@ public class ExperimentDocumentService {
       log.warn(
           "could not delete the orphaned document {} of experiment {}",
           key.documentId(),
-          key.ownerId(),
+          key.parentId(),
           e);
     }
   }

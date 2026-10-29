@@ -92,7 +92,7 @@ class ExperimentDocumentServiceIT {
     // then
     ArgumentCaptor<DocumentKey> storedKey = ArgumentCaptor.forClass(DocumentKey.class);
     then(storage).should().store(storedKey.capture(), any(), any());
-    assertThat(storedKey.getValue().ownerId()).isEqualTo(SeedData.EXPERIMENT_ALPHA);
+    assertThat(storedKey.getValue().parentId()).isEqualTo(SeedData.EXPERIMENT_ALPHA);
     then(storage).should().delete(storedKey.getValue());
     assertThat(countDocumentRows(fileName)).isZero();
   }
