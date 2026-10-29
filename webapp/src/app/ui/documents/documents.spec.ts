@@ -21,7 +21,7 @@ describe('Documents', () => {
   let source: {
     list: ReturnType<typeof vi.fn>;
     upload: ReturnType<typeof vi.fn>;
-    content: ReturnType<typeof vi.fn>;
+    fetchContent: ReturnType<typeof vi.fn>;
   };
   let fileDownload: { download: ReturnType<typeof vi.fn>; openInNewTab: ReturnType<typeof vi.fn> };
   let toast: { error: ReturnType<typeof vi.fn> };
@@ -30,7 +30,7 @@ describe('Documents', () => {
     source = {
       list: vi.fn().mockResolvedValue([REPORT]),
       upload: vi.fn().mockResolvedValue(REPORT),
-      content: vi.fn().mockResolvedValue(new Blob(['%PDF'])),
+      fetchContent: vi.fn().mockResolvedValue(new Blob(['%PDF'])),
     };
     fileDownload = {
       download: vi.fn(),
@@ -217,7 +217,7 @@ describe('Documents', () => {
     element.querySelector<HTMLButtonElement>('.file-name')!.click();
 
     await vi.waitFor(() => expect(fileDownload.download).toHaveBeenCalled());
-    expect(source.content).toHaveBeenCalledWith('parent-1', 'document-1');
+    expect(source.fetchContent).toHaveBeenCalledWith('parent-1', 'document-1');
     expect(fileDownload.download.mock.calls[0][1]).toBe('report.pdf');
   });
 
@@ -227,7 +227,7 @@ describe('Documents', () => {
     element.querySelector<HTMLButtonElement>('.view')!.click();
 
     await vi.waitFor(() => expect(fileDownload.openInNewTab).toHaveBeenCalled());
-    expect(source.content).toHaveBeenCalledWith('parent-1', 'document-1');
+    expect(source.fetchContent).toHaveBeenCalledWith('parent-1', 'document-1');
   });
 
   it('offers only the download for a document the browser must not open', async () => {
@@ -240,7 +240,7 @@ describe('Documents', () => {
   });
 
   it('toasts a failed download', async () => {
-    source.content.mockRejectedValue(new Error('404'));
+    source.fetchContent.mockRejectedValue(new Error('404'));
     const { element } = await render();
 
     element.querySelector<HTMLButtonElement>('.file-name')!.click();

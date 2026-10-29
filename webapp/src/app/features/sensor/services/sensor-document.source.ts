@@ -21,7 +21,7 @@ export class SensorDocumentSource extends DocumentSource {
     );
   }
 
-  content(sensorId: string, documentId: string): Promise<Blob> {
+  fetchContent(sensorId: string, documentId: string): Promise<Blob> {
     return firstValueFrom(
       this.api.downloadSensorDocument(sensorId, documentId, 'body', false, {
         context: skipGlobalErrorToast(),
