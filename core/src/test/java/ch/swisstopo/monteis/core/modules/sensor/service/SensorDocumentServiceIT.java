@@ -5,9 +5,11 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_DOCUMENTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentKey;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
@@ -19,8 +21,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -50,7 +53,7 @@ class SensorDocumentServiceIT {
   }
 
   @Test
-  void should_refuse_a_pi_of_another_experiment_before_storing_anything() {
+  void should_let_row_level_security_refuse_a_pi_of_another_experiment_and_delete_the_content() {
     // given
     UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
     String fileName = uniqueFileName();
@@ -63,10 +66,13 @@ class SensorDocumentServiceIT {
         List.of(SeedData.EXPERIMENT_BETA),
         () ->
             assertThrows(
-                AccessDeniedException.class, () -> service.upload(sensorId, metadata, content)));
+                PermissionDeniedDataAccessException.class,
+                () -> service.upload(sensorId, metadata, content)));
 
     // then
-    then(storage).shouldHaveNoInteractions();
+    ArgumentCaptor<DocumentKey> stored = ArgumentCaptor.forClass(DocumentKey.class);
+    then(storage).should().store(stored.capture(), eq(metadata), eq(content));
+    then(storage).should().delete(stored.getValue());
     assertThat(countDocumentRows(fileName)).isZero();
   }
 
