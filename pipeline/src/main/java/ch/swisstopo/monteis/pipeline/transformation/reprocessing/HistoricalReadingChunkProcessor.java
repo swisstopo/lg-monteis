@@ -58,28 +58,19 @@ public class HistoricalReadingChunkProcessor {
   }
 
   /**
-   * Rows already tagged with the config's sensor_parameter_id - survives DAS-key remaps, see
-   * {@code SensorReadingRepository.fetchOldSensorDataById}.
+   * Next chunk of rows stored under this DAS key that the given config has not produced yet, see
+   * {@code SensorReadingRepository.fetchStaleSensorDataByDasKey}.
    */
-  public ChunkProcessingResult processNextChunkById(
-      ActiveSensorConfig activeSensorConfig, OffsetDateTime cursor) {
-    SensorParameterConfig config = activeSensorConfig.getConfig();
-    List<SensorReadingRecord> oldRecords =
-        sensorReadingRepository.fetchOldSensorDataById(
-            config.getSensorParameterId(), config.getVersion().shortValue(), chunkSize, cursor);
-    return processChunk(activeSensorConfig, oldRecords, cursor);
-  }
-
-  /**
-   * Rows ingested under this DAS key before sensor_parameter_id was ever known (still NULL) - the
-   * one-time backfill path, see {@code SensorReadingRepository.fetchOldSensorDataByDasKeyUnbackfilled}.
-   */
-  public ChunkProcessingResult processNextChunkByDasKeyUnbackfilled(
+  public ChunkProcessingResult processNextChunk(
       ActiveSensorConfig activeSensorConfig, String dasKey, OffsetDateTime cursor) {
     SensorParameterConfig config = activeSensorConfig.getConfig();
     List<SensorReadingRecord> oldRecords =
-        sensorReadingRepository.fetchOldSensorDataByDasKeyUnbackfilled(
-            dasKey, config.getVersion().shortValue(), chunkSize, cursor);
+        sensorReadingRepository.fetchStaleSensorDataByDasKey(
+            dasKey,
+            config.getSensorParameterId(),
+            config.getVersion().shortValue(),
+            chunkSize,
+            cursor);
     return processChunk(activeSensorConfig, oldRecords, cursor);
   }
 
@@ -122,9 +113,9 @@ public class HistoricalReadingChunkProcessor {
                     // raw value.
                     reading.setNormValue(null);
 
-                    // Still backfill the id even on a poison pill: this row otherwise stays stuck
-                    // in the unbackfilled-by-DAS-key backlog forever, since its version now equals
-                    // the config's and it will never be picked up by that scan again.
+                    // Still stamp the config's id even on a poison pill: the stale-row scan also
+                    // matches on a differing sensor_parameter_id, so leaving it would re-select
+                    // this row forever.
                     reading.setSensorParameterId(
                         activeSensorConfig.getConfig().getSensorParameterId());
 

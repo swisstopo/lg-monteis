@@ -71,24 +71,26 @@ class HistoricalReadingChunkProcessorTest {
         .executeWithoutResult(any());
   }
 
+  private static final String DAS_KEY = "SOL_EXPERTS__deviceA__temperature";
+
   private static SensorParameterConfig config(UUID sensorParameterId, int version) {
     return new SensorParameterConfig(
         Das.SOL_EXPERTS, "deviceA", "temperature", sensorParameterId, "x + 1", 100.0, 0.0, version);
   }
 
   @Test
-  void should_return_zero_when_no_old_records_found_by_id() {
+  void should_return_zero_when_no_stale_records_found() {
     // given
     UUID sensorParameterId = UUID.randomUUID();
     ActiveSensorConfig config = new ActiveSensorConfig(config(sensorParameterId, (short) 2));
 
     given(
-            sensorReadingRepository.fetchOldSensorDataById(
-                sensorParameterId, (short) 2, testChunkSize, null))
+            sensorReadingRepository.fetchStaleSensorDataByDasKey(
+                DAS_KEY, sensorParameterId, (short) 2, testChunkSize, null))
         .willReturn(List.of());
 
     // when
-    ChunkProcessingResult result = chunkService.processNextChunkById(config, null);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, DAS_KEY, null);
 
     // then
     assertThat(result.processedCount()).isZero();
@@ -98,7 +100,7 @@ class HistoricalReadingChunkProcessorTest {
   }
 
   @Test
-  void should_process_and_bulk_update_valid_records_matched_by_id() throws TransformationException {
+  void should_process_and_bulk_update_valid_records() throws TransformationException {
     // given
     UUID sensorParameterId = UUID.randomUUID();
     ActiveSensorConfig config = new ActiveSensorConfig(config(sensorParameterId, (short) 2));
@@ -106,24 +108,24 @@ class HistoricalReadingChunkProcessorTest {
 
     SensorReadingRecord oldRecord =
         new SensorReadingRecord(
-            timestamp, "deviceA", 10.0, 15.0, (short) 1, RangeCategory.correct, sensorParameterId);
+            timestamp, DAS_KEY, 10.0, 15.0, (short) 1, RangeCategory.correct, sensorParameterId);
 
     given(
-            sensorReadingRepository.fetchOldSensorDataById(
-                sensorParameterId, (short) 2, testChunkSize, null))
+            sensorReadingRepository.fetchStaleSensorDataByDasKey(
+                DAS_KEY, sensorParameterId, (short) 2, testChunkSize, null))
         .willReturn(List.of(oldRecord));
 
     SensorReadingRecord transformedRecord =
         new SensorReadingRecord(
-            timestamp, "deviceA", 10.0, 20.0, (short) 2, RangeCategory.correct, sensorParameterId);
+            timestamp, DAS_KEY, 10.0, 20.0, (short) 2, RangeCategory.correct, sensorParameterId);
 
     given(
             transformationOrchestrator.transform(
-                "deviceA", 10.0, timestamp, config, ProcessingOrigin.REPROCESS))
+                DAS_KEY, 10.0, timestamp, config, ProcessingOrigin.REPROCESS))
         .willReturn(transformedRecord);
 
     // when
-    ChunkProcessingResult result = chunkService.processNextChunkById(config, null);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, DAS_KEY, null);
 
     // then
     assertThat(result.processedCount()).isEqualTo(1);
@@ -149,21 +151,21 @@ class HistoricalReadingChunkProcessorTest {
   }
 
   @Test
-  void should_process_unbackfilled_records_matched_by_das_key() throws TransformationException {
+  void should_stamp_sensor_parameter_id_on_records_without_one() throws TransformationException {
     // given
     UUID sensorParameterId = UUID.randomUUID();
     ActiveSensorConfig config = new ActiveSensorConfig(config(sensorParameterId, (short) 1));
     OffsetDateTime timestamp = OffsetDateTime.now();
-    String dasKey = "SOL_EXPERTS__deviceA__temperature";
+    String dasKey = DAS_KEY;
 
-    // sensor_parameter_id still null on the fetched row - that's why it matched this backlog
+    // sensor_parameter_id still null on the fetched row - ingested before the config was known
     SensorReadingRecord oldRecord =
         new SensorReadingRecord(
             timestamp, dasKey, 10.0, 15.0, (short) 0, RangeCategory.correct, null);
 
     given(
-            sensorReadingRepository.fetchOldSensorDataByDasKeyUnbackfilled(
-                dasKey, (short) 1, testChunkSize, null))
+            sensorReadingRepository.fetchStaleSensorDataByDasKey(
+                DAS_KEY, sensorParameterId, (short) 1, testChunkSize, null))
         .willReturn(List.of(oldRecord));
 
     SensorReadingRecord transformedRecord =
@@ -176,8 +178,7 @@ class HistoricalReadingChunkProcessorTest {
         .willReturn(transformedRecord);
 
     // when
-    ChunkProcessingResult result =
-        chunkService.processNextChunkByDasKeyUnbackfilled(config, dasKey, null);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, DAS_KEY, null);
 
     // then
     assertThat(result.processedCount()).isEqualTo(1);
@@ -198,11 +199,11 @@ class HistoricalReadingChunkProcessorTest {
     // The old record has version 1 and a raw value that will cause math to fail
     SensorReadingRecord poisonRecord =
         new SensorReadingRecord(
-            timestamp, "deviceB", -999.0, 5.0, (short) 1, RangeCategory.correct, sensorParameterId);
+            timestamp, DAS_KEY, -999.0, 5.0, (short) 1, RangeCategory.correct, sensorParameterId);
 
     given(
-            sensorReadingRepository.fetchOldSensorDataById(
-                sensorParameterId, (short) 3, testChunkSize, null))
+            sensorReadingRepository.fetchStaleSensorDataByDasKey(
+                DAS_KEY, sensorParameterId, (short) 3, testChunkSize, null))
         .willReturn(List.of(poisonRecord));
 
     TransformationException ex = mock(TransformationException.class);
@@ -210,11 +211,11 @@ class HistoricalReadingChunkProcessorTest {
 
     given(
             transformationOrchestrator.transform(
-                "deviceB", -999.0, timestamp, config, ProcessingOrigin.REPROCESS))
+                DAS_KEY, -999.0, timestamp, config, ProcessingOrigin.REPROCESS))
         .willThrow(ex);
 
     // when
-    ChunkProcessingResult result = chunkService.processNextChunkById(config, null);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, DAS_KEY, null);
 
     // then
     assertThat(result.processedCount()).isEqualTo(1);

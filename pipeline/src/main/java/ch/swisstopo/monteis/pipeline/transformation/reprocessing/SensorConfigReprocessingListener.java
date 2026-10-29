@@ -41,9 +41,7 @@ public class SensorConfigReprocessingListener {
         dasKey,
         ack,
         validConfig -> {
-          log.info(
-              "Triggering reprocessing flow for sensor parameter {}.",
-              validConfig.getSensorParameterId());
+          log.info("Triggering reprocessing flow for DAS key {}.", dasKey);
           ActiveSensorConfig activeConfig = new ActiveSensorConfig(validConfig);
           sensorReprocessingOrchestrator.checkAndReprocessHistoricalData(activeConfig);
         });
