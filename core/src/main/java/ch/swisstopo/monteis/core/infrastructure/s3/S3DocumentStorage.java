@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.infrastructure.s3;
 
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentKey;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentStorage;
 import java.io.InputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -14,7 +15,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
  * sets the prefix. The file name is not part of the key, two uploads with the same name would
  * overwrite each other and the user would decide what the key looks like.
  */
-public abstract class S3DocumentStorage {
+public abstract class S3DocumentStorage implements DocumentStorage {
 
   private final S3Client s3;
   private final String bucket;
