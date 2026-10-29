@@ -1,10 +1,10 @@
 import { DocumentResponseDto } from '@core/generated';
 
-// each owner provides its own where the list is shown: { provide: DocumentSource, useExisting: … }
+// each parent provides its own where the list is shown: { provide: DocumentSource, useExisting: … }
 export abstract class DocumentSource {
-  abstract list(ownerId: string): Promise<DocumentResponseDto[]>;
+  abstract list(parentId: string): Promise<DocumentResponseDto[]>;
 
-  abstract upload(ownerId: string, file: File): Promise<DocumentResponseDto>;
+  abstract upload(parentId: string, file: File): Promise<DocumentResponseDto>;
 
-  abstract content(ownerId: string, documentId: string): Promise<Blob>;
+  abstract content(parentId: string, documentId: string): Promise<Blob>;
 }

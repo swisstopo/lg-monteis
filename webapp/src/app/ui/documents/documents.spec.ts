@@ -54,7 +54,7 @@ describe('Documents', () => {
 
   async function render(readOnly = false) {
     const fixture = TestBed.createComponent(Documents);
-    fixture.componentRef.setInput('ownerId', 'owner-1');
+    fixture.componentRef.setInput('parentId', 'parent-1');
     fixture.componentRef.setInput('readOnly', readOnly);
     await fixture.whenStable();
     const element = fixture.nativeElement as HTMLElement;
@@ -82,7 +82,7 @@ describe('Documents', () => {
   it('lists the documents with upload time and uploader', async () => {
     const { element } = await render();
 
-    expect(source.list).toHaveBeenCalledWith('owner-1');
+    expect(source.list).toHaveBeenCalledWith('parent-1');
     expect(element.querySelector('.file-name')?.textContent).toContain('report.pdf');
     expect(element.querySelector('.document-meta')?.textContent).toContain('alice');
   });
@@ -127,8 +127,8 @@ describe('Documents', () => {
     await selectFiles(view, first, second);
 
     expect(source.upload.mock.calls).toEqual([
-      ['owner-1', first],
-      ['owner-1', second],
+      ['parent-1', first],
+      ['parent-1', second],
     ]);
     expect(view.fileInput()!.value).toBe('');
   });
@@ -217,7 +217,7 @@ describe('Documents', () => {
     element.querySelector<HTMLButtonElement>('.file-name')!.click();
 
     await vi.waitFor(() => expect(fileDownload.download).toHaveBeenCalled());
-    expect(source.content).toHaveBeenCalledWith('owner-1', 'document-1');
+    expect(source.content).toHaveBeenCalledWith('parent-1', 'document-1');
     expect(fileDownload.download.mock.calls[0][1]).toBe('report.pdf');
   });
 
@@ -227,7 +227,7 @@ describe('Documents', () => {
     element.querySelector<HTMLButtonElement>('.view')!.click();
 
     await vi.waitFor(() => expect(fileDownload.openInNewTab).toHaveBeenCalled());
-    expect(source.content).toHaveBeenCalledWith('owner-1', 'document-1');
+    expect(source.content).toHaveBeenCalledWith('parent-1', 'document-1');
   });
 
   it('offers only the download for a document the browser must not open', async () => {
