@@ -57,7 +57,7 @@ public class SecurityConfig {
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
                     .access(experimentWrite)
-                    // SensorDocumentService checks it, the sensor's experiments are only in the db
+                    // SensorDocumentController checks it, sensor's experiments only in the db
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)

@@ -23,6 +23,7 @@ import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorDocument;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorDocumentService;
+import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -34,7 +35,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
@@ -57,6 +57,7 @@ class SensorDocumentControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private SensorDocumentService service;
+  @MockitoBean private SensorService sensorService;
 
   @Test
   void should_list_the_documents_of_a_sensor() throws Exception {
@@ -91,6 +92,7 @@ class SensorDocumentControllerTest {
   @Test
   void should_store_an_upload_and_answer_201() throws Exception {
     // given
+    given(sensorService.canWriteAnExperimentOf(SENSOR_ID)).willReturn(true);
     given(service.upload(eq(SENSOR_ID), any(), any(InputStream.class))).willReturn(DOCUMENT);
 
     // when / then
@@ -124,10 +126,10 @@ class SensorDocumentControllerTest {
   }
 
   @Test
-  void should_answer_403_when_the_service_refuses_the_upload() throws Exception {
+  void should_refuse_an_upload_without_a_writable_experiment_before_storing_anything()
+      throws Exception {
     // given
-    given(service.upload(eq(SENSOR_ID), any(), any(InputStream.class)))
-        .willThrow(new AccessDeniedException("no write access"));
+    given(sensorService.canWriteAnExperimentOf(SENSOR_ID)).willReturn(false);
 
     // when / then
     mockMvc
@@ -136,6 +138,8 @@ class SensorDocumentControllerTest {
                 .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication())))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.messageKey").value("access.denied"));
+
+    then(service).shouldHaveNoInteractions();
   }
 
   @Test
