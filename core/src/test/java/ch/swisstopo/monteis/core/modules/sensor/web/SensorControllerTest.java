@@ -277,7 +277,7 @@ class SensorControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().createSensor(mockDomain);
-    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
+    then(mapper).should().toDto(eq(mockDomain), anyBoolean(), any(LocalDate.class));
   }
 
   @Test
@@ -364,7 +364,7 @@ class SensorControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().createSensor(mockDomain);
-    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
+    then(mapper).should().toDto(eq(mockDomain), anyBoolean(), any(LocalDate.class));
   }
 
   @Test
@@ -412,7 +412,7 @@ class SensorControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().updateSensor(mockDomain);
-    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
+    then(mapper).should().toDto(eq(mockDomain), anyBoolean(), any(LocalDate.class));
   }
 
   @Test
