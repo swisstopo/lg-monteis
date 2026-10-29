@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.experiment.jooq;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_OWNER;
+import static ch.swisstopo.monteis.core.jooq.generated.Tables.ORGANISATIONS;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
@@ -56,6 +57,16 @@ public class JooqExperimentRepository implements ExperimentRepository {
               DSL.inline("HISTORIC"))
           .else_(DSL.inline("ACTIVE"));
 
+  // the names sorted and joined, so the experiments sort by their alphabetically first organisation
+  // (the filter is ExperimentOrganisationFilter, an experiment has several organisations)
+  private static final Field<String> ORGANISATION_NAMES_FIELD =
+      DSL.select(DSL.stringAgg(ORGANISATIONS.NAME, ", ").orderBy(ORGANISATIONS.NAME.asc()))
+          .from(EXPERIMENT_ORGANISATION)
+          .join(ORGANISATIONS)
+          .on(ORGANISATIONS.ID.eq(EXPERIMENT_ORGANISATION.ORGANISATION_ID))
+          .where(EXPERIMENT_ORGANISATION.EXPERIMENT_ID.eq(EXPERIMENTS.ID))
+          .asField();
+
   // Package-private (not private): also reused by JooqExperimentCsvExportQueryRepository, so a
   // CSV export honors the exact same filter/sort semantics as the grid.
   static final Map<String, Field<?>> COLUMNS_BY_COL_ID =
@@ -73,7 +84,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
           SENSOR_COUNT_FIELD_NAME,
           SENSOR_COUNT_FIELD,
           "status",
-          STATUS_FIELD);
+          STATUS_FIELD,
+          ExperimentOrganisationFilter.ORGANISATIONS_COLUMN,
+          ORGANISATION_NAMES_FIELD);
 
   private static final List<Field<?>> EXPERIMENT_FIELDS =
       List.of(
@@ -114,10 +127,18 @@ public class JooqExperimentRepository implements ExperimentRepository {
     // Default to a deterministic order so offset-based paging stays stable across separate
     // requests (Postgres does not guarantee row order without an ORDER BY).
     ExperimentOwnerFilter.Split ownerFilter = ExperimentOwnerFilter.split(request);
+    ExperimentOrganisationFilter.Split organisationFilter =
+        ExperimentOrganisationFilter.split(ownerFilter.requestWithoutOwnersColumn());
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
         PagedRequestJooqTranslator.translate(
-            ownerFilter.requestWithoutOwnersColumn(), COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
-    var condition = criteria.condition().and(ownerFilter.ownerCondition());
+            organisationFilter.requestWithoutOrganisationsColumn(),
+            COLUMNS_BY_COL_ID,
+            EXPERIMENTS.ID.asc());
+    var condition =
+        criteria
+            .condition()
+            .and(ownerFilter.ownerCondition())
+            .and(organisationFilter.organisationCondition());
 
     List<Experiment> data =
         selectExperiments()

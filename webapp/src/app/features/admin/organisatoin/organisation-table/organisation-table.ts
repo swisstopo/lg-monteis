@@ -48,15 +48,6 @@ export default class OrganisationTable {
 
   protected readonly gridOptions: GridOptions<OrganisationResponseDto> = {
     domLayout: 'normal',
-    autoSizeStrategy: {
-      type: 'fitCellContents',
-      scaleUpToFitGridWidth: true,
-      // Without this, the scale-up only runs once on first render, so toggling the sidenav
-      // (which resizes the grid's container) leaves the columns sized for the old width.
-      // the organisation table only has a few columns, once it has more it can size them like
-      // the other tables
-      continuous: true,
-    },
   };
 
   protected readonly datasource = createPagedDatasource(
