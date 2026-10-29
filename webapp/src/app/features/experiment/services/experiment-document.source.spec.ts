@@ -39,7 +39,7 @@ describe('ExperimentDocumentSource', () => {
   });
 
   it('fetches the content of a document', async () => {
-    const content = await service.content('experiment-1', 'document-1');
+    const content = await service.fetchContent('experiment-1', 'document-1');
 
     expect(await content.text()).toBe('%PDF');
     const [experimentId, documentId, , , options] = api['downloadDocument'].mock.calls[0];

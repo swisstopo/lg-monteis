@@ -21,7 +21,7 @@ export class ExperimentDocumentSource extends DocumentSource {
     );
   }
 
-  content(experimentId: string, documentId: string): Promise<Blob> {
+  fetchContent(experimentId: string, documentId: string): Promise<Blob> {
     return firstValueFrom(
       this.api.downloadDocument(experimentId, documentId, 'body', false, {
         context: skipGlobalErrorToast(),
