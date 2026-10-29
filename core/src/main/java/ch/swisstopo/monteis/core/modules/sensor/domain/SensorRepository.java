@@ -49,7 +49,7 @@ public interface SensorRepository {
   void requireVisible(UUID id);
 
   /** Whether the caller may upload documents to the sensor, see {@code V22}. */
-  boolean canUploadDocumentsTo(UUID id);
+  boolean canWriteAnExperimentOf(UUID id);
 
   /**
    * Retrieves a page of sensors.

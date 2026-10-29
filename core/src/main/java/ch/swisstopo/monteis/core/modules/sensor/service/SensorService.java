@@ -111,8 +111,8 @@ public class SensorService {
         .orElseThrow(() -> new ObjectNotFoundException(Sensor.class));
   }
 
-  public boolean canUploadDocumentsTo(UUID id) {
-    return repository.canUploadDocumentsTo(id);
+  public boolean canWriteAnExperimentOf(UUID id) {
+    return repository.canWriteAnExperimentOf(id);
   }
 
   public List<Formula> findAllFormulas() {
