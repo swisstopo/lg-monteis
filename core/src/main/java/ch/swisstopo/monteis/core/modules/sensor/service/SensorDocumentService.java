@@ -43,7 +43,7 @@ public class SensorDocumentService {
   public SensorDocument upload(UUID sensorId, DocumentMetadata metadata, InputStream content) {
     String uploadedBy = currentUserProvider.requireCurrentUsername();
     sensorRepository.requireVisible(sensorId);
-    requireUploadAllowed(sensorId);
+    requireWritableExperimentOf(sensorId);
     DocumentKey key = new DocumentKey(sensorId, documentRepository.nextId());
     storage.store(key, metadata, content);
     try {
@@ -68,8 +68,8 @@ public class SensorDocumentService {
     return storage.load(document.key());
   }
 
-  private void requireUploadAllowed(UUID sensorId) {
-    if (!sensorRepository.canUploadDocumentsTo(sensorId)) {
+  private void requireWritableExperimentOf(UUID sensorId) {
+    if (!sensorRepository.canWriteAnExperimentOf(sensorId)) {
       throw new AccessDeniedException("May not upload documents to sensor " + sensorId);
     }
   }

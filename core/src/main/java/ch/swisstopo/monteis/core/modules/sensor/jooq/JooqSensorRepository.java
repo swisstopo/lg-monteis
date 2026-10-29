@@ -260,8 +260,8 @@ public class JooqSensorRepository implements SensorRepository {
   // same function as the sensor_documents insert policy: flag, check and policy can't drift
   @Override
   @Transactional(readOnly = true)
-  public boolean canUploadDocumentsTo(UUID id) {
-    return dsl.select(DSL.function("can_upload_sensor_documents", Boolean.class, DSL.val(id)))
+  public boolean canWriteAnExperimentOf(UUID id) {
+    return dsl.select(DSL.function("can_write_an_experiment_of_sensor", Boolean.class, DSL.val(id)))
         .fetchSingle()
         .value1();
   }

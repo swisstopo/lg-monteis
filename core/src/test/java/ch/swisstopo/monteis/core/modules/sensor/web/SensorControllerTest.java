@@ -112,7 +112,7 @@ class SensorControllerTest {
     Sensor mockDomain = mock(Sensor.class);
 
     given(service.getSensor(SENSOR_ID)).willReturn(mockDomain);
-    given(service.canUploadDocumentsTo(SENSOR_ID)).willReturn(true);
+    given(service.canWriteAnExperimentOf(SENSOR_ID)).willReturn(true);
     given(mapper.toDto(eq(mockDomain), eq(true), any(LocalDate.class)))
         .willReturn(expectedResponseDto);
 

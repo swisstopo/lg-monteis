@@ -68,7 +68,7 @@ public class SensorController {
   public ResponseEntity<SensorResponseDto> getSensor(@PathVariable UUID id) {
     LocalDate today = LocalDate.now(clock);
     Sensor sensor = service.getSensor(id);
-    return ResponseEntity.ok(mapper.toDto(sensor, service.canUploadDocumentsTo(id), today));
+    return ResponseEntity.ok(mapper.toDto(sensor, service.canWriteAnExperimentOf(id), today));
   }
 
   @Operation(
@@ -89,7 +89,7 @@ public class SensorController {
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(
             mapper.toDto(
-                createdSensor, service.canUploadDocumentsTo(createdSensor.getId()), today));
+                createdSensor, service.canWriteAnExperimentOf(createdSensor.getId()), today));
   }
 
   @Operation(
@@ -113,7 +113,7 @@ public class SensorController {
     Sensor updated = service.updateSensor(mapper.toDomain(dto));
     LocalDate today = LocalDate.now(clock);
     return ResponseEntity.status(HttpStatus.OK)
-        .body(mapper.toDto(updated, service.canUploadDocumentsTo(id), today));
+        .body(mapper.toDto(updated, service.canWriteAnExperimentOf(id), today));
   }
 
   @Operation(

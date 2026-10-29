@@ -41,8 +41,8 @@ class JooqSensorRepositoryAccessIT {
         List.of(SeedData.EXPERIMENT_ALPHA, SeedData.EXPERIMENT_BETA),
         List.of(SeedData.EXPERIMENT_ALPHA),
         () -> {
-          assertThat(repository.canUploadDocumentsTo(alphaSensor)).isTrue();
-          assertThat(repository.canUploadDocumentsTo(betaSensor)).isFalse();
+          assertThat(repository.canWriteAnExperimentOf(alphaSensor)).isTrue();
+          assertThat(repository.canWriteAnExperimentOf(betaSensor)).isFalse();
         });
   }
 
@@ -50,14 +50,14 @@ class JooqSensorRepositoryAccessIT {
   void should_not_let_a_reader_upload_documents() {
     SecurityContextTestSupport.runAsUser(
         List.of(SeedData.EXPERIMENT_ALPHA),
-        () -> assertThat(repository.canUploadDocumentsTo(alphaSensor)).isFalse());
+        () -> assertThat(repository.canWriteAnExperimentOf(alphaSensor)).isFalse());
   }
 
   @Test
   void should_let_admins_and_global_editors_upload_documents_to_every_sensor() {
-    assertThat(callAsAdmin(() -> repository.canUploadDocumentsTo(betaSensor))).isTrue();
+    assertThat(callAsAdmin(() -> repository.canWriteAnExperimentOf(betaSensor))).isTrue();
     SecurityContextTestSupport.runAsGlobalEditor(
-        () -> assertThat(repository.canUploadDocumentsTo(betaSensor)).isTrue());
+        () -> assertThat(repository.canWriteAnExperimentOf(betaSensor)).isTrue());
   }
 
   @Test
