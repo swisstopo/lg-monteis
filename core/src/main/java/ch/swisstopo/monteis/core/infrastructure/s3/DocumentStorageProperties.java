@@ -9,8 +9,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * @param fulcrumDocumentUploadTimeout own timeout, Fulcrum files only capped by
- *     monteis.fulcrum.documents.max-file-size
  * @param localEndpoint the S3Mock that dev (docker/compose.yml) and the e2e tests (a testcontainer)
  *     run against. unset in every deployed environment, the client then talks to AWS
  */
@@ -23,5 +21,4 @@ public record DocumentStorageProperties(
     @DefaultValue("fulcrum-documents/") String fulcrumDocumentKeyPrefix,
     @DefaultValue("60s") Duration callTimeout,
     @DefaultValue("30s") Duration attemptTimeout,
-    @DefaultValue("10m") Duration fulcrumDocumentUploadTimeout,
     @Nullable URI localEndpoint) {}

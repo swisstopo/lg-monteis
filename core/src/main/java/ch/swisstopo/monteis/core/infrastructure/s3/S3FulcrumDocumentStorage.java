@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.infrastructure.s3;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -22,7 +23,7 @@ public class S3FulcrumDocumentStorage implements FulcrumDocumentStorage {
   }
 
   @Override
-  public void store(FulcrumDocumentFile file, InputStream content) {
+  public void store(FulcrumDocumentFile file, InputStream content, Duration timeout) {
     long sizeBytes = file.metadata().sizeBytes();
     PutObjectRequest request =
         PutObjectRequest.builder()
@@ -31,10 +32,7 @@ public class S3FulcrumDocumentStorage implements FulcrumDocumentStorage {
             .contentType(file.metadata().contentType())
             .contentLength(sizeBytes)
             .overrideConfiguration(
-                override ->
-                    override
-                        .apiCallTimeout(properties.fulcrumDocumentUploadTimeout())
-                        .apiCallAttemptTimeout(properties.fulcrumDocumentUploadTimeout()))
+                override -> override.apiCallTimeout(timeout).apiCallAttemptTimeout(timeout))
             .build();
     s3.putObject(request, RequestBody.fromInputStream(content, sizeBytes));
   }

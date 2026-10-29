@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
@@ -37,6 +38,7 @@ class FulcrumDocumentSyncServiceTest {
   private static final Instant NOW = Instant.parse("2026-10-15T00:00:00Z");
   private static final OffsetDateTime SYNCED_AT = NOW.atOffset(ZoneOffset.UTC);
   private static final Instant DEADLINE = NOW.plus(Duration.ofMinutes(8));
+  private static final Duration TIME_LEFT_AT_START = Duration.between(NOW, DEADLINE);
   private static final UUID RECORD_ID = UUID.fromString("221ae592-4527-4442-8294-8dc2c5be1168");
   private static final UUID ATTACHMENT_ID = UUID.fromString("22c52651-0b4b-48ca-bf8e-6594e935da0f");
   private static final String FILE_NAME = "Jahns 03 2011 - DS Experiment.pdf";
@@ -111,7 +113,7 @@ class FulcrumDocumentSyncServiceTest {
     service().sync(DEADLINE);
 
     // then
-    then(importService).should().importFulcrumDocument(ROW);
+    then(importService).should().importFulcrumDocument(ROW, TIME_LEFT_AT_START);
     then(syncRepository).should().saveSuccessfulSync(SYNCED_AT);
   }
 
@@ -127,7 +129,7 @@ class FulcrumDocumentSyncServiceTest {
 
     // then keeps old file until new one imported
     then(documentRepository).should().saveSynced(stored(oldAttachment));
-    then(importService).should().importFulcrumDocument(ROW);
+    then(importService).should().importFulcrumDocument(ROW, TIME_LEFT_AT_START);
   }
 
   @Test
@@ -140,7 +142,7 @@ class FulcrumDocumentSyncServiceTest {
     service().sync(DEADLINE);
 
     // then
-    then(importService).should().importFulcrumDocument(withTwoFiles);
+    then(importService).should().importFulcrumDocument(withTwoFiles, TIME_LEFT_AT_START);
   }
 
   @Test
@@ -150,13 +152,13 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(broken, ROW));
     willThrow(new IllegalStateException("download failed"))
         .given(importService)
-        .importFulcrumDocument(broken);
+        .importFulcrumDocument(broken, TIME_LEFT_AT_START);
 
     // when
     service().sync(DEADLINE);
 
     // then
-    then(importService).should().importFulcrumDocument(ROW);
+    then(importService).should().importFulcrumDocument(ROW, TIME_LEFT_AT_START);
     then(syncRepository).should(never()).saveSuccessfulSync(any());
   }
 
@@ -186,13 +188,28 @@ class FulcrumDocumentSyncServiceTest {
     given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(ROW));
     willThrow(new FulcrumAttachmentTooLargeException(ATTACHMENT_ID, DataSize.ofMegabytes(200)))
         .given(importService)
-        .importFulcrumDocument(ROW);
+        .importFulcrumDocument(ROW, TIME_LEFT_AT_START);
 
     // when
     service().sync(DEADLINE);
 
     // then
     then(syncRepository).should().saveSuccessfulSync(SYNCED_AT);
+  }
+
+  @Test
+  void should_give_each_import_only_the_time_left_until_the_deadline() {
+    // given
+    FulcrumLiteratureRow second = row(UUID.randomUUID(), TITLE, UUID.randomUUID());
+    given(fulcrumService.findLiteratureMarkedForMonteis()).willReturn(List.of(ROW, second));
+    given(clock.instant()).willReturn(NOW, NOW, NOW.plus(Duration.ofMinutes(5)));
+
+    // when
+    service().sync(DEADLINE);
+
+    // then
+    then(importService).should().importFulcrumDocument(ROW, TIME_LEFT_AT_START);
+    then(importService).should().importFulcrumDocument(second, Duration.ofMinutes(3));
   }
 
   @Test
@@ -207,8 +224,8 @@ class FulcrumDocumentSyncServiceTest {
     service().sync(DEADLINE);
 
     // then
-    then(importService).should().importFulcrumDocument(ROW);
-    then(importService).should(never()).importFulcrumDocument(second);
+    then(importService).should().importFulcrumDocument(ROW, TIME_LEFT_AT_START);
+    then(importService).should(never()).importFulcrumDocument(eq(second), any());
     then(syncRepository).should(never()).saveSuccessfulSync(any());
   }
 

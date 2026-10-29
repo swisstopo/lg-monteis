@@ -7,6 +7,7 @@ import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRepository;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -101,12 +102,13 @@ public class FulcrumDocumentSyncService {
     int skipped = 0;
     int failed = 0;
     for (FulcrumLiteratureRow row : rowsToImport) {
-      if (clock.instant().isAfter(deadline)) {
+      Duration timeLeft = Duration.between(clock.instant(), deadline);
+      if (!timeLeft.isPositive()) {
         log.info("Fulcrum Document sync ran out of time, the next one continues");
         return new ImportCounts(imported, skipped, failed, true);
       }
       try {
-        importService.importFulcrumDocument(row);
+        importService.importFulcrumDocument(row, timeLeft);
         imported++;
       } catch (FulcrumAttachmentTooLargeException e) {
         skipped++;
