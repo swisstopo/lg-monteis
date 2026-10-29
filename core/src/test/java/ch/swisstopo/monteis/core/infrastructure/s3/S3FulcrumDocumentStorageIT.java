@@ -45,7 +45,6 @@ class S3FulcrumDocumentStorageIT {
             FULCRUM_KEY_PREFIX,
             Duration.ofSeconds(60),
             Duration.ofSeconds(30),
-            Duration.ofMinutes(10),
             URI.create(S3TestcontainersConfiguration.endpointOf(S3_MOCK)));
     s3 = new S3Config().s3Client(properties);
     storage = new S3FulcrumDocumentStorage(s3, properties);
@@ -62,7 +61,7 @@ class S3FulcrumDocumentStorageIT {
     UUID documentId = UUID.randomUUID();
 
     // when
-    storage.store(pdf(documentId), new ByteArrayInputStream(CONTENT));
+    storage.store(pdf(documentId), new ByteArrayInputStream(CONTENT), Duration.ofMinutes(1));
 
     // then
     try (InputStream loaded = storage.load(documentId)) {
@@ -76,7 +75,7 @@ class S3FulcrumDocumentStorageIT {
     UUID documentId = UUID.randomUUID();
 
     // when
-    storage.store(pdf(documentId), new ByteArrayInputStream(CONTENT));
+    storage.store(pdf(documentId), new ByteArrayInputStream(CONTENT), Duration.ofMinutes(1));
 
     // then
     HeadObjectResponse head =

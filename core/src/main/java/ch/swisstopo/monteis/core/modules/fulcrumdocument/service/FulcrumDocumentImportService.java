@@ -8,6 +8,7 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow.Ful
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
+import java.time.Duration;
 import org.springframework.stereotype.Service;
 
 // storage before row (like experiment uploads): failure between leaves invisible object, next
@@ -34,23 +35,25 @@ public class FulcrumDocumentImportService {
     this.syncProperties = syncProperties;
   }
 
-  public void importFulcrumDocument(FulcrumLiteratureRow row) {
+  public void importFulcrumDocument(FulcrumLiteratureRow row, Duration timeLeft) {
     FulcrumAttachmentReference attachment =
         row.firstAttachment()
             .orElseThrow(
                 () ->
                     new IllegalArgumentException(
                         "Fulcrum Document %s has no file".formatted(row.recordId())));
-    FulcrumDocumentFile file = copyIntoStorage(attachment);
+    FulcrumDocumentFile file = copyIntoStorage(attachment, timeLeft);
     documentRepository.saveSynced(literatureMapper.toDocument(row, file));
   }
 
-  private FulcrumDocumentFile copyIntoStorage(FulcrumAttachmentReference attachment) {
+  private FulcrumDocumentFile copyIntoStorage(
+      FulcrumAttachmentReference attachment, Duration timeLeft) {
     try (FulcrumAttachmentDownload download =
         downloadClient.download(attachment.id(), syncProperties.maxFileSize())) {
       FulcrumDocumentFile file =
           FulcrumDocumentFile.of(attachment.id(), attachment.name(), download.sizeBytes());
-      storage.store(file, download.content());
+      // download streams through upload, so this caps both
+      storage.store(file, download.content(), timeLeft);
       return file;
     }
   }

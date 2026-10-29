@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
@@ -43,6 +44,7 @@ class FulcrumDocumentImportServiceTest {
   private static final UUID ATTACHMENT_ID = UUID.randomUUID();
   private static final String FILE_NAME = "Jahns 03 2011 - DS Experiment.pdf";
   private static final DataSize MAX_FILE_SIZE = DataSize.ofMegabytes(200);
+  private static final Duration TIME_LEFT = Duration.ofMinutes(3);
   private static final byte[] CONTENT = "%PDF-1.7".getBytes(StandardCharsets.UTF_8);
   private static final FulcrumLiteratureRow ROW =
       new FulcrumLiteratureRow(
@@ -83,16 +85,16 @@ class FulcrumDocumentImportServiceTest {
     willAnswer(
             invocation -> stored.add(invocation.getArgument(1, InputStream.class).readAllBytes()))
         .given(storage)
-        .store(fileOfType("application/pdf"), any());
+        .store(fileOfType("application/pdf"), any(), eq(TIME_LEFT));
 
     // when
-    importService.importFulcrumDocument(ROW);
+    importService.importFulcrumDocument(ROW, TIME_LEFT);
 
     // then
     assertThat(stored).singleElement().isEqualTo(CONTENT);
     assertThat(downloadClosed).isTrue();
     InOrder order = inOrder(storage, documentRepository);
-    order.verify(storage).store(fileOfType("application/pdf"), any());
+    order.verify(storage).store(fileOfType("application/pdf"), any(), eq(TIME_LEFT));
     order
         .verify(documentRepository)
         .saveSynced(
@@ -117,7 +119,8 @@ class FulcrumDocumentImportServiceTest {
         .willThrow(new IllegalStateException("answered 404"));
 
     // when / then
-    assertThrows(IllegalStateException.class, () -> importService.importFulcrumDocument(ROW));
+    assertThrows(
+        IllegalStateException.class, () -> importService.importFulcrumDocument(ROW, TIME_LEFT));
     then(storage).shouldHaveNoInteractions();
     then(documentRepository).shouldHaveNoInteractions();
   }
@@ -130,7 +133,8 @@ class FulcrumDocumentImportServiceTest {
 
     // when / then
     assertThrows(
-        FulcrumAttachmentTooLargeException.class, () -> importService.importFulcrumDocument(ROW));
+        FulcrumAttachmentTooLargeException.class,
+        () -> importService.importFulcrumDocument(ROW, TIME_LEFT));
     then(storage).shouldHaveNoInteractions();
   }
 
@@ -138,10 +142,11 @@ class FulcrumDocumentImportServiceTest {
   void should_not_save_the_document_when_storing_fails() {
     // given
     givenTheDownloadReturns(CONTENT);
-    willThrow(new IllegalStateException("S3 down")).given(storage).store(any(), any());
+    willThrow(new IllegalStateException("S3 down")).given(storage).store(any(), any(), any());
 
     // when / then
-    assertThrows(IllegalStateException.class, () -> importService.importFulcrumDocument(ROW));
+    assertThrows(
+        IllegalStateException.class, () -> importService.importFulcrumDocument(ROW, TIME_LEFT));
     then(documentRepository).shouldHaveNoInteractions();
     assertThat(downloadClosed).isTrue();
   }
@@ -153,7 +158,8 @@ class FulcrumDocumentImportServiceTest {
 
     // when / then
     assertThrows(
-        ObjectBusinessValidationException.class, () -> importService.importFulcrumDocument(ROW));
+        ObjectBusinessValidationException.class,
+        () -> importService.importFulcrumDocument(ROW, TIME_LEFT));
     then(storage).shouldHaveNoInteractions();
   }
 
@@ -166,7 +172,8 @@ class FulcrumDocumentImportServiceTest {
 
     // when / then
     assertThrows(
-        IllegalArgumentException.class, () -> importService.importFulcrumDocument(withoutFile));
+        IllegalArgumentException.class,
+        () -> importService.importFulcrumDocument(withoutFile, TIME_LEFT));
     then(downloadClient).shouldHaveNoInteractions();
   }
 
