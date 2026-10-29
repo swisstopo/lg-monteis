@@ -12,7 +12,7 @@
 -- before it uploads to S3 (SensorDocumentService).
 -- -----------------------------------------------------------------------------
 
-CREATE FUNCTION can_upload_sensor_documents(target_sensor_id uuid) RETURNS boolean AS $$
+CREATE FUNCTION can_write_an_experiment_of_sensor(target_sensor_id uuid) RETURNS boolean AS $$
     SELECT can_write_all_experiments() OR EXISTS (
         SELECT 1 FROM experiment_sensor es
         WHERE es.sensor_id = target_sensor_id
@@ -41,4 +41,4 @@ CREATE POLICY sensor_documents_read ON sensor_documents FOR SELECT
 -- WITH CHECK raises SQLSTATE 42501 for a forbidden insert, which the
 -- application maps to 403 (see V16).
 CREATE POLICY sensor_documents_insert ON sensor_documents FOR INSERT
-    WITH CHECK (can_upload_sensor_documents(sensor_documents.sensor_id));
+    WITH CHECK (can_write_an_experiment_of_sensor(sensor_documents.sensor_id));

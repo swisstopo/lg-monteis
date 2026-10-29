@@ -57,7 +57,7 @@ class SensorDocumentServiceTest {
     // given
     InputStream content = new ByteArrayInputStream(new byte[4]);
     given(currentUserProvider.requireCurrentUsername()).willReturn("alice");
-    given(sensorRepository.canUploadDocumentsTo(SENSOR_ID)).willReturn(true);
+    given(sensorRepository.canWriteAnExperimentOf(SENSOR_ID)).willReturn(true);
     given(documentRepository.nextId()).willReturn(DOCUMENT_ID);
     given(documentRepository.create(DOCUMENT_ID, SENSOR_ID, METADATA, "alice"))
         .willReturn(DOCUMENT);
@@ -69,7 +69,7 @@ class SensorDocumentServiceTest {
     assertSame(DOCUMENT, uploaded);
     InOrder order = inOrder(sensorRepository, documentRepository, storage);
     order.verify(sensorRepository).requireVisible(SENSOR_ID);
-    order.verify(sensorRepository).canUploadDocumentsTo(SENSOR_ID);
+    order.verify(sensorRepository).canWriteAnExperimentOf(SENSOR_ID);
     order.verify(documentRepository).nextId();
     order.verify(storage).store(KEY, METADATA, content);
     order.verify(documentRepository).create(DOCUMENT_ID, SENSOR_ID, METADATA, "alice");
@@ -94,7 +94,7 @@ class SensorDocumentServiceTest {
   @Test
   void should_refuse_an_upload_the_caller_may_not_make_before_storing_anything() {
     // given
-    given(sensorRepository.canUploadDocumentsTo(SENSOR_ID)).willReturn(false);
+    given(sensorRepository.canWriteAnExperimentOf(SENSOR_ID)).willReturn(false);
 
     // when / then
     assertThrows(
@@ -111,7 +111,7 @@ class SensorDocumentServiceTest {
         new PermissionDeniedDataAccessException("rls", null);
     IllegalStateException deleteFailure = new IllegalStateException("S3 unavailable");
     given(currentUserProvider.requireCurrentUsername()).willReturn("alice");
-    given(sensorRepository.canUploadDocumentsTo(SENSOR_ID)).willReturn(true);
+    given(sensorRepository.canWriteAnExperimentOf(SENSOR_ID)).willReturn(true);
     given(documentRepository.nextId()).willReturn(DOCUMENT_ID);
     given(documentRepository.create(DOCUMENT_ID, SENSOR_ID, METADATA, "alice"))
         .willThrow(rejection);
