@@ -5,7 +5,6 @@ import ch.swisstopo.monteis.core.infrastructure.api.DocumentResponseDto;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorDocument;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorDocumentService;
-import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,7 +21,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,13 +34,10 @@ import org.springframework.web.multipart.MultipartFile;
 public class SensorDocumentController {
 
   private final SensorDocumentService service;
-  private final SensorService sensorService;
   private final SensorDocumentWebMapper mapper;
 
-  public SensorDocumentController(
-      SensorDocumentService service, SensorService sensorService, SensorDocumentWebMapper mapper) {
+  public SensorDocumentController(SensorDocumentService service, SensorDocumentWebMapper mapper) {
     this.service = service;
-    this.sensorService = sensorService;
     this.mapper = mapper;
   }
 
@@ -67,7 +62,6 @@ public class SensorDocumentController {
   public ResponseEntity<DocumentResponseDto> uploadSensorDocument(
       @PathVariable UUID id, @RequestPart("file") MultipartFile file) throws IOException {
     DocumentMetadata metadata = mapper.toMetadata(file);
-    requireWritableExperimentOf(id);
     try (InputStream content = file.getInputStream()) {
       SensorDocument document = service.upload(id, metadata, content);
       return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDto(document));
@@ -100,14 +94,5 @@ public class SensorDocumentController {
         .contentType(contentType)
         .contentLength(metadata.sizeBytes())
         .body(new InputStreamResource(service.openContent(document)));
-  }
-
-  // not in the filter chain: the token holds experiment ids, the sensor's experiments are only in
-  // the db. not in the service: no permission checks there (ArchUnit). before S3, so a refused
-  // upload stores nothing
-  private void requireWritableExperimentOf(UUID sensorId) {
-    if (!sensorService.canWriteAnExperimentOf(sensorId)) {
-      throw new AccessDeniedException("May not upload documents to sensor " + sensorId);
-    }
   }
 }

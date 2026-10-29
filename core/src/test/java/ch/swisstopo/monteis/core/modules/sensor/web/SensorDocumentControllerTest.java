@@ -23,7 +23,6 @@ import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorDocument;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorDocumentService;
-import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +33,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -57,7 +57,6 @@ class SensorDocumentControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private SensorDocumentService service;
-  @MockitoBean private SensorService sensorService;
 
   @Test
   void should_list_the_documents_of_a_sensor() throws Exception {
@@ -92,7 +91,6 @@ class SensorDocumentControllerTest {
   @Test
   void should_store_an_upload_and_answer_201() throws Exception {
     // given
-    given(sensorService.canWriteAnExperimentOf(SENSOR_ID)).willReturn(true);
     given(service.upload(eq(SENSOR_ID), any(), any(InputStream.class))).willReturn(DOCUMENT);
 
     // when / then
@@ -126,11 +124,8 @@ class SensorDocumentControllerTest {
   }
 
   @Test
-  void should_refuse_an_upload_without_a_writable_experiment_before_storing_anything()
+  void should_refuse_an_upload_without_the_experiment_write_grant_before_storing_anything()
       throws Exception {
-    // given
-    given(sensorService.canWriteAnExperimentOf(SENSOR_ID)).willReturn(false);
-
     // when / then
     mockMvc
         .perform(
@@ -140,6 +135,21 @@ class SensorDocumentControllerTest {
         .andExpect(jsonPath("$.messageKey").value("access.denied"));
 
     then(service).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_answer_403_when_row_level_security_refuses_the_upload() throws Exception {
+    // given
+    given(service.upload(eq(SENSOR_ID), any(), any(InputStream.class)))
+        .willThrow(new PermissionDeniedDataAccessException("rls", null));
+
+    // when / then
+    mockMvc
+        .perform(
+            uploadRequest(file("report.pdf", CONTENT))
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.messageKey").value("access.denied"));
   }
 
   @Test
