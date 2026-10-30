@@ -6,6 +6,7 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRepository;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentComparison.NewFile;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -66,7 +67,7 @@ public class FulcrumDocumentSyncService {
     int failedSaves = saveEachSynced(storedDocumentsWithFulcrumMetadata(comparison));
     List<UUID> noLongerInFulcrum = comparison.idsNoLongerInFulcrum();
     documentRepository.markRemovedFromFulcrum(noLongerInFulcrum, start.atOffset(ZoneOffset.UTC));
-    ImportCounts imports = importNewFiles(comparison.rowsWithNewFile(), deadline);
+    ImportCounts imports = importNewFiles(comparison.newFiles(), deadline);
 
     SyncOutcome outcome =
         new SyncOutcome(fromFulcrum.size(), failedSaves, noLongerInFulcrum.size(), imports);
@@ -97,25 +98,28 @@ public class FulcrumDocumentSyncService {
   }
 
   // too large = skipped, not failed, else every sync fails
-  private ImportCounts importNewFiles(List<FulcrumLiteratureRow> rowsToImport, Instant deadline) {
+  private ImportCounts importNewFiles(List<NewFile> newFiles, Instant deadline) {
     int imported = 0;
     int skipped = 0;
     int failed = 0;
-    for (FulcrumLiteratureRow row : rowsToImport) {
+    for (NewFile newFile : newFiles) {
       Duration timeLeft = Duration.between(clock.instant(), deadline);
       if (!timeLeft.isPositive()) {
         log.info("Fulcrum Document sync ran out of time, the next one continues");
         return new ImportCounts(imported, skipped, failed, true);
       }
       try {
-        importService.importFulcrumDocument(row, timeLeft);
+        importService.importFulcrumDocument(newFile, timeLeft);
         imported++;
       } catch (FulcrumAttachmentTooLargeException e) {
         skipped++;
-        log.warn("Skipping the file of Fulcrum Document {}: {}", row.recordId(), e.getMessage());
+        log.warn(
+            "Skipping the file of Fulcrum Document {}: {}",
+            newFile.row().recordId(),
+            e.getMessage());
       } catch (RuntimeException e) {
         failed++;
-        log.warn("Could not import the file of Fulcrum Document {}", row.recordId(), e);
+        log.warn("Could not import the file of Fulcrum Document {}", newFile.row().recordId(), e);
       }
     }
     return new ImportCounts(imported, skipped, failed, false);
