@@ -143,136 +143,123 @@ class SensorReadingRepositoryIT {
     assertThat(count).isZero();
   }
 
+  private void insertReading(
+      String dasKey, UUID sensorParameterId, short version, OffsetDateTime timestamp) {
+    ctx.insertInto(Tables.SENSOR_READING)
+        .set(Tables.SENSOR_READING.DAS_KEY, dasKey)
+        .set(Tables.SENSOR_READING.SENSOR_PARAMETER_ID, sensorParameterId)
+        .set(Tables.SENSOR_READING.VERSION, version)
+        .set(Tables.SENSOR_READING.TIMESTAMP, timestamp)
+        .set(Tables.SENSOR_READING.RAW_VALUE, 1.0)
+        .set(Tables.SENSOR_READING.NORM_VALUE, 1.0)
+        .set(Tables.SENSOR_READING.STATUS, RangeCategory.correct)
+        .execute();
+  }
+
   @Test
-  void checkOldSensorDataById_should_detect_old_sensor_data() {
+  void checkStaleSensorDataByDasKey_should_detect_rows_with_older_version() {
     // given
     var sensorParameterId = UUID.randomUUID();
-
-    ctx.insertInto(Tables.SENSOR_READING)
-        .set(Tables.SENSOR_READING.DAS_KEY, "sensor-001")
-        .set(Tables.SENSOR_READING.SENSOR_PARAMETER_ID, sensorParameterId)
-        .set(Tables.SENSOR_READING.VERSION, (short) 3)
-        .set(Tables.SENSOR_READING.TIMESTAMP, OffsetDateTime.now())
-        .set(Tables.SENSOR_READING.RAW_VALUE, 1.0)
-        .set(Tables.SENSOR_READING.NORM_VALUE, 1.0)
-        .set(Tables.SENSOR_READING.STATUS, RangeCategory.correct)
-        .execute();
+    insertReading("sensor-001", sensorParameterId, (short) 3, OffsetDateTime.now());
 
     // when
-    boolean result = repo.checkOldSensorDataById(sensorParameterId, (short) 5);
+    boolean result = repo.checkStaleSensorDataByDasKey("sensor-001", sensorParameterId, (short) 5);
 
     // then
     assertTrue(result);
   }
 
   @Test
-  void checkOldSensorDataById_should_return_false_when_no_old_data_exists() {
-    // when
-    boolean result = repo.checkOldSensorDataById(UUID.randomUUID(), (short) 5);
-
-    // then
-    assertFalse(result);
-  }
-
-  @Test
-  void checkOldSensorDataByDasKeyUnbackfilled_should_detect_unbackfilled_rows() {
+  void checkStaleSensorDataByDasKey_should_detect_rows_without_sensor_parameter_id() {
     // given
-    ctx.insertInto(Tables.SENSOR_READING)
-        .set(Tables.SENSOR_READING.DAS_KEY, "sensor-001")
-        .set(Tables.SENSOR_READING.SENSOR_PARAMETER_ID, (UUID) null)
-        .set(Tables.SENSOR_READING.VERSION, (short) 0)
-        .set(Tables.SENSOR_READING.TIMESTAMP, OffsetDateTime.now())
-        .set(Tables.SENSOR_READING.RAW_VALUE, 1.0)
-        .set(Tables.SENSOR_READING.NORM_VALUE, 1.0)
-        .set(Tables.SENSOR_READING.STATUS, RangeCategory.correct)
-        .execute();
+    insertReading("sensor-001", null, (short) 0, OffsetDateTime.now());
 
     // when
-    boolean result = repo.checkOldSensorDataByDasKeyUnbackfilled("sensor-001", (short) 1);
+    boolean result = repo.checkStaleSensorDataByDasKey("sensor-001", UUID.randomUUID(), (short) 1);
 
     // then
     assertTrue(result);
   }
 
   @Test
-  void checkOldSensorDataByDasKeyUnbackfilled_should_ignore_already_backfilled_rows() {
-    // given: same DAS key, but already tagged with an id - not part of this backlog anymore
-    ctx.insertInto(Tables.SENSOR_READING)
-        .set(Tables.SENSOR_READING.DAS_KEY, "sensor-001")
-        .set(Tables.SENSOR_READING.SENSOR_PARAMETER_ID, UUID.randomUUID())
-        .set(Tables.SENSOR_READING.VERSION, (short) 0)
-        .set(Tables.SENSOR_READING.TIMESTAMP, OffsetDateTime.now())
-        .set(Tables.SENSOR_READING.RAW_VALUE, 1.0)
-        .set(Tables.SENSOR_READING.NORM_VALUE, 1.0)
-        .set(Tables.SENSOR_READING.STATUS, RangeCategory.correct)
-        .execute();
+  void checkStaleSensorDataByDasKey_should_detect_rows_of_a_previously_mapped_parameter() {
+    // given: the DAS key used to belong to another sensor parameter with a higher version
+    insertReading("sensor-001", UUID.randomUUID(), (short) 7, OffsetDateTime.now());
 
     // when
-    boolean result = repo.checkOldSensorDataByDasKeyUnbackfilled("sensor-001", (short) 1);
+    boolean result = repo.checkStaleSensorDataByDasKey("sensor-001", UUID.randomUUID(), (short) 1);
+
+    // then
+    assertTrue(result);
+  }
+
+  @Test
+  void checkStaleSensorDataByDasKey_should_ignore_up_to_date_rows() {
+    // given
+    var sensorParameterId = UUID.randomUUID();
+    insertReading("sensor-001", sensorParameterId, (short) 2, OffsetDateTime.now());
+
+    // when
+    boolean result = repo.checkStaleSensorDataByDasKey("sensor-001", sensorParameterId, (short) 2);
 
     // then
     assertFalse(result);
   }
 
   @Test
-  void fetchOldSensorDataById_should_fetch_only_data_within_limit() {
+  void checkStaleSensorDataByDasKey_should_ignore_rows_of_other_das_keys() {
+    // given: same sensor parameter, stale version, but stored under another DAS key
+    var sensorParameterId = UUID.randomUUID();
+    insertReading("sensor-002", sensorParameterId, (short) 1, OffsetDateTime.now());
+
+    // when
+    boolean result = repo.checkStaleSensorDataByDasKey("sensor-001", sensorParameterId, (short) 2);
+
+    // then
+    assertFalse(result);
+  }
+
+  @Test
+  void fetchStaleSensorDataByDasKey_should_fetch_only_data_within_limit() {
     // given
-    var sensorId = "sensor-001";
     var sensorParameterId = UUID.randomUUID();
     for (int i = 1; i <= 5; i++) {
-      ctx.insertInto(Tables.SENSOR_READING)
-          .set(Tables.SENSOR_READING.DAS_KEY, sensorId)
-          .set(Tables.SENSOR_READING.SENSOR_PARAMETER_ID, sensorParameterId)
-          .set(Tables.SENSOR_READING.VERSION, (short) i)
-          .set(Tables.SENSOR_READING.TIMESTAMP, OffsetDateTime.now().plusMinutes(i))
-          .set(Tables.SENSOR_READING.RAW_VALUE, 1.0)
-          .set(Tables.SENSOR_READING.NORM_VALUE, 1.0)
-          .set(Tables.SENSOR_READING.STATUS, RangeCategory.correct)
-          .execute();
+      insertReading(
+          "sensor-001", sensorParameterId, (short) i, OffsetDateTime.now().plusMinutes(i));
     }
 
     // when
-    var result = repo.fetchOldSensorDataById(sensorParameterId, (short) 4, 2, null);
+    var result =
+        repo.fetchStaleSensorDataByDasKey("sensor-001", sensorParameterId, (short) 4, 2, null);
 
     // then
     assertThat(result).hasSize(2).allMatch(r -> r.getVersion() < 4);
   }
 
   @Test
-  void
-      fetchOldSensorDataByDasKeyUnbackfilled_should_only_return_unbackfilled_rows_for_the_das_key() {
+  void fetchStaleSensorDataByDasKey_should_only_return_stale_rows_for_the_das_key() {
     // given
     var dasKey = "sensor-001";
-    ctx.insertInto(Tables.SENSOR_READING)
-        .set(Tables.SENSOR_READING.DAS_KEY, dasKey)
-        .set(Tables.SENSOR_READING.SENSOR_PARAMETER_ID, (UUID) null)
-        .set(Tables.SENSOR_READING.VERSION, (short) 0)
-        .set(Tables.SENSOR_READING.TIMESTAMP, OffsetDateTime.now())
-        .set(Tables.SENSOR_READING.RAW_VALUE, 1.0)
-        .set(Tables.SENSOR_READING.NORM_VALUE, 1.0)
-        .set(Tables.SENSOR_READING.STATUS, RangeCategory.correct)
-        .execute();
-    // Same DAS key, already backfilled - must not show up in this backlog
-    ctx.insertInto(Tables.SENSOR_READING)
-        .set(Tables.SENSOR_READING.DAS_KEY, dasKey)
-        .set(Tables.SENSOR_READING.SENSOR_PARAMETER_ID, UUID.randomUUID())
-        .set(Tables.SENSOR_READING.VERSION, (short) 0)
-        .set(Tables.SENSOR_READING.TIMESTAMP, OffsetDateTime.now().plusMinutes(1))
-        .set(Tables.SENSOR_READING.RAW_VALUE, 1.0)
-        .set(Tables.SENSOR_READING.NORM_VALUE, 1.0)
-        .set(Tables.SENSOR_READING.STATUS, RangeCategory.correct)
-        .execute();
+    var sensorParameterId = UUID.randomUUID();
+    var now = OffsetDateTime.now();
+    insertReading(dasKey, null, (short) 0, now); // never resolved
+    insertReading(dasKey, UUID.randomUUID(), (short) 9, now.plusMinutes(1)); // remapped
+    insertReading(dasKey, sensorParameterId, (short) 1, now.plusMinutes(2)); // older version
+    insertReading(dasKey, sensorParameterId, (short) 2, now.plusMinutes(3)); // up to date
+    insertReading("sensor-002", sensorParameterId, (short) 1, now.plusMinutes(4)); // other key
 
     // when
-    var result = repo.fetchOldSensorDataByDasKeyUnbackfilled(dasKey, (short) 1, 10, null);
+    var result = repo.fetchStaleSensorDataByDasKey(dasKey, sensorParameterId, (short) 2, 10, null);
 
     // then
-    assertThat(result).hasSize(1);
-    assertThat(result.getFirst().getSensorParameterId()).isNull();
+    assertThat(result)
+        .hasSize(3)
+        .allMatch(r -> r.getDasKey().equals(dasKey))
+        .noneMatch(r -> sensorParameterId.equals(r.getSensorParameterId()) && r.getVersion() == 2);
   }
 
   @Test
-  void fetchOldSensorDataById_should_resume_from_cursor_without_gaps_or_duplicates() {
+  void fetchStaleSensorDataByDasKey_should_resume_from_cursor_without_gaps_or_duplicates() {
     // given
     var sensorId = "sensor-001";
     var sensorParameterId = UUID.randomUUID();
@@ -280,19 +267,12 @@ class SensorReadingRepositoryIT {
     // the nanosecond-precision in-memory value never equals what's read back from the DB.
     var baseTime = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     for (int i = 1; i <= 5; i++) {
-      ctx.insertInto(Tables.SENSOR_READING)
-          .set(Tables.SENSOR_READING.DAS_KEY, sensorId)
-          .set(Tables.SENSOR_READING.SENSOR_PARAMETER_ID, sensorParameterId)
-          .set(Tables.SENSOR_READING.VERSION, (short) 1)
-          .set(Tables.SENSOR_READING.TIMESTAMP, baseTime.plusMinutes(i))
-          .set(Tables.SENSOR_READING.RAW_VALUE, 1.0)
-          .set(Tables.SENSOR_READING.NORM_VALUE, 1.0)
-          .set(Tables.SENSOR_READING.STATUS, RangeCategory.correct)
-          .execute();
+      insertReading(sensorId, sensorParameterId, (short) 1, baseTime.plusMinutes(i));
     }
 
     // when: first chunk (newest first, no cursor yet)
-    var firstChunk = repo.fetchOldSensorDataById(sensorParameterId, (short) 2, 2, null);
+    var firstChunk =
+        repo.fetchStaleSensorDataByDasKey(sensorId, sensorParameterId, (short) 2, 2, null);
     // then
     assertThat(firstChunk).hasSize(2);
     assertThat(firstChunk.get(0).getTimestamp()).isEqualTo(baseTime.plusMinutes(5));
@@ -300,8 +280,8 @@ class SensorReadingRepositoryIT {
 
     // when: second chunk resumes strictly before the first chunk's oldest timestamp
     var secondChunk =
-        repo.fetchOldSensorDataById(
-            sensorParameterId, (short) 2, 2, firstChunk.getLast().getTimestamp());
+        repo.fetchStaleSensorDataByDasKey(
+            sensorId, sensorParameterId, (short) 2, 2, firstChunk.getLast().getTimestamp());
     // then
     assertThat(secondChunk).hasSize(2);
     assertThat(secondChunk.get(0).getTimestamp()).isEqualTo(baseTime.plusMinutes(3));
@@ -309,8 +289,8 @@ class SensorReadingRepositoryIT {
 
     // when: third chunk picks up the single remaining row
     var thirdChunk =
-        repo.fetchOldSensorDataById(
-            sensorParameterId, (short) 2, 2, secondChunk.getLast().getTimestamp());
+        repo.fetchStaleSensorDataByDasKey(
+            sensorId, sensorParameterId, (short) 2, 2, secondChunk.getLast().getTimestamp());
     // then
     assertThat(thirdChunk).hasSize(1);
     assertThat(thirdChunk.getFirst().getTimestamp()).isEqualTo(baseTime.plusMinutes(1));
