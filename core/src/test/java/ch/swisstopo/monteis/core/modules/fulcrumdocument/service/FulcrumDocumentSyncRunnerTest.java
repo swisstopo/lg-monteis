@@ -11,8 +11,10 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncLock;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatus;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.HeldSyncLock;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -21,7 +23,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import net.javacrumbs.shedlock.core.SimpleLock;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -44,7 +45,7 @@ class FulcrumDocumentSyncRunnerTest {
   @Mock private FulcrumDocumentSyncService syncService;
   @Mock private FulcrumSyncLock syncLock;
   @Mock private FulcrumSyncRepository syncRepository;
-  @Mock private SimpleLock lock;
+  @Mock private HeldSyncLock lock;
 
   @Test
   void should_run_the_sync_and_release_the_lock() {
@@ -56,7 +57,7 @@ class FulcrumDocumentSyncRunnerTest {
 
     // then
     then(syncService).should().sync(DEADLINE);
-    then(lock).should().unlock();
+    then(lock).should().close();
   }
 
   @Test
@@ -69,7 +70,7 @@ class FulcrumDocumentSyncRunnerTest {
     runner(ENABLED).runUnlessRunning();
 
     // then
-    then(lock).should().unlock();
+    then(lock).should().close();
   }
 
   @Test
@@ -116,7 +117,7 @@ class FulcrumDocumentSyncRunnerTest {
 
     // then
     then(syncService).should().sync(DEADLINE);
-    then(lock).should().unlock();
+    then(lock).should().close();
   }
 
   @Test
@@ -131,7 +132,7 @@ class FulcrumDocumentSyncRunnerTest {
 
     // when / then
     assertThrows(TaskRejectedException.class, runner::startInBackground);
-    then(lock).should().unlock();
+    then(lock).should().close();
     then(syncService).shouldHaveNoInteractions();
   }
 
