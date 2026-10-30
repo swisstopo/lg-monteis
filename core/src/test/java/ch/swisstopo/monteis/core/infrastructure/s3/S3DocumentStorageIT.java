@@ -3,16 +3,15 @@ package ch.swisstopo.monteis.core.infrastructure.s3;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentKey;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.itconfig.S3TestcontainersConfiguration;
-import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -31,13 +30,17 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 @Testcontainers
 class S3DocumentStorageIT {
 
-  private static final String KEY_PREFIX = "experiment-documents/";
+  private static final String EXPERIMENT_KEY_PREFIX = "experiment-documents/";
+  private static final String SENSOR_KEY_PREFIX = "sensor-documents/";
+  private static final DocumentMetadata PDF =
+      new DocumentMetadata("report.pdf", "application/pdf", 4);
 
   @Container
   private static final GenericContainer<?> S3_MOCK = S3TestcontainersConfiguration.s3Mock();
 
   private static S3Client s3;
-  private static S3DocumentStorage storage;
+  private static S3ExperimentDocumentStorage experimentStorage;
+  private static S3SensorDocumentStorage sensorStorage;
 
   @BeforeAll
   static void createStorage() {
@@ -45,13 +48,15 @@ class S3DocumentStorageIT {
         new DocumentStorageProperties(
             S3TestcontainersConfiguration.BUCKET,
             "eu-central-1",
-            KEY_PREFIX,
+            EXPERIMENT_KEY_PREFIX,
+            SENSOR_KEY_PREFIX,
             "fulcrum-documents/",
             Duration.ofSeconds(60),
             Duration.ofSeconds(30),
             URI.create(S3TestcontainersConfiguration.endpointOf(S3_MOCK)));
     s3 = new S3Config().s3Client(properties);
-    storage = new S3DocumentStorage(s3, properties);
+    experimentStorage = new S3ExperimentDocumentStorage(s3, properties);
+    sensorStorage = new S3SensorDocumentStorage(s3, properties);
   }
 
   @AfterAll
@@ -63,70 +68,79 @@ class S3DocumentStorageIT {
   void should_load_what_it_stored() throws IOException {
     // given
     byte[] content = "measured values".getBytes(StandardCharsets.UTF_8);
-    ExperimentDocument document = document(content.length);
+    DocumentKey key = randomKey();
 
     // when
-    store(document, new ByteArrayInputStream(content));
+    experimentStorage.store(
+        key,
+        new DocumentMetadata("values.txt", "text/plain", content.length),
+        new ByteArrayInputStream(content));
 
     // then
-    try (InputStream loaded = storage.load(document)) {
+    try (InputStream loaded = experimentStorage.load(key)) {
       assertThat(loaded.readAllBytes()).isEqualTo(content);
     }
   }
 
   @Test
-  void should_key_by_experiment_and_document_id_with_the_content_type() {
+  void should_key_experiment_documents_by_experiment_and_document_id_with_the_content_type() {
     // given
-    byte[] content = "%PDF".getBytes(StandardCharsets.UTF_8);
-    ExperimentDocument document = document(content.length);
+    DocumentKey key = randomKey();
 
     // when
-    store(document, new ByteArrayInputStream(content));
+    experimentStorage.store(key, PDF, pdfContent());
 
     // then
-    HeadObjectResponse head =
-        s3.headObject(
-            request ->
-                request
-                    .bucket(S3TestcontainersConfiguration.BUCKET)
-                    .key(KEY_PREFIX + document.experimentId() + "/" + document.id()));
+    HeadObjectResponse head = headOf(EXPERIMENT_KEY_PREFIX, key);
     assertThat(head.contentType()).isEqualTo("application/pdf");
-    assertThat(head.contentLength()).isEqualTo(content.length);
+    assertThat(head.contentLength()).isEqualTo(PDF.sizeBytes());
+  }
+
+  @Test
+  void should_key_sensor_documents_by_sensor_and_document_id() {
+    // given
+    DocumentKey key = randomKey();
+
+    // when
+    sensorStorage.store(key, PDF, pdfContent());
+
+    // then
+    assertThat(headOf(SENSOR_KEY_PREFIX, key).contentLength()).isEqualTo(PDF.sizeBytes());
+    assertThrows(NoSuchKeyException.class, () -> experimentStorage.load(key));
   }
 
   @Test
   void should_not_load_a_deleted_document() {
     // given
-    byte[] content = "%PDF".getBytes(StandardCharsets.UTF_8);
-    ExperimentDocument document = document(content.length);
-    store(document, new ByteArrayInputStream(content));
+    DocumentKey key = randomKey();
+    sensorStorage.store(key, PDF, pdfContent());
 
     // when
-    storage.delete(document.experimentId(), document.id());
+    sensorStorage.delete(key);
 
     // then
-    assertThrows(NoSuchKeyException.class, () -> storage.load(document));
+    assertThrows(NoSuchKeyException.class, () -> sensorStorage.load(key));
   }
 
   @Test
   void should_fail_to_load_a_document_that_was_never_stored() {
-    // given
-    ExperimentDocument document = document(1);
-
     // when / then
-    assertThrows(NoSuchKeyException.class, () -> storage.load(document));
+    assertThrows(NoSuchKeyException.class, () -> experimentStorage.load(randomKey()));
   }
 
-  private static void store(ExperimentDocument document, InputStream content) {
-    storage.store(document.experimentId(), document.id(), document.metadata(), content);
+  private static HeadObjectResponse headOf(String keyPrefix, DocumentKey key) {
+    return s3.headObject(
+        request ->
+            request
+                .bucket(S3TestcontainersConfiguration.BUCKET)
+                .key(keyPrefix + key.parentId() + "/" + key.documentId()));
   }
 
-  private static ExperimentDocument document(long sizeBytes) {
-    return new ExperimentDocument(
-        UUID.randomUUID(),
-        UUID.randomUUID(),
-        new DocumentMetadata("report.pdf", "application/pdf", sizeBytes),
-        OffsetDateTime.now(),
-        "alice");
+  private static InputStream pdfContent() {
+    return new ByteArrayInputStream("%PDF".getBytes(StandardCharsets.UTF_8));
+  }
+
+  private static DocumentKey randomKey() {
+    return new DocumentKey(UUID.randomUUID(), UUID.randomUUID());
   }
 }

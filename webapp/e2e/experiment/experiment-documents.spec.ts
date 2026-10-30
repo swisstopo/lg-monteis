@@ -3,7 +3,7 @@ import { truncate, writeFile } from 'node:fs/promises';
 import {
   MAX_DOCUMENT_SIZE_BYTES,
   MAX_DOCUMENT_SIZE_MB,
-} from '../../src/app/features/experiment/experiment-documents/max-document-size';
+} from '../../src/app/ui/documents/max-document-size';
 import {
   createExperimentInDialog,
   editExperimentButton,

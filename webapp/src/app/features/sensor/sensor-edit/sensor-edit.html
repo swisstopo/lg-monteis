@@ -151,10 +151,12 @@
 
     <div class="parameter-header full-width">
       <h3>{{ 'sensor.parameter.heading' | translate }}</h3>
-      <button matButton="tonal" color="secondary" type="button" (click)="addParameter()">
-        <mat-icon fontIcon="add"></mat-icon>
-        {{ 'sensor.parameter.addButton' | translate }}
-      </button>
+      @if (!readOnly()) {
+        <button matButton="tonal" color="secondary" type="button" (click)="addParameter()">
+          <mat-icon fontIcon="add"></mat-icon>
+          {{ 'sensor.parameter.addButton' | translate }}
+        </button>
+      }
     </div>
 
     @for (parameter of sensorForm.parameters; track parameterKeys()[i]; let i = $index) {
@@ -302,22 +304,28 @@
           <textarea matInput [formField]="parameter.comment" rows="5"></textarea>
         </mat-form-field>
 
-        <button
-          matButton
-          type="button"
-          [disabled]="!canRemoveParameter()"
-          [attr.aria-label]="'sensor.parameter.removeButton' | translate"
-          (click)="removeParameter(i)"
-        >
-          <mat-icon fontIcon="delete"></mat-icon>
-          {{ 'sensor.parameter.removeButton' | translate }}
-        </button>
+        @if (!readOnly()) {
+          <button
+            matButton
+            type="button"
+            [disabled]="!canRemoveParameter()"
+            [attr.aria-label]="'sensor.parameter.removeButton' | translate"
+            (click)="removeParameter(i)"
+          >
+            <mat-icon fontIcon="delete"></mat-icon>
+            {{ 'sensor.parameter.removeButton' | translate }}
+          </button>
+        }
         <mat-divider class="full-width" />
       </fieldset>
     }
   </form>
 
-  <app-dismiss-button dialog-action-dismiss />
+  @if (sensorId(); as sensorId) {
+    <app-documents [parentId]="sensorId" [readOnly]="!canUploadDocuments()" />
+  }
+
+  <app-dismiss-button dialog-action-dismiss [kind]="readOnly() ? 'close' : 'cancel'" />
   <ng-container ngProjectAs="[dialog-action-submit]">
     @if (mode() === 'create') {
       <app-submit-button [form]="sensorForm" variant="secondary" (pressed)="saveAndCreateNew()">

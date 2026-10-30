@@ -3,35 +3,35 @@ import { ChangeDetectionStrategy, Component, inject, input, resource, signal } f
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
-import { ExperimentDocumentResponseDto } from '@core/generated';
+import { DocumentResponseDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
-import { ExperimentDocumentService } from '@features/experiment/services/experiment-document.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
+import { DocumentSource } from './document-source';
 import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_MB } from './max-document-size';
 
 @Component({
-  selector: 'app-experiment-documents',
+  selector: 'app-documents',
   imports: [DatePipe, MatButton, MatIconButton, MatIcon, MatProgressSpinner, TranslatePipe],
-  templateUrl: './experiment-documents.html',
-  styleUrl: './experiment-documents.scss',
+  templateUrl: './documents.html',
+  styleUrl: './documents.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ExperimentDocuments {
-  private readonly documentService = inject(ExperimentDocumentService);
+export class Documents {
+  private readonly source = inject(DocumentSource);
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
 
-  readonly experimentId = input.required<string>();
+  readonly parentId = input.required<string>();
   readonly readOnly = input(false);
 
   protected readonly uploading = signal(false);
 
   protected readonly documents = resource({
-    params: () => this.experimentId(),
-    loader: ({ params: experimentId }) => this.documentService.getDocuments(experimentId),
+    params: () => this.parentId(),
+    loader: ({ params: parentId }) => this.source.list(parentId),
   });
 
   // one after the other, so each failed file gets its own toast
@@ -51,13 +51,13 @@ export class ExperimentDocuments {
     }
   }
 
-  protected download(document: ExperimentDocumentResponseDto): Promise<void> {
+  protected download(document: DocumentResponseDto): Promise<void> {
     return this.toastOnFailure(async () =>
       this.fileDownloadService.download(await this.contentOf(document), document.fileName!),
     );
   }
 
-  protected view(document: ExperimentDocumentResponseDto): Promise<void> {
+  protected view(document: DocumentResponseDto): Promise<void> {
     return this.toastOnFailure(() =>
       this.fileDownloadService.openInNewTab(() => this.contentOf(document)),
     );
@@ -75,7 +75,7 @@ export class ExperimentDocuments {
       return;
     }
     try {
-      await this.documentService.uploadDocument(this.experimentId(), file);
+      await this.source.upload(this.parentId(), file);
     } catch (error) {
       this.toastUploadErrors(error, file.name);
     }
@@ -84,13 +84,10 @@ export class ExperimentDocuments {
   // a body without message key (network error, 500) still gets the generic toast
   private toastUploadErrors(error: unknown, fileName: string): void {
     const messages = toErrorDtos(error).map((dto) =>
-      this.translateService.translate(
-        dto.messageKey ?? 'experiment.documents.error.upload',
-        dto.params,
-      )(),
+      this.translateService.translate(dto.messageKey ?? 'document.error.upload', dto.params)(),
     );
     if (messages.length === 0) {
-      messages.push(this.translateService.translate('experiment.documents.error.upload')());
+      messages.push(this.translateService.translate('document.error.upload')());
     }
     messages.forEach((message) => this.toastService.error(message, fileName));
   }
@@ -99,13 +96,11 @@ export class ExperimentDocuments {
     try {
       await action();
     } catch {
-      this.toastService.error(
-        this.translateService.translate('experiment.documents.error.download')(),
-      );
+      this.toastService.error(this.translateService.translate('document.error.download')());
     }
   }
 
-  private contentOf(document: ExperimentDocumentResponseDto): Promise<Blob> {
-    return this.documentService.getContent(this.experimentId(), document.id!);
+  private contentOf(document: DocumentResponseDto): Promise<Blob> {
+    return this.source.fetchContent(this.parentId(), document.id!);
   }
 }

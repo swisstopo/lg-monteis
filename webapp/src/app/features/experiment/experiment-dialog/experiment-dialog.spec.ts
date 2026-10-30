@@ -8,7 +8,6 @@ import { PermissionsService } from '@core/auth/permissions.service';
 import { ErrorDto, ExperimentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
-import { ExperimentDocuments } from '@features/experiment/experiment-documents/experiment-documents';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import {
   EXPERIMENT_FIELDS,
@@ -16,12 +15,13 @@ import {
 } from '@features/experiment/testing/experiment-dialog.harness';
 import { ALICE, anExperiment, BOB } from '@features/experiment/testing/experiment-fixtures';
 import { provideTranslateService } from '@ngx-translate/core';
+import { Documents } from '@ui/documents/documents';
 import { describe, expect, it, Mocked, vi } from 'vitest';
 import { ExperimentDialog } from './experiment-dialog';
 
-@Component({ selector: 'app-experiment-documents', template: '' })
-class ExperimentDocumentsStub {
-  readonly experimentId = input.required<string>();
+@Component({ selector: 'app-documents', template: '' })
+class DocumentsStub {
+  readonly parentId = input.required<string>();
   readonly readOnly = input(false);
 }
 
@@ -68,8 +68,8 @@ async function setup({
       { provide: ToastService, useValue: toast },
     ],
   }).overrideComponent(ExperimentDialog, {
-    remove: { imports: [ExperimentDocuments] },
-    add: { imports: [ExperimentDocumentsStub] },
+    remove: { imports: [Documents] },
+    add: { imports: [DocumentsStub] },
   });
 
   const fixture = TestBed.createComponent(ExperimentDialog);
@@ -82,8 +82,8 @@ async function setup({
     ExperimentDialogHarness,
   );
   const documents = () =>
-    fixture.debugElement.query(By.directive(ExperimentDocumentsStub))?.componentInstance as
-      ExperimentDocumentsStub | undefined;
+    fixture.debugElement.query(By.directive(DocumentsStub))?.componentInstance as
+      DocumentsStub | undefined;
 
   return { dialog, documents, experimentService, toast, dialogRef };
 }
@@ -189,7 +189,7 @@ describe('ExperimentDialog', () => {
     it('shows the documents with upload', async () => {
       const { documents } = await setup({ experimentId: 'experiment-1' });
 
-      expect(documents()?.experimentId()).toBe('experiment-1');
+      expect(documents()?.parentId()).toBe('experiment-1');
       expect(documents()?.readOnly()).toBe(false);
     });
 

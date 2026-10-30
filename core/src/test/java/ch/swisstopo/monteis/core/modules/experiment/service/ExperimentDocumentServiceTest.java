@@ -11,13 +11,14 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentKey;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentStorage;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentRepository;
+import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocumentStorage;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -37,6 +38,7 @@ class ExperimentDocumentServiceTest {
 
   private static final UUID EXPERIMENT_ID = UUID.randomUUID();
   private static final UUID DOCUMENT_ID = UUID.randomUUID();
+  private static final DocumentKey KEY = new DocumentKey(EXPERIMENT_ID, DOCUMENT_ID);
   private static final DocumentMetadata METADATA =
       new DocumentMetadata("report.pdf", "application/pdf", 4);
   private static final ExperimentDocument DOCUMENT =
@@ -44,7 +46,7 @@ class ExperimentDocumentServiceTest {
 
   @Mock private ExperimentRepository experimentRepository;
   @Mock private ExperimentDocumentRepository documentRepository;
-  @Mock private DocumentStorage storage;
+  @Mock private ExperimentDocumentStorage storage;
   @Mock private CurrentUserProvider currentUserProvider;
 
   @InjectMocks private ExperimentDocumentService service;
@@ -66,9 +68,9 @@ class ExperimentDocumentServiceTest {
     InOrder order = inOrder(experimentRepository, documentRepository, storage);
     order.verify(experimentRepository).requireVisible(EXPERIMENT_ID);
     order.verify(documentRepository).nextId();
-    order.verify(storage).store(EXPERIMENT_ID, DOCUMENT_ID, METADATA, content);
+    order.verify(storage).store(KEY, METADATA, content);
     order.verify(documentRepository).create(DOCUMENT_ID, EXPERIMENT_ID, METADATA, "alice");
-    then(storage).should(never()).delete(any(), any());
+    then(storage).should(never()).delete(any());
   }
 
   @Test
@@ -93,7 +95,7 @@ class ExperimentDocumentServiceTest {
     given(documentRepository.nextId()).willReturn(DOCUMENT_ID);
     willThrow(new IllegalStateException("S3 unavailable"))
         .given(storage)
-        .store(any(), any(), any(), any());
+        .store(any(), any(), any());
 
     InputStream content = InputStream.nullInputStream();
 
@@ -101,7 +103,7 @@ class ExperimentDocumentServiceTest {
     assertThrows(
         IllegalStateException.class, () -> service.upload(EXPERIMENT_ID, METADATA, content));
     then(documentRepository).should(never()).create(any(), any(), any(), any());
-    then(storage).should(never()).delete(any(), any());
+    then(storage).should(never()).delete(any());
   }
 
   @Test
@@ -124,7 +126,7 @@ class ExperimentDocumentServiceTest {
 
     // then
     assertSame(rejection, thrown);
-    then(storage).should().delete(EXPERIMENT_ID, DOCUMENT_ID);
+    then(storage).should().delete(KEY);
   }
 
   @Test
@@ -137,7 +139,7 @@ class ExperimentDocumentServiceTest {
     given(documentRepository.nextId()).willReturn(DOCUMENT_ID);
     given(documentRepository.create(DOCUMENT_ID, EXPERIMENT_ID, METADATA, "alice"))
         .willThrow(rejection);
-    willThrow(deleteFailure).given(storage).delete(EXPERIMENT_ID, DOCUMENT_ID);
+    willThrow(deleteFailure).given(storage).delete(KEY);
 
     InputStream content = InputStream.nullInputStream();
 
@@ -194,7 +196,7 @@ class ExperimentDocumentServiceTest {
   void should_open_the_stored_content_of_a_document() {
     // given
     InputStream content = new ByteArrayInputStream(new byte[4]);
-    given(storage.load(DOCUMENT)).willReturn(content);
+    given(storage.load(KEY)).willReturn(content);
 
     // when / then
     assertSame(content, service.openContent(DOCUMENT));

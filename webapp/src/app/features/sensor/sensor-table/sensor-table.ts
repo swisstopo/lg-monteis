@@ -72,10 +72,18 @@ export default class SensorTable {
     this.formDialog.open(SensorEdit);
   }
 
+  onView(): void {
+    this.openSelected(true);
+  }
+
   onEdit(): void {
+    this.openSelected(false);
+  }
+
+  private openSelected(viewOnly: boolean): void {
     const sensorId = this.selectedSensorId();
     if (sensorId !== undefined) {
-      this.formDialog.open(SensorEdit, { sensorId });
+      this.formDialog.open(SensorEdit, { sensorId, viewOnly });
     }
   }
 

@@ -267,6 +267,7 @@ class CapabilitiesTest {
     assertFalse(none.isAdmin());
     assertFalse(none.canReadAllExperiments());
     assertFalse(none.canWriteAllExperiments());
+    assertFalse(none.canWriteExperiments());
     assertFalse(none.canCreateExperiment());
     assertFalse(none.canManageSensors());
     assertFalse(none.canManageExperimentOwners());
@@ -282,6 +283,7 @@ class CapabilitiesTest {
     assertTrue(admin.isAdmin());
     assertTrue(admin.canReadAllExperiments());
     assertTrue(admin.canWriteAllExperiments());
+    assertTrue(admin.canWriteExperiments());
     assertTrue(admin.canCreateExperiment());
     assertTrue(admin.canManageSensors());
     assertTrue(admin.canManageExperimentOwners());
@@ -295,6 +297,7 @@ class CapabilitiesTest {
 
     assertTrue(editor.canReadAllExperiments());
     assertTrue(editor.canWriteAllExperiments());
+    assertTrue(editor.canWriteExperiments());
     assertTrue(editor.canWriteExperiment(EXPERIMENT_B));
     assertFalse(editor.isAdmin());
     assertFalse(editor.canCreateExperiment());
@@ -309,6 +312,7 @@ class CapabilitiesTest {
     assertTrue(system.canReadAllExperiments());
     assertTrue(system.canReadExperiment(EXPERIMENT_A));
     assertFalse(system.canWriteAllExperiments());
+    assertFalse(system.canWriteExperiments());
     assertFalse(system.canWriteExperiment(EXPERIMENT_A));
     assertEquals(Set.of(), system.writableExperimentIds());
     assertFalse(system.isAdmin());
@@ -322,6 +326,7 @@ class CapabilitiesTest {
 
     assertEquals(BOTH, pi.readableExperimentIds());
     assertEquals(Set.of(EXPERIMENT_A), pi.writableExperimentIds());
+    assertTrue(pi.canWriteExperiments());
     assertTrue(pi.canWriteExperiment(EXPERIMENT_A));
     assertFalse(pi.canWriteExperiment(EXPERIMENT_B));
     assertTrue(pi.canReadExperiment(EXPERIMENT_B));
@@ -332,6 +337,7 @@ class CapabilitiesTest {
     Capabilities reader = capabilities(Set.of(Grant.EXPERIMENT_READ), BOTH, Set.of(EXPERIMENT_A));
 
     assertEquals(Set.of(), reader.writableExperimentIds());
+    assertFalse(reader.canWriteExperiments());
     assertFalse(reader.canWriteExperiment(EXPERIMENT_A));
   }
 

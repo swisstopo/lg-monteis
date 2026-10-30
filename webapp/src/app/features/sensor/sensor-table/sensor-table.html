@@ -18,6 +18,16 @@
       <mat-icon fontIcon="edit"></mat-icon>
       {{ 'sensor.tableHeader.edit' | translate }}
     </button>
+
+    <button
+      primary-action
+      matButton="filled"
+      [disabled]="selectedSensorId() === undefined"
+      (click)="onView()"
+    >
+      <mat-icon fontIcon="visibility"></mat-icon>
+      {{ 'sensor.tableHeader.view' | translate }}
+    </button>
   </app-table-header>
   @if (loadError()) {
     <app-inline-error [message]="'sensor.error.connection' | translate"></app-inline-error>

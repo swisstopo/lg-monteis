@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.sensor.web;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -111,7 +112,9 @@ class SensorControllerTest {
     Sensor mockDomain = mock(Sensor.class);
 
     given(service.getSensor(SENSOR_ID)).willReturn(mockDomain);
-    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
+    given(service.canWriteAnExperimentOf(SENSOR_ID)).willReturn(true);
+    given(mapper.toDto(eq(mockDomain), eq(true), any(LocalDate.class)))
+        .willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -129,7 +132,7 @@ class SensorControllerTest {
                 .value(expectedResponseDto.parameters().getFirst().type().name()));
 
     then(service).should().getSensor(SENSOR_ID);
-    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
+    then(mapper).should().toDto(eq(mockDomain), eq(true), any(LocalDate.class));
   }
 
   @Test
@@ -237,7 +240,8 @@ class SensorControllerTest {
 
     given(mapper.toDomain(any(WriteSensorDto.class))).willReturn(mockDomain);
     given(service.createSensor(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(mockDomain), anyBoolean(), any(LocalDate.class)))
+        .willReturn(expectedResponseDto);
 
     // when / then: Perform request and assert the actual JSON fields match our expected output
     // DTO
@@ -273,7 +277,7 @@ class SensorControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().createSensor(mockDomain);
-    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
+    then(mapper).should().toDto(eq(mockDomain), anyBoolean(), any(LocalDate.class));
   }
 
   @Test
@@ -329,13 +333,15 @@ class SensorControllerTest {
             true,
             null,
             1,
-            List.of(expectedParameterDto));
+            List.of(expectedParameterDto),
+            true);
 
     Sensor mockDomain = mock(Sensor.class);
 
     given(mapper.toDomain(any(WriteSensorDto.class))).willReturn(mockDomain);
     given(service.createSensor(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(mockDomain), anyBoolean(), any(LocalDate.class)))
+        .willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -358,7 +364,7 @@ class SensorControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().createSensor(mockDomain);
-    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
+    then(mapper).should().toDto(eq(mockDomain), anyBoolean(), any(LocalDate.class));
   }
 
   @Test
@@ -371,7 +377,8 @@ class SensorControllerTest {
 
     given(mapper.toDomain(any(WriteSensorDto.class))).willReturn(mockDomain);
     given(service.updateSensor(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(mockDomain), anyBoolean(), any(LocalDate.class)))
+        .willReturn(expectedResponseDto);
 
     // when / then
     mockMvc
@@ -405,7 +412,7 @@ class SensorControllerTest {
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteSensorDto.class));
     then(service).should().updateSensor(mockDomain);
-    then(mapper).should().toDto(eq(mockDomain), any(LocalDate.class));
+    then(mapper).should().toDto(eq(mockDomain), anyBoolean(), any(LocalDate.class));
   }
 
   @Test
@@ -432,7 +439,8 @@ class SensorControllerTest {
 
     given(mapper.toDomain(any(WriteSensorDto.class))).willReturn(mockDomain);
     given(service.updateSensor(mockDomain)).willReturn(mockDomain);
-    given(mapper.toDto(eq(mockDomain), any(LocalDate.class))).willReturn(expectedResponseDto);
+    given(mapper.toDto(eq(mockDomain), anyBoolean(), any(LocalDate.class)))
+        .willReturn(expectedResponseDto);
 
     // when / then: must pass bean validation (not 422) despite the second parameter's missing
     // id/version
@@ -645,6 +653,7 @@ class SensorControllerTest {
         true,
         null,
         sensorVersion,
-        List.of(defaultResponseParameterDto(paramVersion)));
+        List.of(defaultResponseParameterDto(paramVersion)),
+        false);
   }
 }
