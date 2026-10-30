@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow.FulcrumAttachmentReference;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import java.util.List;
 import java.util.Map;
@@ -37,16 +38,20 @@ record FulcrumDocumentComparison(
         .toList();
   }
 
-  List<FulcrumLiteratureRow> rowsWithNewFile() {
-    return fromFulcrum.stream().filter(this::hasNewFile).toList();
+  List<NewFile> newFiles() {
+    return fromFulcrum.stream()
+        .flatMap(
+            row ->
+                row
+                    .firstAttachment()
+                    .filter(attachment -> !isStoredFile(row, attachment))
+                    .map(attachment -> new NewFile(row, attachment))
+                    .stream())
+        .toList();
   }
 
-  private boolean hasNewFile(FulcrumLiteratureRow row) {
-    return row.firstAttachment()
-        .filter(
-            attachment ->
-                storedDocumentOf(row).filter(stored -> stored.hasFile(attachment.id())).isEmpty())
-        .isPresent();
+  private boolean isStoredFile(FulcrumLiteratureRow row, FulcrumAttachmentReference attachment) {
+    return storedDocumentOf(row).filter(stored -> stored.hasFile(attachment.id())).isPresent();
   }
 
   private Optional<FulcrumDocument> storedDocumentOf(FulcrumLiteratureRow row) {
@@ -54,4 +59,6 @@ record FulcrumDocumentComparison(
   }
 
   record StoredRow(FulcrumLiteratureRow row, FulcrumDocument document) {}
+
+  record NewFile(FulcrumLiteratureRow row, FulcrumAttachmentReference attachment) {}
 }

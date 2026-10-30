@@ -6,6 +6,7 @@ import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocument;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentComparison.NewFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentComparison.StoredRow;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -62,7 +63,8 @@ class FulcrumDocumentComparisonTest {
                     List.of(unchanged, replaced, added),
                     stored(STORED_ID, FILE, null),
                     stored(replacedId, UUID.randomUUID(), null))
-                .rowsWithNewFile())
+                .newFiles())
+        .extracting(NewFile::row)
         .containsExactly(replaced, added);
   }
 
@@ -74,7 +76,7 @@ class FulcrumDocumentComparisonTest {
             UUID.randomUUID(), "2011-02", "title", "Jahns E.", 2011, "TN", null, null, null);
 
     // when / then
-    assertThat(comparison(List.of(withoutFile)).rowsWithNewFile()).isEmpty();
+    assertThat(comparison(List.of(withoutFile)).newFiles()).isEmpty();
   }
 
   private static FulcrumDocumentComparison comparison(

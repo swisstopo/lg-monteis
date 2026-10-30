@@ -3,18 +3,18 @@ package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownload;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentDownloadClient;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncProperties;
-import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow.FulcrumAttachmentReference;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentFile;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumDocumentStorage;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentComparison.NewFile;
 import java.time.Duration;
 import org.springframework.stereotype.Service;
 
 // storage before row (like experiment uploads): failure between leaves invisible object, next
 // sync overwrites same key
 @Service
-public class FulcrumDocumentImportService {
+class FulcrumDocumentImportService {
 
   private final FulcrumAttachmentDownloadClient downloadClient;
   private final FulcrumDocumentStorage storage;
@@ -22,7 +22,7 @@ public class FulcrumDocumentImportService {
   private final FulcrumLiteratureMapper literatureMapper;
   private final FulcrumDocumentSyncProperties syncProperties;
 
-  public FulcrumDocumentImportService(
+  FulcrumDocumentImportService(
       FulcrumAttachmentDownloadClient downloadClient,
       FulcrumDocumentStorage storage,
       FulcrumDocumentRepository documentRepository,
@@ -35,15 +35,9 @@ public class FulcrumDocumentImportService {
     this.syncProperties = syncProperties;
   }
 
-  public void importFulcrumDocument(FulcrumLiteratureRow row, Duration timeLeft) {
-    FulcrumAttachmentReference attachment =
-        row.firstAttachment()
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        "Fulcrum Document %s has no file".formatted(row.recordId())));
-    FulcrumDocumentFile file = copyIntoStorage(attachment, timeLeft);
-    documentRepository.saveSynced(literatureMapper.toDocument(row, file));
+  void importFulcrumDocument(NewFile newFile, Duration timeLeft) {
+    FulcrumDocumentFile file = copyIntoStorage(newFile.attachment(), timeLeft);
+    documentRepository.saveSynced(literatureMapper.toDocument(newFile.row(), file));
   }
 
   private FulcrumDocumentFile copyIntoStorage(
