@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -56,7 +57,8 @@ public class FulcrumDocumentSyncRunner {
   }
 
   // disabled Fulcrum would log a failed sync nightly
-  public void runUnlessRunning() {
+  @Scheduled(cron = "${monteis.fulcrum.documents.sync-cron}", zone = "Europe/Zurich")
+  public void syncUnlessRunning() {
     if (!fulcrumProperties.enabled()) {
       log.info("Fulcrum is switched off, skipping the Fulcrum Document sync");
       return;
