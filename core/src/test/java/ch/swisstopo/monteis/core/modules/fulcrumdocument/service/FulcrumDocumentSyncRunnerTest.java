@@ -53,7 +53,7 @@ class FulcrumDocumentSyncRunnerTest {
     givenTheLockIsFree();
 
     // when
-    runner(ENABLED).runUnlessRunning();
+    runner(ENABLED).syncUnlessRunning();
 
     // then
     then(syncService).should().sync(DEADLINE);
@@ -67,7 +67,7 @@ class FulcrumDocumentSyncRunnerTest {
     willThrow(new IllegalStateException("connection lost")).given(syncService).sync(DEADLINE);
 
     // when
-    runner(ENABLED).runUnlessRunning();
+    runner(ENABLED).syncUnlessRunning();
 
     // then
     then(lock).should().close();
@@ -76,7 +76,7 @@ class FulcrumDocumentSyncRunnerTest {
   @Test
   void should_skip_the_sync_while_fulcrum_is_switched_off() {
     // when
-    runner(DISABLED).runUnlessRunning();
+    runner(DISABLED).syncUnlessRunning();
 
     // then
     then(syncLock).shouldHaveNoInteractions();
@@ -89,7 +89,7 @@ class FulcrumDocumentSyncRunnerTest {
     given(syncLock.tryAcquire(any())).willReturn(Optional.empty());
 
     // when
-    runner(ENABLED).runUnlessRunning();
+    runner(ENABLED).syncUnlessRunning();
 
     // then
     then(syncService).shouldHaveNoInteractions();
@@ -101,7 +101,7 @@ class FulcrumDocumentSyncRunnerTest {
     given(syncLock.tryAcquire(any())).willReturn(Optional.empty());
 
     // when
-    runner(ENABLED).runUnlessRunning();
+    runner(ENABLED).syncUnlessRunning();
 
     // then
     then(syncLock).should().tryAcquire(Duration.ofMinutes(1));
