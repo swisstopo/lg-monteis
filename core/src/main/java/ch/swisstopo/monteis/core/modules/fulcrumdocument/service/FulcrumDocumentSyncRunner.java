@@ -5,11 +5,12 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDocumentSyncPrope
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumProperties;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
 import ch.swisstopo.monteis.core.infrastructure.security.SystemSecurityContext;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncLock;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncRepository;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.FulcrumSyncStatus;
+import ch.swisstopo.monteis.core.modules.fulcrumdocument.domain.HeldSyncLock;
 import java.time.Clock;
 import java.time.Duration;
-import net.javacrumbs.shedlock.core.SimpleLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -72,21 +73,19 @@ public class FulcrumDocumentSyncRunner {
     if (!fulcrumProperties.enabled()) {
       throw new FulcrumDisabledException();
     }
-    SimpleLock lock =
+    HeldSyncLock lock =
         syncLock.tryAcquire(Duration.ZERO).orElseThrow(FulcrumSyncAlreadyRunningException::new);
     try {
       taskExecutor.execute(() -> runAndRelease(lock));
     } catch (RuntimeException e) {
-      lock.unlock();
+      lock.close();
       throw e;
     }
   }
 
-  private void runAndRelease(SimpleLock lock) {
-    try {
+  private void runAndRelease(HeldSyncLock lock) {
+    try (lock) {
       SystemSecurityContext.runAsSystem(this::runQuietly);
-    } finally {
-      lock.unlock();
     }
   }
 

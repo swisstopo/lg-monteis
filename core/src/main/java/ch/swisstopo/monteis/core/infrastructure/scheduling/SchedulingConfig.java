@@ -14,8 +14,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class SchedulingConfig {
 
-  public static final String FULCRUM_DOCUMENT_SYNC_LOCK = "fulcrum-document-sync";
-
   // db time: drifting pod clocks agree on expiry. keep-alive: ShedLock unlocks by name only, an
   // expired holder would release the next holder's lock. executor no bean: would disable Boot's
   // task executor/scheduler, sync would run on the thread extending its lock
