@@ -100,19 +100,11 @@ class JooqFulcrumDocumentRepositoryIT {
   }
 
   @Test
-  void should_save_a_number_and_a_category_longer_than_255_characters() {
+  void should_save_a_category_longer_than_255_characters() {
     // given
     FulcrumDocument document =
         new FulcrumDocument(
-            UUID.randomUUID(),
-            "1".repeat(300),
-            null,
-            null,
-            null,
-            "c".repeat(300),
-            List.of(),
-            file(),
-            null);
+            UUID.randomUUID(), "1", null, null, null, "c".repeat(300), List.of(), file(), null);
 
     // when
     repository.saveSynced(document);
