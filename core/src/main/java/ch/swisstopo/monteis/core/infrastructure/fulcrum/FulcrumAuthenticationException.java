@@ -1,19 +1,19 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
-/**
- * Thrown when Monteis cannot authenticate against the Fulcrum API: no {@code
- * monteis.fulcrum.api-token} is configured, or Fulcrum answers 401/403.
- *
- * <p>{@code GlobalErrorControllerAdvice} maps this to 502 with the generic {@code
- * error.system.internal} message and an error id. The message here is written to the log under
- * that id and never reaches the user, so it should name the configuration problem, not the record
- * being saved.
- */
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.RestClientResponseException;
+
 public class FulcrumAuthenticationException extends RuntimeException {
 
-  /**
-   * @param message log-only detail, e.g. which token check failed
-   */
+  // both Fulcrum clients send the token, a 401 or 403 always means it was rejected
+  static RuntimeException translateRejectedToken(RestClientResponseException e) {
+    if (e.getStatusCode() == HttpStatus.UNAUTHORIZED || e.getStatusCode() == HttpStatus.FORBIDDEN) {
+      return new FulcrumAuthenticationException(
+          "Fulcrum rejected the configured API token with %s".formatted(e.getStatusCode()), e);
+    }
+    return e;
+  }
+
   public FulcrumAuthenticationException(String message) {
     super(message);
   }

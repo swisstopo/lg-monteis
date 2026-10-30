@@ -1,0 +1,16 @@
+:host {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.removed {
+  flex-shrink: 0;
+  color: var(--mat-sys-error);
+}

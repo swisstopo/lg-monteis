@@ -20,11 +20,15 @@ export default defineConfig({
       },
     ],
   },
+  // scan drops type-only imports, Angular plugin keeps them: found mid-run => re-bundle reloads open spec iframes
+  optimizeDeps: { include: ['@angular/router'] },
   test: {
     include: ['src/**/*.spec.ts'],
     exclude: ['e2e/**', 'node_modules/**'],
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
+    // busy CI runner can need > 60s default to boot a spec iframe, read by @vitest/browser orchestrator
+    env: { VITEST_BROWSER_IFRAME_TIMEOUT: '180000' },
     browser: {
       provider: playwright(),
       enabled: true,

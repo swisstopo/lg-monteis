@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.domain;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 

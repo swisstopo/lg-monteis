@@ -1,4 +1,4 @@
-package ch.swisstopo.monteis.core.modules.experiment.web;
+package ch.swisstopo.monteis.core.infrastructure.api;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

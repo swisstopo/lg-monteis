@@ -3,8 +3,8 @@ package ch.swisstopo.monteis.core.infrastructure.s3;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.itconfig.S3TestcontainersConfiguration;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentMetadata;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -46,6 +46,7 @@ class S3DocumentStorageIT {
             S3TestcontainersConfiguration.BUCKET,
             "eu-central-1",
             KEY_PREFIX,
+            "fulcrum-documents/",
             Duration.ofSeconds(60),
             Duration.ofSeconds(30),
             URI.create(S3TestcontainersConfiguration.endpointOf(S3_MOCK)));
