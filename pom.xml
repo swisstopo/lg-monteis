@@ -24,32 +24,32 @@
     <java.version>25</java.version>
     <testcontainers.postgres.version>1.21.4</testcontainers.postgres.version>
     <testcontainers.kafka.version>1.21.4</testcontainers.kafka.version>
-    <postgresql.version>42.7.13</postgresql.version>
-    <springdoc.version>3.1.1</springdoc.version>
+    <postgresql.version>42.7.14</postgresql.version>
+    <springdoc.version>3.2.0</springdoc.version>
     <sonar.version>5.8.0.7211</sonar.version>
     <springdoc-plugin.version>1.5</springdoc-plugin.version>
-    <spotless.version>3.10.3</spotless.version>
+    <spotless.version>3.10.4</spotless.version>
     <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
-    <openapi-generator-plugin.version>7.25.0</openapi-generator-plugin.version>
+    <openapi-generator-plugin.version>7.26.0</openapi-generator-plugin.version>
     <swagger-annotations.version>2.2.55</swagger-annotations.version>
-    <jackson-databind-nullable.version>0.2.12</jackson-databind-nullable.version>
+    <jackson-databind-nullable.version>0.2.13</jackson-databind-nullable.version>
     <parsington.version>3.3.0</parsington.version>
     <maven-build-helper.version>3.6.2</maven-build-helper.version>
-    <javers.version>7.11.8</javers.version>
+    <javers.version>7.11.9</javers.version>
     <spring-boot-starter-aop.version>3.5.16</spring-boot-starter-aop.version>
     <org.mapstruct.version>1.6.3</org.mapstruct.version>
     <archunit-junit5.version>1.5.1</archunit-junit5.version>
-    <jacoco.version>0.8.15</jacoco.version>
+    <jacoco.version>0.8.16</jacoco.version>
     <testcontainers-keycloak.version>4.4.0</testcontainers-keycloak.version>
     <aws-msk-iam-auth.version>2.3.9</aws-msk-iam-auth.version>
-    <awssdk.version>2.51.2</awssdk.version>
+    <awssdk.version>2.57.4</awssdk.version>
 
     <!-- Override the Spring Boot BOM's managed flyway.version so the test-scoped
          flyway-core + flyway-database-postgresql (Testcontainers validation) and the
          flyway-maven-plugin (jOOQ codegen) match the migration image runner (MON-87:
          docker/migration builds FROM flyway/flyway 13.9.0-alpine). Keeps validator ==
          runner so CI actually exercises the version that migrates cloud RDS/TimescaleDB. -->
-    <flyway.version>13.9.0</flyway.version>
+    <flyway.version>13.11.1</flyway.version>
 
     <!-- Override the Spring Boot BOM's managed tomcat.version to pull the patched
          tomcat-embed-core 11.0.25. Fixes CVE-2026-65182 (security constraint bypass),
@@ -69,12 +69,12 @@
     <!-- Pin lz4-java (transitive via kafka-clients, not managed by the Spring Boot BOM) to
          1.11.4 to fix CVE-2026-106451 (TOCTOU on the native library in the shared tmp dir).
          Drop this pin and the dependencyManagement entry once kafka-clients pulls >= 1.11.4. -->
-    <lz4-java.version>1.11.4</lz4-java.version>
+    <lz4-java.version>1.12.1</lz4-java.version>
 
     <!-- Pin snappy-java (transitive via kafka-clients, not managed by the Spring Boot BOM) to
          1.1.10.9 to fix CVE-2026-108106, caught by the Trivy scan. Drop this pin and the
          dependencyManagement entry once kafka-clients pulls >= 1.1.10.9. -->
-    <snappy-java.version>1.1.10.9</snappy-java.version>
+    <snappy-java.version>1.1.10.12</snappy-java.version>
 
     <!-- Pin guava (transitive, not managed by the Spring Boot BOM) to 33.7.2-jre to fix
          CVE-2026-102554, caught by the Trivy scan. Drop this pin and the dependencyManagement
