@@ -1,5 +1,7 @@
+import { HttpContext } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { ChartDataResponseDto, MeasurementControllerService } from '@core/generated';
+import { SKIP_GLOBAL_ERROR_TOAST } from '@core/http/http-context';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Observable, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -185,5 +187,23 @@ describe('MeasurementsService', () => {
 
     await vi.waitFor(() => expect(service.chartData.status()).toBe('error'));
     expect(service.chartData.hasValue()).toBe(false);
+  });
+
+  it('exports the CSV without the global error toast, the table toasts it itself', async () => {
+    const getMeasurementsCsv = vi.fn().mockReturnValue(of(new Blob(['experimentName'])));
+    TestBed.configureTestingModule({
+      providers: [
+        MeasurementsService,
+        provideTranslateService(),
+        { provide: MeasurementControllerService, useValue: { getMeasurementsCsv } },
+      ],
+    });
+    const service = TestBed.inject(MeasurementsService);
+
+    await service.getMeasurementsCsv('[]', '{}');
+
+    const [sortModel, filterModel, , , options] = getMeasurementsCsv.mock.calls[0];
+    expect([sortModel, filterModel]).toEqual(['[]', '{}']);
+    expect((options.context as HttpContext).get(SKIP_GLOBAL_ERROR_TOAST)).toBe(true);
   });
 });
