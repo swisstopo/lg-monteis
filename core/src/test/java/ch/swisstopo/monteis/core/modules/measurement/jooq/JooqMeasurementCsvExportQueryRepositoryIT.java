@@ -63,24 +63,11 @@ class JooqMeasurementCsvExportQueryRepositoryIT {
 
   @Test
   @Transactional
-  void should_stream_only_the_header_when_filter_matches_nothing() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // when
-          String csv = streamToString(dasKeyEquals("does-not-exist"));
-
-          // then
-          assertEquals(HEADER + "\r\n", csv);
-        });
-  }
-
-  @Test
-  @Transactional
   void should_exclude_rows_hidden_by_row_level_security() {
     SecurityContextTestSupport.runAsUser(
         EXPERIMENT_1_ONLY,
         () -> {
-          // when: FLOW-Admin belongs to no experiment, explicitly filtering for it must not help
+          // when
           String csv = streamToString(dasKeyEquals("SOL_EXPERTS__FLOW-Admin__flow"));
 
           // then

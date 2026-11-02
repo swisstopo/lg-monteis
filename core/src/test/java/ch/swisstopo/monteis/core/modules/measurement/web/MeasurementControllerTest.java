@@ -575,7 +575,7 @@ class MeasurementControllerTest {
   @Test
   void should_return_bad_request_when_measurements_csv_export_query_rejects_the_filter()
       throws Exception {
-    // given: the repository throws before writing any bytes - must surface as a normal 400
+    // given
     PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
     given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
     willThrow(new InvalidPagedRequestException("Unknown sortable/filterable column: bogus"))
