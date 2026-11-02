@@ -9,6 +9,20 @@
       {{ 'sensor.tableHeader.download' | translate }}
     </button>
 
+    <button
+      read-action
+      matButton="text"
+      [disabled]="selectedSensors().length === 0 || refreshing()"
+      (click)="onRefresh()"
+    >
+      @if (refreshing()) {
+        <mat-spinner diameter="16"></mat-spinner>
+      } @else {
+        <mat-icon fontIcon="sync"></mat-icon>
+      }
+      {{ 'sensor.tableHeader.refresh' | translate }}
+    </button>
+
     <button write-action matButton="tonal" (click)="onCreate()">
       <mat-icon fontIcon="add"></mat-icon>
       {{ 'sensor.tableHeader.create' | translate }}
@@ -35,7 +49,7 @@
     <app-table
       class="custom-grid"
       [checkboxes]="true"
-      [multiple]="false"
+      [multiple]="true"
       [columns]="wrappedCols"
       [rowModelType]="'infinite'"
       [datasource]="datasource"

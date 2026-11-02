@@ -1,8 +1,12 @@
-import { Component, effect, inject, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
-import { SensorParameterRowResponseDto } from '@core/generated';
+import {
+  FulcrumRefreshResponseDto,
+  SensorParameterRowResponseDto,
+  SkippedSensorDto,
+} from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
 import { SensorService } from '@features/sensor/services/sensor.service';
@@ -34,10 +38,16 @@ export default class SensorTable {
   readonly searchTerm = signal<string>('');
 
   protected wrappedCols = createColumns();
-  protected selectedSensorId = signal<string | undefined>(undefined);
+  // one row per parameter, a sensor counts once however many of its rows are selected
+  protected selectedSensors = signal<SensorParameterRowResponseDto[]>([]);
+  protected selectedSensorId = computed(() => {
+    const sensors = this.selectedSensors();
+    return sensors.length === 1 ? sensors[0].sensorId : undefined;
+  });
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
   protected downloading = signal(false);
+  protected refreshing = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
 
   protected datasource = createPagedDatasource(
@@ -65,7 +75,8 @@ export default class SensorTable {
   }
 
   onSelectionChanged(rows: SensorParameterRowResponseDto[]): void {
-    this.selectedSensorId.set(rows[0]?.sensorId);
+    const bySensorId = new Map(rows.map((row) => [row.sensorId, row]));
+    this.selectedSensors.set([...bySensorId.values()]);
   }
 
   onCreate(): void {
@@ -101,6 +112,49 @@ export default class SensorTable {
     } finally {
       this.downloading.set(false);
     }
+  }
+
+  async onRefresh(): Promise<void> {
+    const sensors = this.selectedSensors();
+    this.refreshing.set(true);
+    try {
+      const result = await this.sensorService.refreshFromFulcrum(
+        sensors.map((sensor) => sensor.sensorId!),
+      );
+      this.toastRefreshResult(result, sensors);
+    } catch {
+      // the global error toast already reports it
+    } finally {
+      this.refreshing.set(false);
+    }
+  }
+
+  private toastRefreshResult(
+    result: FulcrumRefreshResponseDto,
+    sensors: SensorParameterRowResponseDto[],
+  ): void {
+    const counts = { checked: result.checked, updated: result.updated };
+    const skipped = result.skipped ?? [];
+    if (skipped.length === 0) {
+      this.toastService.success(
+        this.translateService.translate('sensor.fulcrumRefresh.success', counts)(),
+      );
+      return;
+    }
+    const namesById = new Map(sensors.map((sensor) => [sensor.sensorId, sensor.name]));
+    const skippedSensors = skipped
+      .map((sensor) => `${namesById.get(sensor.sensorId)} (${this.skipReasonOf(sensor)})`)
+      .join(', ');
+    this.toastService.warning(
+      this.translateService.translate('sensor.fulcrumRefresh.partial', {
+        ...counts,
+        skippedSensors,
+      })(),
+    );
+  }
+
+  private skipReasonOf(sensor: SkippedSensorDto): string {
+    return this.translateService.translate(`sensor.fulcrumRefresh.reason.${sensor.reason}`)();
   }
 
   onSearch(term: string): void {
