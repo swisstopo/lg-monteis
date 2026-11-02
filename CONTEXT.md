@@ -12,13 +12,13 @@ The descriptive fields of an Experiment (name, period, comment, Experiment Owner
 _Avoid_: Stammdaten, metadata
 
 **Experiment document**:
-A file a PI uploaded to a specific Experiment.
+A file a PI uploaded to a specific Experiment; a Monteis-Admin or a PI of the Experiment can delete it, which removes it from MONTEIS for good.
 _Avoid_: Document (alone)
 
 ## Sensors
 
 **Sensor document**:
-A file an admin or a PI of one of the Sensor's Experiments uploaded to a specific Sensor; everyone who can see the Sensor can see it.
+A file a Monteis-Admin or a PI of one of the Sensor's Experiments uploaded to a specific Sensor; everyone who can see the Sensor can see it, and the same people who can upload it can delete it for good.
 _Avoid_: Document (alone), Attachment, Experiment document
 
 ## Documents from Fulcrum
@@ -35,7 +35,11 @@ _Avoid_: Fulcrum file
 
 **PI**:
 A user with write access to a specific Experiment.
-_Avoid_: Principal investigator (spelled out), editor
+_Avoid_: Principal investigator (spelled out), editor, Experiment-Admin
+
+**Monteis-Admin**:
+A user who may see and change every Experiment and Sensor in MONTEIS, including their documents.
+_Avoid_: Admin (alone), superuser
 
 **Experiment Owner**:
 A PI of an Experiment who is listed as the contact person for questions about it; being an Experiment Owner grants no permissions.
