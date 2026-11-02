@@ -17,12 +17,14 @@ public final class ApiPaths {
   public static final String EXPERIMENTS = "/api/experiments";
   public static final String EXPERIMENT = EXPERIMENTS + "/" + EXPERIMENT_ID_SEGMENT;
   public static final String EXPERIMENT_DOCUMENTS = EXPERIMENT + "/documents";
+  public static final String EXPERIMENT_DOCUMENT = EXPERIMENT_DOCUMENTS + "/{documentId}";
   public static final String EXPERIMENT_OWNER_CANDIDATES = EXPERIMENT + "/owner-candidates";
 
   public static final String ALL_EXPERIMENT_OWNERS = EXPERIMENTS + "/owners";
 
   public static final String SENSORS = "/api/sensors";
   public static final String SENSOR_DOCUMENTS = SENSORS + "/{id}/documents";
+  public static final String SENSOR_DOCUMENT = SENSOR_DOCUMENTS + "/{documentId}";
   public static final String ORGANISATIONS = "/api/organisations";
 
   public static final String FULCRUM_DOCUMENTS = "/api/fulcrum-documents";

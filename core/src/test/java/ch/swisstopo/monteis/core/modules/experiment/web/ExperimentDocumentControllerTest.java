@@ -7,10 +7,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -35,6 +37,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -45,6 +48,7 @@ import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequ
 class ExperimentDocumentControllerTest {
 
   private static final String DOCUMENTS = "/api/experiments/{id}/documents";
+  private static final String DOCUMENT_BY_ID = DOCUMENTS + "/{documentId}";
   private static final String DOCUMENT_CONTENT = DOCUMENTS + "/{documentId}/content";
   private static final byte[] CONTENT = "%PDF-1.7".getBytes(StandardCharsets.UTF_8);
   private static final ExperimentDocument DOCUMENT =
@@ -173,6 +177,36 @@ class ExperimentDocumentControllerTest {
         .andExpect(jsonPath("$.messageKey").value("object.not-found"));
 
     then(service).should(never()).openContent(any());
+  }
+
+  @Test
+  void should_delete_a_document_and_answer_204() throws Exception {
+    // when / then
+    mockMvc
+        .perform(
+            delete(DOCUMENT_BY_ID, ASSIGNED_EXPERIMENT, DOCUMENT.id())
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .andExpect(status().isNoContent());
+
+    then(service).should().delete(ASSIGNED_EXPERIMENT, DOCUMENT.id());
+  }
+
+  @Test
+  void should_answer_403_when_row_level_security_rejects_the_delete() throws Exception {
+    // given
+    willThrow(new PermissionDeniedDataAccessException("rls", null))
+        .given(service)
+        .delete(ASSIGNED_EXPERIMENT, DOCUMENT.id());
+
+    // when / then
+    mockMvc
+        .perform(
+            delete(DOCUMENT_BY_ID, ASSIGNED_EXPERIMENT, DOCUMENT.id())
+                .with(csrf())
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.messageKey").value("access.denied"));
   }
 
   private static MockMultipartFile file(String originalFileName, byte[] content) {

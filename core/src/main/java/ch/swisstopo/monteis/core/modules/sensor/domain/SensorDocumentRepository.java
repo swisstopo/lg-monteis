@@ -8,7 +8,8 @@ import java.util.UUID;
  * Repository for the metadata of {@link SensorDocument}s. Row-level security alone decides which
  * documents a caller reads (those of sensors they may read). Inserts are decided by the
  * sensor_documents_insert policy (can_write_an_experiment_of_sensor), the filter chain only checks
- * the experiment write grant. Nobody may update or delete a document.
+ * the experiment write grant. Deletes are decided the same way by the sensor_documents_delete
+ * policy. Nobody may update a document.
  */
 public interface SensorDocumentRepository {
   UUID nextId();
@@ -36,4 +37,12 @@ public interface SensorDocumentRepository {
    *     document does not exist, belongs to another sensor or is hidden from the caller
    */
   SensorDocument getById(UUID sensorId, UUID documentId);
+
+  /**
+   * Deletes the metadata of a document of a sensor.
+   *
+   * @throws org.springframework.dao.PermissionDeniedDataAccessException if the caller may not
+   *     write an experiment of the sensor or the document is gone
+   */
+  void delete(UUID sensorId, UUID documentId);
 }

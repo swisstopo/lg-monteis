@@ -213,4 +213,45 @@ class ExperimentDocumentServiceTest {
     assertThrows(
         ObjectNotFoundException.class, () -> service.getDocument(EXPERIMENT_ID, documentId));
   }
+
+  @Test
+  void should_delete_the_row_before_the_stored_content() {
+    // given
+    given(documentRepository.getById(EXPERIMENT_ID, DOCUMENT_ID)).willReturn(DOCUMENT);
+
+    // when
+    service.delete(EXPERIMENT_ID, DOCUMENT_ID);
+
+    // then
+    InOrder order = inOrder(documentRepository, storage);
+    order.verify(documentRepository).delete(EXPERIMENT_ID, DOCUMENT_ID);
+    order.verify(storage).delete(KEY);
+  }
+
+  @Test
+  void should_not_delete_a_document_the_caller_cannot_see() {
+    // given
+    given(documentRepository.getById(EXPERIMENT_ID, DOCUMENT_ID))
+        .willThrow(new ObjectNotFoundException(ExperimentDocument.class));
+
+    // when / then
+    assertThrows(ObjectNotFoundException.class, () -> service.delete(EXPERIMENT_ID, DOCUMENT_ID));
+    then(documentRepository).should(never()).delete(any(), any());
+    then(storage).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_keep_the_stored_content_when_row_level_security_rejects_the_delete() {
+    // given
+    given(documentRepository.getById(EXPERIMENT_ID, DOCUMENT_ID)).willReturn(DOCUMENT);
+    willThrow(new PermissionDeniedDataAccessException("rls", null))
+        .given(documentRepository)
+        .delete(EXPERIMENT_ID, DOCUMENT_ID);
+
+    // when / then
+    assertThrows(
+        PermissionDeniedDataAccessException.class,
+        () -> service.delete(EXPERIMENT_ID, DOCUMENT_ID));
+    then(storage).shouldHaveNoInteractions();
+  }
 }

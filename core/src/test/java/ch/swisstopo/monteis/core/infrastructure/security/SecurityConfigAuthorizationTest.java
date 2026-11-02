@@ -93,6 +93,14 @@ class SecurityConfigAuthorizationTest {
             HttpMethod.POST, "/api/experiments/" + OTHER_EXPERIMENT + "/documents", allExperiments),
         Arguments.of(
             HttpMethod.POST, "/api/experiments/not-a-uuid/documents", new PrivilegeLevel[] {}),
+        Arguments.of(
+            HttpMethod.DELETE,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/documents/" + UUID.randomUUID(),
+            assignedExperiment),
+        Arguments.of(
+            HttpMethod.DELETE,
+            "/api/experiments/" + OTHER_EXPERIMENT + "/documents/" + UUID.randomUUID(),
+            allExperiments),
         Arguments.of(HttpMethod.GET, "/api/experiments/owners", everyone),
         Arguments.of(
             HttpMethod.GET,
@@ -105,6 +113,9 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.GET, sensor + "/documents", everyone),
         // write grant only, the insert policy decides per sensor
         Arguments.of(HttpMethod.POST, sensor + "/documents", assignedExperiment),
+        // write grant only, the delete policy decides per sensor
+        Arguments.of(
+            HttpMethod.DELETE, sensor + "/documents/" + UUID.randomUUID(), assignedExperiment),
         Arguments.of(HttpMethod.GET, "/api/organisations", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/all", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/csv", everyone),
@@ -310,6 +321,14 @@ class SecurityConfigAuthorizationTest {
 
     @DeleteMapping("/api/other")
     public String delete() {
+      return "ok";
+    }
+
+    @DeleteMapping({
+      "/api/experiments/{id}/documents/{documentId}",
+      "/api/sensors/{id}/documents/{documentId}"
+    })
+    public String deleteDocument(@PathVariable String id, @PathVariable String documentId) {
       return "ok";
     }
 

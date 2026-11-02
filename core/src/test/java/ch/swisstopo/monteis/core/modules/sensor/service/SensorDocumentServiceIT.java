@@ -14,6 +14,7 @@ import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import ch.swisstopo.monteis.core.itconfig.SeedData;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SensorDocument;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorDocumentStorage;
 import java.io.InputStream;
 import java.util.List;
@@ -95,6 +96,48 @@ class SensorDocumentServiceIT {
 
     // then
     assertThat(countDocumentRows(fileName)).isZero();
+  }
+
+  @Test
+  void should_delete_the_document_row_and_its_stored_content() {
+    // given
+    String fileName = uniqueFileName();
+    SensorDocument document = uploadAsAdmin(fileName);
+
+    // when
+    SecurityContextTestSupport.runAsAdmin(
+        () -> service.delete(SeedData.SENSOR_ONLY_IN_ALPHA, document.id()));
+
+    // then
+    then(storage).should().delete(document.key());
+    assertThat(countDocumentRows(fileName)).isZero();
+  }
+
+  @Test
+  void should_keep_the_document_row_when_deleting_its_stored_content_fails() {
+    // given
+    String fileName = uniqueFileName();
+    SensorDocument document = uploadAsAdmin(fileName);
+    willThrow(new IllegalStateException("S3 unavailable")).given(storage).delete(any());
+
+    // when
+    SecurityContextTestSupport.runAsAdmin(
+        () ->
+            assertThrows(
+                IllegalStateException.class,
+                () -> service.delete(SeedData.SENSOR_ONLY_IN_ALPHA, document.id())));
+
+    // then
+    assertThat(countDocumentRows(fileName)).isEqualTo(1);
+  }
+
+  private SensorDocument uploadAsAdmin(String fileName) {
+    return callAsAdmin(
+        () ->
+            service.upload(
+                SeedData.SENSOR_ONLY_IN_ALPHA,
+                pdfMetadata(fileName),
+                InputStream.nullInputStream()));
   }
 
   private static String uniqueFileName() {
