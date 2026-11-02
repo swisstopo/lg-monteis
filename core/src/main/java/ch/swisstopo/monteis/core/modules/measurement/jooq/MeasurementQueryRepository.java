@@ -70,6 +70,23 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                   SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
           .as("das_key");
 
+  /** One row per sensor parameter, without the latest reading. */
+  private static final Table<?> BASE_TABLE =
+      SENSORS
+          .join(SENSOR_PARAMETER)
+          .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
+          .leftJoin(EXPERIMENTS)
+          .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+          .leftJoin(SENSOR_TYPES)
+          .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID));
+
+  /**
+   * The grid's row source: {@link #BASE_TABLE} plus the latest reading of each parameter. Shared
+   * with {@link JooqMeasurementCsvExportQueryRepository}, so grid and export see the same rows. A
+   * constant, not a method: a call into this proxied class would bypass the transaction proxy.
+   */
+  static final Table<?> JOINED_FROM = BASE_TABLE.leftJoin(LATEST_READINGS).on(trueCondition());
+
   static final Map<String, Field<?>> MEASUREMENT_COLUMNS_BY_COL_ID =
       Map.ofEntries(
           Map.entry("sensorParameterId", SENSOR_PARAMETER.ID),
@@ -92,25 +109,6 @@ public class MeasurementQueryRepository implements MeasurementQuery {
           Map.entry("alarmLimits.upper", SENSOR_PARAMETER.UPPER_ALARM_LIMIT),
           Map.entry("active", SENSORS.ACTIVE),
           Map.entry("comment", SENSORS.COMMENT));
-
-  /** One row per sensor parameter, without the latest reading. */
-  private static Table<?> baseTable() {
-    return SENSORS
-        .join(SENSOR_PARAMETER)
-        .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
-        .leftJoin(EXPERIMENTS)
-        .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
-        .leftJoin(SENSOR_TYPES)
-        .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID));
-  }
-
-  /**
-   * The grid's row source: {@link #baseTable()} plus the latest reading of each parameter. Shared
-   * with {@link JooqMeasurementCsvExportQueryRepository}, so grid and export see the same rows.
-   */
-  static Table<?> joinedFrom() {
-    return baseTable().leftJoin(LATEST_READINGS).on(trueCondition());
-  }
 
   public MeasurementQueryRepository(DSLContext dsl, Clock clock) {
     this.dsl = dsl;
@@ -208,8 +206,8 @@ public class MeasurementQueryRepository implements MeasurementQuery {
         PagedRequestJooqTranslator.translate(
             request, MEASUREMENT_COLUMNS_BY_COL_ID, SENSOR_PARAMETER.SENSOR_ID.asc());
 
-    var baseTable = baseTable();
-    var fullTable = joinedFrom();
+    var baseTable = BASE_TABLE;
+    var fullTable = JOINED_FROM;
 
     List<MeasurementRow> rows =
         dsl.select(
