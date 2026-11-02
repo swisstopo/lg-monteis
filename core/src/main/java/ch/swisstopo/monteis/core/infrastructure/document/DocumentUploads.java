@@ -18,10 +18,10 @@ public final class DocumentUploads {
       DocumentKey key,
       DocumentMetadata metadata,
       InputStream content,
-      Supplier<T> record) {
+      Supplier<T> recordDocument) {
     storage.store(key, metadata, content);
     try {
-      return record.get();
+      return recordDocument.get();
     } catch (RuntimeException e) {
       deleteStored(storage, key, e);
       throw e;

@@ -34,7 +34,6 @@ export class Documents {
     loader: ({ params: parentId }) => this.source.list(parentId),
   });
 
-  // one after the other, so each failed file gets its own toast
   protected async upload(fileInput: HTMLInputElement): Promise<void> {
     const files = Array.from(fileInput.files ?? []);
     fileInput.value = '';
@@ -42,9 +41,7 @@ export class Documents {
 
     this.uploading.set(true);
     try {
-      for (const file of files) {
-        await this.uploadFile(file);
-      }
+      await Promise.all(files.map((file) => this.uploadFile(file)));
     } finally {
       this.uploading.set(false);
       this.documents.reload();

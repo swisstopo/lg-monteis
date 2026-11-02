@@ -124,8 +124,11 @@ class S3DocumentStorageIT {
 
   @Test
   void should_fail_to_load_a_document_that_was_never_stored() {
+    // given
+    DocumentKey key = randomKey();
+
     // when / then
-    assertThrows(NoSuchKeyException.class, () -> experimentStorage.load(randomKey()));
+    assertThrows(NoSuchKeyException.class, () -> experimentStorage.load(key));
   }
 
   private static HeadObjectResponse headOf(String keyPrefix, DocumentKey key) {

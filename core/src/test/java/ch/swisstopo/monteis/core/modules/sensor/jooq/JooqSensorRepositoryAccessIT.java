@@ -52,13 +52,14 @@ class JooqSensorRepositoryAccessIT {
 
   @Test
   void should_treat_a_hidden_sensor_like_an_unknown_one() {
+    UUID unknownSensor = UUID.randomUUID();
     SecurityContextTestSupport.runAsUser(
         List.of(SeedData.EXPERIMENT_ALPHA),
         () -> {
           assertDoesNotThrow(() -> repository.requireVisible(alphaSensor));
           assertThrows(ObjectNotFoundException.class, () -> repository.requireVisible(betaSensor));
           assertThrows(
-              ObjectNotFoundException.class, () -> repository.requireVisible(UUID.randomUUID()));
+              ObjectNotFoundException.class, () -> repository.requireVisible(unknownSensor));
         });
   }
 }

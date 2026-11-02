@@ -84,15 +84,14 @@ class SensorDocumentServiceIT {
         .store(any(), any(), any());
     UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
     String fileName = uniqueFileName();
+    DocumentMetadata metadata = pdfMetadata(fileName);
+    InputStream content = InputStream.nullInputStream();
 
     // when
     SecurityContextTestSupport.runAsAdmin(
         () ->
             assertThrows(
-                IllegalStateException.class,
-                () ->
-                    service.upload(
-                        sensorId, pdfMetadata(fileName), InputStream.nullInputStream())));
+                IllegalStateException.class, () -> service.upload(sensorId, metadata, content)));
 
     // then
     assertThat(countDocumentRows(fileName)).isZero();
