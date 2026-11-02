@@ -120,6 +120,9 @@ public class FulcrumAttachmentDownloadClient {
           "Downloading Fulcrum attachment %s answered without a content length"
               .formatted(attachmentId));
     }
+    if (length == 0) {
+      throw new FulcrumAttachmentEmptyException(attachmentId);
+    }
     if (length > maxSize.toBytes()) {
       throw new FulcrumAttachmentTooLargeException(attachmentId, maxSize);
     }

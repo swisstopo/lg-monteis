@@ -158,6 +158,21 @@ class FulcrumDocumentSyncServiceIT {
   }
 
   @Test
+  void should_skip_an_empty_file_and_still_count_the_sync_as_successful() {
+    // given
+    StubDocument empty = StubDocument.of("2026-01", StubFile.of("empty.pdf", new byte[0]));
+    StubDocument imported = StubDocument.of("2026-02", StubFile.of("report.pdf", PDF));
+    fulcrum.serveDocuments(empty, imported);
+
+    // when
+    syncWithTimeLeft();
+
+    // then
+    assertThat(storedIds()).containsExactly(imported.recordId());
+    assertThat(syncRepository.findLastSuccessfulSyncAt()).isPresent();
+  }
+
+  @Test
   void should_import_the_other_files_but_not_count_the_sync_when_a_download_fails() {
     // given
     StubDocument failing = StubDocument.of("2026-01", StubFile.notDownloadable("gone.pdf"));

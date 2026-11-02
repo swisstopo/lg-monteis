@@ -38,6 +38,7 @@ class FulcrumAttachmentDownloadClientTest {
   private int downloadStatus = 200;
   private String downloadUrl;
   private boolean sendContentLength = true;
+  private byte[] downloadContent = CONTENT;
 
   @BeforeEach
   void startServer() throws IOException {
@@ -135,6 +136,17 @@ class FulcrumAttachmentDownloadClientTest {
     // when / then
     assertThatThrownBy(() -> client.download(ATTACHMENT_ID, tooSmall))
         .isInstanceOf(FulcrumAttachmentTooLargeException.class);
+  }
+
+  @Test
+  void should_refuse_an_empty_file_before_reading_it() {
+    // given
+    downloadContent = new byte[0];
+    FulcrumAttachmentDownloadClient client = client(true);
+
+    // when / then
+    assertThatThrownBy(() -> client.download(ATTACHMENT_ID, MAX_SIZE))
+        .isInstanceOf(FulcrumAttachmentEmptyException.class);
   }
 
   @Test
@@ -248,17 +260,20 @@ class FulcrumAttachmentDownloadClientTest {
       exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
       exchange.sendResponseHeaders(downloadStatus, downloadLengthOf(downloadStatus));
       if (downloadStatus == 200) {
-        exchange.getResponseBody().write(CONTENT);
+        exchange.getResponseBody().write(downloadContent);
       }
     }
   }
 
-  // 0 => HttpServer sends chunked, no content length
+  // HttpServer: 0 => chunked, no content length. -1 => content length 0
   private long downloadLengthOf(int status) {
     if (status != 200) {
       return -1;
     }
-    return sendContentLength ? CONTENT.length : 0;
+    if (!sendContentLength) {
+      return 0;
+    }
+    return downloadContent.length == 0 ? -1 : downloadContent.length;
   }
 
   private void redirectToDownload(HttpExchange exchange) throws IOException {

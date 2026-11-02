@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.fulcrumdocument.service;
 
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentEmptyException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAttachmentTooLargeException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumLiteratureRow;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
@@ -97,7 +98,7 @@ public class FulcrumDocumentSyncService {
     return failed;
   }
 
-  // too large = skipped, not failed, else every sync fails
+  // too large or empty = skipped, not failed, else every sync fails
   private ImportCounts importNewFiles(List<NewFile> newFiles, Instant deadline) {
     int imported = 0;
     int skipped = 0;
@@ -111,7 +112,7 @@ public class FulcrumDocumentSyncService {
       try {
         importService.importFulcrumDocument(newFile, timeLeft);
         imported++;
-      } catch (FulcrumAttachmentTooLargeException e) {
+      } catch (FulcrumAttachmentTooLargeException | FulcrumAttachmentEmptyException e) {
         skipped++;
         log.warn(
             "Skipping the file of Fulcrum Document {}: {}",
@@ -140,7 +141,7 @@ public class FulcrumDocumentSyncService {
 
     String summary() {
       return ("%d documents from Fulcrum, %d failed to save, %d newly removed, %d files imported,"
-              + " %d skipped as too large, %d failed%s, successful: %s")
+              + " %d skipped as too large or empty, %d failed%s, successful: %s")
           .formatted(
               fromFulcrum,
               failedSaves,

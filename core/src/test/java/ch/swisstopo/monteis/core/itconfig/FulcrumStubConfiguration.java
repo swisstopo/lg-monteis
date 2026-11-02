@@ -129,7 +129,9 @@ public class FulcrumStubConfiguration {
         exchange.sendResponseHeaders(HttpStatus.NOT_FOUND.value(), -1);
         return;
       }
-      exchange.sendResponseHeaders(HttpStatus.OK.value(), content.get().length);
+      // HttpServer: 0 => chunked, no content length. -1 => content length 0
+      long length = content.get().length == 0 ? -1 : content.get().length;
+      exchange.sendResponseHeaders(HttpStatus.OK.value(), length);
       exchange.getResponseBody().write(content.get());
     } catch (Exception ex) {
       log.warn("Error:", ex);
