@@ -7,4 +7,6 @@ export abstract class DocumentSource {
   abstract upload(parentId: string, file: File): Promise<DocumentResponseDto>;
 
   abstract fetchContent(parentId: string, documentId: string): Promise<Blob>;
+
+  abstract delete(parentId: string, documentId: string): Promise<void>;
 }

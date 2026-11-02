@@ -17,6 +17,7 @@ describe('ExperimentDocumentSource', () => {
       getDocuments: vi.fn(() => of([DOCUMENT])),
       uploadDocument: vi.fn(() => of(DOCUMENT)),
       downloadDocument: vi.fn(() => of(new Blob(['%PDF']))),
+      deleteDocument: vi.fn(() => of(undefined)),
     };
     TestBed.configureTestingModule({
       providers: [{ provide: ExperimentDocumentControllerService, useValue: api }],
@@ -43,6 +44,14 @@ describe('ExperimentDocumentSource', () => {
 
     expect(await content.text()).toBe('%PDF');
     const [experimentId, documentId, , , options] = api['downloadDocument'].mock.calls[0];
+    expect([experimentId, documentId]).toEqual(['experiment-1', 'document-1']);
+    expect(skipsGlobalErrorToast(options)).toBe(true);
+  });
+
+  it('deletes a document', async () => {
+    await service.delete('experiment-1', 'document-1');
+
+    const [experimentId, documentId, , , options] = api['deleteDocument'].mock.calls[0];
     expect([experimentId, documentId]).toEqual(['experiment-1', 'document-1']);
     expect(skipsGlobalErrorToast(options)).toBe(true);
   });
