@@ -45,6 +45,14 @@ async function chooseFile(
   await fileChooser.setFiles(file);
 }
 
+/** Clicks the trash icon of the only document and returns the confirmation dialog. */
+async function askToDelete(dialog: Locator): Promise<Locator> {
+  await dialog.getByRole('button', { name: 'Delete document' }).click();
+  const confirmation = dialog.page().getByRole('dialog', { name: 'Delete document' });
+  await expect(confirmation).toBeVisible();
+  return confirmation;
+}
+
 // a document's script would run on the app's origin, where it can read the viewer's session
 const SCRIPT_MARKER = 'monteis-e2e-document-script-ran';
 const MARKING_SCRIPT = `<script>localStorage.setItem('${SCRIPT_MARKER}', '1')</script>`;
@@ -141,4 +149,31 @@ test('rejects a file over the size limit with a toast naming the limit', async (
     page.getByText(`The file is larger than the allowed ${MAX_DOCUMENT_SIZE_MB} MB.`),
   ).toBeVisible();
   await expect(dialog.getByText('No documents yet.')).toBeVisible();
+});
+
+test('deletes a document after the confirmation', async ({ page }) => {
+  const dialog = await editNewExperiment(page);
+  await upload(dialog, 'report.txt', 'measured values');
+  await expect(dialog.getByRole('button', { name: 'report.txt' })).toBeVisible();
+
+  const confirmation = await askToDelete(dialog);
+  await expect(confirmation).toContainText(
+    '“report.txt” will be permanently deleted and cannot be restored.',
+  );
+  await confirmation.getByRole('button', { name: 'Delete', exact: true }).click();
+
+  await expect(confirmation).toBeHidden();
+  await expect(dialog.getByText('No documents yet.')).toBeVisible();
+});
+
+test('keeps a document when the deletion is cancelled', async ({ page }) => {
+  const dialog = await editNewExperiment(page);
+  await upload(dialog, 'report.txt', 'measured values');
+  await expect(dialog.getByRole('button', { name: 'report.txt' })).toBeVisible();
+
+  const confirmation = await askToDelete(dialog);
+  await confirmation.getByRole('button', { name: 'Cancel' }).click();
+
+  await expect(confirmation).toBeHidden();
+  await expect(dialog.getByRole('button', { name: 'report.txt' })).toBeVisible();
 });

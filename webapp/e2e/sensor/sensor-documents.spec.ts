@@ -43,6 +43,14 @@ async function upload(dialog: Locator, name: string, content: string): Promise<v
   await fileChooser.setFiles({ name, mimeType: 'text/plain', buffer: Buffer.from(content) });
 }
 
+/** Deletes the only document of the dialog through its confirmation. */
+async function deleteDocument(dialog: Locator): Promise<void> {
+  await dialog.getByRole('button', { name: 'Delete document' }).click();
+  const confirmation = dialog.page().getByRole('dialog', { name: 'Delete document' });
+  await confirmation.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(confirmation).toBeHidden();
+}
+
 test('a PI uploads a document to a sensor of their experiment and downloads it', async ({
   page,
   browser,
@@ -63,7 +71,10 @@ test('a PI uploads a document to a sensor of their experiment and downloads it',
   expect((await download).suggestedFilename()).toBe('calibration.txt');
 });
 
-test('a reader sees the documents of a sensor but cannot add one', async ({ page, browser }) => {
+test('a reader sees the documents of a sensor but cannot add or delete one', async ({
+  page,
+  browser,
+}) => {
   const alias = await createSensor(browser, BETA);
   await asAdmin(browser, async (adminPage) => {
     const dialog = await viewSensor(adminPage, alias);
@@ -77,4 +88,24 @@ test('a reader sees the documents of a sensor but cannot add one', async ({ page
   await expect(dialog.getByRole('button', { name: 'manual.txt' })).toBeVisible();
   await expect(dialog.getByText('admin-user')).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Add Document' })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Delete document' })).toHaveCount(0);
+});
+
+test('a PI deletes a document of a sensor of their experiment', async ({ page, browser }) => {
+  const alias = await createSensor(browser, ALPHA);
+  await asAdmin(browser, async (adminPage) => {
+    const dialog = await viewSensor(adminPage, alias);
+    await upload(dialog, 'outdated.txt', 'old calibration');
+    await expect(dialog.getByRole('button', { name: 'outdated.txt' })).toBeVisible();
+  });
+
+  await openAppAs(page, SEED_USERS.alice);
+  const dialog = await viewSensor(page, alias);
+  await expect(dialog.getByRole('button', { name: 'outdated.txt' })).toBeVisible();
+
+  await deleteDocument(dialog);
+
+  await expect(dialog.getByText('No documents yet.')).toBeVisible();
+  await page.reload();
+  await expect((await viewSensor(page, alias)).getByText('No documents yet.')).toBeVisible();
 });
