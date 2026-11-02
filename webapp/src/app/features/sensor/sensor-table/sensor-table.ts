@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -27,6 +28,7 @@ import { createColumns } from './columns';
   imports: [Table, TableHeader, TranslatePipe, MatIcon, MatButton, MatProgressSpinner, InlineError],
   templateUrl: './sensor-table.html',
   styleUrl: './sensor-table.scss',
+  providers: [DatePipe],
 })
 export default class SensorTable {
   private readonly formDialog = inject(FormDialogService);
@@ -34,10 +36,11 @@ export default class SensorTable {
   private readonly translateService = inject(TranslateService);
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
+  private readonly datePipe = inject(DatePipe);
 
   readonly searchTerm = signal<string>('');
 
-  protected wrappedCols = createColumns();
+  protected wrappedCols = createColumns(this.datePipe);
   // one row per parameter, a sensor counts once however many of its rows are selected
   protected selectedSensors = signal<SensorParameterRowResponseDto[]>([]);
   protected selectedSensorId = computed(() => {

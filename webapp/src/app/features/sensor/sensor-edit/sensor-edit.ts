@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import {
   applyEach,
@@ -179,6 +180,7 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
     TranslatePipe,
     MatDivider,
     Documents,
+    DatePipe,
   ],
   templateUrl: './sensor-edit.html',
   styleUrl: './sensor-edit.scss',
