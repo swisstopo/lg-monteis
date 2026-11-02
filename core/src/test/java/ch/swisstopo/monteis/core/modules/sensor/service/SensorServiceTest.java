@@ -20,6 +20,10 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +43,7 @@ class SensorServiceTest {
   @Mock private SensorRepository repository;
   @Mock private SensorConfigPublisher configPublisher;
   @Mock private FulcrumService fulcrumService;
+  @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-02T10:00:00Z"), ZoneOffset.UTC);
 
   @InjectMocks private SensorService service;
 
@@ -253,6 +259,33 @@ class SensorServiceTest {
   }
 
   @Test
+  void should_stamp_the_last_fulcrum_refresh_when_the_coordinates_were_read_from_fulcrum() {
+    // given
+    Sensor inputSensor = mock(Sensor.class);
+    givenTheSensorExistsInFulcrum(inputSensor);
+    given(repository.update(inputSensor)).willReturn(inputSensor);
+
+    // when
+    service.updateSensor(inputSensor);
+
+    // then
+    then(inputSensor).should().setLastFulcrumRefreshAt(OffsetDateTime.now(clock));
+  }
+
+  @Test
+  void should_clear_the_last_fulcrum_refresh_when_the_sensor_has_no_fulcrum_id() {
+    // given
+    Sensor inputSensor = mock(Sensor.class);
+    given(repository.update(inputSensor)).willReturn(inputSensor);
+
+    // when
+    service.updateSensor(inputSensor);
+
+    // then
+    then(inputSensor).should().setLastFulcrumRefreshAt(null);
+  }
+
+  @Test
   void should_return_sensor_when_found_by_id() {
     // given
     UUID id = UUID.randomUUID();
@@ -320,10 +353,8 @@ class SensorServiceTest {
    * write to go through has to hand the record a complete position.
    */
   private void givenTheSensorExistsInFulcrum(Sensor sensor, Double x, Double y, Double z) {
-    FulcrumSensor fulcrumSensor = mock(FulcrumSensor.class);
-    given(fulcrumSensor.xPointWithOffset()).willReturn(x);
-    given(fulcrumSensor.yPointWithOffset()).willReturn(y);
-    given(fulcrumSensor.zPointWithOffset()).willReturn(z);
+    FulcrumSensor fulcrumSensor =
+        new FulcrumSensor(FULCRUM_RECORD_ID, "BSW04_PP_1", List.of("Sensor"), x, y, z);
 
     given(sensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
     given(fulcrumService.getSensorById(FULCRUM_RECORD_ID)).willReturn(Optional.of(fulcrumSensor));

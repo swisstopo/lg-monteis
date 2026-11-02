@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound;
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ public record SensorResponseDto(
     String dasSensorAlias,
     Das das,
     UUID fulcrumId,
+    OffsetDateTime lastFulcrumRefreshAt,
     ExperimentResponseDto mainExperiment,
     CoordinatesDto coordinates,
     Boolean active,

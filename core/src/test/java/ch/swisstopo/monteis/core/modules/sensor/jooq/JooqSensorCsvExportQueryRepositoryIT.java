@@ -33,8 +33,8 @@ import org.springframework.transaction.annotation.Transactional;
 class JooqSensorCsvExportQueryRepositoryIT {
 
   private static final String HEADER =
-      "dasSensorAlias,name,das,fulcrumId,mainExperiment.name,coordinates.x,coordinates.y,"
-          + "coordinates.z,active,comment,parameter.name,parameter.dasParameterAlias,"
+      "dasSensorAlias,name,das,fulcrumId,lastFulcrumRefreshAt,mainExperiment.name,coordinates.x,"
+          + "coordinates.y,coordinates.z,active,comment,parameter.name,parameter.dasParameterAlias,"
           + "parameter.type.name,parameter.unit,parameter.formula.expression,"
           + "parameter.alarmLimits.lower,parameter.alarmLimits.upper,parameter.active,"
           + "parameter.comment";
@@ -70,7 +70,7 @@ class JooqSensorCsvExportQueryRepositoryIT {
               lines
                   .get(1)
                   .startsWith(
-                      "CSV-01,UniqueCsvExportName,SOL_EXPERTS,,,0.0,0.0,0.0,true,,UniqueCsvExportName,"));
+                      "CSV-01,UniqueCsvExportName,SOL_EXPERTS,,,,0.0,0.0,0.0,true,,UniqueCsvExportName,"));
         });
   }
 
@@ -143,6 +143,7 @@ class JooqSensorCsvExportQueryRepositoryIT {
                   "UniqueCsvNoneName",
                   "SOL_EXPERTS",
                   "", // fulcrumId
+                  "", // lastFulcrumRefreshAt
                   "", // mainExperiment.name
                   // x/y/z are DOUBLE PRECISION since V15, so the export carries their decimals
                   "0.0",
