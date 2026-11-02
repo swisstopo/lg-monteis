@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
 import {
   ExperimentControllerService,
@@ -10,7 +11,7 @@ import { MultiSelectFilter } from '@ui/filters/multi-select-filter/multi-select-
 import { TableColumn } from '@ui/table/table.types';
 import { firstValueFrom } from 'rxjs';
 
-export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
+export function createColumns(datePipe: DatePipe): TableColumn<SensorParameterRowResponseDto>[] {
   const translateService = inject(TranslateService);
   const experimentApi = inject(ExperimentControllerService);
   const dasMetadata = getDasMetadata();
@@ -57,6 +58,13 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
       headerName: translateService.translate('sensor.fulcrumId.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
+    },
+    {
+      field: 'lastFulcrumRefreshAt',
+      headerName: translateService.translate('sensor.lastFulcrumRefresh.label')(),
+      sortable: true,
+      filter: false,
+      valueFormatter: (params) => datePipe.transform(params.value, 'dd.MM.yyyy HH:mm') ?? '',
     },
     {
       field: 'mainExperiment.name',

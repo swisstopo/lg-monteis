@@ -110,6 +110,9 @@
         "CHANGED_MEANWHILE": "changed meanwhile, try again"
       }
     },
+    "lastFulcrumRefresh": {
+      "label": "Last Fulcrum refresh"
+    },
     "mainExperiment": {
       "label": "Main Experiment",
       "placeholder": "Search for an experiment...",
