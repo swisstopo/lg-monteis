@@ -9,11 +9,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 
 /**
- * Filter-chain adapter for {@code PUT} on {@link ApiPaths#EXPERIMENT} and {@code POST} on {@link
- * ApiPaths#EXPERIMENT_DOCUMENTS}: allows the request when {@link Capabilities} say the caller may
+ * Filter-chain adapter for {@code PUT} on {@link ApiPaths#EXPERIMENT}, {@code POST} on {@link
+ * ApiPaths#EXPERIMENT_DOCUMENTS} and {@code DELETE} on {@link ApiPaths#EXPERIMENT_DOCUMENT}: allows the request when {@link Capabilities} say the caller may
  * write the experiment named by the {@link ApiPaths#EXPERIMENT_ID} path variable. A path id that is
- * not a UUID identifies no experiment and is denied. The {@code experiments_update} and {@code
- * experiment_documents_insert} RLS policies enforce the same rule in the database (defence in
+ * not a UUID identifies no experiment and is denied. The {@code experiments_update}, {@code
+ * experiment_documents_insert} and {@code experiment_documents_delete} RLS policies enforce the same rule in the database (defence in
  * depth, ADR-003).
  */
 class ExperimentWriteAuthorizationManager

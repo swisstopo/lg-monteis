@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,5 +64,20 @@ public class JooqSensorDocumentRepository implements SensorDocumentRepository {
         .and(SENSOR_DOCUMENTS.SENSOR_ID.eq(sensorId))
         .fetchOptional(mapper::toDomain)
         .orElseThrow(() -> new ObjectNotFoundException(SensorDocument.class));
+  }
+
+  // the delete policy skips a forbidden row without an error, so nothing deleted = forbidden
+  @Override
+  @Transactional
+  public void delete(UUID sensorId, UUID documentId) {
+    int deleted =
+        dsl.deleteFrom(SENSOR_DOCUMENTS)
+            .where(SENSOR_DOCUMENTS.ID.eq(documentId))
+            .and(SENSOR_DOCUMENTS.SENSOR_ID.eq(sensorId))
+            .execute();
+    if (deleted == 0) {
+      throw new PermissionDeniedDataAccessException(
+          "document " + documentId + " of sensor " + sensorId + " was not deleted", null);
+    }
   }
 }

@@ -21,6 +21,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -94,5 +95,16 @@ public class SensorDocumentController {
         .contentType(contentType)
         .contentLength(metadata.sizeBytes())
         .body(new InputStreamResource(service.openContent(document)));
+  }
+
+  @Operation(
+      summary = "Delete a document of a sensor",
+      description = "Deletes the document and its file for good.")
+  @ApiResponse(responseCode = "204", description = "Document successfully deleted")
+  @DeleteMapping(path = "{documentId}")
+  public ResponseEntity<Void> deleteSensorDocument(
+      @PathVariable UUID id, @PathVariable UUID documentId) {
+    service.delete(id, documentId);
+    return ResponseEntity.noContent().build();
   }
 }

@@ -11,11 +11,15 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ExperimentDocumentService {
+
+  private static final Logger log = LoggerFactory.getLogger(ExperimentDocumentService.class);
 
   private final ExperimentRepository experimentRepository;
   private final ExperimentDocumentRepository documentRepository;
@@ -59,5 +63,20 @@ public class ExperimentDocumentService {
 
   public InputStream openContent(ExperimentDocument document) {
     return storage.load(document.key());
+  }
+
+  // S3 inside the transaction: a failed S3 delete rolls the row back, the document stays whole
+  @Transactional
+  public void delete(UUID experimentId, UUID documentId) {
+    String deletedBy = currentUserProvider.requireCurrentUsername();
+    ExperimentDocument document = documentRepository.getById(experimentId, documentId);
+    documentRepository.delete(experimentId, documentId);
+    storage.delete(document.key());
+    log.info(
+        "{} deleted document {} ({}) of experiment {}",
+        deletedBy,
+        documentId,
+        document.metadata().fileName(),
+        experimentId);
   }
 }
