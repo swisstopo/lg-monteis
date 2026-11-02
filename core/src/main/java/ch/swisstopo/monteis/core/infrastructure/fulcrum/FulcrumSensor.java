@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,5 +38,19 @@ public record FulcrumSensor(
    */
   public boolean isSensor() {
     return categoryAndType != null && categoryAndType.contains(SENSOR_CATEGORY);
+  }
+
+  public List<String> missingCoordinateAxes() {
+    List<String> missing = new ArrayList<>();
+    if (xPointWithOffset == null) {
+      missing.add("x");
+    }
+    if (yPointWithOffset == null) {
+      missing.add("y");
+    }
+    if (zPointWithOffset == null) {
+      missing.add("z");
+    }
+    return missing;
   }
 }

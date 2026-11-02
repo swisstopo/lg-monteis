@@ -12,7 +12,8 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
-import java.util.ArrayList;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,14 +25,17 @@ public class SensorService {
   private final SensorRepository repository;
   private final SensorConfigPublisher configPublisher;
   private final FulcrumService fulcrumService;
+  private final Clock clock;
 
   public SensorService(
       SensorRepository repository,
       SensorConfigPublisher configPublisher,
-      FulcrumService fulcrumService) {
+      FulcrumService fulcrumService,
+      Clock clock) {
     this.repository = repository;
     this.configPublisher = configPublisher;
     this.fulcrumService = fulcrumService;
+    this.clock = clock;
   }
 
   @AuditChanges
@@ -69,6 +73,7 @@ public class SensorService {
 
   private void applyFulcrumCoordinates(Sensor sensor) {
     if (sensor.getFulcrumId() == null) {
+      sensor.setLastFulcrumRefreshAt(null);
       return;
     }
 
@@ -78,17 +83,7 @@ public class SensorService {
             .orElseThrow(
                 () -> new ObjectBusinessValidationException("fulcrum.sensor.not-found", Map.of()));
 
-    List<String> missing = new ArrayList<>();
-    if (fulcrumSensor.xPointWithOffset() == null) {
-      missing.add("x");
-    }
-    if (fulcrumSensor.yPointWithOffset() == null) {
-      missing.add("y");
-    }
-    if (fulcrumSensor.zPointWithOffset() == null) {
-      missing.add("z");
-    }
-
+    List<String> missing = fulcrumSensor.missingCoordinateAxes();
     if (!missing.isEmpty()) {
       throw new ObjectBusinessValidationException(
           "sensor.fulcrum.coordinatesMissing",
