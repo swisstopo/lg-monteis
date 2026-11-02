@@ -26,11 +26,14 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.FulcrumRefreshResult;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SkippedSensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
+import ch.swisstopo.monteis.core.modules.sensor.service.SensorFulcrumRefreshService;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
@@ -39,6 +42,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeD
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FulcrumRefreshResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
@@ -51,6 +55,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,6 +94,7 @@ class SensorControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @MockitoBean private SensorService service;
+  @MockitoBean private SensorFulcrumRefreshService fulcrumRefreshService;
 
   @MockitoBean private SensorWebMapper mapper;
   @MockitoBean private PagedRequestParser pagedRequestParser;
@@ -591,6 +597,53 @@ class SensorControllerTest {
         .andExpect(status().isAccepted());
 
     then(service).should().republishAllActiveParameterConfigs();
+  }
+
+  /** Anyone who sees a sensor may refresh it, RLS decides which of the ids are visible. */
+  @ParameterizedTest
+  @EnumSource(PrivilegeLevel.class)
+  void should_let_every_privilege_level_refresh_sensors_from_fulcrum(PrivilegeLevel level)
+      throws Exception {
+    // given
+    FulcrumRefreshResult result =
+        new FulcrumRefreshResult(
+            1, 1, List.of(new SkippedSensor(OTHER_SENSOR_ID, SkippedSensor.Reason.NO_FULCRUM_ID)));
+    given(fulcrumRefreshService.refresh(Set.of(SENSOR_ID, OTHER_SENSOR_ID))).willReturn(result);
+    given(mapper.toDto(result))
+        .willReturn(
+            new FulcrumRefreshResponseDto(
+                1,
+                1,
+                List.of(
+                    new FulcrumRefreshResponseDto.SkippedSensorDto(
+                        OTHER_SENSOR_ID, SkippedSensor.Reason.NO_FULCRUM_ID))));
+
+    // when / then
+    mockMvc
+        .perform(
+            post("/api/sensors/fulcrum-refresh")
+                .with(csrf())
+                .with(authentication(level.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sensorIds\":[\"%s\",\"%s\"]}".formatted(SENSOR_ID, OTHER_SENSOR_ID)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.checked").value(1))
+        .andExpect(jsonPath("$.updated").value(1))
+        .andExpect(jsonPath("$.skipped[0].sensorId").value(OTHER_SENSOR_ID.toString()))
+        .andExpect(jsonPath("$.skipped[0].reason").value("NO_FULCRUM_ID"));
+  }
+
+  @Test
+  void should_reject_a_fulcrum_refresh_without_sensors() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/sensors/fulcrum-refresh")
+                .with(asAdmin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sensorIds\":[]}"))
+        .andExpect(status().is4xxClientError());
+
+    then(fulcrumRefreshService).shouldHaveNoInteractions();
   }
 
   private static RequestPostProcessor asAdmin() {

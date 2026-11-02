@@ -23,10 +23,12 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.jooq.DSLContext;
+import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @IT
 class JooqSensorRepositoryIT {
+  private static final OffsetDateTime REFRESHED_AT = OffsetDateTime.parse("2026-11-02T10:00:00Z");
+
   @Autowired private JooqSensorRepository repository;
 
   @Autowired private DSLContext dsl;
@@ -416,6 +420,90 @@ class JooqSensorRepositoryIT {
 
           // Act & Assert
           assertThrows(ObjectNotFoundException.class, () -> repository.update(ghostSensor));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_write_refreshed_coordinates_and_increment_the_version() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Sensor sensor =
+              repository
+                  .findById(
+                      repository.create(createDummySensor("REF-001", "Refreshed", "x")).getId())
+                  .orElseThrow();
+          sensor.setCoordinates(new Coordinates(2579333.768, 1247000.0, 500.0));
+          sensor.setLastFulcrumRefreshAt(REFRESHED_AT);
+          sensor.setName("not written by a refresh");
+
+          // Act
+          Sensor refreshed = repository.updateRefreshedCoordinates(sensor);
+
+          // Assert
+          Sensor stored = repository.findById(sensor.getId()).orElseThrow();
+          assertEquals(2, refreshed.getVersion());
+          assertEquals(2, stored.getVersion());
+          assertEquals(new Coordinates(2579333.768, 1247000.0, 500.0), stored.getCoordinates());
+          assertTrue(REFRESHED_AT.isEqual(stored.getLastFulcrumRefreshAt()));
+          assertEquals("Refreshed", stored.getName());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_reject_refreshed_coordinates_read_at_a_stale_version() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Sensor sensor =
+              repository
+                  .findById(repository.create(createDummySensor("REF-002", "Stale", "x")).getId())
+                  .orElseThrow();
+          sensor.setVersion(sensor.getVersion() - 1);
+          sensor.setLastFulcrumRefreshAt(REFRESHED_AT);
+
+          // Act & Assert
+          assertThrows(
+              DataChangedException.class, () -> repository.updateRefreshedCoordinates(sensor));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_mark_sensors_as_refreshed_without_changing_their_version() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          UUID id = repository.create(createDummySensor("REF-003", "Unchanged", "x")).getId();
+          int versionBefore = repository.findById(id).orElseThrow().getVersion();
+
+          // Act
+          repository.markFulcrumRefreshed(List.of(id), REFRESHED_AT);
+
+          // Assert
+          Sensor stored = repository.findById(id).orElseThrow();
+          assertEquals(versionBefore, stored.getVersion());
+          assertTrue(REFRESHED_AT.isEqual(stored.getLastFulcrumRefreshAt()));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_find_only_existing_sensors_by_ids_with_their_parameters() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          UUID id = repository.create(createDummySensor("REF-004", "Found", "x")).getId();
+
+          // Act
+          List<Sensor> found = repository.findAllByIds(List.of(id, UUID.randomUUID()));
+
+          // Assert
+          assertEquals(1, found.size());
+          assertEquals(id, found.getFirst().getId());
+          assertEquals(1, found.getFirst().getParameters().size());
         });
   }
 

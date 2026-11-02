@@ -97,6 +97,12 @@ public class SensorService {
             fulcrumSensor.xPointWithOffset(),
             fulcrumSensor.yPointWithOffset(),
             fulcrumSensor.zPointWithOffset()));
+    sensor.setLastFulcrumRefreshAt(OffsetDateTime.now(clock));
+  }
+
+  @AuditChanges
+  public Sensor saveRefreshedCoordinates(Sensor sensor) {
+    return repository.updateRefreshedCoordinates(sensor);
   }
 
   public Sensor getSensor(UUID id) {

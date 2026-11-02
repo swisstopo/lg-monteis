@@ -72,6 +72,10 @@ public class SecurityConfig {
                     .access(allowIf(Capabilities::canAccessDocuments))
                     .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
                     .access(allowIf(Capabilities::canAccessDocuments))
+                    // anyone who sees a sensor may refresh it (MON-173): RLS limits the sensors,
+                    // the values come from Fulcrum only
+                    .requestMatchers(HttpMethod.POST, ApiPaths.SENSORS_FULCRUM_REFRESH)
+                    .authenticated()
                     // sensor reads need no rule of their own: RLS filters the rows by experiment
                     .requestMatchers(HttpMethod.GET, SENSORS_PATHS)
                     .authenticated()
