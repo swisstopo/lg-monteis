@@ -133,6 +133,7 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.GET, "/api/fulcrum-sync", everyone),
         Arguments.of(HttpMethod.POST, "/api/fulcrum-sync", documentReaders),
         Arguments.of(HttpMethod.GET, "/api/measurements", everyone),
+        Arguments.of(HttpMethod.GET, "/api/measurements/csv", everyone),
         Arguments.of(HttpMethod.GET, "/api/me", everyone));
   }
 
@@ -262,6 +263,7 @@ class SecurityConfigAuthorizationTest {
       "/api/fulcrum-documents",
       "/api/fulcrum-sync",
       "/api/measurements",
+      "/api/measurements/csv",
       "/api/me",
       "/api/organisations",
       "/api/sensors"
