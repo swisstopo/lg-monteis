@@ -79,11 +79,10 @@ class SensorDocumentServiceTest {
     willThrow(new ObjectNotFoundException(Sensor.class))
         .given(sensorRepository)
         .requireVisible(SENSOR_ID);
+    InputStream content = InputStream.nullInputStream();
 
     // when / then
-    assertThrows(
-        ObjectNotFoundException.class,
-        () -> service.upload(SENSOR_ID, METADATA, InputStream.nullInputStream()));
+    assertThrows(ObjectNotFoundException.class, () -> service.upload(SENSOR_ID, METADATA, content));
     then(documentRepository).shouldHaveNoInteractions();
     then(storage).shouldHaveNoInteractions();
   }
@@ -99,12 +98,13 @@ class SensorDocumentServiceTest {
     given(documentRepository.create(DOCUMENT_ID, SENSOR_ID, METADATA, "alice"))
         .willThrow(rejection);
     willThrow(deleteFailure).given(storage).delete(KEY);
+    InputStream content = InputStream.nullInputStream();
 
     // when
     PermissionDeniedDataAccessException thrown =
         assertThrows(
             PermissionDeniedDataAccessException.class,
-            () -> service.upload(SENSOR_ID, METADATA, InputStream.nullInputStream()));
+            () -> service.upload(SENSOR_ID, METADATA, content));
 
     // then
     assertSame(rejection, thrown);
