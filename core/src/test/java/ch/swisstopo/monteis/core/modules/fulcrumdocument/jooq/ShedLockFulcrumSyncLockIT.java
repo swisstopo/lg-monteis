@@ -14,7 +14,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-// ShedLock commits on own connection, so rows deleted after each test, no rollback
+// ShedLock commits on own connection, so no rollback. row expired, not deleted: ShedLock caches
+// created rows and only updates them after
 @IT
 class ShedLockFulcrumSyncLockIT {
 
@@ -22,8 +23,11 @@ class ShedLockFulcrumSyncLockIT {
   @Autowired private DSLContext dsl;
 
   @AfterEach
-  void removeTheLock() {
-    dsl.deleteFrom(SHEDLOCK).where(SHEDLOCK.NAME.eq(ShedLockFulcrumSyncLock.LOCK_NAME)).execute();
+  void releaseTheLock() {
+    dsl.update(SHEDLOCK)
+        .set(SHEDLOCK.LOCK_UNTIL, LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1))
+        .where(SHEDLOCK.NAME.eq(ShedLockFulcrumSyncLock.LOCK_NAME))
+        .execute();
   }
 
   @Test
@@ -81,6 +85,11 @@ class ShedLockFulcrumSyncLockIT {
     LocalDateTime minuteAgoUtc = LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1);
     dsl.insertInto(SHEDLOCK)
         .set(SHEDLOCK.NAME, ShedLockFulcrumSyncLock.LOCK_NAME)
+        .set(SHEDLOCK.LOCK_UNTIL, minuteAgoUtc)
+        .set(SHEDLOCK.LOCKED_AT, minuteAgoUtc.minusMinutes(2))
+        .set(SHEDLOCK.LOCKED_BY, "core-pod-that-died")
+        .onConflict(SHEDLOCK.NAME)
+        .doUpdate()
         .set(SHEDLOCK.LOCK_UNTIL, minuteAgoUtc)
         .set(SHEDLOCK.LOCKED_AT, minuteAgoUtc.minusMinutes(2))
         .set(SHEDLOCK.LOCKED_BY, "core-pod-that-died")
