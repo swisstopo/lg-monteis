@@ -465,9 +465,12 @@
     "title": "Documents",
     "add": "Add Document",
     "view": "View document",
+    "delete": "Delete document",
+    "deleteConfirmation": "“{{fileName}}” will be permanently deleted and cannot be restored.",
     "empty": "No documents yet.",
     "error": {
       "upload": "The document could not be uploaded.",
+      "delete": "The document could not be deleted.",
       "download": "The document could not be downloaded.",
       "load": "The documents could not be loaded."
     },
@@ -479,7 +482,8 @@
   },
   "button": {
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "delete": "Delete"
   },
   "organisation": {
     "edit": {
