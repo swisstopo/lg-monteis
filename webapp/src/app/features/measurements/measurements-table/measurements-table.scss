@@ -26,7 +26,8 @@
     margin-bottom: 1rem;
 
     .plot-button,
-    .reload-button {
+    .reload-button,
+    .download-button {
       // mat-form-field reserves space below the input for hints/errors, so align the button
       // with the input boxes themselves rather than with the field's outer (taller) box.
       margin-top: 8px;
