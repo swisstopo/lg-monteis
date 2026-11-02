@@ -91,7 +91,7 @@ public class JooqMeasurementCsvExportQueryRepository
                 SENSORS.Y,
                 SENSORS.Z,
                 SENSORS.COMMENT)
-            .from(MeasurementQueryRepository.joinedFrom())
+            .from(MeasurementQueryRepository.JOINED_FROM)
             .where(criteria.condition())
             .orderBy(criteria.sortFields())
             .limit(exportRequest.limit())
