@@ -1,9 +1,11 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -100,6 +102,18 @@ public class FulcrumService {
     }
 
     return rows.stream().findFirst();
+  }
+
+  public List<FulcrumSensor> getSensorsByIds(Collection<UUID> fulcrumRecordIds) {
+    if (fulcrumRecordIds.isEmpty()) {
+      return List.of();
+    }
+    // UUID.toString() is hex and dashes only, so the ids are safe to inline
+    String ids =
+        fulcrumRecordIds.stream().map(id -> "'%s'".formatted(id)).collect(Collectors.joining(", "));
+    return query(
+        "SELECT %s FROM \"%s\" WHERE _record_id IN (%s);"
+            .formatted(SENSOR_COLUMNS, properties.sensorTable(), ids));
   }
 
   public List<FulcrumSensor> getSensors() {
