@@ -70,7 +70,6 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                   SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
           .as("das_key");
 
-  /** One row per sensor parameter, without the latest reading. */
   private static final Table<?> BASE_TABLE =
       SENSORS
           .join(SENSOR_PARAMETER)
@@ -80,11 +79,6 @@ public class MeasurementQueryRepository implements MeasurementQuery {
           .leftJoin(SENSOR_TYPES)
           .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID));
 
-  /**
-   * The grid's row source: {@link #BASE_TABLE} plus the latest reading of each parameter. Shared
-   * with {@link JooqMeasurementCsvExportQueryRepository}, so grid and export see the same rows. A
-   * constant, not a method: a call into this proxied class would bypass the transaction proxy.
-   */
   static final Table<?> JOINED_FROM = BASE_TABLE.leftJoin(LATEST_READINGS).on(trueCondition());
 
   static final Map<String, Field<?>> MEASUREMENT_COLUMNS_BY_COL_ID =
