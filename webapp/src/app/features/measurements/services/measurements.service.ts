@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, resource, signal } from '@angular/core';
 import { ChartDataResponseDto, ErrorDto, MeasurementControllerService } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
+import { skipGlobalErrorToast } from '@core/http/http-context';
 import { getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { translate } from '@ngx-translate/core';
 import { ChartDataset, ChartPoint } from '@ui/chart';
@@ -116,5 +117,13 @@ export class MeasurementsService {
   getMeasurements(params: IGetRowsParams) {
     const { startRow, endRow, sortModel, filterModel } = toPagedRequestParams(params);
     return firstValueFrom(this.api.getMeasurements(startRow, endRow, sortModel, filterModel));
+  }
+
+  getMeasurementsCsv(sortModel?: string, filterModel?: string): Promise<Blob> {
+    return firstValueFrom(
+      this.api.getMeasurementsCsv(sortModel, filterModel, 'body', false, {
+        context: skipGlobalErrorToast(),
+      }),
+    );
   }
 }
