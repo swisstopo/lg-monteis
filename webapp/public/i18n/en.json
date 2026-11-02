@@ -99,6 +99,17 @@
     "fulcrum": {
       "coordinatesMissing": "Fulcrum record {{fulcrumId}} has no coordinates ({{missing}} missing). Add them in Fulcrum, or clear the Fulcrum ID and enter the coordinates manually."
     },
+    "fulcrumRefresh": {
+      "success": "{{checked}} sensors checked against Fulcrum, {{updated}} updated.",
+      "partial": "{{checked}} sensors checked against Fulcrum, {{updated}} updated. Skipped: {{skippedSensors}}.",
+      "reason": {
+        "NOT_FOUND": "not found",
+        "NO_FULCRUM_ID": "no Fulcrum ID",
+        "NOT_IN_FULCRUM": "not in Fulcrum",
+        "COORDINATES_MISSING": "coordinates missing in Fulcrum",
+        "CHANGED_MEANWHILE": "changed meanwhile, try again"
+      }
+    },
     "mainExperiment": {
       "label": "Main Experiment",
       "placeholder": "Search for an experiment...",
@@ -259,6 +270,7 @@
     "tableHeader": {
       "search": "Search",
       "download": "Download",
+      "refresh": "Refresh",
       "create": "Create Sensor",
       "edit": "Edit Sensor",
       "view": "View"
