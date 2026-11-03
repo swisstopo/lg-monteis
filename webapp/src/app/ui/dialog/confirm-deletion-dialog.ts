@@ -31,23 +31,8 @@ import { DialogInputs } from './form-dialog.service';
     MatDialogTitle,
     MatIcon,
   ],
-  template: `
-    <h2 mat-dialog-title>{{ title() }}</h2>
-    <mat-dialog-content>{{ message() }}</mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <app-dismiss-button />
-      <button matButton="filled" type="button" class="confirm" [mat-dialog-close]="true">
-        <mat-icon fontIcon="delete" />
-        {{ confirmLabel() }}
-      </button>
-    </mat-dialog-actions>
-  `,
-  styles: `
-    .confirm {
-      --mat-button-filled-container-color: var(--mat-sys-error);
-      --mat-button-filled-label-text-color: var(--mat-sys-on-error);
-    }
-  `,
+  templateUrl: './confirm-deletion-dialog.html',
+  styleUrl: './confirm-deletion-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConfirmDeletionDialog {
