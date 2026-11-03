@@ -37,8 +37,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
-import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
@@ -195,7 +195,7 @@ class ExperimentDocumentControllerTest {
   @Test
   void should_answer_403_when_row_level_security_rejects_the_delete() throws Exception {
     // given
-    willThrow(new PermissionDeniedDataAccessException("rls", null))
+    willThrow(new AccessDeniedException("rls"))
         .given(service)
         .delete(ASSIGNED_EXPERIMENT, DOCUMENT.id());
 

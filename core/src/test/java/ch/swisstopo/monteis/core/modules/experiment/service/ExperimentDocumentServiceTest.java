@@ -32,6 +32,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.PermissionDeniedDataAccessException;
+import org.springframework.security.access.AccessDeniedException;
 
 @ExtendWith(MockitoExtension.class)
 class ExperimentDocumentServiceTest {
@@ -244,14 +245,12 @@ class ExperimentDocumentServiceTest {
   void should_keep_the_stored_content_when_row_level_security_rejects_the_delete() {
     // given
     given(documentRepository.getById(EXPERIMENT_ID, DOCUMENT_ID)).willReturn(DOCUMENT);
-    willThrow(new PermissionDeniedDataAccessException("rls", null))
+    willThrow(new AccessDeniedException("rls"))
         .given(documentRepository)
         .delete(EXPERIMENT_ID, DOCUMENT_ID);
 
     // when / then
-    assertThrows(
-        PermissionDeniedDataAccessException.class,
-        () -> service.delete(EXPERIMENT_ID, DOCUMENT_ID));
+    assertThrows(AccessDeniedException.class, () -> service.delete(EXPERIMENT_ID, DOCUMENT_ID));
     then(storage).shouldHaveNoInteractions();
   }
 }

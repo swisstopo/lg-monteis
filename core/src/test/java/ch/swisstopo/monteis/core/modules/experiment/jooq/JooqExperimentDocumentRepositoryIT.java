@@ -22,6 +22,7 @@ import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.PermissionDeniedDataAccessException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -259,14 +260,14 @@ class JooqExperimentDocumentRepositoryIT {
     // given
     UUID experimentId = newExperiment();
     ExperimentDocument document = createAsAdmin(experimentId);
+    UUID documentId = document.id();
 
     // when
     SecurityContextTestSupport.runAsUser(
         List.of(experimentId),
         () ->
             assertThrows(
-                PermissionDeniedDataAccessException.class,
-                () -> repository.delete(experimentId, document.id())));
+                AccessDeniedException.class, () -> repository.delete(experimentId, documentId)));
 
     // then
     assertThat(callAsAdmin(() -> repository.getById(experimentId, document.id())))
