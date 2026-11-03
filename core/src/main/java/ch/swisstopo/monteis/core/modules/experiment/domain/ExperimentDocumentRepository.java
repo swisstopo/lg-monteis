@@ -42,7 +42,7 @@ public interface ExperimentDocumentRepository {
   /**
    * Deletes the metadata of a document of an experiment.
    *
-   * @throws org.springframework.dao.PermissionDeniedDataAccessException if the caller may not
+   * @throws org.springframework.security.access.AccessDeniedException if the caller may not
    *     write the experiment or the document is gone
    */
   void delete(UUID experimentId, UUID documentId);

@@ -41,7 +41,7 @@ public interface SensorDocumentRepository {
   /**
    * Deletes the metadata of a document of a sensor.
    *
-   * @throws org.springframework.dao.PermissionDeniedDataAccessException if the caller may not
+   * @throws org.springframework.security.access.AccessDeniedException if the caller may not
    *     write an experiment of the sensor or the document is gone
    */
   void delete(UUID sensorId, UUID documentId);

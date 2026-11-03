@@ -117,7 +117,7 @@ class SensorDocumentServiceIT {
   void should_keep_the_document_row_when_deleting_its_stored_content_fails() {
     // given
     String fileName = uniqueFileName();
-    SensorDocument document = uploadAsAdmin(fileName);
+    UUID documentId = uploadAsAdmin(fileName).id();
     willThrow(new IllegalStateException("S3 unavailable")).given(storage).delete(any());
 
     // when
@@ -125,7 +125,7 @@ class SensorDocumentServiceIT {
         () ->
             assertThrows(
                 IllegalStateException.class,
-                () -> service.delete(SeedData.SENSOR_ONLY_IN_ALPHA, document.id())));
+                () -> service.delete(SeedData.SENSOR_ONLY_IN_ALPHA, documentId)));
 
     // then
     assertThat(countDocumentRows(fileName)).isEqualTo(1);

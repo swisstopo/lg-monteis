@@ -20,6 +20,7 @@ import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.PermissionDeniedDataAccessException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 @IT
@@ -194,6 +195,7 @@ class JooqSensorDocumentRepositoryIT {
     // given
     UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
     SensorDocument document = createAsAdmin(sensorId);
+    UUID documentId = document.id();
 
     // when
     SecurityContextTestSupport.runAsUser(
@@ -201,8 +203,7 @@ class JooqSensorDocumentRepositoryIT {
         List.of(SeedData.EXPERIMENT_BETA),
         () ->
             assertThrows(
-                PermissionDeniedDataAccessException.class,
-                () -> repository.delete(sensorId, document.id())));
+                AccessDeniedException.class, () -> repository.delete(sensorId, documentId)));
 
     // then
     assertThat(callAsAdmin(() -> repository.getById(sensorId, document.id()))).isEqualTo(document);

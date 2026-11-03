@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
-import org.springframework.dao.PermissionDeniedDataAccessException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,8 +76,8 @@ public class JooqExperimentDocumentRepository implements ExperimentDocumentRepos
             .and(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID.eq(experimentId))
             .execute();
     if (deleted == 0) {
-      throw new PermissionDeniedDataAccessException(
-          "document " + documentId + " of experiment " + experimentId + " was not deleted", null);
+      throw new AccessDeniedException(
+          "document " + documentId + " of experiment " + experimentId + " was not deleted");
     }
   }
 }
