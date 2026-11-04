@@ -20,6 +20,9 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
 
   private final @Nullable Jwt jwt;
   private final transient MonteisPrincipal principal;
+  private final boolean canWriteAll;
+  private final Set<UUID> readableExperimentIds;
+  private final Set<UUID> writableExperimentIds;
 
   public MonteisAuthenticationToken(
       @Nullable Jwt jwt,
@@ -28,6 +31,15 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
     super(authorities);
     this.jwt = jwt;
     this.principal = principal;
+    this.canWriteAll = hasPermission(Permissions.WRITE_ALL);
+    this.readableExperimentIds =
+        canWriteAll || !hasPermission(Permissions.EXPERIMENT_READ)
+            ? Set.of()
+            : Set.copyOf(principal.readExperimentIds());
+    this.writableExperimentIds =
+        canWriteAll || !hasPermission(Permissions.EXPERIMENT_WRITE)
+            ? Set.of()
+            : Set.copyOf(principal.writeExperimentIds());
     super.setAuthenticated(true);
   }
 
@@ -43,14 +55,12 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
 
   /** Admins and the system context: read and write everything. */
   public boolean canWriteAll() {
-    return hasPermission(Permissions.WRITE_ALL);
+    return canWriteAll;
   }
 
   /** The experiments the caller may read one by one; empty when {@link #canWriteAll()}. */
   public Set<UUID> readableExperimentIds() {
-    return canWriteAll() || !hasPermission(Permissions.EXPERIMENT_READ)
-        ? Set.of()
-        : Set.copyOf(principal.readExperimentIds());
+    return readableExperimentIds;
   }
 
   /**
@@ -58,9 +68,7 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
    * #readableExperimentIds()}; empty when {@link #canWriteAll()}.
    */
   public Set<UUID> writableExperimentIds() {
-    return canWriteAll() || !hasPermission(Permissions.EXPERIMENT_WRITE)
-        ? Set.of()
-        : Set.copyOf(principal.writeExperimentIds());
+    return writableExperimentIds;
   }
 
   private boolean hasPermission(String permission) {

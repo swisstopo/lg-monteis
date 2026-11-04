@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.infrastructure.security;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
@@ -77,6 +78,18 @@ class MonteisAuthenticationTokenTest {
     assertTrue(token.canWriteAll());
     assertEquals(Set.of(), token.readableExperimentIds());
     assertEquals(Set.of(), token.writableExperimentIds());
+  }
+
+  @Test
+  void should_hand_out_the_same_id_sets_on_every_call() {
+    // given
+    var token =
+        givenToken(
+            List.of(READ, WRITE), List.of(EXPERIMENT_1, EXPERIMENT_2), List.of(EXPERIMENT_1));
+
+    // when / then
+    assertSame(token.readableExperimentIds(), token.readableExperimentIds());
+    assertSame(token.writableExperimentIds(), token.writableExperimentIds());
   }
 
   @Test
