@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.contracts.SensorParameterConfig;
+import ch.swisstopo.monteis.pipeline.persistence.ConfigStamp;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.ChunkProcessingResult;
 import ch.swisstopo.monteis.pipeline.transformation.processing.cache.ActiveSensorConfig;
@@ -62,7 +63,7 @@ class SensorReprocessingOrchestratorTest {
 
     given(
             sensorReadingRepository.checkStaleSensorDataByDasKey(
-                DAS_KEY, sensorParameterId, (short) 2))
+                new ConfigStamp(DAS_KEY, sensorParameterId, (short) 2)))
         .willReturn(false);
 
     // when
@@ -82,13 +83,13 @@ class SensorReprocessingOrchestratorTest {
 
     given(
             sensorReadingRepository.checkStaleSensorDataByDasKey(
-                DAS_KEY, sensorParameterId, (short) 3))
+                new ConfigStamp(DAS_KEY, sensorParameterId, (short) 3)))
         .willReturn(true);
 
     OffsetDateTime firstCursor = OffsetDateTime.now().minusMinutes(1);
     OffsetDateTime secondCursor = OffsetDateTime.now().minusMinutes(2);
 
-    given(chunkService.processNextChunk(eq(config), eq(DAS_KEY), any()))
+    given(chunkService.processNextChunk(eq(config), any()))
         .willReturn(
             new ChunkProcessingResult(100, firstCursor),
             new ChunkProcessingResult(50, secondCursor),
@@ -98,10 +99,10 @@ class SensorReprocessingOrchestratorTest {
     sensorReprocessingOrchestrator.checkAndReprocessHistoricalData(config);
 
     // then
-    then(chunkService).should(times(3)).processNextChunk(eq(config), eq(DAS_KEY), any());
-    then(chunkService).should().processNextChunk(config, DAS_KEY, null);
-    then(chunkService).should().processNextChunk(config, DAS_KEY, firstCursor);
-    then(chunkService).should().processNextChunk(config, DAS_KEY, secondCursor);
+    then(chunkService).should(times(3)).processNextChunk(eq(config), any());
+    then(chunkService).should().processNextChunk(config, null);
+    then(chunkService).should().processNextChunk(config, firstCursor);
+    then(chunkService).should().processNextChunk(config, secondCursor);
 
     assertThat(meterRegistry.get("pipeline.reprocessing.run.duration").timer().count())
         .isEqualTo(1);

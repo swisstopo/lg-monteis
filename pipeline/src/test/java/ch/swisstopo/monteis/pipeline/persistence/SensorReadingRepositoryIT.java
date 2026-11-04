@@ -163,7 +163,9 @@ class SensorReadingRepositoryIT {
     insertReading("sensor-001", sensorParameterId, (short) 3, OffsetDateTime.now());
 
     // when
-    boolean result = repo.checkStaleSensorDataByDasKey("sensor-001", sensorParameterId, (short) 5);
+    boolean result =
+        repo.checkStaleSensorDataByDasKey(
+            new ConfigStamp("sensor-001", sensorParameterId, (short) 5));
 
     // then
     assertTrue(result);
@@ -175,7 +177,9 @@ class SensorReadingRepositoryIT {
     insertReading("sensor-001", null, (short) 0, OffsetDateTime.now());
 
     // when
-    boolean result = repo.checkStaleSensorDataByDasKey("sensor-001", UUID.randomUUID(), (short) 1);
+    boolean result =
+        repo.checkStaleSensorDataByDasKey(
+            new ConfigStamp("sensor-001", UUID.randomUUID(), (short) 1));
 
     // then
     assertTrue(result);
@@ -187,7 +191,9 @@ class SensorReadingRepositoryIT {
     insertReading("sensor-001", UUID.randomUUID(), (short) 7, OffsetDateTime.now());
 
     // when
-    boolean result = repo.checkStaleSensorDataByDasKey("sensor-001", UUID.randomUUID(), (short) 1);
+    boolean result =
+        repo.checkStaleSensorDataByDasKey(
+            new ConfigStamp("sensor-001", UUID.randomUUID(), (short) 1));
 
     // then
     assertTrue(result);
@@ -200,7 +206,9 @@ class SensorReadingRepositoryIT {
     insertReading("sensor-001", sensorParameterId, (short) 2, OffsetDateTime.now());
 
     // when
-    boolean result = repo.checkStaleSensorDataByDasKey("sensor-001", sensorParameterId, (short) 2);
+    boolean result =
+        repo.checkStaleSensorDataByDasKey(
+            new ConfigStamp("sensor-001", sensorParameterId, (short) 2));
 
     // then
     assertFalse(result);
@@ -213,7 +221,9 @@ class SensorReadingRepositoryIT {
     insertReading("sensor-002", sensorParameterId, (short) 1, OffsetDateTime.now());
 
     // when
-    boolean result = repo.checkStaleSensorDataByDasKey("sensor-001", sensorParameterId, (short) 2);
+    boolean result =
+        repo.checkStaleSensorDataByDasKey(
+            new ConfigStamp("sensor-001", sensorParameterId, (short) 2));
 
     // then
     assertFalse(result);
@@ -230,7 +240,8 @@ class SensorReadingRepositoryIT {
 
     // when
     var result =
-        repo.fetchStaleSensorDataByDasKey("sensor-001", sensorParameterId, (short) 4, 2, null);
+        repo.fetchStaleSensorDataByDasKey(
+            new ConfigStamp("sensor-001", sensorParameterId, (short) 4), 2, null);
 
     // then
     assertThat(result).hasSize(2).allMatch(r -> r.getVersion() < 4);
@@ -249,7 +260,9 @@ class SensorReadingRepositoryIT {
     insertReading("sensor-002", sensorParameterId, (short) 1, now.plusMinutes(4)); // other key
 
     // when
-    var result = repo.fetchStaleSensorDataByDasKey(dasKey, sensorParameterId, (short) 2, 10, null);
+    var result =
+        repo.fetchStaleSensorDataByDasKey(
+            new ConfigStamp(dasKey, sensorParameterId, (short) 2), 10, null);
 
     // then
     assertThat(result)
@@ -272,7 +285,8 @@ class SensorReadingRepositoryIT {
 
     // when: first chunk (newest first, no cursor yet)
     var firstChunk =
-        repo.fetchStaleSensorDataByDasKey(sensorId, sensorParameterId, (short) 2, 2, null);
+        repo.fetchStaleSensorDataByDasKey(
+            new ConfigStamp(sensorId, sensorParameterId, (short) 2), 2, null);
     // then
     assertThat(firstChunk).hasSize(2);
     assertThat(firstChunk.get(0).getTimestamp()).isEqualTo(baseTime.plusMinutes(5));
@@ -281,7 +295,9 @@ class SensorReadingRepositoryIT {
     // when: second chunk resumes strictly before the first chunk's oldest timestamp
     var secondChunk =
         repo.fetchStaleSensorDataByDasKey(
-            sensorId, sensorParameterId, (short) 2, 2, firstChunk.getLast().getTimestamp());
+            new ConfigStamp(sensorId, sensorParameterId, (short) 2),
+            2,
+            firstChunk.getLast().getTimestamp());
     // then
     assertThat(secondChunk).hasSize(2);
     assertThat(secondChunk.get(0).getTimestamp()).isEqualTo(baseTime.plusMinutes(3));
@@ -290,7 +306,9 @@ class SensorReadingRepositoryIT {
     // when: third chunk picks up the single remaining row
     var thirdChunk =
         repo.fetchStaleSensorDataByDasKey(
-            sensorId, sensorParameterId, (short) 2, 2, secondChunk.getLast().getTimestamp());
+            new ConfigStamp(sensorId, sensorParameterId, (short) 2),
+            2,
+            secondChunk.getLast().getTimestamp());
     // then
     assertThat(thirdChunk).hasSize(1);
     assertThat(thirdChunk.getFirst().getTimestamp()).isEqualTo(baseTime.plusMinutes(1));

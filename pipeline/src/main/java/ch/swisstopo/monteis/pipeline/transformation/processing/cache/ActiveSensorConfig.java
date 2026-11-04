@@ -1,6 +1,8 @@
 package ch.swisstopo.monteis.pipeline.transformation.processing.cache;
 
+import ch.swisstopo.monteis.contracts.DasKey;
 import ch.swisstopo.monteis.contracts.SensorParameterConfig;
+import ch.swisstopo.monteis.pipeline.persistence.ConfigStamp;
 import org.scijava.parsington.ExpressionParser;
 import org.scijava.parsington.SyntaxTree;
 import org.scijava.parsington.Variable;
@@ -20,6 +22,17 @@ public class ActiveSensorConfig {
 
   public SensorParameterConfig getConfig() {
     return config;
+  }
+
+  // composed on call, not in the constructor: SensorConfigCache's default config has no DAS
+  public String dasKey() {
+    return DasKey.compose(
+        config.getDas(), config.getDasSensorAlias(), config.getDasParameterAlias());
+  }
+
+  public ConfigStamp stamp() {
+    return new ConfigStamp(
+        dasKey(), config.getSensorParameterId(), config.getVersion().shortValue());
   }
 
   /**

@@ -10,6 +10,7 @@ import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.enums.RangeCategory;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
+import ch.swisstopo.monteis.pipeline.persistence.ConfigStamp;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.ChunkProcessingResult;
 import ch.swisstopo.monteis.pipeline.transformation.ProcessingOrigin;
@@ -86,11 +87,11 @@ class HistoricalReadingChunkProcessorTest {
 
     given(
             sensorReadingRepository.fetchStaleSensorDataByDasKey(
-                DAS_KEY, sensorParameterId, (short) 2, testChunkSize, null))
+                new ConfigStamp(DAS_KEY, sensorParameterId, (short) 2), testChunkSize, null))
         .willReturn(List.of());
 
     // when
-    ChunkProcessingResult result = chunkService.processNextChunk(config, DAS_KEY, null);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
 
     // then
     assertThat(result.processedCount()).isZero();
@@ -112,7 +113,7 @@ class HistoricalReadingChunkProcessorTest {
 
     given(
             sensorReadingRepository.fetchStaleSensorDataByDasKey(
-                DAS_KEY, sensorParameterId, (short) 2, testChunkSize, null))
+                new ConfigStamp(DAS_KEY, sensorParameterId, (short) 2), testChunkSize, null))
         .willReturn(List.of(oldRecord));
 
     SensorReadingRecord transformedRecord =
@@ -125,7 +126,7 @@ class HistoricalReadingChunkProcessorTest {
         .willReturn(transformedRecord);
 
     // when
-    ChunkProcessingResult result = chunkService.processNextChunk(config, DAS_KEY, null);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
 
     // then
     assertThat(result.processedCount()).isEqualTo(1);
@@ -165,7 +166,7 @@ class HistoricalReadingChunkProcessorTest {
 
     given(
             sensorReadingRepository.fetchStaleSensorDataByDasKey(
-                DAS_KEY, sensorParameterId, (short) 1, testChunkSize, null))
+                new ConfigStamp(DAS_KEY, sensorParameterId, (short) 1), testChunkSize, null))
         .willReturn(List.of(oldRecord));
 
     SensorReadingRecord transformedRecord =
@@ -178,7 +179,7 @@ class HistoricalReadingChunkProcessorTest {
         .willReturn(transformedRecord);
 
     // when
-    ChunkProcessingResult result = chunkService.processNextChunk(config, DAS_KEY, null);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
 
     // then
     assertThat(result.processedCount()).isEqualTo(1);
@@ -203,7 +204,7 @@ class HistoricalReadingChunkProcessorTest {
 
     given(
             sensorReadingRepository.fetchStaleSensorDataByDasKey(
-                DAS_KEY, sensorParameterId, (short) 3, testChunkSize, null))
+                new ConfigStamp(DAS_KEY, sensorParameterId, (short) 3), testChunkSize, null))
         .willReturn(List.of(poisonRecord));
 
     TransformationException ex = mock(TransformationException.class);
@@ -215,7 +216,7 @@ class HistoricalReadingChunkProcessorTest {
         .willThrow(ex);
 
     // when
-    ChunkProcessingResult result = chunkService.processNextChunk(config, DAS_KEY, null);
+    ChunkProcessingResult result = chunkService.processNextChunk(config, null);
 
     // then
     assertThat(result.processedCount()).isEqualTo(1);

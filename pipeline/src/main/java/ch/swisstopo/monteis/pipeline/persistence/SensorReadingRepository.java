@@ -74,37 +74,31 @@ public class SensorReadingRepository {
   // (or no) sensor parameter's config: rows ingested before the config was known
   // (sensor_parameter_id NULL) and keys remapped to another sensor parameter.
 
-  private static Condition staleForDasKey(String dasKey, UUID sensorParameterId, short version) {
+  private static Condition staleForDasKey(ConfigStamp current) {
     return Tables.SENSOR_READING
         .DAS_KEY
-        .eq(dasKey)
+        .eq(current.dasKey())
         .and(
             Tables.SENSOR_READING
                 .VERSION
-                .lt(version)
-                .or(Tables.SENSOR_READING.SENSOR_PARAMETER_ID.isDistinctFrom(sensorParameterId)));
+                .lt(current.version())
+                .or(
+                    Tables.SENSOR_READING.SENSOR_PARAMETER_ID.isDistinctFrom(
+                        current.sensorParameterId())));
   }
 
-  public boolean checkStaleSensorDataByDasKey(
-      String dasKey, UUID sensorParameterId, short version) {
+  public boolean checkStaleSensorDataByDasKey(ConfigStamp current) {
     return ctx.fetchExists(
-        ctx.selectOne()
-            .from(Tables.SENSOR_READING)
-            .where(staleForDasKey(dasKey, sensorParameterId, version)));
+        ctx.selectOne().from(Tables.SENSOR_READING).where(staleForDasKey(current)));
   }
 
   // The cursor (previous chunk's oldest timestamp) lets each call seek straight to where the
   // last one left off via the (das_key, timestamp DESC) index, instead of re-scanning past
   // every already-reprocessed row on every chunk.
   public List<SensorReadingRecord> fetchStaleSensorDataByDasKey(
-      String dasKey,
-      UUID sensorParameterId,
-      short version,
-      int limit,
-      OffsetDateTime cursorTimestamp) {
+      ConfigStamp current, int limit, OffsetDateTime cursorTimestamp) {
     SelectConditionStep<SensorReadingRecord> query =
-        ctx.selectFrom(Tables.SENSOR_READING)
-            .where(staleForDasKey(dasKey, sensorParameterId, version));
+        ctx.selectFrom(Tables.SENSOR_READING).where(staleForDasKey(current));
 
     if (cursorTimestamp != null) {
       query = query.and(Tables.SENSOR_READING.TIMESTAMP.lt(cursorTimestamp));

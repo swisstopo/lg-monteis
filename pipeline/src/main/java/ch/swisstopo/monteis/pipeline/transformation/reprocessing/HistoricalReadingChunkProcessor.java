@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.pipeline.transformation.reprocessing;
 
-import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.pipeline.jooq.generated.tables.records.SensorReadingRecord;
 import ch.swisstopo.monteis.pipeline.persistence.SensorReadingRepository;
 import ch.swisstopo.monteis.pipeline.transformation.ChunkProcessingResult;
@@ -62,15 +61,10 @@ public class HistoricalReadingChunkProcessor {
    * {@code SensorReadingRepository.fetchStaleSensorDataByDasKey}.
    */
   public ChunkProcessingResult processNextChunk(
-      ActiveSensorConfig activeSensorConfig, String dasKey, OffsetDateTime cursor) {
-    SensorParameterConfig config = activeSensorConfig.getConfig();
+      ActiveSensorConfig activeSensorConfig, OffsetDateTime cursor) {
     List<SensorReadingRecord> oldRecords =
         sensorReadingRepository.fetchStaleSensorDataByDasKey(
-            dasKey,
-            config.getSensorParameterId(),
-            config.getVersion().shortValue(),
-            chunkSize,
-            cursor);
+            activeSensorConfig.stamp(), chunkSize, cursor);
     return processChunk(activeSensorConfig, oldRecords, cursor);
   }
 
