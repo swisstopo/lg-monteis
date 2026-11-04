@@ -34,7 +34,6 @@ export class PermissionsService {
 
   private readonly currentUser = toSignal(this.currentUser$, { initialValue: NO_PERMISSIONS });
 
-  /** The admin role: write access to everything, including the admin-only actions and the Sensor menu. */
   readonly isAdmin = computed(() => this.currentUser().isAdmin);
 
   readonly writeExperimentIds = computed<readonly string[]>(

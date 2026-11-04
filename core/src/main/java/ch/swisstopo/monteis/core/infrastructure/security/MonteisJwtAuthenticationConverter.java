@@ -11,10 +11,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
- * The one place that turns a Keycloak access token into this app's {@link
- * MonteisAuthenticationToken}: the client roles read by {@link KeycloakClaimExtractor} map 1:1 to
- * {@link Permissions} (BR4.1), roles unknown to this app are ignored, and the identity and
- * experiment ids become the {@link MonteisPrincipal}.
+ * Builds this app's {@link MonteisAuthenticationToken} from a JWT: client roles map to {@code
+ * api:*} authorities, and the identity read by {@link KeycloakClaimExtractor} becomes the {@link
+ * MonteisPrincipal}.
  */
 public class MonteisJwtAuthenticationConverter
     implements Converter<Jwt, AbstractAuthenticationToken> {

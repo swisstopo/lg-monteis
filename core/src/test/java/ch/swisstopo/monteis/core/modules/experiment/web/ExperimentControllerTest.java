@@ -565,7 +565,7 @@ class ExperimentControllerTest {
   @Test
   void should_return_403_access_denied_when_row_level_security_refuses_the_update()
       throws Exception {
-    // given: the RLS WITH CHECK rejected the row (42501)
+    // given: the filter chain allowed it, but the RLS WITH CHECK rejected the row (42501)
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
     given(experimentService.updateExperiment(mockDomain))
