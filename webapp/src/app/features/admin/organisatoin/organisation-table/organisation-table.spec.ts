@@ -48,7 +48,7 @@ describe('OrganisationTable', () => {
         { provide: OrganisationService, useValue: organisationService },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
-        { provide: PermissionsService, useValue: { canWriteAll: signal(true) } },
+        { provide: PermissionsService, useValue: { isAdmin: signal(true) } },
       ],
     });
     const fixture = TestBed.createComponent(OrganisationTable);

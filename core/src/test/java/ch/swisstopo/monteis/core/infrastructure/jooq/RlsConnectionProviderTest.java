@@ -129,7 +129,7 @@ class RlsConnectionProviderTest {
               SecurityContext context = SecurityContextHolder.createEmptyContext();
               context.setAuthentication(
                   UsernamePasswordAuthenticationToken.authenticated(
-                      "x", null, List.of(new SimpleGrantedAuthority(Permissions.WRITE_ALL))));
+                      "x", null, List.of(new SimpleGrantedAuthority(Permissions.ADMIN))));
               SecurityContextHolder.setContext(context);
               action.run();
             });

@@ -22,7 +22,7 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
 
   private final @Nullable Jwt jwt;
   private final transient MonteisPrincipal principal;
-  private final boolean canWriteAll;
+  private final boolean isAdmin;
   private final Set<UUID> readableExperimentIds;
   private final Set<UUID> writableExperimentIds;
 
@@ -35,13 +35,13 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
     super(authorities);
     this.jwt = jwt;
     this.principal = principal;
-    this.canWriteAll = hasPermission(Permissions.WRITE_ALL);
+    this.isAdmin = hasPermission(Permissions.ADMIN);
     this.writableExperimentIds =
-        canWriteAll || !hasPermission(Permissions.EXPERIMENT_WRITE)
+        isAdmin || !hasPermission(Permissions.EXPERIMENT_WRITE)
             ? Set.of()
             : Set.copyOf(writeExperimentIds);
     this.readableExperimentIds =
-        canWriteAll || !hasPermission(Permissions.EXPERIMENT_READ)
+        isAdmin || !hasPermission(Permissions.EXPERIMENT_READ)
             ? Set.of()
             : union(readExperimentIds, writableExperimentIds);
     super.setAuthenticated(true);
@@ -58,18 +58,18 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
   }
 
   /** Admins and the system context: read and write everything. */
-  public boolean canWriteAll() {
-    return canWriteAll;
+  public boolean isAdmin() {
+    return isAdmin;
   }
 
-  /** The experiments the caller may read one by one; empty when {@link #canWriteAll()}. */
+  /** The experiments the caller may read one by one; empty when {@link #isAdmin()}. */
   public Set<UUID> readableExperimentIds() {
     return readableExperimentIds;
   }
 
   /**
    * The experiments whose metadata the caller may write one by one, always a subset of {@link
-   * #readableExperimentIds()}; empty when {@link #canWriteAll()}.
+   * #readableExperimentIds()}; empty when {@link #isAdmin()}.
    */
   public Set<UUID> writableExperimentIds() {
     return writableExperimentIds;

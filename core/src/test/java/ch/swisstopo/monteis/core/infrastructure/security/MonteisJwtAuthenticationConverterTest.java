@@ -112,7 +112,7 @@ class MonteisJwtAuthenticationConverterTest {
 
     // then
     assertEquals(new MonteisPrincipal(subject, "root"), token.getPrincipal());
-    assertEquals(Set.of(Permissions.WRITE_ALL), authoritiesOf(token));
+    assertEquals(Set.of(Permissions.ADMIN), authoritiesOf(token));
     assertEquals(Set.of(), token.readableExperimentIds());
     assertEquals(Set.of(), token.writableExperimentIds());
   }

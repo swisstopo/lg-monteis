@@ -6,9 +6,9 @@ import { describe, expect, it } from 'vitest';
 import { ADMIN, AuthorizationCheck, authorizationGuard } from './authorization.guard';
 import { PermissionsService } from './permissions.service';
 
-function runGuard(check: AuthorizationCheck, canWriteAll = false): Promise<boolean> {
+function runGuard(check: AuthorizationCheck, isAdmin = false): Promise<boolean> {
   TestBed.configureTestingModule({
-    providers: [{ provide: PermissionsService, useValue: { currentUser$: of({ canWriteAll }) } }],
+    providers: [{ provide: PermissionsService, useValue: { currentUser$: of({ isAdmin }) } }],
   });
   const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
     authorizationGuard(check)({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),

@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.modules.identity.web;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.Permissions.WRITE_ALL;
+import static ch.swisstopo.monteis.core.infrastructure.security.Permissions.ADMIN;
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIMENT;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -58,9 +58,9 @@ class CurrentUserControllerTest {
     // e.g. Spring Security Test's jwt() shortcut: authenticated, but not a
     // MonteisAuthenticationToken
     mockMvc
-        .perform(get("/api/me").with(jwt().authorities(new SimpleGrantedAuthority(WRITE_ALL))))
+        .perform(get("/api/me").with(jwt().authorities(new SimpleGrantedAuthority(ADMIN))))
         .andExpect(status().is5xxServerError())
-        .andExpect(jsonPath("$.canWriteAll").doesNotExist());
+        .andExpect(jsonPath("$.isAdmin").doesNotExist());
   }
 
   @Test
@@ -68,7 +68,7 @@ class CurrentUserControllerTest {
     mockMvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
   }
 
-  private static String body(boolean canWriteAll, String writeIds) {
-    return "{\"canWriteAll\":%s,\"writeExperimentIds\":[%s]}".formatted(canWriteAll, writeIds);
+  private static String body(boolean isAdmin, String writeIds) {
+    return "{\"isAdmin\":%s,\"writeExperimentIds\":[%s]}".formatted(isAdmin, writeIds);
   }
 }
