@@ -20,6 +20,7 @@ import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryReposi
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.SensorWebMapper;
+import ch.swisstopo.monteis.core.modules.visualization.service.TileUploadService;
 import java.time.Clock;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +40,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * Whether the rules themselves hold for each privilege level is {@code
  * SecurityConfigAuthorizationTest}'s job.
  */
+// FIXME the static path managed by spring `api/tileset/` doesn't seem to be in this set?
 @ControllerTest
 class EndpointCoverageTest {
 
@@ -73,7 +75,8 @@ class EndpointCoverageTest {
           "GET /api/measurements/charts/data",
           "GET /api/measurements/sensors/{id}",
           "GET /api/overview/metrics",
-          "GET /api/me");
+          "GET /api/me",
+          "POST /api/tiles");
 
   @Autowired private RequestMappingHandlerMapping handlerMapping;
 
@@ -93,6 +96,7 @@ class EndpointCoverageTest {
   @MockitoBean private MeasurementService measurementService;
   @MockitoBean private OverviewService overviewService;
   @MockitoBean private PagedRequestParser pagedRequestParser;
+  @MockitoBean private TileUploadService tileUploadService;
   @MockitoBean private Clock clock;
 
   @Test

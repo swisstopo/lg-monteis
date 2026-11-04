@@ -24,5 +24,7 @@ public final class ApiPaths {
   public static final String SENSORS = "/api/sensors";
   public static final String ORGANISATIONS = "/api/organisations";
 
+  public static final String TILE_PATH = "/model/tiles/{*path}";
+
   private ApiPaths() {}
 }
