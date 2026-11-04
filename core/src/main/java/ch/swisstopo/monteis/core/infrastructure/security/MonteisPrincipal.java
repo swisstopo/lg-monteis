@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.infrastructure.security;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -18,7 +19,8 @@ public record MonteisPrincipal(
 
   public MonteisPrincipal {
     readExperimentIds = List.copyOf(readExperimentIds);
-    writeExperimentIds = writeExperimentIds.stream().filter(readExperimentIds::contains).toList();
+    Set<UUID> readable = Set.copyOf(readExperimentIds);
+    writeExperimentIds = writeExperimentIds.stream().filter(readable::contains).toList();
   }
 
   public UUID getSubject() {
