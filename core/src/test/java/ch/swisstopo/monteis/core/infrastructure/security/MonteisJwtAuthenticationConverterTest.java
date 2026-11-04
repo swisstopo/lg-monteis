@@ -73,8 +73,9 @@ class MonteisJwtAuthenticationConverterTest {
             .map(GrantedAuthority::getAuthority)
             .collect(Collectors.toSet()),
         authoritiesOf(token));
-    assertEquals(level.readableExperimentIds(), token.readableExperimentIds());
-    assertEquals(Set.copyOf(level.writeExperimentIds()), token.writableExperimentIds());
+    assertEquals(level.readableExperimentIds(), token.experimentAccess().readableExperimentIds());
+    assertEquals(
+        Set.copyOf(level.writeExperimentIds()), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -96,8 +97,9 @@ class MonteisJwtAuthenticationConverterTest {
     assertEquals(new MonteisPrincipal(subject, "alice"), token.getPrincipal());
     assertEquals(
         Set.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE), authoritiesOf(token));
-    assertEquals(Set.of(EXPERIMENT_1, EXPERIMENT_2), token.readableExperimentIds());
-    assertEquals(Set.of(EXPERIMENT_1), token.writableExperimentIds());
+    assertEquals(
+        Set.of(EXPERIMENT_1, EXPERIMENT_2), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_1), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -113,8 +115,8 @@ class MonteisJwtAuthenticationConverterTest {
     // then
     assertEquals(new MonteisPrincipal(subject, "root"), token.getPrincipal());
     assertEquals(Set.of(Permissions.ADMIN), authoritiesOf(token));
-    assertEquals(Set.of(), token.readableExperimentIds());
-    assertEquals(Set.of(), token.writableExperimentIds());
+    assertEquals(Set.of(), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -143,8 +145,8 @@ class MonteisJwtAuthenticationConverterTest {
     // then
     assertEquals(
         Set.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE), authoritiesOf(token));
-    assertEquals(Set.of(EXPERIMENT_1), token.readableExperimentIds());
-    assertEquals(Set.of(EXPERIMENT_1), token.writableExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_1), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_1), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -157,8 +159,8 @@ class MonteisJwtAuthenticationConverterTest {
     var token = (MonteisAuthenticationToken) converter.convert(jwt);
 
     // then
-    assertEquals(Set.of(EXPERIMENT_1), token.readableExperimentIds());
-    assertEquals(Set.of(), token.writableExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_1), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -176,8 +178,10 @@ class MonteisJwtAuthenticationConverterTest {
     var token = (MonteisAuthenticationToken) converter.convert(jwt);
 
     // then
-    assertEquals(Set.of(EXPERIMENT_1, EXPERIMENT_2), token.readableExperimentIds());
-    assertEquals(Set.of(EXPERIMENT_1, EXPERIMENT_2), token.writableExperimentIds());
+    assertEquals(
+        Set.of(EXPERIMENT_1, EXPERIMENT_2), token.experimentAccess().readableExperimentIds());
+    assertEquals(
+        Set.of(EXPERIMENT_1, EXPERIMENT_2), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -192,7 +196,7 @@ class MonteisJwtAuthenticationConverterTest {
     // then
     assertEquals(new MonteisPrincipal(subject, "carol"), token.getPrincipal());
     assertEquals(Set.of(), authoritiesOf(token));
-    assertEquals(Set.of(), token.readableExperimentIds());
+    assertEquals(Set.of(), token.experimentAccess().readableExperimentIds());
   }
 
   @Test

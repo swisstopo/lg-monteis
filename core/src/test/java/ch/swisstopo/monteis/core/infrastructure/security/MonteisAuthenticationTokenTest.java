@@ -37,9 +37,10 @@ class MonteisAuthenticationTokenTest {
     MonteisAuthenticationToken token = level.authentication();
 
     // then
-    assertEquals(level == PrivilegeLevel.MONTEIS_ADMIN, token.isAdmin());
-    assertEquals(level.readableExperimentIds(), token.readableExperimentIds());
-    assertEquals(Set.copyOf(level.writeExperimentIds()), token.writableExperimentIds());
+    assertEquals(level == PrivilegeLevel.MONTEIS_ADMIN, token.experimentAccess().isAdmin());
+    assertEquals(level.readableExperimentIds(), token.experimentAccess().readableExperimentIds());
+    assertEquals(
+        Set.copyOf(level.writeExperimentIds()), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -50,9 +51,10 @@ class MonteisAuthenticationTokenTest {
             List.of(READ, WRITE), List.of(EXPERIMENT_1, EXPERIMENT_2), List.of(EXPERIMENT_1));
 
     // then
-    assertFalse(token.isAdmin());
-    assertEquals(Set.of(EXPERIMENT_1, EXPERIMENT_2), token.readableExperimentIds());
-    assertEquals(Set.of(EXPERIMENT_1), token.writableExperimentIds());
+    assertFalse(token.experimentAccess().isAdmin());
+    assertEquals(
+        Set.of(EXPERIMENT_1, EXPERIMENT_2), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_1), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -61,8 +63,9 @@ class MonteisAuthenticationTokenTest {
     var token = givenToken(List.of(READ, WRITE), List.of(EXPERIMENT_2), List.of(EXPERIMENT_1));
 
     // then
-    assertEquals(Set.of(EXPERIMENT_1, EXPERIMENT_2), token.readableExperimentIds());
-    assertEquals(Set.of(EXPERIMENT_1), token.writableExperimentIds());
+    assertEquals(
+        Set.of(EXPERIMENT_1, EXPERIMENT_2), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_1), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -72,9 +75,9 @@ class MonteisAuthenticationTokenTest {
     var withoutAny = givenToken(List.of(), List.of(EXPERIMENT_1), List.of(EXPERIMENT_1));
 
     // then
-    assertEquals(Set.of(), withoutWrite.writableExperimentIds());
-    assertEquals(Set.of(), withoutAny.readableExperimentIds());
-    assertEquals(Set.of(), withoutAny.writableExperimentIds());
+    assertEquals(Set.of(), withoutWrite.experimentAccess().writableExperimentIds());
+    assertEquals(Set.of(), withoutAny.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(), withoutAny.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -84,9 +87,9 @@ class MonteisAuthenticationTokenTest {
         givenToken(List.of(ADMIN, READ, WRITE), List.of(EXPERIMENT_1), List.of(EXPERIMENT_1));
 
     // then
-    assertTrue(token.isAdmin());
-    assertEquals(Set.of(), token.readableExperimentIds());
-    assertEquals(Set.of(), token.writableExperimentIds());
+    assertTrue(token.experimentAccess().isAdmin());
+    assertEquals(Set.of(), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -97,8 +100,12 @@ class MonteisAuthenticationTokenTest {
             List.of(READ, WRITE), List.of(EXPERIMENT_1, EXPERIMENT_2), List.of(EXPERIMENT_1));
 
     // when / then
-    assertSame(token.readableExperimentIds(), token.readableExperimentIds());
-    assertSame(token.writableExperimentIds(), token.writableExperimentIds());
+    assertSame(
+        token.experimentAccess().readableExperimentIds(),
+        token.experimentAccess().readableExperimentIds());
+    assertSame(
+        token.experimentAccess().writableExperimentIds(),
+        token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -111,8 +118,8 @@ class MonteisAuthenticationTokenTest {
             List.of());
 
     // then
-    assertFalse(token.isAdmin());
-    assertEquals(Set.of(), token.readableExperimentIds());
+    assertFalse(token.experimentAccess().isAdmin());
+    assertEquals(Set.of(), token.experimentAccess().readableExperimentIds());
   }
 
   @Test
