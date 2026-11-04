@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.jooq;
 
+import ch.swisstopo.monteis.core.infrastructure.security.ExperimentAccess;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -19,7 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * <ul>
  *   <li>{@code app.read_all_experiments} and {@code app.write_all_experiments}: {@code true} when
  *       the caller may read and write every experiment ({@link
- *       MonteisAuthenticationToken#isAdmin()});
+ *       ExperimentAccess#isAdmin()});
  *   <li>{@code app.read_experiment_ids}: the readable experiment ids, comma-separated;
  *   <li>{@code app.write_experiment_ids}: the writable experiment ids, comma-separated, always a
  *       subset of the readable ones.
@@ -47,7 +48,7 @@ public class RlsConnectionProvider implements ConnectionProvider {
   @Override
   public Connection acquire() {
     Connection connection = delegate.acquire();
-    applySecurityContext(connection);
+    writeRlsContext(connection, currentExperimentAccess());
     return connection;
   }
 
@@ -56,21 +57,19 @@ public class RlsConnectionProvider implements ConnectionProvider {
     delegate.release(connection);
   }
 
-  private static void applySecurityContext(Connection connection) {
-    boolean isAdmin = false;
-    Set<UUID> readableExperimentIds = Set.of();
-    Set<UUID> writableExperimentIds = Set.of();
-    if (SecurityContextHolder.getContext().getAuthentication()
-        instanceof MonteisAuthenticationToken token) {
-      isAdmin = token.isAdmin();
-      readableExperimentIds = token.readableExperimentIds();
-      writableExperimentIds = token.writableExperimentIds();
-    }
+  private static ExperimentAccess currentExperimentAccess() {
+    return SecurityContextHolder.getContext().getAuthentication()
+            instanceof MonteisAuthenticationToken token
+        ? token.experimentAccess()
+        : ExperimentAccess.NONE;
+  }
+
+  private static void writeRlsContext(Connection connection, ExperimentAccess access) {
     try (PreparedStatement statement = connection.prepareStatement(SET_RLS_CONTEXT)) {
-      statement.setString(1, String.valueOf(isAdmin));
-      statement.setString(2, String.valueOf(isAdmin));
-      statement.setString(3, toSortedCsv(readableExperimentIds));
-      statement.setString(4, toSortedCsv(writableExperimentIds));
+      statement.setString(1, String.valueOf(access.isAdmin()));
+      statement.setString(2, String.valueOf(access.isAdmin()));
+      statement.setString(3, toSortedCsv(access.readableExperimentIds()));
+      statement.setString(4, toSortedCsv(access.writableExperimentIds()));
       statement.execute();
     } catch (SQLException e) {
       throw new DataAccessException("Failed to set RLS context", e);
