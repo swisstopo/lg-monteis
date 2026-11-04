@@ -21,7 +21,7 @@ public final class SystemSecurityContext {
       new MonteisAuthenticationToken(
           null,
           new MonteisPrincipal(SYSTEM_SUBJECT, "SYSTEM"),
-          List.of(new SimpleGrantedAuthority(Permissions.WRITE_ALL)),
+          List.of(new SimpleGrantedAuthority(Permissions.ADMIN)),
           List.of(),
           List.of());
 

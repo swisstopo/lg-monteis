@@ -19,7 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * <ul>
  *   <li>{@code app.read_all_experiments} and {@code app.write_all_experiments}: {@code true} when
  *       the caller may read and write every experiment ({@link
- *       MonteisAuthenticationToken#canWriteAll()});
+ *       MonteisAuthenticationToken#isAdmin()});
  *   <li>{@code app.read_experiment_ids}: the readable experiment ids, comma-separated;
  *   <li>{@code app.write_experiment_ids}: the writable experiment ids, comma-separated, always a
  *       subset of the readable ones.
@@ -57,18 +57,18 @@ public class RlsConnectionProvider implements ConnectionProvider {
   }
 
   private static void applySecurityContext(Connection connection) {
-    boolean canWriteAll = false;
+    boolean isAdmin = false;
     Set<UUID> readableExperimentIds = Set.of();
     Set<UUID> writableExperimentIds = Set.of();
     if (SecurityContextHolder.getContext().getAuthentication()
         instanceof MonteisAuthenticationToken token) {
-      canWriteAll = token.canWriteAll();
+      isAdmin = token.isAdmin();
       readableExperimentIds = token.readableExperimentIds();
       writableExperimentIds = token.writableExperimentIds();
     }
     try (PreparedStatement statement = connection.prepareStatement(SET_RLS_CONTEXT)) {
-      statement.setString(1, String.valueOf(canWriteAll));
-      statement.setString(2, String.valueOf(canWriteAll));
+      statement.setString(1, String.valueOf(isAdmin));
+      statement.setString(2, String.valueOf(isAdmin));
       statement.setString(3, toSortedCsv(readableExperimentIds));
       statement.setString(4, toSortedCsv(writableExperimentIds));
       statement.execute();

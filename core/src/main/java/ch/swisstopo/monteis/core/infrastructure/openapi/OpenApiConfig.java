@@ -17,7 +17,7 @@ import org.springframework.util.StringUtils;
 /**
  * Registers the "Authorize" schemes used by Swagger UI and stamps every documented operation with
  * them, so the spec reflects that the API is not public. The actual per-method authority
- * distinction (reads vs. {@code api:write-all} for writes) is enforced in {@code SecurityConfig}, not
+ * distinction (reads vs. {@code api:admin} for writes) is enforced in {@code SecurityConfig}, not
  * modeled here — OpenAPI can't express real scopes on these schemes, and the frontend sends the
  * same JWT to every request regardless.
  *

@@ -36,7 +36,7 @@ const adminLayout = (factory: WorkbenchLayoutFactory) =>
     .navigatePart('admin-menu', ['admin-menu']);
 
 const isAdmin = () =>
-  firstValueFrom(inject(PermissionsService).currentUser$.pipe(map((user) => user.canWriteAll)));
+  firstValueFrom(inject(PermissionsService).currentUser$.pipe(map((user) => user.isAdmin)));
 
 export const workbenchConfig = provideWorkbench({
   // Delegates SCION Workbench's `%key` translation syntax to ngx-translate, so part labels use

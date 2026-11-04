@@ -20,13 +20,13 @@ const WRITABLE = 'experiment-writable';
 const READ_ONLY = 'experiment-read-only';
 
 interface Caller {
-  canWriteAll: boolean;
+  isAdmin: boolean;
   writeExperimentIds: string[];
 }
 
-const ADMIN: Caller = { canWriteAll: true, writeExperimentIds: [WRITABLE, READ_ONLY] };
-const EXPERIMENT_PI: Caller = { canWriteAll: false, writeExperimentIds: [WRITABLE] };
-const EXPERIMENT_USER: Caller = { canWriteAll: false, writeExperimentIds: [] };
+const ADMIN: Caller = { isAdmin: true, writeExperimentIds: [WRITABLE, READ_ONLY] };
+const EXPERIMENT_PI: Caller = { isAdmin: false, writeExperimentIds: [WRITABLE] };
+const EXPERIMENT_USER: Caller = { isAdmin: false, writeExperimentIds: [] };
 
 describe('ExperimentTable', () => {
   let formDialog: { open: ReturnType<typeof vi.fn> };
@@ -64,7 +64,7 @@ describe('ExperimentTable', () => {
         {
           provide: PermissionsService,
           useValue: {
-            canWriteAll: signal(caller.canWriteAll),
+            isAdmin: signal(caller.isAdmin),
             hasAnyExperimentWriteAccess: computed(() => ids().length > 0),
             canWriteExperiment: (id: string) => ids().includes(id),
           },

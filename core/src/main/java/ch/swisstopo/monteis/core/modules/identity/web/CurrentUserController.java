@@ -25,8 +25,8 @@ public class CurrentUserController {
   public ResponseEntity<CurrentUserDto> getCurrentUser(MonteisAuthenticationToken authentication) {
     return ResponseEntity.ok(
         new CurrentUserDto(
-            authentication.canWriteAll(),
-            // empty when canWriteAll (BR4.10); sorted for a stable response
+            authentication.isAdmin(),
+            // empty when isAdmin (BR4.10); sorted for a stable response
             authentication.writableExperimentIds().stream().sorted().toList()));
   }
 }

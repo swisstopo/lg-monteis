@@ -50,7 +50,7 @@ public class SecurityConfig {
                     .permitAll()
                     // first match wins, these rules have to come before the write-all rule below
                     .requestMatchers(ApiPaths.EXPERIMENT_OWNER_CANDIDATES)
-                    .hasAuthority(Permissions.WRITE_ALL)
+                    .hasAuthority(Permissions.ADMIN)
                     // the experiments_update and experiment_documents_insert/_delete RLS policies
                     // decide which experiments may be written
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
@@ -62,17 +62,17 @@ public class SecurityConfig {
                     // grant only, the insert and delete policies of sensor_documents decide per
                     // sensor
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
-                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.WRITE_ALL)
+                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.SENSOR_DOCUMENT)
-                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.WRITE_ALL)
+                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
                     .authenticated()
                     // grant only, before the write-all rule (MON-173, ADR "Hybride
                     // Durchsetzung"): RLS limits the sensors, values come from Fulcrum only
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSORS_FULCRUM_REFRESH)
-                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.WRITE_ALL)
+                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(WRITE_REQUESTS)
-                    .hasAuthority(Permissions.WRITE_ALL)
+                    .hasAuthority(Permissions.ADMIN)
                     .anyRequest()
                     .authenticated())
         .sessionManagement(
