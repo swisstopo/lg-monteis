@@ -86,15 +86,16 @@ class RlsConnectionProviderTest {
   }
 
   @Test
-  void should_drop_write_ids_that_are_not_readable() throws SQLException {
+  void should_also_read_the_experiments_the_caller_may_write() throws SQLException {
     RlsSettings settings =
         acquireWithin(
             action ->
                 SecurityContextTestSupport.runAsUser(
-                    List.of(EXPERIMENT_A), List.of(EXPERIMENT_A, EXPERIMENT_C), action));
+                    List.of(EXPERIMENT_A), List.of(EXPERIMENT_C), action));
 
     assertEquals(
-        new RlsSettings("false", "false", EXPERIMENT_A.toString(), EXPERIMENT_A.toString()),
+        new RlsSettings(
+            "false", "false", EXPERIMENT_A + "," + EXPERIMENT_C, EXPERIMENT_C.toString()),
         settings);
   }
 

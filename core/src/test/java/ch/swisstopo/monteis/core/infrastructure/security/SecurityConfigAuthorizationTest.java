@@ -215,13 +215,13 @@ class SecurityConfigAuthorizationTest {
   }
 
   @Test
-  void should_reject_a_token_with_experiment_write_but_without_experiment_read() throws Exception {
+  void should_let_a_token_with_only_experiment_write_read_too() throws Exception {
     givenDecodableToken(
-        "misconfigured-token", Map.of("roles", List.of("monteis-client:experiment:write")));
+        "write-only-token", Map.of("roles", List.of("monteis-client:experiment:write")));
 
     mockMvc
-        .perform(withBearer(get("/api/experiments"), "misconfigured-token"))
-        .andExpect(status().isUnauthorized());
+        .perform(withBearer(get("/api/experiments"), "write-only-token"))
+        .andExpect(status().isOk());
   }
 
   @Test

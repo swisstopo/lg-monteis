@@ -3,6 +3,8 @@ package ch.swisstopo.monteis.core.infrastructure.security;
 import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -27,19 +29,21 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
   public MonteisAuthenticationToken(
       @Nullable Jwt jwt,
       MonteisPrincipal principal,
-      @Nullable Collection<? extends GrantedAuthority> authorities) {
+      @Nullable Collection<? extends GrantedAuthority> authorities,
+      Collection<UUID> readExperimentIds,
+      Collection<UUID> writeExperimentIds) {
     super(authorities);
     this.jwt = jwt;
     this.principal = principal;
     this.canWriteAll = hasPermission(Permissions.WRITE_ALL);
-    this.readableExperimentIds =
-        canWriteAll || !hasPermission(Permissions.EXPERIMENT_READ)
-            ? Set.of()
-            : Set.copyOf(principal.readExperimentIds());
     this.writableExperimentIds =
         canWriteAll || !hasPermission(Permissions.EXPERIMENT_WRITE)
             ? Set.of()
-            : Set.copyOf(principal.writeExperimentIds());
+            : Set.copyOf(writeExperimentIds);
+    this.readableExperimentIds =
+        canWriteAll || !hasPermission(Permissions.EXPERIMENT_READ)
+            ? Set.of()
+            : union(readExperimentIds, writableExperimentIds);
     super.setAuthenticated(true);
   }
 
@@ -76,12 +80,20 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
         .anyMatch(authority -> permission.equals(authority.getAuthority()));
   }
 
+  private static Set<UUID> union(Collection<UUID> first, Collection<UUID> second) {
+    return Stream.concat(first.stream(), second.stream()).collect(Collectors.toUnmodifiableSet());
+  }
+
   @Override
   public boolean equals(@Nullable Object obj) {
     if (this == obj) {
       return true;
     }
-    return obj != null && getClass() == obj.getClass() && super.equals(obj);
+    return obj instanceof MonteisAuthenticationToken other
+        && getClass() == other.getClass()
+        && super.equals(other)
+        && readableExperimentIds.equals(other.readableExperimentIds)
+        && writableExperimentIds.equals(other.writableExperimentIds);
   }
 
   @Override

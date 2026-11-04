@@ -70,11 +70,14 @@ public final class SecurityContextTestSupport {
       List<UUID> readExperimentIds,
       List<UUID> writeExperimentIds,
       Supplier<T> action) {
-    MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), USERNAME, readExperimentIds, writeExperimentIds);
+    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), USERNAME);
     var authentication =
         new MonteisAuthenticationToken(
-            null, principal, permissions.stream().map(SimpleGrantedAuthority::new).toList());
+            null,
+            principal,
+            permissions.stream().map(SimpleGrantedAuthority::new).toList(),
+            readExperimentIds,
+            writeExperimentIds);
 
     SecurityContext previous = SecurityContextHolder.getContext();
     try {
