@@ -28,9 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
  * materializing the full result set in memory: the header row, the jOOQ cursor iteration and
  * every row write all happen inside this single {@code @Transactional(readOnly = true)} method,
  * so the DB connection (and the RLS context Postgres enforces against it) stays open for the
- * whole export. This intentionally isn't a {@code StreamingResponseBody} callback - that runs on
- * a separate thread after the controller method (and thus this transaction) has already
- * returned/committed.
+ * whole export. It is called from the {@code StreamingResponseBody} callback, so this transaction
+ * runs on the async thread that writes the response.
  */
 @Repository
 @Transactional(readOnly = true)

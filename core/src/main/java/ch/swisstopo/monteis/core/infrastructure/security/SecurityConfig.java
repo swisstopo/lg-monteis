@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
+import jakarta.servlet.DispatcherType;
 import java.util.Set;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +10,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -40,6 +43,8 @@ public class SecurityConfig {
     http.authorizeHttpRequests(
             request ->
                 request
+                    .dispatcherTypeMatchers(DispatcherType.ERROR)
+                    .permitAll()
                     .requestMatchers(PUBLIC_ENDPOINTS)
                     .permitAll()
                     // first match wins, these rules have to come before the write-all rule below
@@ -65,6 +70,9 @@ public class SecurityConfig {
                     .hasAuthority(Permissions.WRITE_ALL)
                     .anyRequest()
                     .authenticated())
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .csrf(AbstractHttpConfigurer::disable)
         .exceptionHandling(
             exceptions ->
                 exceptions.accessDeniedHandler(new MonteisAccessDeniedHandler(objectMapper)))
