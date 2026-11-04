@@ -26,7 +26,7 @@ public class MonteisJwtAuthenticationConverter
           KeycloakClaimExtractor.EXPERIMENT_WRITE_ROLE,
           Set.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE),
           KeycloakClaimExtractor.ADMIN_ROLE,
-          Set.of(Permissions.WRITE_ALL));
+          Set.of(Permissions.ADMIN));
 
   @Override
   public AbstractAuthenticationToken convert(@NonNull Jwt source) {

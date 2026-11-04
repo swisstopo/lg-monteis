@@ -36,8 +36,7 @@ public enum PrivilegeLevel {
       List.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE),
       List.of(SeedData.EXPERIMENT_GAMMA),
       List.of(SeedData.EXPERIMENT_ALPHA)),
-  MONTEIS_ADMIN(
-      List.of("monteis-client:admin"), List.of(Permissions.WRITE_ALL), List.of(), List.of());
+  MONTEIS_ADMIN(List.of("monteis-client:admin"), List.of(Permissions.ADMIN), List.of(), List.of());
 
   public static final UUID ASSIGNED_EXPERIMENT = SeedData.EXPERIMENT_ALPHA;
   public static final UUID OTHER_EXPERIMENT = SeedData.EXPERIMENT_GAMMA;

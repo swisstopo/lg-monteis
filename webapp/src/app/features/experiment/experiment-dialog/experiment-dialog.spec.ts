@@ -29,7 +29,7 @@ interface Setup {
   experimentId?: string;
   viewOnly?: boolean;
   canWrite?: boolean;
-  canWriteAll?: boolean;
+  isAdmin?: boolean;
   experiment?: ExperimentResponseDto;
 }
 
@@ -37,7 +37,7 @@ async function setup({
   experimentId,
   viewOnly = false,
   canWrite = true,
-  canWriteAll = false,
+  isAdmin = false,
   experiment = anExperiment(),
 }: Setup = {}) {
   const experimentService: Mocked<
@@ -62,7 +62,7 @@ async function setup({
       { provide: OrganisationService, useValue: { allOrganisations: signal([]) } },
       {
         provide: PermissionsService,
-        useValue: { canWriteExperiment: () => canWrite, canWriteAll: () => canWriteAll },
+        useValue: { canWriteExperiment: () => canWrite, isAdmin: () => isAdmin },
       },
       { provide: MatDialogRef, useValue: dialogRef },
       { provide: ToastService, useValue: toast },
@@ -107,7 +107,7 @@ describe('ExperimentDialog', () => {
     });
 
     it('shows the owners disabled and explains that they come later', async () => {
-      const { dialog } = await setup({ canWriteAll: true });
+      const { dialog } = await setup({ isAdmin: true });
 
       expect(await dialog.getOwnersOfNewExperiment()).toEqual({
         disabled: true,
@@ -223,7 +223,7 @@ describe('ExperimentDialog', () => {
   });
 
   describe('owners', () => {
-    const asAdmin = { experimentId: 'experiment-1', canWriteAll: true };
+    const asAdmin = { experimentId: 'experiment-1', isAdmin: true };
 
     it('lets an admin pick the owners, starting with the stored ones', async () => {
       const { dialog } = await setup(asAdmin);

@@ -211,7 +211,7 @@ export default class SensorEdit {
   protected readonly mode = computed<DialogMode>(() => {
     if (!this.sensorId()) return 'create';
     if (this.viewOnly()) return 'view';
-    return this.permissions.canWriteAll() ? 'edit' : 'view';
+    return this.permissions.isAdmin() ? 'edit' : 'view';
   });
   protected readonly readOnly = computed(() => this.mode() === 'view');
   title = computed(() => this.translateService.translate(`sensor.edit.title.${this.mode()}`)());

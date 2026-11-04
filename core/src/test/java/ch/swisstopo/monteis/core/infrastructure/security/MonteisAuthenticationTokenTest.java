@@ -25,8 +25,7 @@ class MonteisAuthenticationTokenTest {
       new SimpleGrantedAuthority(Permissions.EXPERIMENT_READ);
   private static final GrantedAuthority WRITE =
       new SimpleGrantedAuthority(Permissions.EXPERIMENT_WRITE);
-  private static final GrantedAuthority WRITE_ALL =
-      new SimpleGrantedAuthority(Permissions.WRITE_ALL);
+  private static final GrantedAuthority ADMIN = new SimpleGrantedAuthority(Permissions.ADMIN);
 
   private static final UUID EXPERIMENT_1 = UUID.randomUUID();
   private static final UUID EXPERIMENT_2 = UUID.randomUUID();
@@ -38,7 +37,7 @@ class MonteisAuthenticationTokenTest {
     MonteisAuthenticationToken token = level.authentication();
 
     // then
-    assertEquals(level == PrivilegeLevel.MONTEIS_ADMIN, token.canWriteAll());
+    assertEquals(level == PrivilegeLevel.MONTEIS_ADMIN, token.isAdmin());
     assertEquals(level.readableExperimentIds(), token.readableExperimentIds());
     assertEquals(Set.copyOf(level.writeExperimentIds()), token.writableExperimentIds());
   }
@@ -51,7 +50,7 @@ class MonteisAuthenticationTokenTest {
             List.of(READ, WRITE), List.of(EXPERIMENT_1, EXPERIMENT_2), List.of(EXPERIMENT_1));
 
     // then
-    assertFalse(token.canWriteAll());
+    assertFalse(token.isAdmin());
     assertEquals(Set.of(EXPERIMENT_1, EXPERIMENT_2), token.readableExperimentIds());
     assertEquals(Set.of(EXPERIMENT_1), token.writableExperimentIds());
   }
@@ -82,10 +81,10 @@ class MonteisAuthenticationTokenTest {
   void should_leave_the_id_sets_empty_when_write_all_applies() {
     // when
     var token =
-        givenToken(List.of(WRITE_ALL, READ, WRITE), List.of(EXPERIMENT_1), List.of(EXPERIMENT_1));
+        givenToken(List.of(ADMIN, READ, WRITE), List.of(EXPERIMENT_1), List.of(EXPERIMENT_1));
 
     // then
-    assertTrue(token.canWriteAll());
+    assertTrue(token.isAdmin());
     assertEquals(Set.of(), token.readableExperimentIds());
     assertEquals(Set.of(), token.writableExperimentIds());
   }
@@ -107,10 +106,12 @@ class MonteisAuthenticationTokenTest {
     // when
     var token =
         givenToken(
-            List.of(new SimpleGrantedAuthority("api:admin")), List.of(EXPERIMENT_1), List.of());
+            List.of(new SimpleGrantedAuthority("api:experiment:write-all")),
+            List.of(EXPERIMENT_1),
+            List.of());
 
     // then
-    assertFalse(token.canWriteAll());
+    assertFalse(token.isAdmin());
     assertEquals(Set.of(), token.readableExperimentIds());
   }
 
@@ -188,7 +189,7 @@ class MonteisAuthenticationTokenTest {
     MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "alice");
     var first = new MonteisAuthenticationToken(jwt, principal, List.of(READ), List.of(), List.of());
     var second =
-        new MonteisAuthenticationToken(jwt, principal, List.of(WRITE_ALL), List.of(), List.of());
+        new MonteisAuthenticationToken(jwt, principal, List.of(ADMIN), List.of(), List.of());
 
     // then
     assertNotEquals(first, second);

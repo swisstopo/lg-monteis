@@ -22,9 +22,9 @@ public final class SecurityContextTestSupport {
 
   private SecurityContextTestSupport() {}
 
-  /** {@code api:write-all}: everything. */
+  /** {@code api:admin}: everything. */
   public static void runAsAdmin(Runnable action) {
-    runAs(List.of(Permissions.WRITE_ALL), List.of(), List.of(), action);
+    runAs(List.of(Permissions.ADMIN), List.of(), List.of(), action);
   }
 
   /** {@code api:experiment:read} on {@code readExperimentIds} only. */
@@ -47,7 +47,7 @@ public final class SecurityContextTestSupport {
 
   /** {@link #runAsAdmin} for an action with a result. */
   public static <T> T callAsAdmin(Supplier<T> action) {
-    return callAs(List.of(Permissions.WRITE_ALL), List.of(), List.of(), action);
+    return callAs(List.of(Permissions.ADMIN), List.of(), List.of(), action);
   }
 
   public static void runAs(
