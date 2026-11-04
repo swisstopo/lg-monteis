@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.infrastructure.security;
 
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIMENT;
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.UNASSIGNED_EXPERIMENT;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -27,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.observation.SecurityObservationSettings;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ContextConfiguration;
@@ -61,6 +63,7 @@ class SecurityConfigAuthorizationTest {
           + "\"messageKey\":\"access.denied\",\"params\":{}}";
 
   @Autowired private MockMvc mockMvc;
+  @Autowired private SecurityObservationSettings observationSettings;
 
   @MockitoBean private JwtDecoder jwtDecoder;
 
@@ -175,6 +178,13 @@ class SecurityConfigAuthorizationTest {
     mockMvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
     mockMvc.perform(get("/api/fulcrum-documents")).andExpect(status().isUnauthorized());
     mockMvc.perform(get("/api/fulcrum-sync")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void should_wrap_neither_requests_nor_authentication_nor_authorization_in_observations() {
+    assertFalse(observationSettings.shouldObserveRequests());
+    assertFalse(observationSettings.shouldObserveAuthentications());
+    assertFalse(observationSettings.shouldObserveAuthorizations());
   }
 
   @Test

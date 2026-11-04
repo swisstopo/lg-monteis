@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.observation.SecurityObservationSettings;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -86,5 +87,10 @@ public class SecurityConfig {
   @Bean
   public Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter() {
     return new MonteisJwtAuthenticationConverter();
+  }
+
+  @Bean
+  public SecurityObservationSettings securityObservationSettings() {
+    return SecurityObservationSettings.noObservations();
   }
 }
