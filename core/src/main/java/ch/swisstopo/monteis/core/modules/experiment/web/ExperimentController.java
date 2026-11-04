@@ -127,7 +127,7 @@ public class ExperimentController {
       return experimentService.updateExperiment(experiment);
     }
     // gets refactored in PR 258
-    if (!authentication.isAdmin()) {
+    if (!authentication.experimentAccess().isAdmin()) {
       throw new AccessDeniedException("Only admins may change the owners of an experiment");
     }
     return experimentService.updateExperimentAndOwners(experiment, Set.copyOf(dto.ownerIds()));
