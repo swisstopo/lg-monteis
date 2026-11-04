@@ -1,5 +1,7 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { PermissionsService } from '@core/auth/permissions.service';
 import { FulcrumDocumentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
@@ -70,6 +72,7 @@ describe('FulcrumDocumentTable', () => {
         provideTranslateService(),
         WorkbenchView,
         { provide: FulcrumDocumentService, useValue: documentService },
+        { provide: PermissionsService, useValue: { isAdmin: signal(false) } },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
       ],
@@ -172,6 +175,7 @@ describe('FulcrumDocumentTable', () => {
         provideTranslateService(),
         WorkbenchView,
         { provide: FulcrumDocumentService, useValue: documentService },
+        { provide: PermissionsService, useValue: { isAdmin: signal(false) } },
       ],
     });
     const fixture = TestBed.createComponent(FulcrumDocumentTable);
