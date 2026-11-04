@@ -36,7 +36,7 @@ const ACCESS_SUBGROUPS: Record<ExperimentAccess, { attribute: string; roles: str
   },
   'read + write': {
     attribute: 'write_experiment_ids',
-    roles: [EXPERIMENT_READ_ROLE, EXPERIMENT_WRITE_ROLE],
+    roles: [EXPERIMENT_WRITE_ROLE],
   },
 };
 

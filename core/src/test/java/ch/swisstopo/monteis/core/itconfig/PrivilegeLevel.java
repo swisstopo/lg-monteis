@@ -7,7 +7,10 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -22,15 +25,19 @@ import org.springframework.security.oauth2.jwt.Jwt;
  * is assigned to nobody.
  */
 public enum PrivilegeLevel {
-  BASISROLLE(List.of(), List.of(), false, false),
+  BASISROLLE(List.of(), List.of(), List.of(), List.of()),
   EXPERIMENT_USER(
-      List.of("monteis-client:experiment:read"), List.of(Permissions.EXPERIMENT_READ), true, false),
+      List.of("monteis-client:experiment:read"),
+      List.of(Permissions.EXPERIMENT_READ),
+      List.of(SeedData.EXPERIMENT_ALPHA, SeedData.EXPERIMENT_GAMMA),
+      List.of()),
   EXPERIMENT_PI(
       List.of("monteis-client:experiment:read", "monteis-client:experiment:write"),
       List.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE),
-      true,
-      true),
-  MONTEIS_ADMIN(List.of("monteis-client:admin"), List.of(Permissions.WRITE_ALL), false, false);
+      List.of(SeedData.EXPERIMENT_GAMMA),
+      List.of(SeedData.EXPERIMENT_ALPHA)),
+  MONTEIS_ADMIN(
+      List.of("monteis-client:admin"), List.of(Permissions.WRITE_ALL), List.of(), List.of());
 
   public static final UUID ASSIGNED_EXPERIMENT = SeedData.EXPERIMENT_ALPHA;
   public static final UUID OTHER_EXPERIMENT = SeedData.EXPERIMENT_GAMMA;
@@ -38,18 +45,18 @@ public enum PrivilegeLevel {
 
   private final List<String> roles;
   private final List<String> authorities;
-  private final boolean carriesReadIds;
-  private final boolean carriesWriteIds;
+  private final List<UUID> readExperimentIds;
+  private final List<UUID> writeExperimentIds;
 
   PrivilegeLevel(
       List<String> roles,
       List<String> authorities,
-      boolean carriesReadIds,
-      boolean carriesWriteIds) {
+      List<UUID> readExperimentIds,
+      List<UUID> writeExperimentIds) {
     this.roles = roles;
     this.authorities = authorities;
-    this.carriesReadIds = carriesReadIds;
-    this.carriesWriteIds = carriesWriteIds;
+    this.readExperimentIds = readExperimentIds;
+    this.writeExperimentIds = writeExperimentIds;
   }
 
   /** The {@code monteis_access.roles} a token of this level carries. */
@@ -62,19 +69,23 @@ public enum PrivilegeLevel {
   }
 
   public List<UUID> readExperimentIds() {
-    return carriesReadIds ? List.of(ASSIGNED_EXPERIMENT, OTHER_EXPERIMENT) : List.of();
+    return readExperimentIds;
   }
 
   public List<UUID> writeExperimentIds() {
-    return carriesWriteIds ? List.of(ASSIGNED_EXPERIMENT) : List.of();
+    return writeExperimentIds;
+  }
+
+  public Set<UUID> readableExperimentIds() {
+    return Stream.concat(readExperimentIds.stream(), writeExperimentIds.stream())
+        .collect(Collectors.toUnmodifiableSet());
   }
 
   /** The authentication {@code MonteisJwtAuthenticationConverter} produces for this level. */
   public MonteisAuthenticationToken authentication() {
-    MonteisPrincipal principal =
-        new MonteisPrincipal(
-            UUID.randomUUID(), name().toLowerCase(), readExperimentIds(), writeExperimentIds());
-    return new MonteisAuthenticationToken(null, principal, grantedAuthorities());
+    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), name().toLowerCase());
+    return new MonteisAuthenticationToken(
+        null, principal, grantedAuthorities(), readExperimentIds(), writeExperimentIds());
   }
 
   /** A decoded access token of this level, as the resource server hands it to the converter. */

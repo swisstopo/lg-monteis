@@ -48,11 +48,7 @@ class SystemSecurityContextTest {
 
     // then
     assertEquals(
-        new MonteisPrincipal(
-            UUID.fromString("00000000-0000-0000-0000-000000000000"),
-            "SYSTEM",
-            List.of(),
-            List.of()),
+        new MonteisPrincipal(UUID.fromString("00000000-0000-0000-0000-000000000000"), "SYSTEM"),
         captured.get().getPrincipal());
     assertEquals("SYSTEM", captured.get().getName());
   }
