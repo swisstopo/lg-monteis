@@ -22,7 +22,7 @@ public final class SecurityContextTestSupport {
 
   private SecurityContextTestSupport() {}
 
-  /** {@code api:admin}: everything. */
+  /** {@code api:admin}: all experiments, read and write. */
   public static void runAsAdmin(Runnable action) {
     runAs(List.of(Permissions.ADMIN), List.of(), List.of(), action);
   }

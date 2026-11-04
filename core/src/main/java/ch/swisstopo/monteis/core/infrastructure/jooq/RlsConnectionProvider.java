@@ -77,7 +77,7 @@ public class RlsConnectionProvider implements ConnectionProvider {
     }
   }
 
-  // sorted so that the same permissions always produce the same setting value
+  // sorted so that the same capabilities always produce the same setting value
   private static String toSortedCsv(Set<UUID> experimentIds) {
     return experimentIds.stream().sorted().map(UUID::toString).collect(Collectors.joining(","));
   }
