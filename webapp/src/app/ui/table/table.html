@@ -7,7 +7,7 @@
   [gridOptions]="mergedGridOptions()"
   [rowModelType]="rowModelType()"
   [datasource]="datasource()"
-  [cacheBlockSize]="cacheBlockSize()"
+  [cacheBlockSize]="rowModelType() === 'infinite' ? cacheBlockSize() : undefined"
   (rowClicked)="onRowClicked($event)"
   (selectionChanged)="onSelectionChanged($event)"
   (gridReady)="onGridReady($event)"

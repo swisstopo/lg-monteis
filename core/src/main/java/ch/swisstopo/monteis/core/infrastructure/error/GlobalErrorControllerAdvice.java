@@ -6,6 +6,8 @@ import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestExc
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAuthenticationException;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException;
+import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDeniedException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -180,6 +182,27 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
       content = @Content(array = @ArraySchema(schema = @Schema(implementation = ErrorDto.class))))
   protected ResponseEntity<ErrorDto> handleOptimisticLocking(DataChangedException ex) {
     ErrorDto payload = ErrorDto.form("optimistic.locking", Map.of());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(payload);
+  }
+
+  @ExceptionHandler(FulcrumDisabledException.class)
+  @ApiResponse(
+      responseCode = "503",
+      description = "Fulcrum is switched off in this environment (monteis.fulcrum.enabled=false).",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  public ResponseEntity<ErrorDto> handleFulcrumDisabled(FulcrumDisabledException e) {
+    ErrorDto payload = ErrorDto.global(FulcrumDisabledException.MESSAGE_KEY, Map.of());
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(payload);
+  }
+
+  @ExceptionHandler(FulcrumSyncAlreadyRunningException.class)
+  @ApiResponse(
+      responseCode = "409",
+      description = "A Fulcrum Document sync is already running, on this or another pod.",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  public ResponseEntity<ErrorDto> handleFulcrumSyncAlreadyRunning(
+      FulcrumSyncAlreadyRunningException e) {
+    ErrorDto payload = ErrorDto.global(FulcrumSyncAlreadyRunningException.MESSAGE_KEY, Map.of());
     return ResponseEntity.status(HttpStatus.CONFLICT).body(payload);
   }
 

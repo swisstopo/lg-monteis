@@ -59,6 +59,11 @@ public class SecurityConfig {
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)
                     .access(allowIf(Capabilities::canCreateExperiment))
+                    // all methods: Spring answers HEAD via GET handler
+                    .requestMatchers(ApiPaths.FULCRUM_DOCUMENT_CONTENT)
+                    .access(allowIf(Capabilities::canAccessDocuments))
+                    .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
+                    .access(allowIf(Capabilities::canAccessDocuments))
                     // sensor reads need no rule of their own: RLS filters the rows by experiment
                     .requestMatchers(HttpMethod.GET, SENSORS_PATHS)
                     .authenticated()

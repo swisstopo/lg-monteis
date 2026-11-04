@@ -1,0 +1,12 @@
+@if (document(); as document) {
+  <span class="file-name">{{ document.file.fileName }}</span>
+  @if (!document.availableInFulcrum) {
+    <mat-icon
+      class="removed"
+      data-testid="removed-from-fulcrum"
+      fontIcon="cloud_off"
+      [matTooltip]="'fulcrumDocument.removed' | translate"
+      [attr.aria-label]="'fulcrumDocument.removed' | translate"
+    ></mat-icon>
+  }
+}

@@ -11,6 +11,20 @@ A monitoring campaign with a name, a period and a comment, the unit that access 
 The descriptive fields of an Experiment (name, period, comment, Experiment Owners), as opposed to its sensors and measurements.
 _Avoid_: Stammdaten, metadata
 
+**Experiment document**:
+A file a PI uploaded to a specific Experiment.
+_Avoid_: Document (alone)
+
+## Documents from Fulcrum
+
+**Fulcrum Document**:
+A document from the Mont Terri literature that is maintained in Fulcrum and marked for MONTEIS, made up of its metadata (number, title, authors, year, category, keywords) and exactly one file; it only exists in MONTEIS once that file was copied, and it belongs to no Experiment.
+_Avoid_: Fulcrum entry, literature reference, citation, Experiment document, Document (alone)
+
+**Attachment**:
+Fulcrum's term for a file it holds; when Fulcrum lists several for one Fulcrum Document, the first one is taken.
+_Avoid_: Fulcrum file
+
 ## People and access
 
 **PI**:

@@ -1,0 +1,27 @@
+<span class="sync-status" data-testid="sync-status">
+  @if (status.error()) {
+    <span class="hint">{{ 'fulcrumSync.statusUnknown' | translate }}</span>
+  } @else if (status.value(); as status) {
+    @if (status.running) {
+      {{ 'fulcrumSync.running' | translate }}
+    } @else if (status.lastSuccessfulSyncAt) {
+      {{
+        'fulcrumSync.lastSuccessfulSync'
+          | translate
+            : { lastSuccessfulSyncAt: status.lastSuccessfulSyncAt | date: 'dd.MM.yyyy; HH:mm:ss' }
+      }}
+    } @else {
+      {{ 'fulcrumSync.never' | translate }}
+    }
+  }
+</span>
+@if (permissions.canAccessDocuments()) {
+  <button matButton="text" type="button" [disabled]="starting()" (click)="onRefresh()">
+    @if (starting()) {
+      <mat-spinner diameter="16"></mat-spinner>
+    } @else {
+      <mat-icon fontIcon="sync"></mat-icon>
+    }
+    {{ 'fulcrumSync.refresh' | translate }}
+  </button>
+}

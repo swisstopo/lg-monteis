@@ -1,0 +1,48 @@
+<div class="metrics-panel">
+  <app-table-header (searchAction)="onSearch($event)">
+    <app-fulcrum-sync read-action></app-fulcrum-sync>
+
+    @if (permissions.canAccessDocuments()) {
+      <button
+        read-action
+        matButton="tonal"
+        type="button"
+        data-testid="download-file"
+        [disabled]="!selectedDocument()"
+        (click)="onDownload()"
+      >
+        <mat-icon fontIcon="download"></mat-icon>
+        {{ 'fulcrumDocument.tableHeader.download' | translate }}
+      </button>
+    }
+
+    @if (permissions.canAccessDocuments()) {
+      <button
+        primary-action
+        matButton="filled"
+        type="button"
+        data-testid="view-file"
+        [disabled]="!selectedDocument()?.file?.viewable"
+        (click)="onView()"
+      >
+        <mat-icon fontIcon="visibility"></mat-icon>
+        {{ 'fulcrumDocument.tableHeader.view' | translate }}
+      </button>
+    }
+  </app-table-header>
+  @if (documents.error()) {
+    <app-inline-error [message]="'fulcrumDocument.error.load' | translate"></app-inline-error>
+  } @else {
+    <app-table
+      class="custom-grid"
+      [checkboxes]="permissions.canAccessDocuments()"
+      [multiple]="false"
+      [columns]="columns"
+      [rows]="visibleRows()"
+      [gridOptions]="gridOptions()"
+      [getRowId]="getRowId"
+      (selectionChanged)="onSelectionChanged($event)"
+    >
+    </app-table>
+  }
+</div>
