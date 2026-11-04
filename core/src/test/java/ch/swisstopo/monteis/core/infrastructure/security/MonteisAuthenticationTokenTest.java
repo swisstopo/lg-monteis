@@ -39,7 +39,7 @@ class MonteisAuthenticationTokenTest {
 
     // then
     assertEquals(level == PrivilegeLevel.MONTEIS_ADMIN, token.canWriteAll());
-    assertEquals(Set.copyOf(level.readExperimentIds()), token.readableExperimentIds());
+    assertEquals(level.readableExperimentIds(), token.readableExperimentIds());
     assertEquals(Set.copyOf(level.writeExperimentIds()), token.writableExperimentIds());
   }
 
@@ -52,6 +52,16 @@ class MonteisAuthenticationTokenTest {
 
     // then
     assertFalse(token.canWriteAll());
+    assertEquals(Set.of(EXPERIMENT_1, EXPERIMENT_2), token.readableExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_1), token.writableExperimentIds());
+  }
+
+  @Test
+  void should_let_the_caller_read_the_experiments_it_may_write() {
+    // when
+    var token = givenToken(List.of(READ, WRITE), List.of(EXPERIMENT_2), List.of(EXPERIMENT_1));
+
+    // then
     assertEquals(Set.of(EXPERIMENT_1, EXPERIMENT_2), token.readableExperimentIds());
     assertEquals(Set.of(EXPERIMENT_1), token.writableExperimentIds());
   }
@@ -108,13 +118,12 @@ class MonteisAuthenticationTokenTest {
   void should_be_equal_when_jwt_principal_and_authorities_match() {
     // given
     Jwt jwt = givenJwt();
-    MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
+    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "alice");
     var authorities = List.of(READ);
 
     // when
-    var first = new MonteisAuthenticationToken(jwt, principal, authorities);
-    var second = new MonteisAuthenticationToken(jwt, principal, authorities);
+    var first = new MonteisAuthenticationToken(jwt, principal, authorities, List.of(), List.of());
+    var second = new MonteisAuthenticationToken(jwt, principal, authorities, List.of(), List.of());
 
     // then
     assertEquals(first, second);
@@ -129,13 +138,30 @@ class MonteisAuthenticationTokenTest {
     var first =
         new MonteisAuthenticationToken(
             jwt,
-            new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of()),
-            authorities);
+            new MonteisPrincipal(UUID.randomUUID(), "alice"),
+            authorities,
+            List.of(),
+            List.of());
     var second =
         new MonteisAuthenticationToken(
-            jwt,
-            new MonteisPrincipal(UUID.randomUUID(), "bob", List.of(UUID.randomUUID()), List.of()),
-            authorities);
+            jwt, new MonteisPrincipal(UUID.randomUUID(), "bob"), authorities, List.of(), List.of());
+
+    // then
+    assertNotEquals(first, second);
+  }
+
+  @Test
+  void should_not_be_equal_when_the_experiment_ids_differ() {
+    // given
+    Jwt jwt = givenJwt();
+    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "alice");
+    var authorities = List.of(READ);
+    var first =
+        new MonteisAuthenticationToken(
+            jwt, principal, authorities, List.of(EXPERIMENT_1), List.of());
+    var second =
+        new MonteisAuthenticationToken(
+            jwt, principal, authorities, List.of(EXPERIMENT_2), List.of());
 
     // then
     assertNotEquals(first, second);
@@ -144,11 +170,12 @@ class MonteisAuthenticationTokenTest {
   @Test
   void should_not_be_equal_when_jwt_differs() {
     // given
-    MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
+    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "alice");
     var authorities = List.of(READ);
-    var first = new MonteisAuthenticationToken(givenJwt(), principal, authorities);
-    var second = new MonteisAuthenticationToken(givenJwt(), principal, authorities);
+    var first =
+        new MonteisAuthenticationToken(givenJwt(), principal, authorities, List.of(), List.of());
+    var second =
+        new MonteisAuthenticationToken(givenJwt(), principal, authorities, List.of(), List.of());
 
     // then
     assertNotEquals(first, second);
@@ -158,10 +185,10 @@ class MonteisAuthenticationTokenTest {
   void should_not_be_equal_when_authorities_differ() {
     // given
     Jwt jwt = givenJwt();
-    MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
-    var first = new MonteisAuthenticationToken(jwt, principal, List.of(READ));
-    var second = new MonteisAuthenticationToken(jwt, principal, List.of(WRITE_ALL));
+    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "alice");
+    var first = new MonteisAuthenticationToken(jwt, principal, List.of(READ), List.of(), List.of());
+    var second =
+        new MonteisAuthenticationToken(jwt, principal, List.of(WRITE_ALL), List.of(), List.of());
 
     // then
     assertNotEquals(first, second);
@@ -171,10 +198,10 @@ class MonteisAuthenticationTokenTest {
   void should_not_be_equal_to_a_different_authentication_type_with_the_same_fields() {
     // given: without our override, AbstractAuthenticationToken#equals would treat this as equal
     Jwt jwt = givenJwt();
-    MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), "alice", List.of(UUID.randomUUID()), List.of());
+    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), "alice");
     var authorities = List.of(READ);
-    var monteisToken = new MonteisAuthenticationToken(jwt, principal, authorities);
+    var monteisToken =
+        new MonteisAuthenticationToken(jwt, principal, authorities, List.of(), List.of());
     var otherToken = UsernamePasswordAuthenticationToken.authenticated(principal, jwt, authorities);
 
     // then
@@ -187,8 +214,10 @@ class MonteisAuthenticationTokenTest {
       List<UUID> writeExperimentIds) {
     return new MonteisAuthenticationToken(
         null,
-        new MonteisPrincipal(UUID.randomUUID(), "alice", readExperimentIds, writeExperimentIds),
-        authorities);
+        new MonteisPrincipal(UUID.randomUUID(), "alice"),
+        authorities,
+        readExperimentIds,
+        writeExperimentIds);
   }
 
   private static Jwt givenJwt() {
