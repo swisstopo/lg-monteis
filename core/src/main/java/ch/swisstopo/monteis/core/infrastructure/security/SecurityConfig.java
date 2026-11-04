@@ -51,16 +51,12 @@ public class SecurityConfig {
                     // first match wins, these rules have to come before the write-all rule below
                     .requestMatchers(ApiPaths.EXPERIMENT_OWNER_CANDIDATES)
                     .hasAuthority(Permissions.ADMIN)
-                    // the experiments_update and experiment_documents_insert/_delete RLS policies
-                    // decide which experiments may be written
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
-                    .authenticated()
+                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
-                    .authenticated()
+                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.EXPERIMENT_DOCUMENT)
-                    .authenticated()
-                    // grant only, the insert and delete policies of sensor_documents decide per
-                    // sensor
+                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
                     .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.SENSOR_DOCUMENT)

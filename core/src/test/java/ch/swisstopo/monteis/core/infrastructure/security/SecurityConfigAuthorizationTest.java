@@ -80,23 +80,28 @@ class SecurityConfigAuthorizationTest {
     return Stream.of(
         Arguments.of(HttpMethod.GET, "/api/experiments", everyone),
         Arguments.of(HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT, everyone),
-        Arguments.of(HttpMethod.PUT, "/api/experiments/" + ASSIGNED_EXPERIMENT, everyone),
-        Arguments.of(HttpMethod.PUT, "/api/experiments/" + UNASSIGNED_EXPERIMENT, everyone),
+        Arguments.of(HttpMethod.PUT, "/api/experiments/" + ASSIGNED_EXPERIMENT, experimentWriters),
+        Arguments.of(
+            HttpMethod.PUT, "/api/experiments/" + UNASSIGNED_EXPERIMENT, experimentWriters),
         Arguments.of(HttpMethod.POST, "/api/experiments", adminOnly),
         Arguments.of(
             HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT + "/documents", everyone),
         Arguments.of(
-            HttpMethod.POST, "/api/experiments/" + ASSIGNED_EXPERIMENT + "/documents", everyone),
+            HttpMethod.POST,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/documents",
+            experimentWriters),
         Arguments.of(
-            HttpMethod.POST, "/api/experiments/" + UNASSIGNED_EXPERIMENT + "/documents", everyone),
+            HttpMethod.POST,
+            "/api/experiments/" + UNASSIGNED_EXPERIMENT + "/documents",
+            experimentWriters),
         Arguments.of(
             HttpMethod.DELETE,
             "/api/experiments/" + ASSIGNED_EXPERIMENT + "/documents/" + UUID.randomUUID(),
-            everyone),
+            experimentWriters),
         Arguments.of(
             HttpMethod.DELETE,
             "/api/experiments/" + UNASSIGNED_EXPERIMENT + "/documents/" + UUID.randomUUID(),
-            everyone),
+            experimentWriters),
         Arguments.of(HttpMethod.GET, "/api/experiments/owners", everyone),
         Arguments.of(
             HttpMethod.GET,
