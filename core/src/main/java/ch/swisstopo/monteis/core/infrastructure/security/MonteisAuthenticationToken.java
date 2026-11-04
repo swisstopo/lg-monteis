@@ -14,9 +14,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
  * The one {@code Authentication} type this app binds: for real requests ({@link
  * MonteisJwtAuthenticationConverter}, {@code jwt} set) and the system pseudo-user ({@link
  * SystemSecurityContext}, {@code jwt} {@code null}).
- *
- * <p>It is also the single place that holds the privilege rules (ADR-001): the RLS session context
- * and {@code /api/me} ask it, the filter chain checks its {@link Permissions} authorities.
  */
 public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
 
@@ -57,20 +54,14 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
     return principal;
   }
 
-  /** Admins and the system context: read and write everything. */
   public boolean isAdmin() {
     return isAdmin;
   }
 
-  /** The experiments the caller may read one by one; empty when {@link #isAdmin()}. */
   public Set<UUID> readableExperimentIds() {
     return readableExperimentIds;
   }
 
-  /**
-   * The experiments whose metadata the caller may write one by one, always a subset of {@link
-   * #readableExperimentIds()}; empty when {@link #isAdmin()}.
-   */
   public Set<UUID> writableExperimentIds() {
     return writableExperimentIds;
   }

@@ -19,9 +19,9 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * The HTTP request rules (BR4.8), evaluated in order, first match wins. Reads and experiment
- * updates are only authenticated here, because row-level security filters the rows and decides
- * which experiments the caller may update (hybrid filter-chain-plus-RLS model, ADR-003).
+ * The HTTP request rules (BR4.8), evaluated in order, first match wins. Reads are only
+ * authenticated here, because row-level security filters the rows (hybrid filter-chain-plus-RLS
+ * model, ADR-003).
  */
 @Configuration
 @EnableWebSecurity
@@ -31,7 +31,7 @@ public class SecurityConfig {
     "/actuator/**", "/actuator", "/swagger-ui/**", "/v3/api-docs/**"
   };
 
-  // every method that changes state; all of them need write-all unless an earlier rule matched
+  // every method that changes state; all of them are admin-only unless an earlier rule matched
   private static final Set<String> WRITE_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
   private static final RequestMatcher WRITE_REQUESTS =
       request -> WRITE_METHODS.contains(request.getMethod());
@@ -48,7 +48,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(PUBLIC_ENDPOINTS)
                     .permitAll()
-                    // first match wins, these rules have to come before the write-all rule below
+                    // first match wins, the per-experiment writes have to come before the
+                    // admin-only write rule below
                     .requestMatchers(ApiPaths.EXPERIMENT_OWNER_CANDIDATES)
                     .hasAuthority(Permissions.ADMIN)
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
@@ -57,6 +58,8 @@ public class SecurityConfig {
                     .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.EXPERIMENT_DOCUMENT)
                     .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
+                    // grant only, the insert and delete policies of sensor_documents decide per
+                    // sensor
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
                     .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.SENSOR_DOCUMENT)
