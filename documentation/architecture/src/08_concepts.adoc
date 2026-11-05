@@ -355,6 +355,7 @@ Beide Flows stützen sich auf gemeinsame Komponenten und eine strikte Kafka-Konf
 * **Cache Broadcast Pattern:** Damit jeder Pipeline-Pod einen synchronen Metadaten-Cache besitzt, generiert der `SensorConfigCacheHydrationListener` beim Start eine zufällige UUID als Consumer Group (`cache-hydrator-#{UUID}`). Dadurch wird jedes Metadaten-Update an *jeden* laufenden Pod gebroadcastet.
 * **Deaktiviertes Auto-Commit (`enable-auto-commit: false`):** Spring Boot darf Kafka-Offsets niemals im Hintergrund bestätigen. Das System verlässt sich ausschliesslich auf manuelle Bestätigungen (`ack-mode: manual`).
 * **Das Guarded Acknowledgment Pattern (At-Least-Once):** In allen Listenern wird der Kafka-Offset erst explizit committet (`ack.acknowledge()`), **nachdem** die Daten sicher in die nächste Schicht oder die TimeScaleDB persistiert wurden. Fällt ein Pod aus, pausiert Kafka und liefert das Event nach dem Neustart erneut aus.
+* **Fehlerbehandlung im `manualAckFactory` (Backoff & DLT):** Ist die Datenbank vorübergehend nicht erreichbar (z. B. TimescaleDB-Failover, Hikari-Timeout), wird der Datensatz mit exponentiellem Backoff (1s, verdoppelnd, max. 30s) ohne Obergrenze erneut verarbeitet. Die Partition pausiert, bis die Datenbank wieder antwortet. Alle anderen Fehler werden zweimal mit 1s Abstand wiederholt und danach in das Topic `<topic>-dlt` publiziert und committet. Schlägt das Publizieren ins DLT fehl, wird der Offset nicht committet und der Datensatz erneut verarbeitet.
 
 ===== Explizite Separation of Concerns für Container-Factories
 
