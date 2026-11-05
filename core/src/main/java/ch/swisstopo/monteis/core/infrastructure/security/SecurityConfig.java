@@ -19,8 +19,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * The HTTP request rules (BR4.8), evaluated in order, first match wins. Reads are only
- * authenticated here, because row-level security filters the rows (hybrid filter-chain-plus-RLS
+ * Reads are only authenticated here, because row-level security filters the rows (hybrid filter-chain-plus-RLS
  * model, ADR-003).
  */
 @Configuration
@@ -44,12 +43,12 @@ public class SecurityConfig {
     http.authorizeHttpRequests(
             request ->
                 request
+                    // error dispatch has no auth (stateless, bearer filter runs once) => would
+                    // turn 404/500 into 401
                     .dispatcherTypeMatchers(DispatcherType.ERROR)
                     .permitAll()
                     .requestMatchers(PUBLIC_ENDPOINTS)
                     .permitAll()
-                    // first match wins, the per-experiment writes have to come before the
-                    // admin-only write rule below
                     .requestMatchers(ApiPaths.EXPERIMENT_OWNER_CANDIDATES)
                     .hasAuthority(Permissions.ADMIN)
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
@@ -58,8 +57,6 @@ public class SecurityConfig {
                     .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.EXPERIMENT_DOCUMENT)
                     .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
-                    // grant only, the insert and delete policies of sensor_documents decide per
-                    // sensor
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
                     .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.SENSOR_DOCUMENT)
@@ -70,8 +67,10 @@ public class SecurityConfig {
                     .hasAuthority(Permissions.ADMIN)
                     .anyRequest()
                     .authenticated())
+        // bearer token on every request, session would only cost work (ADR-011 P4)
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        // browser sends no credential automatically (no cookie) => no csrf risk (ADR-011 P4)
         .csrf(AbstractHttpConfigurer::disable)
         .exceptionHandling(
             exceptions ->
@@ -88,6 +87,7 @@ public class SecurityConfig {
     return new MonteisJwtAuthenticationConverter();
   }
 
+  // nobody reads them, default wraps every security filter of every request (ADR-011 P5)
   @Bean
   public SecurityObservationSettings securityObservationSettings() {
     return SecurityObservationSettings.noObservations();

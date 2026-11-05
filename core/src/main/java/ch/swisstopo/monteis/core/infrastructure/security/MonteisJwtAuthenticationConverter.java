@@ -6,7 +6,6 @@ import java.util.Set;
 import org.jspecify.annotations.NonNull;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -39,12 +38,12 @@ public class MonteisJwtAuthenticationConverter
         claims.writeExperimentIds());
   }
 
-  private static List<GrantedAuthority> authoritiesOf(List<String> roles) {
+  private static List<SimpleGrantedAuthority> authoritiesOf(List<String> roles) {
     return roles.stream()
         .map(role -> PERMISSIONS_BY_ROLE.getOrDefault(role, Set.of()))
         .flatMap(Set::stream)
         .distinct()
-        .<GrantedAuthority>map(SimpleGrantedAuthority::new)
+        .map(SimpleGrantedAuthority::new)
         .toList();
   }
 }
