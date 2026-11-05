@@ -28,7 +28,6 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -114,23 +113,13 @@ public class ExperimentController {
     }
     LocalDate today = LocalDate.now(clock);
 
-    Experiment updated = update(dto, authentication);
-    return ResponseEntity.status(HttpStatus.OK)
-        .body(mapper.toDto(updated, ownerService.findOwnersOf(updated), today));
-  }
-
-  // the filter chain lets every writer of the experiment through, it can't see the owners in the
-  // body
-  private Experiment update(WriteExperimentDto dto, MonteisAuthenticationToken authentication) {
-    Experiment experiment = mapper.toDomain(dto);
-    if (dto.ownerIds() == null) {
-      return experimentService.updateExperiment(experiment);
-    }
-    // gets refactored in PR 258
-    if (!authentication.experimentAccess().isAdmin()) {
+    // owners arrive in the body, the filter chain only sees that a writer of the experiment calls
+    if (dto.ownerIds() != null && !authentication.experimentAccess().isAdmin()) {
       throw new AccessDeniedException("Only admins may change the owners of an experiment");
     }
-    return experimentService.updateExperimentAndOwners(experiment, Set.copyOf(dto.ownerIds()));
+    Experiment updated = experimentService.updateExperiment(mapper.toDomain(dto), dto.ownerIds());
+    return ResponseEntity.status(HttpStatus.OK)
+        .body(mapper.toDto(updated, ownerService.findOwnersOf(updated), today));
   }
 
   @Operation(

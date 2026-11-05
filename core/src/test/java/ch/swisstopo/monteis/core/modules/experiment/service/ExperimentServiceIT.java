@@ -27,7 +27,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 // not @Transactional, the update and its rollback have to commit like in production
 @IT
 class ExperimentServiceIT {
-
   private static final DirectoryUser ALICE =
       new DirectoryUser(UUID.randomUUID(), "Alice", "Example", "alice@example.test");
   private static final DirectoryUser BOB =
@@ -45,8 +44,7 @@ class ExperimentServiceIT {
     created.setComment("changed with the owners");
 
     // when
-    Experiment updated =
-        callAsAdmin(() -> service.updateExperimentAndOwners(created, Set.of(ALICE.id())));
+    Experiment updated = callAsAdmin(() -> service.updateExperiment(created, Set.of(ALICE.id())));
 
     // then
     assertThat(updated.getOwnerIds()).containsExactly(ALICE.id());
@@ -66,7 +64,7 @@ class ExperimentServiceIT {
     // when
     assertThrows(
         FieldBusinessValidationException.class,
-        () -> callAsAdmin(() -> service.updateExperimentAndOwners(created, Set.of(ALICE.id()))));
+        () -> callAsAdmin(() -> service.updateExperiment(created, Set.of(ALICE.id()))));
 
     // then
     Experiment reloaded = callAsAdmin(() -> service.getById(created.getId()));
