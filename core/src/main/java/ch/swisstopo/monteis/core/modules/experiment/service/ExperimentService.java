@@ -7,10 +7,12 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.organisation.domain.OrganisationRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -35,16 +37,13 @@ public class ExperimentService {
   }
 
   @AuditChanges
-  public Experiment updateExperiment(Experiment experiment) {
-    rejectUnknownOrganisations(experiment);
-    return repository.update(experiment);
-  }
-
-  @AuditChanges
-  public Experiment updateExperimentAndOwners(Experiment experiment, Set<UUID> ownerIds) {
+  public Experiment updateExperiment(Experiment experiment, @Nullable Collection<UUID> ownerIds) {
     rejectUnknownOrganisations(experiment);
     Experiment updated = repository.update(experiment);
-    return ownerService.replaceOwnersInKeycloak(updated, ownerIds);
+    if (ownerIds == null) {
+      return updated;
+    }
+    return ownerService.replaceOwnersInKeycloak(updated, Set.copyOf(ownerIds));
   }
 
   private void rejectUnknownOrganisations(Experiment experiment) {
