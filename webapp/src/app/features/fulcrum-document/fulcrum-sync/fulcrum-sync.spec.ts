@@ -1,7 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { PermissionsService } from '@core/auth/permissions.service';
 import { ErrorDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import { FulcrumDocumentService } from '@features/fulcrum-document/services/fulcrum-document.service';
@@ -32,17 +30,13 @@ describe('FulcrumSync', () => {
     toast = { success: vi.fn(), warning: vi.fn(), error: vi.fn() };
   });
 
-  async function render(canAccessDocuments = true) {
+  async function render() {
     TestBed.configureTestingModule({
       imports: [FulcrumSync],
       providers: [
         provideTranslateService(),
         { provide: FulcrumDocumentService, useValue: documentService },
         { provide: ToastService, useValue: toast },
-        {
-          provide: PermissionsService,
-          useValue: { canAccessDocuments: signal(canAccessDocuments) },
-        },
       ],
     });
     const fixture = TestBed.createComponent(FulcrumSync);
@@ -89,13 +83,6 @@ describe('FulcrumSync', () => {
 
     expect(view.status()).toBe('fulcrumSync.running');
     expect(view.refresh()?.disabled).toBe(false);
-  });
-
-  it('offers no refresh without document access', async () => {
-    const view = await render(false);
-
-    expect(view.refresh()).toBeNull();
-    expect(view.status()).toBe('fulcrumSync.lastSuccessfulSync');
   });
 
   it('starts a sync once and says it started, without asking for the status again', async () => {

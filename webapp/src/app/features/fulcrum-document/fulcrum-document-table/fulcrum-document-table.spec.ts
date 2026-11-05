@@ -65,19 +65,16 @@ describe('FulcrumDocumentTable', () => {
     toast = { error: vi.fn() };
   });
 
-  async function render(canAccessDocuments = true) {
+  async function render() {
     TestBed.configureTestingModule({
       imports: [FulcrumDocumentTable],
       providers: [
         provideTranslateService(),
         WorkbenchView,
         { provide: FulcrumDocumentService, useValue: documentService },
+        { provide: PermissionsService, useValue: { isAdmin: signal(false) } },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
-        {
-          provide: PermissionsService,
-          useValue: { isAdmin: signal(false), canAccessDocuments: signal(canAccessDocuments) },
-        },
       ],
     });
     const fixture = TestBed.createComponent(FulcrumDocumentTable);
@@ -107,15 +104,6 @@ describe('FulcrumDocumentTable', () => {
 
     await view.search('');
     expect(view.titles()).toEqual([CLAY.title, GAS.title]);
-  });
-
-  it('shows the list but no refresh, download or view without document access', async () => {
-    const view = await render(false);
-
-    expect(view.titles()).toHaveLength(2);
-    expect(view.refreshButton()).toBeUndefined();
-    expect(view.find('download-file')).toBeNull();
-    expect(view.find('view-file')).toBeNull();
   });
 
   it('offers download and view only once a document is selected', async () => {
@@ -187,10 +175,7 @@ describe('FulcrumDocumentTable', () => {
         provideTranslateService(),
         WorkbenchView,
         { provide: FulcrumDocumentService, useValue: documentService },
-        {
-          provide: PermissionsService,
-          useValue: { isAdmin: signal(false), canAccessDocuments: signal(true) },
-        },
+        { provide: PermissionsService, useValue: { isAdmin: signal(false) } },
       ],
     });
     const fixture = TestBed.createComponent(FulcrumDocumentTable);
@@ -236,12 +221,6 @@ class TableView {
     ]);
     this.fixture.detectChanges();
     await this.settle();
-  }
-
-  refreshButton(): HTMLButtonElement | undefined {
-    return [...this.element.querySelectorAll<HTMLButtonElement>('app-table-header button')].find(
-      (button) => button.textContent?.includes('fulcrumSync.refresh'),
-    );
   }
 
   async search(term: string): Promise<void> {

@@ -9,19 +9,8 @@ import { PermissionsService } from './permissions.service';
 const PI_EXPERIMENT_ID = '00000000-0000-7000-8000-000000000301';
 const OTHER_EXPERIMENT_ID = '00000000-0000-7000-8000-000000000303';
 
-const NO_PRIVILEGES: CurrentUserDto = {
-  isAdmin: false,
-  canWriteAllExperiments: false,
-  writeExperimentIds: [],
-  canAccessDocuments: false,
-};
-const ADMIN: CurrentUserDto = {
-  ...NO_PRIVILEGES,
-  isAdmin: true,
-  canWriteAllExperiments: true,
-  canAccessDocuments: true,
-};
-const GLOBAL_EDITOR: CurrentUserDto = { ...NO_PRIVILEGES, canWriteAllExperiments: true };
+const NO_PRIVILEGES: CurrentUserDto = { isAdmin: false, writeExperimentIds: [] };
+const ADMIN: CurrentUserDto = { ...NO_PRIVILEGES, isAdmin: true };
 const EXPERIMENT_PI: CurrentUserDto = { ...NO_PRIVILEGES, writeExperimentIds: [PI_EXPERIMENT_ID] };
 const EXPERIMENT_USER: CurrentUserDto = NO_PRIVILEGES;
 
@@ -41,9 +30,7 @@ describe('PermissionsService', () => {
     const service = setup(() => NEVER);
 
     expect(service.isAdmin()).toBe(false);
-    expect(service.canWriteAllExperiments()).toBe(false);
     expect(service.writeExperimentIds()).toEqual([]);
-    expect(service.canAccessDocuments()).toBe(false);
     expect(service.hasAnyExperimentWriteAccess()).toBe(false);
     expect(service.canWriteExperiment(PI_EXPERIMENT_ID)).toBe(false);
   });
@@ -52,26 +39,15 @@ describe('PermissionsService', () => {
     const service = setup(() => throwError(() => new Error('rejected')));
 
     expect(service.isAdmin()).toBe(false);
-    expect(service.canWriteAllExperiments()).toBe(false);
     expect(service.writeExperimentIds()).toEqual([]);
-    expect(service.canAccessDocuments()).toBe(false);
     expect(service.hasAnyExperimentWriteAccess()).toBe(false);
     expect(service.canWriteExperiment(PI_EXPERIMENT_ID)).toBe(false);
   });
 
-  it('grants an admin every action', () => {
+  it('grants an admin every action', async () => {
     const service = setup(() => of(ADMIN));
 
-    expect(service.isAdmin()).toBe(true);
-    expect(service.hasAnyExperimentWriteAccess()).toBe(true);
-    expect(service.canWriteExperiment(OTHER_EXPERIMENT_ID)).toBe(true);
-  });
-
-  it('lets a global editor write every experiment without being an admin', () => {
-    const service = setup(() => of(GLOBAL_EDITOR));
-
-    expect(service.canWriteAllExperiments()).toBe(true);
-    expect(service.isAdmin()).toBe(false);
+    await vi.waitFor(() => expect(service.isAdmin()).toBe(true));
     expect(service.hasAnyExperimentWriteAccess()).toBe(true);
     expect(service.canWriteExperiment(OTHER_EXPERIMENT_ID)).toBe(true);
   });
@@ -81,7 +57,6 @@ describe('PermissionsService', () => {
 
     expect(service.writeExperimentIds()).toEqual([PI_EXPERIMENT_ID]);
     expect(service.isAdmin()).toBe(false);
-    expect(service.canWriteAllExperiments()).toBe(false);
     expect(service.hasAnyExperimentWriteAccess()).toBe(true);
   });
 
@@ -89,7 +64,6 @@ describe('PermissionsService', () => {
     const service = setup(() => of(EXPERIMENT_USER));
 
     expect(service.isAdmin()).toBe(false);
-    expect(service.canWriteAllExperiments()).toBe(false);
     expect(service.writeExperimentIds()).toEqual([]);
     expect(service.hasAnyExperimentWriteAccess()).toBe(false);
     expect(service.canWriteExperiment(PI_EXPERIMENT_ID)).toBe(false);
@@ -100,14 +74,6 @@ describe('PermissionsService', () => {
 
     expect(service.canWriteExperiment(PI_EXPERIMENT_ID)).toBe(true);
     expect(service.canWriteExperiment(OTHER_EXPERIMENT_ID)).toBe(false);
-  });
-
-  it('reports canAccessDocuments from the backend flag', () => {
-    const withDocuments = setup(() => of({ ...NO_PRIVILEGES, canAccessDocuments: true }));
-
-    expect(withDocuments.canAccessDocuments()).toBe(true);
-    expect(withDocuments.isAdmin()).toBe(false);
-    expect(withDocuments.hasAnyExperimentWriteAccess()).toBe(false);
   });
 
   it('does not call /api/me without a token', async () => {

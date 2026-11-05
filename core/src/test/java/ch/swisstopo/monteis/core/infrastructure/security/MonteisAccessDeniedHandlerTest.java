@@ -50,14 +50,14 @@ class MonteisAccessDeniedHandlerTest {
   }
 
   @Test
-  void should_log_method_path_and_sub_at_debug_without_token_claims_or_ids() throws IOException {
+  void should_log_method_path_and_sub_at_warn_without_token_claims_or_ids() throws IOException {
     // given: an ExperimentPI whose principal carries experiment ids and a username
     var authentication = PrivilegeLevel.EXPERIMENT_PI.authentication();
-    MonteisPrincipal principal = (MonteisPrincipal) authentication.getPrincipal();
+    MonteisPrincipal principal = authentication.getPrincipal();
     SecurityContextHolder.getContext().setAuthentication(authentication);
     String path = "/api/experiments/" + PrivilegeLevel.OTHER_EXPERIMENT;
 
-    try (LogCapture logs = LogCapture.of(MonteisAccessDeniedHandler.class, Level.DEBUG)) {
+    try (LogCapture logs = LogCapture.of(MonteisAccessDeniedHandler.class, Level.WARN)) {
       // when
       handler.handle(
           new MockHttpServletRequest("PUT", path),
@@ -77,7 +77,7 @@ class MonteisAccessDeniedHandlerTest {
 
   @Test
   void should_log_anonymous_when_no_monteis_principal_is_bound() throws IOException {
-    try (LogCapture logs = LogCapture.of(MonteisAccessDeniedHandler.class, Level.DEBUG)) {
+    try (LogCapture logs = LogCapture.of(MonteisAccessDeniedHandler.class, Level.WARN)) {
       handler.handle(
           new MockHttpServletRequest("POST", "/api/experiments"),
           new MockHttpServletResponse(),
@@ -88,8 +88,8 @@ class MonteisAccessDeniedHandlerTest {
   }
 
   @Test
-  void should_not_log_when_debug_is_off() throws IOException {
-    try (LogCapture logs = LogCapture.of(MonteisAccessDeniedHandler.class, Level.INFO)) {
+  void should_not_log_when_warn_is_off() throws IOException {
+    try (LogCapture logs = LogCapture.of(MonteisAccessDeniedHandler.class, Level.ERROR)) {
       handler.handle(
           new MockHttpServletRequest("POST", "/api/experiments/" + UUID.randomUUID()),
           new MockHttpServletResponse(),

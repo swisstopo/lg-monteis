@@ -6,9 +6,7 @@ import { Observable, catchError, defer, of, shareReplay } from 'rxjs';
 
 const NO_PERMISSIONS: CurrentUserDto = {
   isAdmin: false,
-  canWriteAllExperiments: false,
   writeExperimentIds: [],
-  canAccessDocuments: false,
 };
 
 /**
@@ -38,24 +36,17 @@ export class PermissionsService {
 
   readonly isAdmin = computed(() => this.currentUser().isAdmin);
 
-  readonly canWriteAllExperiments = computed(() => this.currentUser().canWriteAllExperiments);
-
   readonly writeExperimentIds = computed<readonly string[]>(
     () => this.currentUser().writeExperimentIds,
   );
 
-  readonly canAccessDocuments = computed(() => this.currentUser().canAccessDocuments);
-
   /** Whether the caller can write at least one experiment - decides whether a scoped write action is shown at all. */
   readonly hasAnyExperimentWriteAccess = computed(
-    () => this.canWriteAllExperiments() || this.writeExperimentIds().length > 0,
+    () => this.isAdmin() || this.writeExperimentIds().length > 0,
   );
 
-  /**
-   * Mirrors the backend Capabilities. `canWriteAllExperiments` already covers admins, so the admin
-   * rule lives in the backend only.
-   */
+  /** Mirrors the backend write rule on MonteisAuthenticationToken. */
   canWriteExperiment(experimentId: string): boolean {
-    return this.canWriteAllExperiments() || this.writeExperimentIds().includes(experimentId);
+    return this.isAdmin() || this.writeExperimentIds().includes(experimentId);
   }
 }

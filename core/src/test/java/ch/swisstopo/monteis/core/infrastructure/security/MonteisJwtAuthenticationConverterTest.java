@@ -2,23 +2,21 @@ package ch.swisstopo.monteis.core.infrastructure.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 /** Verifies the full JWT-to-{@code Authentication} mapping in {@link MonteisJwtAuthenticationConverter}. */
@@ -30,7 +28,6 @@ class MonteisJwtAuthenticationConverterTest {
 
   private static final String READ = "monteis-client:experiment:read";
   private static final String WRITE = "monteis-client:experiment:write";
-  private static final String WRITE_ALL = "monteis-client:experiment:write:all";
   private static final String ADMIN = "monteis-client:admin";
 
   private final MonteisJwtAuthenticationConverter converter =
@@ -68,13 +65,17 @@ class MonteisJwtAuthenticationConverterTest {
   @EnumSource(PrivilegeLevel.class)
   void should_convert_a_token_of_each_privilege_level(PrivilegeLevel level) {
     // when
-    AbstractAuthenticationToken authentication = converter.convert(level.jwt("token"));
-    MonteisPrincipal principal = (MonteisPrincipal) authentication.getPrincipal();
+    var token = (MonteisAuthenticationToken) converter.convert(level.jwt("token"));
 
     // then
-    assertEquals(Set.copyOf(level.grantedAuthorities()), authoritiesOf(authentication));
-    assertEquals(level.readExperimentIds(), principal.readExperimentIds());
-    assertEquals(level.writeExperimentIds(), principal.writeExperimentIds());
+    assertEquals(
+        level.grantedAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .collect(Collectors.toSet()),
+        authoritiesOf(token));
+    assertEquals(level.readableExperimentIds(), token.experimentAccess().readableExperimentIds());
+    assertEquals(
+        Set.copyOf(level.writeExperimentIds()), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -90,40 +91,62 @@ class MonteisJwtAuthenticationConverterTest {
             List.of(EXPERIMENT_1));
 
     // when
-    AbstractAuthenticationToken authentication = converter.convert(jwt);
+    var token = (MonteisAuthenticationToken) converter.convert(jwt);
 
     // then
+    assertEquals(new MonteisPrincipal(subject, "alice"), token.getPrincipal());
     assertEquals(
-        new MonteisPrincipal(
-            subject, "alice", List.of(EXPERIMENT_1, EXPERIMENT_2), List.of(EXPERIMENT_1)),
-        authentication.getPrincipal());
+        Set.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE), authoritiesOf(token));
     assertEquals(
-        Set.of(Grant.EXPERIMENT_READ, Grant.EXPERIMENT_WRITE), authoritiesOf(authentication));
+        Set.of(EXPERIMENT_1, EXPERIMENT_2), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_1), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
-  void should_accept_write_all_alone_and_keep_no_experiment_ids() {
-    // given: write:all implies all-experiment read, so its id claims are irrelevant
+  void should_map_admin_to_write_all_and_keep_no_experiment_ids() {
+    // given: write-all covers every experiment, so its id claims are irrelevant
     UUID subject = UUID.randomUUID();
     Jwt jwt =
-        givenJwt(
-            subject, "editor", List.of(WRITE_ALL), List.of(EXPERIMENT_5), List.of(EXPERIMENT_5));
+        givenJwt(subject, "root", List.of(ADMIN), List.of(EXPERIMENT_5), List.of(EXPERIMENT_5));
 
     // when
-    AbstractAuthenticationToken authentication = converter.convert(jwt);
+    var token = (MonteisAuthenticationToken) converter.convert(jwt);
 
     // then
-    assertEquals(
-        new MonteisPrincipal(subject, "editor", List.of(), List.of()),
-        authentication.getPrincipal());
-    assertEquals(Set.of(Grant.EXPERIMENT_WRITE_ALL), authoritiesOf(authentication));
+    assertEquals(new MonteisPrincipal(subject, "root"), token.getPrincipal());
+    assertEquals(Set.of(Permissions.ADMIN), authoritiesOf(token));
+    assertEquals(Set.of(), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
-  void should_reject_write_role_without_read_role() {
-    Jwt jwt = givenJwt(UUID.randomUUID(), "eve", List.of(WRITE), List.of(), List.of());
+  void should_ignore_the_removed_write_all_and_documents_roles() {
+    // given
+    Jwt jwt =
+        givenJwt(
+            UUID.randomUUID(),
+            "legacy",
+            List.of("monteis-client:experiment:write:all", "monteis-client:documents:read"),
+            null,
+            null);
 
-    assertThrows(OAuth2AuthenticationException.class, () -> converter.convert(jwt));
+    // then
+    assertEquals(Set.of(), authoritiesOf(converter.convert(jwt)));
+  }
+
+  @Test
+  void should_imply_read_for_the_write_role() {
+    // given
+    Jwt jwt = givenJwt(UUID.randomUUID(), "eve", List.of(WRITE), List.of(), List.of(EXPERIMENT_1));
+
+    // when
+    var token = (MonteisAuthenticationToken) converter.convert(jwt);
+
+    // then
+    assertEquals(
+        Set.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE), authoritiesOf(token));
+    assertEquals(Set.of(EXPERIMENT_1), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_1), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -133,16 +156,16 @@ class MonteisJwtAuthenticationConverterTest {
     Jwt jwt = givenJwt(subject, "bob", List.of(READ), List.of(EXPERIMENT_1), List.of(EXPERIMENT_1));
 
     // when
-    MonteisPrincipal principal = (MonteisPrincipal) converter.convert(jwt).getPrincipal();
+    var token = (MonteisAuthenticationToken) converter.convert(jwt);
 
     // then
-    assertEquals(List.of(EXPERIMENT_1), principal.readExperimentIds());
-    assertEquals(List.of(), principal.writeExperimentIds());
+    assertEquals(Set.of(EXPERIMENT_1), token.experimentAccess().readableExperimentIds());
+    assertEquals(Set.of(), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
-  void should_drop_write_ids_that_are_not_also_read_ids() {
-    // given: a tampered or misconfigured token
+  void should_let_the_caller_read_the_experiments_it_may_write() {
+    // given
     Jwt jwt =
         givenJwt(
             UUID.randomUUID(),
@@ -152,10 +175,13 @@ class MonteisJwtAuthenticationConverterTest {
             List.of(EXPERIMENT_1, EXPERIMENT_2));
 
     // when
-    MonteisPrincipal principal = (MonteisPrincipal) converter.convert(jwt).getPrincipal();
+    var token = (MonteisAuthenticationToken) converter.convert(jwt);
 
     // then
-    assertEquals(List.of(EXPERIMENT_1), principal.writeExperimentIds());
+    assertEquals(
+        Set.of(EXPERIMENT_1, EXPERIMENT_2), token.experimentAccess().readableExperimentIds());
+    assertEquals(
+        Set.of(EXPERIMENT_1, EXPERIMENT_2), token.experimentAccess().writableExperimentIds());
   }
 
   @Test
@@ -165,13 +191,12 @@ class MonteisJwtAuthenticationConverterTest {
     Jwt jwt = givenJwt(subject, "carol", null, List.of(EXPERIMENT_1, EXPERIMENT_2), null);
 
     // when
-    AbstractAuthenticationToken authentication = converter.convert(jwt);
+    var token = (MonteisAuthenticationToken) converter.convert(jwt);
 
     // then
-    assertEquals(
-        new MonteisPrincipal(subject, "carol", List.of(), List.of()),
-        authentication.getPrincipal());
-    assertEquals(Set.of(), authoritiesOf(authentication));
+    assertEquals(new MonteisPrincipal(subject, "carol"), token.getPrincipal());
+    assertEquals(Set.of(), authoritiesOf(token));
+    assertEquals(Set.of(), token.experimentAccess().readableExperimentIds());
   }
 
   @Test
@@ -188,8 +213,7 @@ class MonteisJwtAuthenticationConverterTest {
     AbstractAuthenticationToken authentication = converter.convert(jwt);
 
     // then
-    assertEquals(
-        new MonteisPrincipal(subject, "dave", List.of(), List.of()), authentication.getPrincipal());
+    assertEquals(new MonteisPrincipal(subject, "dave"), authentication.getPrincipal());
     assertEquals(Set.of(), authoritiesOf(authentication));
   }
 
@@ -210,20 +234,13 @@ class MonteisJwtAuthenticationConverterTest {
 
     // then
     assertEquals(Set.of(), authoritiesOf(authentication));
-    assertEquals(
-        new MonteisPrincipal(subject, "legacy", List.of(), List.of()),
-        authentication.getPrincipal());
+    assertEquals(new MonteisPrincipal(subject, "legacy"), authentication.getPrincipal());
   }
 
-  @Test
-  void should_grant_admin_without_needing_experiment_ids() {
-    Jwt jwt = givenJwt(UUID.randomUUID(), "root", List.of(ADMIN), null, null);
-
-    assertEquals(Set.of(Grant.ADMIN), authoritiesOf(converter.convert(jwt)));
-  }
-
-  private static Set<GrantedAuthority> authoritiesOf(AbstractAuthenticationToken authentication) {
-    return new HashSet<>(authentication.getAuthorities());
+  private static Set<String> authoritiesOf(AbstractAuthenticationToken authentication) {
+    return authentication.getAuthorities().stream()
+        .map(GrantedAuthority::getAuthority)
+        .collect(Collectors.toSet());
   }
 
   private static Jwt givenJwt(

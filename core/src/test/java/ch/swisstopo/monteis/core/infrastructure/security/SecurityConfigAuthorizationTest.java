@@ -1,8 +1,9 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIMENT;
-import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.OTHER_EXPERIMENT;
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.UNASSIGNED_EXPERIMENT;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -26,12 +27,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.security.config.observation.SecurityObservationSettings;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -43,11 +47,11 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * End-to-end verification of {@link SecurityConfig}'s request rules (BR4.8) for all five privilege
+ * End-to-end verification of {@link SecurityConfig}'s request rules (BR4.8) for all four privilege
  * levels (NFR1.2): a real {@code Authorization: Bearer} header, decoded by the (mocked) {@link
  * JwtDecoder}, run through the actually-configured {@link MonteisJwtAuthenticationConverter} bean
- * and {@link Capabilities} - not Spring Security Test's {@code jwt()} shortcut, which bypasses that
- * wiring entirely. The dummy controller mirrors the real paths, so these are the rules as matched.
+ * - not Spring Security Test's {@code jwt()} shortcut, which bypasses that wiring entirely. The dummy
+ * controller mirrors the real paths, so these are the rules as matched.
  */
 @ControllerTest
 @ContextConfiguration(classes = {SecurityConfigAuthorizationTest.DummyController.class})
@@ -58,6 +62,7 @@ class SecurityConfigAuthorizationTest {
           + "\"messageKey\":\"access.denied\",\"params\":{}}";
 
   @Autowired private MockMvc mockMvc;
+  @Autowired private SecurityObservationSettings observationSettings;
 
   @MockitoBean private JwtDecoder jwtDecoder;
 
@@ -65,42 +70,37 @@ class SecurityConfigAuthorizationTest {
   static Stream<Arguments> rules() {
     PrivilegeLevel[] adminOnly = {PrivilegeLevel.MONTEIS_ADMIN};
     PrivilegeLevel[] everyone = PrivilegeLevel.values();
-    PrivilegeLevel[] allExperiments = {PrivilegeLevel.GLOBAL_EDITOR, PrivilegeLevel.MONTEIS_ADMIN};
-    PrivilegeLevel[] assignedExperiment = {
-      PrivilegeLevel.EXPERIMENT_PI, PrivilegeLevel.GLOBAL_EDITOR, PrivilegeLevel.MONTEIS_ADMIN
+    PrivilegeLevel[] experimentWriters = {
+      PrivilegeLevel.EXPERIMENT_PI, PrivilegeLevel.MONTEIS_ADMIN
     };
     String sensor = "/api/sensors/" + UUID.randomUUID();
     String organisation = "/api/organisations/" + UUID.randomUUID();
-    PrivilegeLevel[] documentReaders = {
-      PrivilegeLevel.EXPERIMENT_USER, PrivilegeLevel.EXPERIMENT_PI, PrivilegeLevel.MONTEIS_ADMIN
-    };
     String fulcrumDocument = "/api/fulcrum-documents/" + UUID.randomUUID() + "/content";
     return Stream.of(
         Arguments.of(HttpMethod.GET, "/api/experiments", everyone),
         Arguments.of(HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT, everyone),
-        Arguments.of(HttpMethod.PUT, "/api/experiments/" + ASSIGNED_EXPERIMENT, assignedExperiment),
-        Arguments.of(HttpMethod.PUT, "/api/experiments/" + OTHER_EXPERIMENT, allExperiments),
-        Arguments.of(HttpMethod.PUT, "/api/experiments/" + UNASSIGNED_EXPERIMENT, allExperiments),
-        Arguments.of(HttpMethod.PUT, "/api/experiments/not-a-uuid", new PrivilegeLevel[] {}),
+        Arguments.of(HttpMethod.PUT, "/api/experiments/" + ASSIGNED_EXPERIMENT, experimentWriters),
+        Arguments.of(
+            HttpMethod.PUT, "/api/experiments/" + UNASSIGNED_EXPERIMENT, experimentWriters),
         Arguments.of(HttpMethod.POST, "/api/experiments", adminOnly),
         Arguments.of(
             HttpMethod.GET, "/api/experiments/" + UNASSIGNED_EXPERIMENT + "/documents", everyone),
         Arguments.of(
             HttpMethod.POST,
             "/api/experiments/" + ASSIGNED_EXPERIMENT + "/documents",
-            assignedExperiment),
+            experimentWriters),
         Arguments.of(
-            HttpMethod.POST, "/api/experiments/" + OTHER_EXPERIMENT + "/documents", allExperiments),
-        Arguments.of(
-            HttpMethod.POST, "/api/experiments/not-a-uuid/documents", new PrivilegeLevel[] {}),
+            HttpMethod.POST,
+            "/api/experiments/" + UNASSIGNED_EXPERIMENT + "/documents",
+            experimentWriters),
         Arguments.of(
             HttpMethod.DELETE,
             "/api/experiments/" + ASSIGNED_EXPERIMENT + "/documents/" + UUID.randomUUID(),
-            assignedExperiment),
+            experimentWriters),
         Arguments.of(
             HttpMethod.DELETE,
-            "/api/experiments/" + OTHER_EXPERIMENT + "/documents/" + UUID.randomUUID(),
-            allExperiments),
+            "/api/experiments/" + UNASSIGNED_EXPERIMENT + "/documents/" + UUID.randomUUID(),
+            experimentWriters),
         Arguments.of(HttpMethod.GET, "/api/experiments/owners", everyone),
         Arguments.of(
             HttpMethod.GET,
@@ -112,10 +112,10 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.PUT, sensor, adminOnly),
         Arguments.of(HttpMethod.GET, sensor + "/documents", everyone),
         // write grant only, the insert policy decides per sensor
-        Arguments.of(HttpMethod.POST, sensor + "/documents", assignedExperiment),
+        Arguments.of(HttpMethod.POST, sensor + "/documents", experimentWriters),
         // write grant only, the delete policy decides per sensor
         Arguments.of(
-            HttpMethod.DELETE, sensor + "/documents/" + UUID.randomUUID(), assignedExperiment),
+            HttpMethod.DELETE, sensor + "/documents/" + UUID.randomUUID(), experimentWriters),
         Arguments.of(HttpMethod.GET, "/api/organisations", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/all", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/csv", everyone),
@@ -127,9 +127,9 @@ class SecurityConfigAuthorizationTest {
         Arguments.of(HttpMethod.PATCH, "/api/other", adminOnly),
         Arguments.of(HttpMethod.DELETE, "/api/other", adminOnly),
         Arguments.of(HttpMethod.GET, "/api/fulcrum-documents", everyone),
-        Arguments.of(HttpMethod.GET, fulcrumDocument, documentReaders),
+        Arguments.of(HttpMethod.GET, fulcrumDocument, everyone),
         Arguments.of(HttpMethod.GET, "/api/fulcrum-sync", everyone),
-        Arguments.of(HttpMethod.POST, "/api/fulcrum-sync", documentReaders),
+        Arguments.of(HttpMethod.POST, "/api/fulcrum-sync", everyone),
         Arguments.of(HttpMethod.GET, "/api/measurements", everyone),
         Arguments.of(HttpMethod.GET, "/api/me", everyone));
   }
@@ -165,22 +165,15 @@ class SecurityConfigAuthorizationTest {
   // HEAD served by GET handler, no body to compare
   @ParameterizedTest
   @EnumSource(PrivilegeLevel.class)
-  void should_apply_the_fulcrum_document_rule_to_head_requests(PrivilegeLevel level)
+  void should_let_every_level_send_head_requests_for_fulcrum_documents(PrivilegeLevel level)
       throws Exception {
-    List<PrivilegeLevel> documentReaders =
-        List.of(
-            PrivilegeLevel.EXPERIMENT_USER,
-            PrivilegeLevel.EXPERIMENT_PI,
-            PrivilegeLevel.MONTEIS_ADMIN);
-
-    var result =
-        mockMvc.perform(
+    mockMvc
+        .perform(
             withBearer(
                 request(
                     HttpMethod.HEAD, "/api/fulcrum-documents/" + UUID.randomUUID() + "/content"),
-                givenDecodableToken(level)));
-
-    result.andExpect(documentReaders.contains(level) ? status().isOk() : status().isForbidden());
+                givenDecodableToken(level)))
+        .andExpect(status().isOk());
   }
 
   @Test
@@ -192,6 +185,32 @@ class SecurityConfigAuthorizationTest {
   }
 
   @Test
+  void should_wrap_neither_requests_nor_authentication_nor_authorization_in_observations() {
+    assertFalse(observationSettings.shouldObserveRequests());
+    assertFalse(observationSettings.shouldObserveAuthentications());
+    assertFalse(observationSettings.shouldObserveAuthorizations());
+  }
+
+  @Test
+  void should_not_create_a_session_for_a_rejected_browser_request() throws Exception {
+    MvcResult result =
+        mockMvc
+            .perform(get("/api/experiments").accept(MediaType.TEXT_HTML))
+            .andExpect(status().isUnauthorized())
+            .andReturn();
+
+    assertNull(result.getRequest().getSession(false));
+  }
+
+  @Test
+  void should_answer_an_anonymous_write_with_401_and_no_session() throws Exception {
+    MvcResult result =
+        mockMvc.perform(post("/api/experiments")).andExpect(status().isUnauthorized()).andReturn();
+
+    assertNull(result.getRequest().getSession(false));
+  }
+
+  @Test
   void should_forbid_anonymous_writes() throws Exception {
     mockMvc
         .perform(put("/api/experiments/{id}", ASSIGNED_EXPERIMENT))
@@ -200,13 +219,13 @@ class SecurityConfigAuthorizationTest {
   }
 
   @Test
-  void should_reject_a_token_with_experiment_write_but_without_experiment_read() throws Exception {
+  void should_let_a_token_with_only_experiment_write_read_too() throws Exception {
     givenDecodableToken(
-        "misconfigured-token", Map.of("roles", List.of("monteis-client:experiment:write")));
+        "write-only-token", Map.of("roles", List.of("monteis-client:experiment:write")));
 
     mockMvc
-        .perform(withBearer(get("/api/experiments"), "misconfigured-token"))
-        .andExpect(status().isUnauthorized());
+        .perform(withBearer(get("/api/experiments"), "write-only-token"))
+        .andExpect(status().isOk());
   }
 
   @Test
@@ -219,7 +238,7 @@ class SecurityConfigAuthorizationTest {
         .perform(withBearer(post("/api/experiments"), "legacy-token"))
         .andExpect(status().isForbidden());
     mockMvc
-        .perform(withBearer(put("/api/experiments/{id}", ASSIGNED_EXPERIMENT), "legacy-token"))
+        .perform(withBearer(put("/api/sensors/{id}", UUID.randomUUID()), "legacy-token"))
         .andExpect(status().isForbidden());
   }
 

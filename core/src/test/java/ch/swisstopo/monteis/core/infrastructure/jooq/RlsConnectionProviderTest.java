@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import ch.swisstopo.monteis.core.infrastructure.security.Grant;
+import ch.swisstopo.monteis.core.infrastructure.security.Permissions;
 import ch.swisstopo.monteis.core.infrastructure.security.SystemSecurityContext;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import java.sql.Connection;
@@ -32,11 +32,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * The RLS session values follow {@code Capabilities}: the read-all and write-all flags and the
+ * The RLS session values follow {@code MonteisAuthenticationToken}: the read-all and write-all flags and the
  * readable and writable experiment ids, transaction-local and fail closed (BR3.5-BR3.7).
  */
 @ExtendWith(MockitoExtension.class)
@@ -71,13 +72,6 @@ class RlsConnectionProviderTest {
   }
 
   @Test
-  void should_set_both_all_experiments_flags_and_no_ids_for_a_global_editor() throws SQLException {
-    RlsSettings settings = acquireWithin(SecurityContextTestSupport::runAsGlobalEditor);
-
-    assertEquals(new RlsSettings("true", "true", "", ""), settings);
-  }
-
-  @Test
   void should_set_sorted_read_and_write_ids_for_a_scoped_editor() throws SQLException {
     RlsSettings settings =
         acquireWithin(
@@ -92,15 +86,16 @@ class RlsConnectionProviderTest {
   }
 
   @Test
-  void should_drop_write_ids_that_are_not_readable() throws SQLException {
+  void should_also_read_the_experiments_the_caller_may_write() throws SQLException {
     RlsSettings settings =
         acquireWithin(
             action ->
                 SecurityContextTestSupport.runAsUser(
-                    List.of(EXPERIMENT_A), List.of(EXPERIMENT_A, EXPERIMENT_C), action));
+                    List.of(EXPERIMENT_A), List.of(EXPERIMENT_C), action));
 
     assertEquals(
-        new RlsSettings("false", "false", EXPERIMENT_A.toString(), EXPERIMENT_A.toString()),
+        new RlsSettings(
+            "false", "false", EXPERIMENT_A + "," + EXPERIMENT_C, EXPERIMENT_C.toString()),
         settings);
   }
 
@@ -110,7 +105,7 @@ class RlsConnectionProviderTest {
         acquireWithin(
             action ->
                 SecurityContextTestSupport.runAs(
-                    List.of(Grant.EXPERIMENT_READ),
+                    List.of(Permissions.EXPERIMENT_READ),
                     List.of(EXPERIMENT_A),
                     List.of(EXPERIMENT_A),
                     action));
@@ -119,10 +114,10 @@ class RlsConnectionProviderTest {
   }
 
   @Test
-  void should_set_only_the_read_all_flag_for_the_system_context() throws SQLException {
+  void should_set_both_all_experiments_flags_for_the_system_context() throws SQLException {
     RlsSettings settings = acquireWithin(SystemSecurityContext::runAsSystem);
 
-    assertEquals(new RlsSettings("true", "false", "", ""), settings);
+    assertEquals(new RlsSettings("true", "true", "", ""), settings);
   }
 
   @Test
@@ -134,7 +129,7 @@ class RlsConnectionProviderTest {
               SecurityContext context = SecurityContextHolder.createEmptyContext();
               context.setAuthentication(
                   UsernamePasswordAuthenticationToken.authenticated(
-                      "x", null, List.of(Grant.ADMIN)));
+                      "x", null, List.of(new SimpleGrantedAuthority(Permissions.ADMIN))));
               SecurityContextHolder.setContext(context);
               action.run();
             });

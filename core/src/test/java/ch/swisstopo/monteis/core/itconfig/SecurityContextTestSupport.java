@@ -1,12 +1,12 @@
 package ch.swisstopo.monteis.core.itconfig;
 
-import ch.swisstopo.monteis.core.infrastructure.security.Grant;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
+import ch.swisstopo.monteis.core.infrastructure.security.Permissions;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
-import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -24,17 +24,12 @@ public final class SecurityContextTestSupport {
 
   /** {@code api:admin}: all experiments, read and write. */
   public static void runAsAdmin(Runnable action) {
-    runAs(List.of(Grant.ADMIN), List.of(), List.of(), action);
-  }
-
-  /** {@code api:experiment:write-all}: all experiments, read and write, no admin functions. */
-  public static void runAsGlobalEditor(Runnable action) {
-    runAs(List.of(Grant.EXPERIMENT_WRITE_ALL), List.of(), List.of(), action);
+    runAs(List.of(Permissions.ADMIN), List.of(), List.of(), action);
   }
 
   /** {@code api:experiment:read} on {@code readExperimentIds} only. */
   public static void runAsUser(List<UUID> readExperimentIds, Runnable action) {
-    runAs(List.of(Grant.EXPERIMENT_READ), readExperimentIds, List.of(), action);
+    runAs(List.of(Permissions.EXPERIMENT_READ), readExperimentIds, List.of(), action);
   }
 
   /**
@@ -44,7 +39,7 @@ public final class SecurityContextTestSupport {
   public static void runAsUser(
       List<UUID> readExperimentIds, List<UUID> writeExperimentIds, Runnable action) {
     runAs(
-        List.of(Grant.EXPERIMENT_READ, Grant.EXPERIMENT_WRITE),
+        List.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE),
         readExperimentIds,
         writeExperimentIds,
         action);
@@ -52,16 +47,16 @@ public final class SecurityContextTestSupport {
 
   /** {@link #runAsAdmin} for an action with a result. */
   public static <T> T callAsAdmin(Supplier<T> action) {
-    return callAs(List.of(Grant.ADMIN), List.of(), List.of(), action);
+    return callAs(List.of(Permissions.ADMIN), List.of(), List.of(), action);
   }
 
   public static void runAs(
-      List<GrantedAuthority> authorities,
+      List<String> permissions,
       List<UUID> readExperimentIds,
       List<UUID> writeExperimentIds,
       Runnable action) {
     callAs(
-        authorities,
+        permissions,
         readExperimentIds,
         writeExperimentIds,
         () -> {
@@ -71,13 +66,18 @@ public final class SecurityContextTestSupport {
   }
 
   public static <T> T callAs(
-      List<GrantedAuthority> authorities,
+      List<String> permissions,
       List<UUID> readExperimentIds,
       List<UUID> writeExperimentIds,
       Supplier<T> action) {
-    MonteisPrincipal principal =
-        new MonteisPrincipal(UUID.randomUUID(), USERNAME, readExperimentIds, writeExperimentIds);
-    var authentication = new MonteisAuthenticationToken(null, principal, authorities);
+    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), USERNAME);
+    var authentication =
+        new MonteisAuthenticationToken(
+            null,
+            principal,
+            permissions.stream().map(SimpleGrantedAuthority::new).toList(),
+            readExperimentIds,
+            writeExperimentIds);
 
     SecurityContext previous = SecurityContextHolder.getContext();
     try {
