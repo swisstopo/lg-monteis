@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
@@ -52,9 +53,11 @@ class KafkaListenerConfigTest {
 
   @BeforeEach
   void setUp() {
-    lenient()
-        .when(consumer.groupMetadata())
-        .thenReturn(new ConsumerGroupMetadata("normalization-processor-group"));
+    ConsumerGroupMetadata groupMetadata = mock(ConsumerGroupMetadata.class);
+    lenient().when(groupMetadata.groupId()).thenReturn("normalization-processor-group");
+
+    lenient().when(consumer.groupMetadata()).thenReturn(groupMetadata);
+
     lenient().when(container.isRunning()).thenReturn(true);
     errorHandler = KafkaListenerConfig.deadLetterErrorHandler(kafkaTemplate);
   }
