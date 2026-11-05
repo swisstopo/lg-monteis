@@ -19,9 +19,11 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.function.Supplier;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Record;
@@ -93,6 +95,10 @@ public class MeasurementQueryRepository implements MeasurementQuery {
           Map.entry("active", SENSORS.ACTIVE),
           Map.entry("comment", SENSORS.COMMENT));
 
+  // Fixed bucket origin: buckets stay aligned to the same instants whatever range is requested, so
+  // panning or zooming never shifts a bucket's boundaries (and thus its average).
+  private static final OffsetDateTime BUCKET_ORIGIN = OffsetDateTime.parse("2000-01-01T00:00:00Z");
+
   public MeasurementQueryRepository(DSLContext dsl, Clock clock) {
     this.dsl = dsl;
     this.clock = clock;
@@ -130,6 +136,52 @@ public class MeasurementQueryRepository implements MeasurementQuery {
   @Override
   public Optional<ChartDataResponseDto> findChartData(
       UUID id, OffsetDateTime from, OffsetDateTime to) {
+    return findChartData(
+        id,
+        () ->
+            dsl.select(SENSOR_READING_SECURED.TIMESTAMP, SENSOR_READING_SECURED.NORM_VALUE)
+                .from(SENSOR_READING_SECURED)
+                // sensor_reading_secured links via sensor_parameter.id /
+                // sensor_reading.sensor_parameter_id
+                // (both UUID, globally unique) - see db/meta/schema/V13.
+                .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(DSL.inline(id)))
+                // INLINE from and to in order to bypass string conversion via fdw
+                .and(SENSOR_READING_SECURED.TIMESTAMP.between(DSL.inline(from), DSL.inline(to)))
+                .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc())
+                .fetch(mapping(ChartPointDto::new)));
+  }
+
+  // The aggregate is not pushed down to TimescaleDB (the secured view joins a local table, see
+  // db/meta/schema/V3), so the raw rows still cross the fdw and are averaged in the meta DB. The
+  // WHERE clause is pushed down as for the raw read. date_bin is used over time_bucket because the
+  // meta DB has no TimescaleDB extension. Everything is INLINED: besides the fdw reason, identical
+  // literal expressions are what lets PostgreSQL match the SELECT's bucket against the GROUP BY.
+  @Override
+  public Optional<ChartDataResponseDto> findBucketedChartData(
+      UUID id, OffsetDateTime from, OffsetDateTime to, Duration bucket) {
+    Field<OffsetDateTime> bucketStart =
+        field(
+            "date_bin(cast({0} as interval), {1}, {2})",
+            SENSOR_READING_SECURED.TIMESTAMP.getDataType(),
+            DSL.inline(bucket.toString()),
+            SENSOR_READING_SECURED.TIMESTAMP,
+            DSL.inline(BUCKET_ORIGIN));
+    Field<Double> average = avg(SENSOR_READING_SECURED.NORM_VALUE).coerce(Double.class);
+
+    return findChartData(
+        id,
+        () ->
+            dsl.select(bucketStart, average)
+                .from(SENSOR_READING_SECURED)
+                .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(DSL.inline(id)))
+                .and(SENSOR_READING_SECURED.TIMESTAMP.between(DSL.inline(from), DSL.inline(to)))
+                .groupBy(bucketStart)
+                .orderBy(bucketStart.asc())
+                .fetch(mapping(ChartPointDto::new)));
+  }
+
+  private Optional<ChartDataResponseDto> findChartData(
+      UUID id, Supplier<List<ChartPointDto>> pointsQuery) {
 
     var parameterInfo =
         dsl.select(
@@ -148,17 +200,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
       return Optional.empty();
     }
 
-    List<ChartPointDto> points =
-        dsl.select(SENSOR_READING_SECURED.TIMESTAMP, SENSOR_READING_SECURED.NORM_VALUE)
-            .from(SENSOR_READING_SECURED)
-            // sensor_reading_secured links via sensor_parameter.id /
-            // sensor_reading.sensor_parameter_id
-            // (both UUID, globally unique) - see db/meta/schema/V13.
-            .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(DSL.inline(id)))
-            // INLINE from and to in order to bypass string conversion via fdw
-            .and(SENSOR_READING_SECURED.TIMESTAMP.between(DSL.inline(from), DSL.inline(to)))
-            .orderBy(SENSOR_READING_SECURED.TIMESTAMP.asc())
-            .fetch(mapping(ChartPointDto::new));
+    List<ChartPointDto> points = pointsQuery.get();
 
     String combinedName =
         parameterInfo.get(SENSORS.NAME) + " - " + parameterInfo.get(SENSOR_PARAMETER.NAME);

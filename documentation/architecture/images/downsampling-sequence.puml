@@ -6,27 +6,29 @@ skinparam maxMessageSize 150
 actor "Nutzer" as User
 participant "Angular Frontend\n(Chart.js)" as UI
 participant "Core API (Backend)" as Backend
-database "TimeScaleDB" as TSDB
-database "PostgreSQL" as PostGIS
+database "Meta-PostgreSQL" as MetaDB
+database "TimescaleDB" as TSDB
 
-User -> UI : Klick "Plot 10 Jahre"
-UI -> Backend : GET /sensor/123/series?range=10y
+User -> UI : Zeitraum wählen (z. B. 1 Jahr)
+UI -> Backend : GET /api/measurements/charts/data\n?id&from&to
 activate Backend
 
-Backend -> Backend : Zeitspanne prüfen -> Downsampling notwendig
-Backend -> TSDB : jOOQ Query (mit time_bucket / Aggregation)
-activate TSDB
+Backend -> Backend : ChartResolution:\nBucket = range/1500\n(Raw falls <= 1h)
+Backend -> MetaDB : jOOQ: date_bin + avg(norm_value)\nWHERE sensor_parameter_id + timestamp-Range\n(sensor_reading_secured, RLS)
+activate MetaDB
 
-TSDB -> PostGIS : FDW: Fetch Metadaten (Einheit/Formel)
-PostGIS --> TSDB : Return Data
-TSDB -> TSDB : Nativ Millionen Messwerte auf tausende Punkte verdichten
-TSDB --> Backend : Return aggregiertes Resultset
+MetaDB -> MetaDB : can_access_sensor() (RLS)
+MetaDB -> TSDB : FDW: Filter-Pushdown\n(sensor_parameter_id, timestamp)
+TSDB --> MetaDB : gefilterte Rohzeilen
 deactivate TSDB
+MetaDB -> MetaDB : Aggregat auf <=1500 Buckets
+MetaDB --> Backend : aggregiertes Resultset
+deactivate MetaDB
 
-Backend --> UI : Komprimiertes JSON (Payload optimiert)
+Backend --> UI : JSON (max. ~1500 Punkte)
 deactivate Backend
 
-UI -> UI : Chart.js rendert Plot
-UI --> User : Graph wird angezeigt
+UI -> UI : Chart.js rendert
+UI --> User : Chart
 
 @enduml

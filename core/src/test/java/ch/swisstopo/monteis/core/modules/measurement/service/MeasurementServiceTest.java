@@ -17,6 +17,7 @@ import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementQuery;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.MeasurementResponseDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorDetailResponseDto;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.OffsetDateTime;
@@ -41,10 +42,10 @@ class MeasurementServiceTest {
   @InjectMocks private MeasurementService service;
 
   @Test
-  void should_delegate_to_query_when_from_is_before_to() {
+  void should_delegate_to_raw_query_when_range_is_within_raw_limit() {
     // given
     OffsetDateTime from = OffsetDateTime.parse("2024-01-01T00:00:00Z");
-    OffsetDateTime to = OffsetDateTime.parse("2024-01-02T00:00:00Z");
+    OffsetDateTime to = from.plus(ChartResolution.RAW_MAX_RANGE);
     Optional<ChartDataResponseDto> expected = Optional.of(mock(ChartDataResponseDto.class));
 
     given(query.findChartData(SENSOR_ID, from, to)).willReturn(expected);
@@ -54,6 +55,26 @@ class MeasurementServiceTest {
 
     // then
     then(query).should().findChartData(SENSOR_ID, from, to);
+    then(query).shouldHaveNoMoreInteractions();
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void should_delegate_to_bucketed_query_when_range_exceeds_raw_limit() {
+    // given: one day at 1500 points max resolves to one-minute buckets
+    OffsetDateTime from = OffsetDateTime.parse("2024-01-01T00:00:00Z");
+    OffsetDateTime to = OffsetDateTime.parse("2024-01-02T00:00:00Z");
+    Optional<ChartDataResponseDto> expected = Optional.of(mock(ChartDataResponseDto.class));
+
+    given(query.findBucketedChartData(SENSOR_ID, from, to, Duration.ofMinutes(1)))
+        .willReturn(expected);
+
+    // when
+    Optional<ChartDataResponseDto> actual = service.findChartData(SENSOR_ID, from, to);
+
+    // then
+    then(query).should().findBucketedChartData(SENSOR_ID, from, to, Duration.ofMinutes(1));
+    then(query).shouldHaveNoMoreInteractions();
     assertEquals(expected, actual);
   }
 
@@ -63,7 +84,8 @@ class MeasurementServiceTest {
     OffsetDateTime from = OffsetDateTime.parse("2024-01-01T00:00:00Z");
     OffsetDateTime to = OffsetDateTime.parse("2024-01-02T00:00:00Z");
 
-    given(query.findChartData(SENSOR_ID, from, to)).willReturn(Optional.empty());
+    given(query.findBucketedChartData(SENSOR_ID, from, to, Duration.ofMinutes(1)))
+        .willReturn(Optional.empty());
 
     // when / then
     assertEquals(Optional.empty(), service.findChartData(SENSOR_ID, from, to));

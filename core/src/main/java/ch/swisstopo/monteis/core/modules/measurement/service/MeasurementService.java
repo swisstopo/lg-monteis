@@ -31,7 +31,9 @@ public class MeasurementService {
       throw new ObjectBusinessValidationException(
           "measurement.dateRange.invalid", Map.of("from", from, "to", to));
     }
-    return query.findChartData(id, from, to);
+    return ChartResolution.bucketFor(from, to)
+        .map(bucket -> query.findBucketedChartData(id, from, to, bucket))
+        .orElseGet(() -> query.findChartData(id, from, to));
   }
 
   public PagedResult<MeasurementResponseDto> getPagedMeasurements(PagedRequest request) {

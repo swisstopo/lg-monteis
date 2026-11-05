@@ -77,13 +77,13 @@ include::../images/filtering-sequence.puml[]
 
 === Szenario 5: Visualisierung langer Zeitreihen (FDW & Downsampling)
 
-Das Abfragen von Zeitreihen, die Jahre zurückreichen, ist hochgradig datenintensiv. Hier kommt die Performance der `TimeScaleDB` in Kombination mit `postgres_fdw` und Downsampling zum Tragen.
+Das Abfragen von Zeitreihen, die Jahre zurückreichen, ist hochgradig datenintensiv. Die Core API begrenzt die Punktzahl serverseitig auf ~1500 Punkte pro Chart-Request. Die Aggregation läuft bewusst in der Meta-PostgreSQL: Der Secured-View `sensor_reading_secured` joint die per `postgres_fdw` eingebundene Tabelle `raw_sensor_reading` lokal mit `sensor_parameter` (Row-Level Security).
 
 **Ablauf:**
 
-1. Der Nutzer wählt einen Sensor und einen grossen Zeitraum (z. B. 10 Jahre) für einen Plot (`Chart.js`) aus.
-2. Das Backend prüft die Zeitspanne und leitet einen Downsampling-Request an die TimeScaleDB weiter. (Vordefinierte Buckets, z.B. Zeitspanne > 1 Jahr -> Bucket=hourly)
-3. Die TimeScaleDB aggregiert die Messwerte nativ (z. B. via `time_bucket`) und joined via `FDW` transparent notwendige Metadaten (wie Einheiten) aus der PostgreSQL.
+1. Der Nutzer wählt einen Sensor-Parameter und einen grossen Zeitraum (z. B. 1 Jahr) für einen Plot (`Chart.js`) aus.
+2. Das Backend bestimmt die Auflösung anhand der Zeitspanne: Zeiträume bis 1 Stunde liefern Rohdaten, längere Zeiträume werden in festen Zeit-Buckets (Minuten- bis Tages-Raster) auf maximal ~1500 Punkte verdichtet. Die Bucket-Grenzen sind an einem festen Zeitursprung (2000-01-01T00:00Z) ausgerichtet, damit Kurven bei Zoom/Pan nicht springen.
+3. Die Abfrage läuft über den RLS-gesicherten View `sensor_reading_secured` auf der Meta-Datenbank: Parameter- und Zeitfilter werden per `postgres_fdw` an die TimeScaleDB weitergereicht (Pushdown), die Mittelwert-Bildung pro Bucket erfolgt lokal in der Meta-Datenbank.
 4. Das Backend empfängt ein stark komprimiertes, aber visuell akkurates JSON-Array und liefert es an das Frontend aus.
 
 [plantuml, seq-downsampling, format="svg"]

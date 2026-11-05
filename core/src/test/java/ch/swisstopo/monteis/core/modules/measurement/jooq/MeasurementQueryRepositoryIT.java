@@ -27,9 +27,11 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.jooq.JooqSensorRepository;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -335,6 +337,110 @@ class MeasurementQueryRepositoryIT {
 
   private List<ChartPointDto> dataOf(UUID id, OffsetDateTime from, OffsetDateTime to) {
     return repository.findChartData(id, from, to).orElseThrow().points();
+  }
+
+  @Test
+  @Transactional
+  void should_return_one_point_per_bucket_aligned_to_bucket_boundaries_in_ascending_order() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Act
+          ChartDataResponseDto dto =
+              repository
+                  .findBucketedChartData(TEMP_1_PARAM, wideFrom, wideTo, Duration.ofMinutes(30))
+                  .orElseThrow();
+
+          // Assert: ~1 day of 5-minute readings collapses into at most 49 half-hour buckets
+          assertEquals("SOL_EXPERTS__TEMP-1__temperature", dto.dasKey());
+          List<ChartPointDto> points = dto.points();
+          assertFalse(points.isEmpty());
+          assertTrue(points.size() <= 49, "got " + points.size() + " points");
+          for (int i = 0; i < points.size(); i++) {
+            OffsetDateTime ts = points.get(i).timestamp().withOffsetSameInstant(ZoneOffset.UTC);
+            assertEquals(0, ts.getMinute() % 30, "bucket start " + ts + " not on a 30-min mark");
+            assertEquals(0, ts.getSecond());
+            assertEquals(0, ts.getNano());
+            if (i > 0) {
+              assertTrue(points.get(i - 1).timestamp().isBefore(points.get(i).timestamp()));
+            }
+          }
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_average_the_norm_values_of_all_readings_within_a_bucket() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange: pick a full bucket from the middle of the window and average it independently
+          ChartPointDto bucket =
+              repository
+                  .findBucketedChartData(TEMP_1_PARAM, wideFrom, wideTo, Duration.ofHours(1))
+                  .orElseThrow()
+                  .points()
+                  .get(5);
+          OffsetDateTime bucketStart = bucket.timestamp();
+          List<ChartPointDto> rawInBucket =
+              dataOf(TEMP_1_PARAM, bucketStart, bucketStart.plusHours(1).minusNanos(1_000));
+          double expectedAverage =
+              rawInBucket.stream().mapToDouble(ChartPointDto::value).average().orElseThrow();
+
+          // Assert
+          assertFalse(rawInBucket.isEmpty());
+          assertEquals(expectedAverage, bucket.value(), 1e-9);
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_keep_bucket_values_stable_regardless_of_requested_range_start() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Act: same window, start shifted by 7 minutes - inner buckets must not move
+          OffsetDateTime shiftedFrom = wideFrom.plusMinutes(7);
+          List<ChartPointDto> original =
+              repository
+                  .findBucketedChartData(TEMP_1_PARAM, wideFrom, wideTo, Duration.ofMinutes(30))
+                  .orElseThrow()
+                  .points();
+          List<ChartPointDto> shifted =
+              repository
+                  .findBucketedChartData(TEMP_1_PARAM, shiftedFrom, wideTo, Duration.ofMinutes(30))
+                  .orElseThrow()
+                  .points();
+
+          // Assert: every bucket starting inside both ranges is fully covered by both requests
+          List<ChartPointDto> originalInner =
+              original.stream().filter(p -> !p.timestamp().isBefore(shiftedFrom)).toList();
+          List<ChartPointDto> shiftedInner =
+              shifted.stream().filter(p -> !p.timestamp().isBefore(shiftedFrom)).toList();
+          assertFalse(originalInner.isEmpty());
+          assertEquals(originalInner, shiftedInner);
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_return_empty_bucketed_series_when_id_does_not_exist() {
+    SecurityContextTestSupport.runAsAdmin(
+        () ->
+            assertTrue(
+                repository
+                    .findBucketedChartData(
+                        NON_EXISTENT_ID, wideFrom, wideTo, Duration.ofMinutes(30))
+                    .isEmpty()));
+  }
+
+  @Test
+  @Transactional
+  void should_exclude_sensor_from_bucketed_series_for_regular_user_without_access() {
+    SecurityContextTestSupport.runAsUser(
+        EXPERIMENT_1_ONLY,
+        () ->
+            assertTrue(
+                repository
+                    .findBucketedChartData(DISP_2_PARAM, wideFrom, wideTo, Duration.ofMinutes(30))
+                    .isEmpty()));
   }
 
   @Test
