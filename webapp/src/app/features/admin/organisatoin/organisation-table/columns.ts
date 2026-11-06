@@ -12,6 +12,7 @@ export function createColumns(): TableColumn<OrganisationResponseDto>[] {
       headerName: translateService.translate('organisation.name.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
+      flex: 1,
     },
     {
       field: 'comment',
@@ -19,8 +20,7 @@ export function createColumns(): TableColumn<OrganisationResponseDto>[] {
       sortable: true,
       filter: 'agTextColumnFilter',
       tooltip: (params) => params.value,
-      width: 450,
-      suppressAutoSize: true,
+      flex: 3,
     },
   ];
 }

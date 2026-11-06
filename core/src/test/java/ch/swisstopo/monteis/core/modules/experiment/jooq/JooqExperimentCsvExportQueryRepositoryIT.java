@@ -1,7 +1,9 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
+import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOrganisation.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.ExperimentOwner.EXPERIMENT_OWNER;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.Experiments.EXPERIMENTS;
+import static ch.swisstopo.monteis.core.jooq.generated.tables.Organisations.ORGANISATIONS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -17,6 +19,8 @@ import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -156,6 +160,70 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           assertEquals(2, lines.size());
           assertTrue(lines.get(1).startsWith("FilteredCsvOwned,"));
         });
+  }
+
+  @Test
+  @Transactional
+  void should_apply_the_organisation_filter_to_the_export() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          UUID swisstopo = createOrganisation("CsvOrgFilter swisstopo");
+          UUID eth = createOrganisation("CsvOrgFilter ETH");
+          UUID ofSwisstopo = createDefaultExperiment("OrgFilteredCsvSwisstopo");
+          UUID ofEth = createDefaultExperiment("OrgFilteredCsvEth");
+          createDefaultExperiment("OrgFilteredCsvNone");
+          linkOrganisation(ofSwisstopo, swisstopo);
+          linkOrganisation(ofEth, eth);
+
+          List<String> bySwisstopo = exportedNames(organisationFilter(swisstopo.toString()));
+          List<String> bySwisstopoOrNone =
+              exportedNames(organisationFilter(swisstopo.toString(), null));
+
+          assertEquals(List.of("OrgFilteredCsvSwisstopo"), bySwisstopo);
+          assertEquals(List.of("OrgFilteredCsvNone", "OrgFilteredCsvSwisstopo"), bySwisstopoOrNone);
+        });
+  }
+
+  private UUID createDefaultExperiment(String name) {
+    return createExperiment(
+        name, null, LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31));
+  }
+
+  private UUID createOrganisation(String name) {
+    return Objects.requireNonNull(
+            dsl.insertInto(ORGANISATIONS)
+                .set(ORGANISATIONS.NAME, name)
+                .returning(ORGANISATIONS.ID)
+                .fetchOne())
+        .getId();
+  }
+
+  private void linkOrganisation(UUID experimentId, UUID organisationId) {
+    dsl.insertInto(EXPERIMENT_ORGANISATION)
+        .set(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, experimentId)
+        .set(EXPERIMENT_ORGANISATION.ORGANISATION_ID, organisationId)
+        .execute();
+  }
+
+  private static PagedRequest organisationFilter(String... organisationIds) {
+    return new PagedRequest(
+        0,
+        10,
+        List.of(),
+        Map.of(
+            "name",
+            new TextFilterModel("contains", "OrgFilteredCsv", null),
+            "organisationIds",
+            new SetFilterModel("set", new HashSet<>(Arrays.asList(organisationIds)))));
+  }
+
+  /** The names of the exported rows, sorted, without the header. */
+  private List<String> exportedNames(PagedRequest request) {
+    return Arrays.stream(streamToString(request).split("\r\n"))
+        .skip(1)
+        .map(line -> line.substring(0, line.indexOf(',')))
+        .sorted()
+        .toList();
   }
 
   private static PagedRequest nameFilter(String name) {
