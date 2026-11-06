@@ -20,7 +20,7 @@ import java.util.UUID;
  * {@code Sensor} row fills different columns), so every component here is nullable.
  **/
 public record FulcrumSensor(
-    @JsonProperty("_record_id") UUID recordId,
+    @JsonProperty("_record_id") UUID fulcrumId,
     @JsonProperty("_title") String title,
     @JsonProperty("system_or_component_category_and_type") List<String> categoryAndType,
 

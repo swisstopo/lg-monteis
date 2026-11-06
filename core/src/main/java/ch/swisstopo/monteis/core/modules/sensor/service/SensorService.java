@@ -79,7 +79,7 @@ public class SensorService {
 
     FulcrumSensor fulcrumSensor =
         fulcrumService
-            .getSensorById(sensor.getFulcrumId())
+            .findSensorByFulcrumId(sensor.getFulcrumId())
             .orElseThrow(
                 () -> new ObjectBusinessValidationException("fulcrum.sensor.not-found", Map.of()));
 

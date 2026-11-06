@@ -162,7 +162,8 @@ public class FulcrumStubConfiguration {
 
     Matcher matcher = RECORD_ID_FILTER.matcher(UriUtils.decode(statement, StandardCharsets.UTF_8));
     if (!matcher.find()) {
-      // Only the unfiltered getSensors() statement legitimately lands here. Anything else means
+      // Only the unfiltered findAllSensorsByFulcrumId() statement legitimately lands here. Anything
+      // else means
       // the filter FulcrumService writes and the pattern above have drifted apart, which would
       // otherwise surface as a puzzling "fulcrum.sensor.not-found" in the browser.
       log.warn(

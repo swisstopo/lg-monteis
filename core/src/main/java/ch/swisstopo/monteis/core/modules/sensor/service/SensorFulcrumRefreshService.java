@@ -14,11 +14,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.jooq.exception.DataChangedException;
 import org.springframework.stereotype.Service;
 
@@ -45,7 +42,7 @@ public class SensorFulcrumRefreshService {
   public FulcrumRefreshResult refresh(Set<UUID> sensorIds) {
     List<Sensor> sensors = repository.findAllByIds(sensorIds);
     // read before any write: Fulcrum failing leaves every sensor as it was
-    Map<UUID, FulcrumSensor> fulcrumSensorsById = fulcrumSensorsOf(sensors);
+    Map<UUID, FulcrumSensor> fulcrumSensorsById = fulcrumService.findAllSensorsByFulcrumId();
     OffsetDateTime refreshedAt = OffsetDateTime.now(clock);
 
     List<SkippedSensor> skipped = new ArrayList<>(notFoundAmong(sensorIds, sensors));
@@ -69,18 +66,6 @@ public class SensorFulcrumRefreshService {
 
     int updated = changed.size() - notSaved.size();
     return new FulcrumRefreshResult(unchanged.size() + updated, updated, skipped);
-  }
-
-  private Map<UUID, FulcrumSensor> fulcrumSensorsOf(List<Sensor> sensors) {
-    Set<UUID> fulcrumIds =
-        sensors.stream()
-            .map(Sensor::getFulcrumId)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toSet());
-    return fulcrumService.getSensorsByIds(fulcrumIds).stream()
-        // Fulcrum may return a record twice, the first one counts like for a single sensor
-        .collect(
-            Collectors.toMap(FulcrumSensor::recordId, Function.identity(), (first, _) -> first));
   }
 
   private static List<SkippedSensor> notFoundAmong(Set<UUID> sensorIds, List<Sensor> found) {
