@@ -8,6 +8,7 @@ import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.javers.AuditChanges;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
@@ -41,8 +42,7 @@ public class SensorService {
 
   @AuditChanges
   public Sensor createSensor(Sensor sensor) {
-    applyFulcrumCoordinates(sensor);
-    setOrClearLastFulcrumRefresh(sensor);
+    takeCoordinatesFromFulcrum(sensor);
 
     Sensor created = repository.create(sensor);
     for (SensorParameter parameter : created.getParameters()) {
@@ -55,8 +55,7 @@ public class SensorService {
   public Sensor updateSensor(Sensor sensor) {
     Sensor before = repository.findById(sensor.getId()).orElse(null);
 
-    applyFulcrumCoordinates(sensor);
-    setOrClearLastFulcrumRefresh(sensor);
+    takeCoordinatesFromFulcrum(sensor);
     Sensor updated = repository.update(sensor);
 
     Map<UUID, SensorParameter> parametersBefore =
@@ -74,14 +73,19 @@ public class SensorService {
     return updated;
   }
 
-  private void applyFulcrumCoordinates(Sensor sensor) {
+  private void takeCoordinatesFromFulcrum(Sensor sensor) {
     if (sensor.getFulcrumId() == null) {
+      sensor.setLastFulcrumRefreshAt(null);
       return;
     }
-    FulcrumSensor fulcrumSensor = findInFulcrumOrFail(sensor.getFulcrumId());
-    sensor.setCoordinates(
-        coordinatesOf(fulcrumSensor)
-            .orElseThrow(() -> coordinatesMissing(sensor.getFulcrumId(), fulcrumSensor)));
+    sensor.setCoordinates(findCoordinatesInFulcrumOrFail(sensor.getFulcrumId()));
+    sensor.setLastFulcrumRefreshAt(OffsetDateTime.now(clock));
+  }
+
+  private Coordinates findCoordinatesInFulcrumOrFail(UUID fulcrumId) {
+    FulcrumSensor fulcrumSensor = findInFulcrumOrFail(fulcrumId);
+    return coordinatesOf(fulcrumSensor)
+        .orElseThrow(() -> coordinatesMissing(fulcrumId, fulcrumSensor));
   }
 
   private FulcrumSensor findInFulcrumOrFail(UUID fulcrumId) {
@@ -98,11 +102,6 @@ public class SensorService {
         Map.of(
             "fulcrumId", fulcrumId.toString(),
             "missing", String.join(", ", fulcrumSensor.missingCoordinateAxes())));
-  }
-
-  private void setOrClearLastFulcrumRefresh(Sensor sensor) {
-    sensor.setLastFulcrumRefreshAt(
-        sensor.getFulcrumId() == null ? null : OffsetDateTime.now(clock));
   }
 
   @AuditChanges
