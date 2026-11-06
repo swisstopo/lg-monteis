@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { DocumentResponseDto, ErrorDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
+import { ConfirmDeletionService } from '@ui/dialog/confirm-deletion-dialog';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DocumentSource } from './document-source';
@@ -22,7 +23,9 @@ describe('Documents', () => {
     list: ReturnType<typeof vi.fn>;
     upload: ReturnType<typeof vi.fn>;
     fetchContent: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
   };
+  let confirmDeletion: { confirmDeletion: ReturnType<typeof vi.fn> };
   let fileDownload: { download: ReturnType<typeof vi.fn>; openInNewTab: ReturnType<typeof vi.fn> };
   let toast: { error: ReturnType<typeof vi.fn> };
 
@@ -31,7 +34,9 @@ describe('Documents', () => {
       list: vi.fn().mockResolvedValue([REPORT]),
       upload: vi.fn().mockResolvedValue(REPORT),
       fetchContent: vi.fn().mockResolvedValue(new Blob(['%PDF'])),
+      delete: vi.fn().mockResolvedValue(undefined),
     };
+    confirmDeletion = { confirmDeletion: vi.fn().mockResolvedValue(true) };
     fileDownload = {
       download: vi.fn(),
       openInNewTab: vi.fn((load: () => Promise<Blob>) => load()),
@@ -44,6 +49,7 @@ describe('Documents', () => {
         { provide: DocumentSource, useValue: source },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
+        { provide: ConfirmDeletionService, useValue: confirmDeletion },
       ],
     });
   });
@@ -103,11 +109,12 @@ describe('Documents', () => {
     expect(element.textContent).toContain('document.error.load');
   });
 
-  it('offers no upload in read-only mode', async () => {
+  it('offers no upload and no delete in read-only mode', async () => {
     const view = await render(true);
 
     expect(view.addButton()).toBeUndefined();
     expect(view.fileInput()).toBeNull();
+    expect(view.element.querySelector('.delete')).toBeNull();
   });
 
   it('opens the file chooser from Add Document', async () => {
@@ -256,5 +263,54 @@ describe('Documents', () => {
     element.querySelector<HTMLButtonElement>('.view')!.click();
 
     await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('document.error.download'));
+  });
+
+  it('deletes a document after the confirmation and reloads the list', async () => {
+    const { element } = await render();
+
+    element.querySelector<HTMLButtonElement>('.delete')!.click();
+
+    await vi.waitFor(() => expect(source.list).toHaveBeenCalledTimes(2));
+    expect(confirmDeletion.confirmDeletion).toHaveBeenCalledWith({
+      title: 'document.delete',
+      message: 'document.deleteConfirmation',
+      confirmLabel: 'button.delete',
+    });
+    expect(source.delete).toHaveBeenCalledWith('parent-1', 'document-1');
+  });
+
+  it('names the file in the confirmation', async () => {
+    const translate = vi.spyOn(TestBed.inject(TranslateService), 'translate');
+    const { element } = await render();
+
+    element.querySelector<HTMLButtonElement>('.delete')!.click();
+
+    await vi.waitFor(() => expect(source.delete).toHaveBeenCalled());
+    expect(translate).toHaveBeenCalledWith('document.deleteConfirmation', {
+      fileName: 'report.pdf',
+    });
+  });
+
+  it('keeps a document when the deletion is not confirmed', async () => {
+    confirmDeletion.confirmDeletion.mockResolvedValue(false);
+    const { element } = await render();
+
+    element.querySelector<HTMLButtonElement>('.delete')!.click();
+
+    await vi.waitFor(() => expect(confirmDeletion.confirmDeletion).toHaveBeenCalled());
+    expect(source.delete).not.toHaveBeenCalled();
+    expect(source.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('toasts a failed delete and reloads the list', async () => {
+    source.delete.mockRejectedValue(new Error('403'));
+    const { element } = await render();
+
+    element.querySelector<HTMLButtonElement>('.delete')!.click();
+
+    await vi.waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('document.error.delete', 'report.pdf'),
+    );
+    await vi.waitFor(() => expect(source.list).toHaveBeenCalledTimes(2));
   });
 });

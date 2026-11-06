@@ -4,7 +4,10 @@ import { skipGlobalErrorToast } from '@core/http/http-context';
 import { DocumentSource } from '@ui/documents/document-source';
 import { firstValueFrom } from 'rxjs';
 
-/** Upload and content requests skip the global error toast, the documents section toasts them. */
+/**
+ * Upload, content and delete requests skip the global error toast, the documents section toasts
+ * them.
+ */
 @Injectable({ providedIn: 'root' })
 export class SensorDocumentSource extends DocumentSource {
   private readonly api = inject(SensorDocumentControllerService);
@@ -24,6 +27,14 @@ export class SensorDocumentSource extends DocumentSource {
   fetchContent(sensorId: string, documentId: string): Promise<Blob> {
     return firstValueFrom(
       this.api.downloadSensorDocument(sensorId, documentId, 'body', false, {
+        context: skipGlobalErrorToast(),
+      }),
+    );
+  }
+
+  async delete(sensorId: string, documentId: string): Promise<void> {
+    await firstValueFrom(
+      this.api.deleteSensorDocument(sensorId, documentId, 'body', false, {
         context: skipGlobalErrorToast(),
       }),
     );

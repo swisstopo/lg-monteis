@@ -7,6 +7,7 @@ import { DocumentResponseDto } from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { ToastService } from '@core/notifications/toast.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { ConfirmDeletionService } from '@ui/dialog/confirm-deletion-dialog';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { DocumentSource } from './document-source';
 import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_MB } from './max-document-size';
@@ -23,6 +24,7 @@ export class Documents {
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
+  private readonly confirmDeletionService = inject(ConfirmDeletionService);
 
   readonly parentId = input.required<string>();
   readonly readOnly = input(false);
@@ -58,6 +60,28 @@ export class Documents {
     return this.toastOnFailure(() =>
       this.fileDownloadService.openInNewTab(() => this.contentOf(document)),
     );
+  }
+
+  protected async delete(document: DocumentResponseDto): Promise<void> {
+    const confirmed = await this.confirmDeletionService.confirmDeletion({
+      title: this.translateService.translate('document.delete')(),
+      message: this.translateService.translate('document.deleteConfirmation', {
+        fileName: document.fileName,
+      })(),
+      confirmLabel: this.translateService.translate('button.delete')(),
+    });
+    if (!confirmed) return;
+
+    try {
+      await this.source.delete(this.parentId(), document.id!);
+    } catch {
+      this.toastService.error(
+        this.translateService.translate('document.error.delete')(),
+        document.fileName,
+      );
+    } finally {
+      this.documents.reload();
+    }
   }
 
   // checked here as well, so a too large file is not sent in full just to be refused

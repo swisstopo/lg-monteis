@@ -19,7 +19,7 @@
   } @else if (documents.error()) {
     <p class="hint">{{ 'document.error.load' | translate }}</p>
   } @else {
-    <ul class="document-list">
+    <ul class="document-list" [class.deletable]="!readOnly()">
       @for (document of documents.value(); track document.id) {
         <li class="document">
           <button type="button" class="file-name" (click)="download(document)">
@@ -39,6 +39,17 @@
           <span class="document-meta">
             {{ document.uploadedAt | date: 'dd.MM.yyyy; HH:mm:ss' }}, {{ document.uploadedBy }}
           </span>
+          @if (!readOnly()) {
+            <button
+              matIconButton
+              type="button"
+              class="delete"
+              [attr.aria-label]="'document.delete' | translate"
+              (click)="delete(document)"
+            >
+              <mat-icon fontIcon="delete" />
+            </button>
+          }
         </li>
       } @empty {
         <li class="hint">{{ 'document.empty' | translate }}</li>

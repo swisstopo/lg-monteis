@@ -8,7 +8,8 @@ import java.util.UUID;
  * Repository for the metadata of {@link ExperimentDocument}s. Row-level security alone decides
  * which documents a caller reads (those of experiments they may read). Inserts are checked twice:
  * the filter chain and the experiment_documents_insert policy both require write access to the
- * experiment. Nobody may update or delete a document.
+ * experiment. Deletes are checked the same way by the experiment_documents_delete policy. Nobody
+ * may update a document.
  */
 public interface ExperimentDocumentRepository {
   UUID nextId();
@@ -37,4 +38,12 @@ public interface ExperimentDocumentRepository {
    *     document does not exist, belongs to another experiment or is hidden from the caller
    */
   ExperimentDocument getById(UUID experimentId, UUID documentId);
+
+  /**
+   * Deletes the metadata of a document of an experiment.
+   *
+   * @throws org.springframework.security.access.AccessDeniedException if the caller may not
+   *     write the experiment or the document is gone
+   */
+  void delete(UUID experimentId, UUID documentId);
 }

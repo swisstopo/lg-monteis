@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,5 +64,20 @@ public class JooqExperimentDocumentRepository implements ExperimentDocumentRepos
         .and(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID.eq(experimentId))
         .fetchOptional(mapper::toDomain)
         .orElseThrow(() -> new ObjectNotFoundException(ExperimentDocument.class));
+  }
+
+  // the delete policy skips a forbidden row without an error, so nothing deleted = forbidden
+  @Override
+  @Transactional
+  public void delete(UUID experimentId, UUID documentId) {
+    int deleted =
+        dsl.deleteFrom(EXPERIMENT_DOCUMENTS)
+            .where(EXPERIMENT_DOCUMENTS.ID.eq(documentId))
+            .and(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID.eq(experimentId))
+            .execute();
+    if (deleted == 0) {
+      throw new AccessDeniedException(
+          "document " + documentId + " of experiment " + experimentId + " was not deleted");
+    }
   }
 }

@@ -20,6 +20,7 @@ import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.PermissionDeniedDataAccessException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 @IT
@@ -152,11 +153,11 @@ class JooqSensorDocumentRepositoryIT {
 
   @Test
   @Transactional
-  void should_reject_updating_and_deleting_a_document_even_for_an_admin() {
+  void should_reject_updating_a_document_even_for_an_admin() {
     // given
     SensorDocument document = createAsAdmin(SeedData.SENSOR_ONLY_IN_ALPHA);
 
-    // when: no UPDATE or DELETE policy, RLS filters every row out
+    // when: no UPDATE policy, RLS filters every row out
     int updated =
         callAsAdmin(
             () ->
@@ -164,16 +165,48 @@ class JooqSensorDocumentRepositoryIT {
                     .set(SENSOR_DOCUMENTS.FILE_NAME, "renamed.pdf")
                     .where(SENSOR_DOCUMENTS.ID.eq(document.id()))
                     .execute());
-    int deleted =
-        callAsAdmin(
-            () ->
-                dsl.deleteFrom(SENSOR_DOCUMENTS)
-                    .where(SENSOR_DOCUMENTS.ID.eq(document.id()))
-                    .execute());
 
     // then
     assertThat(updated).isZero();
-    assertThat(deleted).isZero();
+  }
+
+  @Test
+  @Transactional
+  void should_let_a_writer_of_one_of_the_sensors_experiments_delete_a_document() {
+    // given
+    UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
+    SensorDocument document = createAsAdmin(sensorId);
+
+    // when
+    SecurityContextTestSupport.runAsUser(
+        List.of(SeedData.EXPERIMENT_ALPHA),
+        List.of(SeedData.EXPERIMENT_ALPHA),
+        () -> repository.delete(sensorId, document.id()));
+
+    // then
+    assertThrows(
+        ObjectNotFoundException.class,
+        () -> callAsAdmin(() -> repository.getById(sensorId, document.id())));
+  }
+
+  @Test
+  @Transactional
+  void should_reject_deleting_a_document_by_a_writer_of_another_experiment() {
+    // given
+    UUID sensorId = SeedData.SENSOR_ONLY_IN_ALPHA;
+    SensorDocument document = createAsAdmin(sensorId);
+    UUID documentId = document.id();
+
+    // when
+    SecurityContextTestSupport.runAsUser(
+        List.of(SeedData.EXPERIMENT_ALPHA, SeedData.EXPERIMENT_BETA),
+        List.of(SeedData.EXPERIMENT_BETA),
+        () ->
+            assertThrows(
+                AccessDeniedException.class, () -> repository.delete(sensorId, documentId)));
+
+    // then
+    assertThat(callAsAdmin(() -> repository.getById(sensorId, document.id()))).isEqualTo(document);
   }
 
   private SensorDocument createAsAdmin(UUID sensorId) {

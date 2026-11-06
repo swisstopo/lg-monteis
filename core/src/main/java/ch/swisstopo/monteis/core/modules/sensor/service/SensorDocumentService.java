@@ -11,11 +11,15 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SensorDocumentService {
+
+  private static final Logger log = LoggerFactory.getLogger(SensorDocumentService.class);
 
   private final SensorRepository sensorRepository;
   private final SensorDocumentRepository documentRepository;
@@ -58,5 +62,20 @@ public class SensorDocumentService {
 
   public InputStream openContent(SensorDocument document) {
     return storage.load(document.key());
+  }
+
+  // S3 inside the transaction: a failed S3 delete rolls the row back, the document stays whole
+  @Transactional
+  public void delete(UUID sensorId, UUID documentId) {
+    String deletedBy = currentUserProvider.requireCurrentUsername();
+    SensorDocument document = documentRepository.getById(sensorId, documentId);
+    documentRepository.delete(sensorId, documentId);
+    storage.delete(document.key());
+    log.info(
+        "{} deleted document {} ({}) of sensor {}",
+        deletedBy,
+        documentId,
+        document.metadata().fileName(),
+        sensorId);
   }
 }

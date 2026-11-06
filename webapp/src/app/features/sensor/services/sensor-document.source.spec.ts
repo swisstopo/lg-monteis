@@ -17,6 +17,7 @@ describe('SensorDocumentSource', () => {
       getSensorDocuments: vi.fn(() => of([DOCUMENT])),
       uploadSensorDocument: vi.fn(() => of(DOCUMENT)),
       downloadSensorDocument: vi.fn(() => of(new Blob(['%PDF']))),
+      deleteSensorDocument: vi.fn(() => of(undefined)),
     };
     TestBed.configureTestingModule({
       providers: [{ provide: SensorDocumentControllerService, useValue: api }],
@@ -43,6 +44,14 @@ describe('SensorDocumentSource', () => {
 
     expect(await content.text()).toBe('%PDF');
     const [sensorId, documentId, , , options] = api['downloadSensorDocument'].mock.calls[0];
+    expect([sensorId, documentId]).toEqual(['sensor-1', 'document-1']);
+    expect(skipsGlobalErrorToast(options)).toBe(true);
+  });
+
+  it('deletes a document', async () => {
+    await service.delete('sensor-1', 'document-1');
+
+    const [sensorId, documentId, , , options] = api['deleteSensorDocument'].mock.calls[0];
     expect([sensorId, documentId]).toEqual(['sensor-1', 'document-1']);
     expect(skipsGlobalErrorToast(options)).toBe(true);
   });

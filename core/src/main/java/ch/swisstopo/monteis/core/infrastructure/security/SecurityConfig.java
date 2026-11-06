@@ -57,8 +57,13 @@ public class SecurityConfig {
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
                     .access(experimentWrite)
-                    // grant only, the insert policy of sensor_documents decides per sensor
+                    .requestMatchers(HttpMethod.DELETE, ApiPaths.EXPERIMENT_DOCUMENT)
+                    .access(experimentWrite)
+                    // grant only, the insert and delete policies of sensor_documents decide per
+                    // sensor
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
+                    .access(allowIf(Capabilities::canWriteExperiments))
+                    .requestMatchers(HttpMethod.DELETE, ApiPaths.SENSOR_DOCUMENT)
                     .access(allowIf(Capabilities::canWriteExperiments))
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)
                     .access(allowIf(Capabilities::canCreateExperiment))

@@ -22,6 +22,7 @@ import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.PermissionDeniedDataAccessException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -236,27 +237,48 @@ class JooqExperimentDocumentRepositoryIT {
 
   @Test
   @Transactional
-  void should_reject_deleting_a_document_even_for_an_admin() {
+  void should_let_a_writer_delete_a_document_of_the_experiments_they_may_write() {
     // given
-    ExperimentDocument document =
-        callAsAdmin(
-            () ->
-                repository.create(
-                    repository.nextId(),
-                    newExperiment(),
-                    REPORT,
-                    SecurityContextTestSupport.USERNAME));
+    UUID experimentId = newExperiment();
+    ExperimentDocument document = createAsAdmin(experimentId);
 
-    // when: no DELETE policy, RLS filters every row out
-    int deleted =
-        callAsAdmin(
-            () ->
-                dsl.deleteFrom(EXPERIMENT_DOCUMENTS)
-                    .where(EXPERIMENT_DOCUMENTS.ID.eq(document.id()))
-                    .execute());
+    // when
+    SecurityContextTestSupport.runAsUser(
+        List.of(experimentId),
+        List.of(experimentId),
+        () -> repository.delete(experimentId, document.id()));
 
     // then
-    assertThat(deleted).isZero();
+    assertThrows(
+        ObjectNotFoundException.class,
+        () -> callAsAdmin(() -> repository.getById(experimentId, document.id())));
+  }
+
+  @Test
+  @Transactional
+  void should_reject_deleting_a_document_by_a_user_who_may_only_read_the_experiment() {
+    // given
+    UUID experimentId = newExperiment();
+    ExperimentDocument document = createAsAdmin(experimentId);
+    UUID documentId = document.id();
+
+    // when
+    SecurityContextTestSupport.runAsUser(
+        List.of(experimentId),
+        () ->
+            assertThrows(
+                AccessDeniedException.class, () -> repository.delete(experimentId, documentId)));
+
+    // then
+    assertThat(callAsAdmin(() -> repository.getById(experimentId, document.id())))
+        .isEqualTo(document);
+  }
+
+  private ExperimentDocument createAsAdmin(UUID experimentId) {
+    return callAsAdmin(
+        () ->
+            repository.create(
+                repository.nextId(), experimentId, REPORT, SecurityContextTestSupport.USERNAME));
   }
 
   private UUID newExperiment() {
