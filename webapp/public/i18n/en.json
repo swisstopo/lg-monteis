@@ -102,7 +102,7 @@
     "fulcrumRefresh": {
       "success": "{{checked}} sensors checked against Fulcrum, {{updated}} updated.",
       "partial": "{{checked}} sensors checked against Fulcrum, {{updated}} updated. Skipped: {{skippedSensors}}.",
-      "andMore": "and {{count}} more",
+      "andMore": "{{sensors}} and {{count}} more",
       "reason": {
         "NOT_FOUND": "not found",
         "NOT_IN_FULCRUM": "not in Fulcrum",
