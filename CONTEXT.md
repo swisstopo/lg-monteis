@@ -21,6 +21,18 @@ _Avoid_: Document (alone)
 A file a Monteis-Admin or a PI of one of the Sensor's Experiments uploaded to a specific Sensor; everyone who can see the Sensor can see it, and the same people who can upload it can delete it for good.
 _Avoid_: Document (alone), Attachment, Experiment document
 
+**Fulcrum ID**:
+The optional link from a Sensor to its record in Fulcrum; only a Sensor with a Fulcrum ID takes its coordinates from Fulcrum.
+_Avoid_: Fulcrum record id, external id
+
+**Fulcrum refresh**:
+Taking the current coordinates from Fulcrum over into the selected Sensors, or every visible Sensor when none is selected, on request; PIs, global editors and admins may refresh every Sensor they can see, and a Sensor counts as updated only when its coordinates changed.
+_Avoid_: Sync, import, Aktualisieren (alone)
+
+**Last Fulcrum refresh**:
+When MONTEIS last read a Sensor's coordinates from Fulcrum, whether or not they changed; a Sensor without a Fulcrum ID has none.
+_Avoid_: Last sync, updated at
+
 ## Documents from Fulcrum
 
 **Fulcrum Document**:

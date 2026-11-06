@@ -1,9 +1,12 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -86,25 +89,42 @@ public class FulcrumService {
     this.objectMapper = objectMapper;
   }
 
-  public Optional<FulcrumSensor> getSensorById(UUID fulcrumRecordId) {
-    String statement =
-        "SELECT %s FROM \"%s\" WHERE _record_id = '%s';"
-            .formatted(SENSOR_COLUMNS, properties.sensorTable(), fulcrumRecordId);
-
-    List<FulcrumSensor> rows = query(statement, SENSOR_ROWS);
-    if (rows.size() > 1) {
-      log.warn(
-          "Fulcrum returned {} records for record id {}, using the first one",
-          rows.size(),
-          fulcrumRecordId);
-    }
-
-    return rows.stream().findFirst();
+  public Optional<FulcrumSensor> findSensorByFulcrumId(UUID fulcrumId) {
+    List<FulcrumSensor> rows =
+        query(
+            "SELECT %s FROM \"%s\" WHERE _record_id = '%s';"
+                .formatted(SENSOR_COLUMNS, properties.sensorTable(), fulcrumId),
+            SENSOR_ROWS);
+    return Optional.ofNullable(firstPerFulcrumId(rows).get(fulcrumId));
   }
 
-  public List<FulcrumSensor> getSensors() {
-    return query(
-        "SELECT %s FROM \"%s\";".formatted(SENSOR_COLUMNS, properties.sensorTable()), SENSOR_ROWS);
+  // whole table in one short GET: an IN list of ids would outgrow the URL length limit
+  public Map<UUID, FulcrumSensor> findAllSensorsByFulcrumId() {
+    return firstPerFulcrumId(
+        query(
+            "SELECT %s FROM \"%s\";".formatted(SENSOR_COLUMNS, properties.sensorTable()),
+            SENSOR_ROWS));
+  }
+
+  // one Fulcrum ID per record expected, more = data error in Fulcrum
+  private static Map<UUID, FulcrumSensor> firstPerFulcrumId(List<FulcrumSensor> rows) {
+    Map<UUID, List<FulcrumSensor>> rowsByFulcrumId =
+        rows.stream()
+            .collect(
+                Collectors.groupingBy(
+                    FulcrumSensor::fulcrumId, LinkedHashMap::new, Collectors.toList()));
+    rowsByFulcrumId.forEach(FulcrumService::warnAboutDuplicates);
+    return rowsByFulcrumId.entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getFirst()));
+  }
+
+  private static void warnAboutDuplicates(UUID fulcrumId, List<FulcrumSensor> rows) {
+    if (rows.size() > 1) {
+      log.warn(
+          "Fulcrum holds {} sensor records with Fulcrum ID {}, the first one counts",
+          rows.size(),
+          fulcrumId);
+    }
   }
 
   // rows without file useless in overview (PO). malformed rows skipped, one must not block rest

@@ -72,6 +72,10 @@ public class SecurityConfig {
                     .access(allowIf(Capabilities::canAccessDocuments))
                     .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
                     .access(allowIf(Capabilities::canAccessDocuments))
+                    // grant only, before the admin-only sensor rule (MON-173, ADR "Hybride
+                    // Durchsetzung"): RLS limits the sensors, values come from Fulcrum only
+                    .requestMatchers(HttpMethod.POST, ApiPaths.SENSORS_FULCRUM_REFRESH)
+                    .access(allowIf(Capabilities::canWriteExperiments))
                     // sensor reads need no rule of their own: RLS filters the rows by experiment
                     .requestMatchers(HttpMethod.GET, SENSORS_PATHS)
                     .authenticated()

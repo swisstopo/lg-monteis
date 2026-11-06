@@ -74,6 +74,10 @@ async function setup({ sensorId, viewOnly = false, isAdmin = false, sensor = SEN
       fixture.debugElement.query(By.directive(DocumentsStub))?.componentInstance as
         DocumentsStub | undefined,
     nameInput: () => element.querySelector<HTMLInputElement>('input[matinput]'),
+    lastFulcrumRefreshInput: () =>
+      Array.from(element.querySelectorAll('mat-form-field'))
+        .find((field) => field.textContent?.includes('sensor.lastFulcrumRefresh.label'))
+        ?.querySelector<HTMLInputElement>('input'),
   };
 }
 
@@ -120,5 +124,32 @@ describe('SensorEdit', () => {
 
     expect(nameInput()?.disabled).toBe(true);
     expect(documents()?.readOnly()).toBe(false);
+  });
+
+  it('shows the last fulcrum refresh read-only when viewing a sensor', async () => {
+    const { lastFulcrumRefreshInput } = await setup({
+      sensorId: 'sensor-1',
+      sensor: { ...SENSOR, lastFulcrumRefreshAt: '2026-11-02T08:15:00Z' },
+    });
+
+    expect(lastFulcrumRefreshInput()?.readOnly).toBe(true);
+    expect(lastFulcrumRefreshInput()?.value).not.toBe('');
+  });
+
+  it('shows the last fulcrum refresh read-only when editing a sensor', async () => {
+    const { lastFulcrumRefreshInput } = await setup({
+      sensorId: 'sensor-1',
+      isAdmin: true,
+      sensor: { ...SENSOR, lastFulcrumRefreshAt: '2026-11-02T08:15:00Z' },
+    });
+
+    expect(lastFulcrumRefreshInput()?.readOnly).toBe(true);
+    expect(lastFulcrumRefreshInput()?.value).not.toBe('');
+  });
+
+  it('shows no last fulcrum refresh while a sensor is created', async () => {
+    const { element } = await setup({ isAdmin: true });
+
+    expect(element.textContent).not.toContain('sensor.lastFulcrumRefresh.label');
   });
 });

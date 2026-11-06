@@ -1,8 +1,14 @@
-import { Component, effect, inject, signal, untracked } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
-import { SensorParameterRowResponseDto } from '@core/generated';
+import { PermissionsService } from '@core/auth/permissions.service';
+import {
+  FulcrumRefreshResponseDto,
+  SensorParameterRowResponseDto,
+  SkippedSensorDto,
+} from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
 import { SensorService } from '@features/sensor/services/sensor.service';
@@ -18,11 +24,14 @@ import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
 import { createColumns } from './columns';
 
+const MAX_NAMED_SKIPPED_SENSORS = 10;
+
 @Component({
   selector: 'app-sensor-table',
   imports: [Table, TableHeader, TranslatePipe, MatIcon, MatButton, MatProgressSpinner, InlineError],
   templateUrl: './sensor-table.html',
   styleUrl: './sensor-table.scss',
+  providers: [DatePipe],
 })
 export default class SensorTable {
   private readonly formDialog = inject(FormDialogService);
@@ -30,14 +39,20 @@ export default class SensorTable {
   private readonly translateService = inject(TranslateService);
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
+  protected readonly permissions = inject(PermissionsService);
 
   readonly searchTerm = signal<string>('');
 
   protected wrappedCols = createColumns();
-  protected selectedSensorId = signal<string | undefined>(undefined);
+  protected selectedSensorRows = signal<SensorParameterRowResponseDto[]>([]);
+  protected selectedSensorId = computed(() => {
+    const rows = this.selectedSensorRows();
+    return rows.length === 1 ? rows[0].sensorId : undefined;
+  });
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
   protected downloading = signal(false);
+  protected refreshing = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
 
   protected datasource = createPagedDatasource(
@@ -65,7 +80,9 @@ export default class SensorTable {
   }
 
   onSelectionChanged(rows: SensorParameterRowResponseDto[]): void {
-    this.selectedSensorId.set(rows[0]?.sensorId);
+    // one row per parameter, a sensor counts once however many of its rows are selected
+    const bySensorId = new Map(rows.map((row) => [row.sensorId, row]));
+    this.selectedSensorRows.set([...bySensorId.values()]);
   }
 
   onCreate(): void {
@@ -101,6 +118,55 @@ export default class SensorTable {
     } finally {
       this.downloading.set(false);
     }
+  }
+
+  async onRefresh(): Promise<void> {
+    const rows = this.selectedSensorRows();
+    this.refreshing.set(true);
+    try {
+      const result = await this.sensorService.refreshFromFulcrum(rows.map((row) => row.sensorId!));
+      this.toastRefreshResult(result);
+    } catch {
+      // the global error toast already reports it
+    } finally {
+      this.refreshing.set(false);
+    }
+  }
+
+  private toastRefreshResult(result: FulcrumRefreshResponseDto): void {
+    const counts = { checked: result.checked, updated: result.updated };
+    const skipped = result.skipped ?? [];
+    if (skipped.length === 0) {
+      this.toastService.success(
+        this.translateService.translate('sensor.fulcrumRefresh.success', counts)(),
+      );
+      return;
+    }
+    this.toastService.warning(
+      this.translateService.translate('sensor.fulcrumRefresh.partial', {
+        ...counts,
+        skippedSensors: this.describeSkipped(skipped),
+      })(),
+    );
+  }
+
+  private describeSkipped(skipped: SkippedSensorDto[]): string {
+    // no name for NOT_FOUND: sensor unknown or hidden from caller
+    const listed = skipped
+      .slice(0, MAX_NAMED_SKIPPED_SENSORS)
+      .map((sensor) => `${sensor.sensorName ?? sensor.sensorId} (${this.skipReasonOf(sensor)})`);
+    const notListedCount = skipped.length - listed.length;
+    if (notListedCount === 0) {
+      return listed.join(', ');
+    }
+    return this.translateService.translate('sensor.fulcrumRefresh.andMore', {
+      sensors: listed.join(', '),
+      count: notListedCount,
+    })();
+  }
+
+  private skipReasonOf(sensor: SkippedSensorDto): string {
+    return this.translateService.translate(`sensor.fulcrumRefresh.reason.${sensor.reason}`)();
   }
 
   onSearch(term: string): void {

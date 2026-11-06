@@ -1,5 +1,10 @@
 import { Injectable, inject, resource, signal } from '@angular/core';
-import { ErrorDto, SensorControllerService, WriteSensorDto } from '@core/generated';
+import {
+  ErrorDto,
+  FulcrumRefreshResponseDto,
+  SensorControllerService,
+  WriteSensorDto,
+} from '@core/generated';
 import { toErrorDtos } from '@core/http/api-error.model';
 import { skipGlobalErrorToast } from '@core/http/http-context';
 import { translate } from '@ngx-translate/core';
@@ -64,6 +69,17 @@ export class SensorService {
     } catch (err) {
       this.error.set(toErrorDtos(err));
       throw err;
+    }
+  }
+
+  async refreshFromFulcrum(sensorIds: string[]): Promise<FulcrumRefreshResponseDto> {
+    // backend rejects an empty list, absent ids mean all visible sensors
+    const request = sensorIds.length > 0 ? { sensorIds } : {};
+    try {
+      return await firstValueFrom(this.api.refreshFromFulcrum(request));
+    } finally {
+      // a failed refresh keeps the sensors refreshed before the failure
+      this.saveCount.update((count) => count + 1);
     }
   }
 

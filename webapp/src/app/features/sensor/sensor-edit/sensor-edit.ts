@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import {
   applyEach,
@@ -23,6 +24,7 @@ import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/in
 import { MatDivider } from '@angular/material/list';
 import { MatSelect } from '@angular/material/select';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { APP_DATE_TIME_FORMAT } from '@core/date/date.provider';
 import {
   ExperimentResponseDto,
   FormulaResponseDto,
@@ -179,6 +181,7 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
     TranslatePipe,
     MatDivider,
     Documents,
+    DatePipe,
   ],
   templateUrl: './sensor-edit.html',
   styleUrl: './sensor-edit.scss',
@@ -189,6 +192,7 @@ export default class SensorEdit {
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
   private readonly formErrorService = inject(FormErrorService);
+  protected readonly dateTimeFormat = APP_DATE_TIME_FORMAT;
   readonly dialogRef = inject<MatDialogRef<SensorEdit>>(MatDialogRef, {
     optional: true,
   });

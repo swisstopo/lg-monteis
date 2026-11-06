@@ -11,12 +11,14 @@ import ch.swisstopo.monteis.core.jooq.generated.tables.records.*;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.jooq.ExperimentJooqMapper;
 import ch.swisstopo.monteis.core.modules.sensor.domain.*;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Record;
 import org.jooq.SelectOnConditionStep;
+import org.jooq.exception.DataChangedException;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -264,6 +266,59 @@ public class JooqSensorRepository implements SensorRepository {
     return dsl.select(DSL.function("can_write_an_experiment_of_sensor", Boolean.class, DSL.val(id)))
         .fetchSingle()
         .value1();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Sensor> findAllByIds(Collection<UUID> ids) {
+    List<Sensor> sensors =
+        sensorsWithExperiments().where(SENSORS.ID.in(ids)).fetch(this::toSensorWithExperiment);
+    attachParameters(sensors);
+    return sensors;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Sensor> findAllWithFulcrumId() {
+    List<Sensor> sensors =
+        sensorsWithExperiments()
+            .where(SENSORS.FULCRUM_ID.isNotNull())
+            .fetch(this::toSensorWithExperiment);
+    attachParameters(sensors);
+    return sensors;
+  }
+
+  @Override
+  @Transactional
+  public Sensor updateRefreshedCoordinates(Sensor sensor) {
+    // not via update(): that rewrites every column and the experiment memberships
+    Integer version =
+        dsl.update(SENSORS)
+            .set(SENSORS.X, sensor.getCoordinates().x())
+            .set(SENSORS.Y, sensor.getCoordinates().y())
+            .set(SENSORS.Z, sensor.getCoordinates().z())
+            .set(SENSORS.LAST_FULCRUM_REFRESH_AT, sensor.getLastFulcrumRefreshAt())
+            .set(SENSORS.VERSION, SENSORS.VERSION.plus(1))
+            .where(SENSORS.ID.eq(sensor.getId()))
+            .and(SENSORS.VERSION.eq(sensor.getVersion()))
+            .returningResult(SENSORS.VERSION)
+            .fetchOptional(SENSORS.VERSION)
+            .orElseThrow(() -> new DataChangedException("Database record has been changed"));
+    sensor.setVersion(version);
+    return sensor;
+  }
+
+  @Override
+  @Transactional
+  public void markFulcrumRefreshed(Collection<UUID> sensorIds, OffsetDateTime refreshedAt) {
+    if (sensorIds.isEmpty()) {
+      return;
+    }
+    dsl.update(SENSORS)
+        .set(SENSORS.LAST_FULCRUM_REFRESH_AT, refreshedAt)
+        .where(SENSORS.ID.in(sensorIds))
+        .and(SENSORS.FULCRUM_ID.isNotNull())
+        .execute();
   }
 
   /**

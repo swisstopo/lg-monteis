@@ -2,6 +2,8 @@ package ch.swisstopo.monteis.core.modules.sensor.domain;
 
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
+import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,6 +52,16 @@ public interface SensorRepository {
 
   /** Whether the caller may upload documents to the sensor, see {@code V22}. */
   boolean canWriteAnExperimentOf(UUID id);
+
+  List<Sensor> findAllByIds(Collection<UUID> ids);
+
+  List<Sensor> findAllWithFulcrumId();
+
+  // DataChangedException when saved or deleted since read
+  Sensor updateRefreshedCoordinates(Sensor sensor);
+
+  // version stays: no change of the sensor. skips sensors whose fulcrum id was removed meanwhile
+  void markFulcrumRefreshed(Collection<UUID> sensorIds, OffsetDateTime refreshedAt);
 
   /**
    * Retrieves a page of sensors.
