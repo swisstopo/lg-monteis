@@ -687,15 +687,24 @@ class JooqExperimentRepositoryIT {
           UUID eth = createOrganisationWithDsl("Org filter ETH");
           UUID ofSwisstopo = createDefaultExperiment("ORG-FILTER-SWISSTOPO");
           UUID ofEth = createDefaultExperiment("ORG-FILTER-ETH");
+          UUID ofBoth = createDefaultExperiment("ORG-FILTER-BOTH");
           UUID withoutOrganisation = createDefaultExperiment("ORG-FILTER-NONE");
           linkOrganisation(ofSwisstopo, swisstopo);
           linkOrganisation(ofEth, eth);
+          linkOrganisation(ofBoth, swisstopo);
+          linkOrganisation(ofBoth, eth);
 
-          Set<UUID> bySwisstopo = idsMatchingOrganisationFilter("Org filter swisstopo");
-          Set<UUID> bySwisstopoOrNone = idsMatchingOrganisationFilter("Org filter swisstopo", null);
+          PagedResult<Experiment> bySwisstopo = matchingOrganisationFilter(swisstopo.toString());
+          PagedResult<Experiment> bySwisstopoOrNone =
+              matchingOrganisationFilter(swisstopo.toString(), null);
+          PagedResult<Experiment> byNone = matchingOrganisationFilter((String) null);
 
-          assertEquals(Set.of(ofSwisstopo), bySwisstopo);
-          assertEquals(Set.of(ofSwisstopo, withoutOrganisation), bySwisstopoOrNone);
+          assertEquals(Set.of(ofSwisstopo, ofBoth), idsOf(bySwisstopo));
+          assertEquals(2, bySwisstopo.totalCount());
+          assertEquals(Set.of(ofSwisstopo, ofBoth, withoutOrganisation), idsOf(bySwisstopoOrNone));
+          assertEquals(3, bySwisstopoOrNone.totalCount());
+          assertEquals(Set.of(withoutOrganisation), idsOf(byNone));
+          assertEquals(1, byNone.totalCount());
         });
   }
 
@@ -729,7 +738,7 @@ class JooqExperimentRepositoryIT {
         .execute();
   }
 
-  private Set<UUID> idsMatchingOrganisationFilter(String... organisationNames) {
+  private PagedResult<Experiment> matchingOrganisationFilter(String... organisationIds) {
     PagedRequest request =
         new PagedRequest(
             0,
@@ -739,9 +748,13 @@ class JooqExperimentRepositoryIT {
                 "name",
                 new TextFilterModel("startsWith", "ORG-FILTER-", null),
                 "organisationIds",
-                new SetFilterModel("set", new HashSet<>(Arrays.asList(organisationNames)))));
+                new SetFilterModel("set", new HashSet<>(Arrays.asList(organisationIds)))));
+    return repository.getExperiments(request);
+  }
+
+  private static Set<UUID> idsOf(PagedResult<Experiment> result) {
     Set<UUID> ids = new HashSet<>();
-    repository.getExperiments(request).rows().forEach(e -> ids.add(e.getId()));
+    result.rows().forEach(e -> ids.add(e.getId()));
     return ids;
   }
 
