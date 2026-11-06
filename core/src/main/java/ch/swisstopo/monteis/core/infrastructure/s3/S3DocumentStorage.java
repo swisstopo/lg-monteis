@@ -1,11 +1,9 @@
 package ch.swisstopo.monteis.core.infrastructure.s3;
 
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentKey;
 import ch.swisstopo.monteis.core.infrastructure.document.DocumentMetadata;
-import ch.swisstopo.monteis.core.modules.experiment.domain.DocumentStorage;
-import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentDocument;
+import ch.swisstopo.monteis.core.infrastructure.document.DocumentStorage;
 import java.io.InputStream;
-import java.util.UUID;
-import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -13,55 +11,46 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 /**
- * Keeps each document under {@code <keyPrefix><experimentId>/<documentId>}. The file name is not
- * part of the key, two uploads with the same name would overwrite each other and the user would
- * decide what the key looks like.
+ * Keeps each document under {@code <keyPrefix><parentId>/<documentId>}, one subclass per parent
+ * sets the prefix. The file name is not part of the key, two uploads with the same name would
+ * overwrite each other and the user would decide what the key looks like.
  */
-@Component
-public class S3DocumentStorage implements DocumentStorage {
+public abstract class S3DocumentStorage implements DocumentStorage {
 
   private final S3Client s3;
-  private final DocumentStorageProperties properties;
+  private final String bucket;
+  private final String keyPrefix;
 
-  public S3DocumentStorage(S3Client s3, DocumentStorageProperties properties) {
+  protected S3DocumentStorage(S3Client s3, String bucket, String keyPrefix) {
     this.s3 = s3;
-    this.properties = properties;
+    this.bucket = bucket;
+    this.keyPrefix = keyPrefix;
   }
 
-  @Override
-  public void store(
-      UUID experimentId, UUID documentId, DocumentMetadata metadata, InputStream content) {
+  public void store(DocumentKey key, DocumentMetadata metadata, InputStream content) {
     PutObjectRequest request =
         PutObjectRequest.builder()
-            .bucket(properties.bucket())
-            .key(keyOf(experimentId, documentId))
+            .bucket(bucket)
+            .key(objectKeyOf(key))
             .contentType(metadata.contentType())
             .contentLength(metadata.sizeBytes())
             .build();
     s3.putObject(request, RequestBody.fromInputStream(content, metadata.sizeBytes()));
   }
 
-  @Override
-  public InputStream load(ExperimentDocument document) {
+  public InputStream load(DocumentKey key) {
     GetObjectRequest request =
-        GetObjectRequest.builder()
-            .bucket(properties.bucket())
-            .key(keyOf(document.experimentId(), document.id()))
-            .build();
+        GetObjectRequest.builder().bucket(bucket).key(objectKeyOf(key)).build();
     return s3.getObject(request);
   }
 
-  @Override
-  public void delete(UUID experimentId, UUID documentId) {
+  public void delete(DocumentKey key) {
     DeleteObjectRequest request =
-        DeleteObjectRequest.builder()
-            .bucket(properties.bucket())
-            .key(keyOf(experimentId, documentId))
-            .build();
+        DeleteObjectRequest.builder().bucket(bucket).key(objectKeyOf(key)).build();
     s3.deleteObject(request);
   }
 
-  private String keyOf(UUID experimentId, UUID documentId) {
-    return properties.keyPrefix() + experimentId + "/" + documentId;
+  private String objectKeyOf(DocumentKey key) {
+    return keyPrefix + key.parentId() + "/" + key.documentId();
   }
 }

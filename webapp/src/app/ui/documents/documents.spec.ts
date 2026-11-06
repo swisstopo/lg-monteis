@@ -1,15 +1,15 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { ErrorDto, ExperimentDocumentResponseDto } from '@core/generated';
+import { DocumentResponseDto, ErrorDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
-import { ExperimentDocumentService } from '@features/experiment/services/experiment-document.service';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ExperimentDocuments } from './experiment-documents';
+import { DocumentSource } from './document-source';
+import { Documents } from './documents';
 import { MAX_DOCUMENT_SIZE_BYTES, MAX_DOCUMENT_SIZE_MB } from './max-document-size';
 
-const REPORT: ExperimentDocumentResponseDto = {
+const REPORT: DocumentResponseDto = {
   id: 'document-1',
   fileName: 'report.pdf',
   viewable: true,
@@ -17,20 +17,20 @@ const REPORT: ExperimentDocumentResponseDto = {
   uploadedBy: 'alice',
 };
 
-describe('ExperimentDocuments', () => {
-  let documentService: {
-    getDocuments: ReturnType<typeof vi.fn>;
-    uploadDocument: ReturnType<typeof vi.fn>;
-    getContent: ReturnType<typeof vi.fn>;
+describe('Documents', () => {
+  let source: {
+    list: ReturnType<typeof vi.fn>;
+    upload: ReturnType<typeof vi.fn>;
+    fetchContent: ReturnType<typeof vi.fn>;
   };
   let fileDownload: { download: ReturnType<typeof vi.fn>; openInNewTab: ReturnType<typeof vi.fn> };
   let toast: { error: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    documentService = {
-      getDocuments: vi.fn().mockResolvedValue([REPORT]),
-      uploadDocument: vi.fn().mockResolvedValue(REPORT),
-      getContent: vi.fn().mockResolvedValue(new Blob(['%PDF'])),
+    source = {
+      list: vi.fn().mockResolvedValue([REPORT]),
+      upload: vi.fn().mockResolvedValue(REPORT),
+      fetchContent: vi.fn().mockResolvedValue(new Blob(['%PDF'])),
     };
     fileDownload = {
       download: vi.fn(),
@@ -38,10 +38,10 @@ describe('ExperimentDocuments', () => {
     };
     toast = { error: vi.fn() };
     TestBed.configureTestingModule({
-      imports: [ExperimentDocuments],
+      imports: [Documents],
       providers: [
         provideTranslateService(),
-        { provide: ExperimentDocumentService, useValue: documentService },
+        { provide: DocumentSource, useValue: source },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
       ],
@@ -53,8 +53,8 @@ describe('ExperimentDocuments', () => {
   });
 
   async function render(readOnly = false) {
-    const fixture = TestBed.createComponent(ExperimentDocuments);
-    fixture.componentRef.setInput('experimentId', 'experiment-1');
+    const fixture = TestBed.createComponent(Documents);
+    fixture.componentRef.setInput('parentId', 'parent-1');
     fixture.componentRef.setInput('readOnly', readOnly);
     await fixture.whenStable();
     const element = fixture.nativeElement as HTMLElement;
@@ -63,7 +63,7 @@ describe('ExperimentDocuments', () => {
       element,
       addButton: () =>
         [...element.querySelectorAll('button')].find((button) =>
-          button.textContent?.includes('experiment.documents.add'),
+          button.textContent?.includes('document.add'),
         ),
       fileInput: () => element.querySelector<HTMLInputElement>('input[type="file"]'),
     };
@@ -75,32 +75,32 @@ describe('ExperimentDocuments', () => {
     files.forEach((file) => transfer.items.add(file));
     input.files = transfer.files;
     input.dispatchEvent(new Event('change'));
-    await vi.waitFor(() => expect(documentService.getDocuments).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(source.list).toHaveBeenCalledTimes(2));
     await view.fixture.whenStable();
   }
 
   it('lists the documents with upload time and uploader', async () => {
     const { element } = await render();
 
-    expect(documentService.getDocuments).toHaveBeenCalledWith('experiment-1');
+    expect(source.list).toHaveBeenCalledWith('parent-1');
     expect(element.querySelector('.file-name')?.textContent).toContain('report.pdf');
     expect(element.querySelector('.document-meta')?.textContent).toContain('alice');
   });
 
   it('says so when there are no documents', async () => {
-    documentService.getDocuments.mockResolvedValue([]);
+    source.list.mockResolvedValue([]);
 
     const { element } = await render();
 
-    expect(element.textContent).toContain('experiment.documents.empty');
+    expect(element.textContent).toContain('document.empty');
   });
 
   it('says so when the documents cannot be loaded', async () => {
-    documentService.getDocuments.mockRejectedValue(new Error('500'));
+    source.list.mockRejectedValue(new Error('500'));
 
     const { element } = await render();
 
-    expect(element.textContent).toContain('experiment.documents.error.load');
+    expect(element.textContent).toContain('document.error.load');
   });
 
   it('offers no upload in read-only mode', async () => {
@@ -126,15 +126,15 @@ describe('ExperimentDocuments', () => {
 
     await selectFiles(view, first, second);
 
-    expect(documentService.uploadDocument.mock.calls).toEqual([
-      ['experiment-1', first],
-      ['experiment-1', second],
+    expect(source.upload.mock.calls).toEqual([
+      ['parent-1', first],
+      ['parent-1', second],
     ]);
     expect(view.fileInput()!.value).toBe('');
   });
 
   it('toasts every failed upload with its file name, the interceptor is skipped', async () => {
-    documentService.uploadDocument
+    source.upload
       .mockRejectedValueOnce(
         new HttpErrorResponse({
           status: 422,
@@ -158,7 +158,7 @@ describe('ExperimentDocuments', () => {
   });
 
   it('toasts the size limit of a too large upload', async () => {
-    documentService.uploadDocument.mockRejectedValue(
+    source.upload.mockRejectedValue(
       new HttpErrorResponse({
         status: 413,
         error: {
@@ -178,14 +178,14 @@ describe('ExperimentDocuments', () => {
   });
 
   it('toasts the generic upload error when the response carries no message', async () => {
-    documentService.uploadDocument.mockRejectedValue(
+    source.upload.mockRejectedValue(
       new HttpErrorResponse({ status: 0, error: new ProgressEvent('error') }),
     );
     const view = await render();
 
     await selectFiles(view, new File(['x'], 'report.pdf'));
 
-    expect(toast.error).toHaveBeenCalledWith('experiment.documents.error.upload', 'report.pdf');
+    expect(toast.error).toHaveBeenCalledWith('document.error.upload', 'report.pdf');
   });
 
   it('refuses a file over the size limit without uploading it', async () => {
@@ -195,7 +195,7 @@ describe('ExperimentDocuments', () => {
 
     await selectFiles(view, new File(['x'], 'huge.pdf'));
 
-    expect(documentService.uploadDocument).not.toHaveBeenCalled();
+    expect(source.upload).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith('document.validation.tooLarge', 'huge.pdf');
     expect(translate).toHaveBeenCalledWith('document.validation.tooLarge', {
       max: `${MAX_DOCUMENT_SIZE_MB} MB`,
@@ -203,12 +203,12 @@ describe('ExperimentDocuments', () => {
   });
 
   it('toasts the generic upload error for an error without body', async () => {
-    documentService.uploadDocument.mockRejectedValue(new HttpErrorResponse({ status: 500 }));
+    source.upload.mockRejectedValue(new HttpErrorResponse({ status: 500 }));
     const view = await render();
 
     await selectFiles(view, new File(['x'], 'report.pdf'));
 
-    expect(toast.error).toHaveBeenCalledWith('experiment.documents.error.upload', 'report.pdf');
+    expect(toast.error).toHaveBeenCalledWith('document.error.upload', 'report.pdf');
   });
 
   it('downloads a document from its name', async () => {
@@ -217,7 +217,7 @@ describe('ExperimentDocuments', () => {
     element.querySelector<HTMLButtonElement>('.file-name')!.click();
 
     await vi.waitFor(() => expect(fileDownload.download).toHaveBeenCalled());
-    expect(documentService.getContent).toHaveBeenCalledWith('experiment-1', 'document-1');
+    expect(source.fetchContent).toHaveBeenCalledWith('parent-1', 'document-1');
     expect(fileDownload.download.mock.calls[0][1]).toBe('report.pdf');
   });
 
@@ -227,13 +227,11 @@ describe('ExperimentDocuments', () => {
     element.querySelector<HTMLButtonElement>('.view')!.click();
 
     await vi.waitFor(() => expect(fileDownload.openInNewTab).toHaveBeenCalled());
-    expect(documentService.getContent).toHaveBeenCalledWith('experiment-1', 'document-1');
+    expect(source.fetchContent).toHaveBeenCalledWith('parent-1', 'document-1');
   });
 
   it('offers only the download for a document the browser must not open', async () => {
-    documentService.getDocuments.mockResolvedValue([
-      { ...REPORT, fileName: 'page.html', viewable: false },
-    ]);
+    source.list.mockResolvedValue([{ ...REPORT, fileName: 'page.html', viewable: false }]);
 
     const { element } = await render();
 
@@ -242,14 +240,12 @@ describe('ExperimentDocuments', () => {
   });
 
   it('toasts a failed download', async () => {
-    documentService.getContent.mockRejectedValue(new Error('404'));
+    source.fetchContent.mockRejectedValue(new Error('404'));
     const { element } = await render();
 
     element.querySelector<HTMLButtonElement>('.file-name')!.click();
 
-    await vi.waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('experiment.documents.error.download'),
-    );
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('document.error.download'));
     expect(fileDownload.download).not.toHaveBeenCalled();
   });
 
@@ -259,8 +255,6 @@ describe('ExperimentDocuments', () => {
 
     element.querySelector<HTMLButtonElement>('.view')!.click();
 
-    await vi.waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('experiment.documents.error.download'),
-    );
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('document.error.download'));
   });
 });

@@ -1,6 +1,6 @@
 <section class="documents">
   <header class="documents-header">
-    <h3>{{ 'experiment.documents.title' | translate }}</h3>
+    <h3>{{ 'document.title' | translate }}</h3>
     @if (!readOnly()) {
       <input #fileInput type="file" multiple hidden (change)="upload(fileInput)" />
       <button matButton="filled" type="button" [disabled]="uploading()" (click)="fileInput.click()">
@@ -9,7 +9,7 @@
         } @else {
           <mat-icon fontIcon="upload" />
         }
-        {{ 'experiment.documents.add' | translate }}
+        {{ 'document.add' | translate }}
       </button>
     }
   </header>
@@ -17,7 +17,7 @@
   @if (documents.isLoading() && !documents.hasValue()) {
     <mat-spinner diameter="24" />
   } @else if (documents.error()) {
-    <p class="hint">{{ 'experiment.documents.error.load' | translate }}</p>
+    <p class="hint">{{ 'document.error.load' | translate }}</p>
   } @else {
     <ul class="document-list">
       @for (document of documents.value(); track document.id) {
@@ -30,7 +30,7 @@
               matIconButton
               type="button"
               class="view"
-              [attr.aria-label]="'experiment.documents.view' | translate"
+              [attr.aria-label]="'document.view' | translate"
               (click)="view(document)"
             >
               <mat-icon fontIcon="visibility" />
@@ -41,7 +41,7 @@
           </span>
         </li>
       } @empty {
-        <li class="hint">{{ 'experiment.documents.empty' | translate }}</li>
+        <li class="hint">{{ 'document.empty' | translate }}</li>
       }
     </ul>
   }

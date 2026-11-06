@@ -43,6 +43,15 @@ public interface SensorRepository {
   Optional<Sensor> findById(UUID id);
 
   /**
+   * @throws ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException if the
+   *     sensor does not exist or is hidden from the caller
+   */
+  void requireVisible(UUID id);
+
+  /** Whether the caller may upload documents to the sensor, see {@code V22}. */
+  boolean canWriteAnExperimentOf(UUID id);
+
+  /**
    * Retrieves a page of sensors.
    *
    * @param request the requested page, together with an optional sort/filter model

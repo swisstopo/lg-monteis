@@ -88,7 +88,7 @@ class SensorWebMapperTest {
             null);
 
     // when
-    SensorResponseDto dto = mapper.toDto(sensor, LocalDate.of(2030, Month.JANUARY, 1));
+    SensorResponseDto dto = mapper.toDto(sensor, false, LocalDate.of(2030, Month.JANUARY, 1));
 
     // then
     assertThat(dto.mainExperiment()).isNull();
@@ -115,9 +115,10 @@ class SensorWebMapperTest {
             null);
 
     // when
-    SensorResponseDto dto = mapper.toDto(sensor, LocalDate.of(2030, Month.JUNE, 1));
+    SensorResponseDto dto = mapper.toDto(sensor, true, LocalDate.of(2030, Month.JUNE, 1));
 
     // then
+    assertThat(dto.canUploadDocuments()).isTrue();
     assertThat(dto.mainExperiment().name()).isEqualTo("Mont Terri");
     assertThat(dto.mainExperiment().owners()).isNull();
     assertThat(dto.mainExperiment().ownersStatus()).isNull();

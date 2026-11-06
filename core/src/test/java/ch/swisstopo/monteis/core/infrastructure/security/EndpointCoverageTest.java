@@ -21,7 +21,9 @@ import ch.swisstopo.monteis.core.modules.organisation.web.OrganisationWebMapper;
 import ch.swisstopo.monteis.core.modules.overview.service.OverviewService;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
+import ch.swisstopo.monteis.core.modules.sensor.service.SensorDocumentService;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
+import ch.swisstopo.monteis.core.modules.sensor.web.SensorDocumentWebMapper;
 import ch.swisstopo.monteis.core.modules.sensor.web.SensorWebMapper;
 import java.time.Clock;
 import java.util.Map;
@@ -76,6 +78,9 @@ class EndpointCoverageTest {
           "POST /api/sensors",
           "PUT /api/sensors/{id}",
           "POST /api/sensors/republish-config",
+          "GET /api/sensors/{id}/documents",
+          "POST /api/sensors/{id}/documents",
+          "GET /api/sensors/{id}/documents/{documentId}/content",
           "GET /api/measurements",
           "GET /api/measurements/charts/data",
           "GET /api/measurements/sensors/{id}",
@@ -100,6 +105,8 @@ class EndpointCoverageTest {
   @MockitoBean private SensorWebMapper sensorWebMapper;
   @MockitoBean private SensorCsvExportQueryRepository sensorCsvExportQueryRepository;
   @MockitoBean private SensorParameterRowQueryRepository sensorParameterRowQueryRepository;
+  @MockitoBean private SensorDocumentService sensorDocumentService;
+  @MockitoBean private SensorDocumentWebMapper sensorDocumentWebMapper;
   @MockitoBean private MeasurementService measurementService;
   @MockitoBean private OverviewService overviewService;
   @MockitoBean private PagedRequestParser pagedRequestParser;

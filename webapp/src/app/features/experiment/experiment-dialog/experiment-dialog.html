@@ -65,7 +65,7 @@
   </form>
 
   @if (experimentId(); as experimentId) {
-    <app-experiment-documents [experimentId]="experimentId" [readOnly]="readOnly()" />
+    <app-documents [parentId]="experimentId" [readOnly]="readOnly()" />
   }
 
   <app-dismiss-button dialog-action-dismiss [kind]="readOnly() ? 'close' : 'cancel'" />
