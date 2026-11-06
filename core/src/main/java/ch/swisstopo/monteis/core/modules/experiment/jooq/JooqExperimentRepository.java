@@ -57,10 +57,10 @@ public class JooqExperimentRepository implements ExperimentRepository {
               DSL.inline("HISTORIC"))
           .else_(DSL.inline("ACTIVE"));
 
-  // the names sorted and joined, so the experiments sort by their alphabetically first organisation
-  // (the filter is ExperimentOrganisationFilter, an experiment has several organisations)
-  private static final Field<String> ORGANISATION_NAMES_FIELD =
-      DSL.select(DSL.stringAgg(ORGANISATIONS.NAME, ", ").orderBy(ORGANISATIONS.NAME.asc()))
+  // an experiment has several organisations, it sorts by its alphabetically first one (the filter
+  // is LinkTableSetFilter.ORGANISATIONS)
+  private static final Field<String> FIRST_ORGANISATION_NAME_FIELD =
+      DSL.select(DSL.min(ORGANISATIONS.NAME))
           .from(EXPERIMENT_ORGANISATION)
           .join(ORGANISATIONS)
           .on(ORGANISATIONS.ID.eq(EXPERIMENT_ORGANISATION.ORGANISATION_ID))
@@ -85,8 +85,8 @@ public class JooqExperimentRepository implements ExperimentRepository {
           SENSOR_COUNT_FIELD,
           "status",
           STATUS_FIELD,
-          ExperimentOrganisationFilter.ORGANISATIONS_COLUMN,
-          ORGANISATION_NAMES_FIELD);
+          LinkTableSetFilter.ORGANISATIONS.column(),
+          FIRST_ORGANISATION_NAME_FIELD);
 
   private static final List<Field<?>> EXPERIMENT_FIELDS =
       List.of(
@@ -126,19 +126,14 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
     // Default to a deterministic order so offset-based paging stays stable across separate
     // requests (Postgres does not guarantee row order without an ORDER BY).
-    ExperimentOwnerFilter.Split ownerFilter = ExperimentOwnerFilter.split(request);
-    ExperimentOrganisationFilter.Split organisationFilter =
-        ExperimentOrganisationFilter.split(ownerFilter.requestWithoutOwnersColumn());
+    LinkTableSetFilter.Split ownerFilter = LinkTableSetFilter.OWNERS.split(request);
+    LinkTableSetFilter.Split organisationFilter =
+        LinkTableSetFilter.ORGANISATIONS.split(ownerFilter.requestWithoutColumn());
     PagedRequestJooqTranslator.JooqPageCriteria criteria =
         PagedRequestJooqTranslator.translate(
-            organisationFilter.requestWithoutOrganisationsColumn(),
-            COLUMNS_BY_COL_ID,
-            EXPERIMENTS.ID.asc());
+            organisationFilter.requestWithoutColumn(), COLUMNS_BY_COL_ID, EXPERIMENTS.ID.asc());
     var condition =
-        criteria
-            .condition()
-            .and(ownerFilter.ownerCondition())
-            .and(organisationFilter.organisationCondition());
+        criteria.condition().and(ownerFilter.condition()).and(organisationFilter.condition());
 
     List<Experiment> data =
         selectExperiments()
