@@ -30,11 +30,13 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.FulcrumRefreshResult;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SkippedSensor;
+import ch.swisstopo.monteis.core.modules.sensor.domain.SkippedSensor.Reason;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorFulcrumRefreshService;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.FulcrumRefreshRequestDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParameterDto;
@@ -57,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -609,8 +612,9 @@ class SensorControllerTest {
     // given
     FulcrumRefreshResult result =
         new FulcrumRefreshResult(
-            1, 1, List.of(new SkippedSensor(OTHER_SENSOR_ID, SkippedSensor.Reason.NO_FULCRUM_ID)));
-    given(fulcrumRefreshService.refresh(Set.of(SENSOR_ID, OTHER_SENSOR_ID))).willReturn(result);
+            1, 1, List.of(new SkippedSensor(OTHER_SENSOR_ID, "TEMP-1", Reason.NOT_IN_FULCRUM)));
+    given(fulcrumRefreshService.refreshSelected(Set.of(SENSOR_ID, OTHER_SENSOR_ID)))
+        .willReturn(result);
     given(mapper.toDto(result))
         .willReturn(
             new FulcrumRefreshResponseDto(
@@ -618,7 +622,7 @@ class SensorControllerTest {
                 1,
                 List.of(
                     new FulcrumRefreshResponseDto.SkippedSensorDto(
-                        OTHER_SENSOR_ID, SkippedSensor.Reason.NO_FULCRUM_ID))));
+                        OTHER_SENSOR_ID, "TEMP-1", Reason.NOT_IN_FULCRUM))));
 
     // when / then
     mockMvc
@@ -632,18 +636,60 @@ class SensorControllerTest {
         .andExpect(jsonPath("$.checked").value(1))
         .andExpect(jsonPath("$.updated").value(1))
         .andExpect(jsonPath("$.skipped[0].sensorId").value(OTHER_SENSOR_ID.toString()))
-        .andExpect(jsonPath("$.skipped[0].reason").value("NO_FULCRUM_ID"));
+        .andExpect(jsonPath("$.skipped[0].sensorName").value("TEMP-1"))
+        .andExpect(jsonPath("$.skipped[0].reason").value("NOT_IN_FULCRUM"));
   }
 
   @Test
-  void should_reject_a_fulcrum_refresh_without_sensors() throws Exception {
+  void should_refresh_every_visible_sensor_when_no_sensor_ids_are_given() throws Exception {
+    // given
+    FulcrumRefreshResult result = new FulcrumRefreshResult(3, 1, List.of());
+    given(fulcrumRefreshService.refreshAllVisible()).willReturn(result);
+    given(mapper.toDto(result)).willReturn(new FulcrumRefreshResponseDto(3, 1, List.of()));
+
+    // when / then
     mockMvc
         .perform(
             post("/api/sensors/fulcrum-refresh")
                 .with(asAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"sensorIds\":[]}"))
-        .andExpect(status().is4xxClientError());
+                .content("{}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.checked").value(3));
+
+    then(fulcrumRefreshService).should().refreshAllVisible();
+  }
+
+  @Test
+  void should_reject_an_empty_list_of_sensor_ids() throws Exception {
+    expectRejectedFulcrumRefresh("{\"sensorIds\":[]}", "validation.size");
+  }
+
+  @Test
+  void should_reject_more_than_1000_sensor_ids() throws Exception {
+    List<UUID> sensorIds =
+        Stream.generate(UUID::randomUUID)
+            .limit(FulcrumRefreshRequestDto.MAX_SENSOR_IDS + 1L)
+            .toList();
+    expectRejectedFulcrumRefresh(
+        objectMapper.writeValueAsString(Map.of("sensorIds", sensorIds)), "validation.size");
+  }
+
+  @Test
+  void should_reject_a_null_sensor_id() throws Exception {
+    expectRejectedFulcrumRefresh(
+        "{\"sensorIds\":[\"%s\",null]}".formatted(SENSOR_ID), "validation.required");
+  }
+
+  private void expectRejectedFulcrumRefresh(String body, String messageKey) throws Exception {
+    mockMvc
+        .perform(
+            post("/api/sensors/fulcrum-refresh")
+                .with(asAdmin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isUnprocessableContent())
+        .andExpect(jsonPath("$[0].messageKey").value(messageKey));
 
     then(fulcrumRefreshService).shouldHaveNoInteractions();
   }

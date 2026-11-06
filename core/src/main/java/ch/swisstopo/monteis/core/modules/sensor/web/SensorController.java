@@ -127,9 +127,12 @@ public class SensorController {
   @Operation(
       summary = "Refresh sensors from Fulcrum",
       description =
-          "Takes the current coordinates from Fulcrum over into the given sensors. Sensors the"
-              + " caller can't see, without a Fulcrum ID, unknown to Fulcrum, without complete"
-              + " coordinates there or changed meanwhile are skipped, the others are refreshed.")
+          "Takes the current coordinates from Fulcrum over into the given sensors, or into every"
+              + " sensor the caller can see when no sensorIds are given. Sensors without a Fulcrum"
+              + " ID are left out and not reported. Sensors the caller can't see, unknown to"
+              + " Fulcrum, without complete coordinates there or changed meanwhile are reported as"
+              + " skipped, the others are refreshed and counted as checked. Nothing is written when"
+              + " Fulcrum can't be read.")
   @ApiResponse(responseCode = "200", description = "Sensors refreshed")
   @PostMapping(
       path = ApiPaths.FULCRUM_REFRESH_SEGMENT,
@@ -137,7 +140,10 @@ public class SensorController {
       produces = MediaType.APPLICATION_JSON_VALUE)
   public FulcrumRefreshResponseDto refreshFromFulcrum(
       @Valid @RequestBody FulcrumRefreshRequestDto dto) {
-    return mapper.toDto(fulcrumRefreshService.refresh(Set.copyOf(dto.sensorIds())));
+    return mapper.toDto(
+        dto.selectedSensorIds()
+            .map(sensorIds -> fulcrumRefreshService.refreshSelected(Set.copyOf(sensorIds)))
+            .orElseGet(fulcrumRefreshService::refreshAllVisible));
   }
 
   @Operation(
