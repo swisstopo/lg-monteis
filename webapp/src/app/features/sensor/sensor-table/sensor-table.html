@@ -23,7 +23,7 @@
       } @else {
         <mat-icon fontIcon="sync"></mat-icon>
       }
-      @if (selectedSensors().length > 0) {
+      @if (selectedSensorRows().length > 0) {
         {{ 'sensor.tableHeader.refreshSelected' | translate }}
       } @else {
         {{ 'sensor.tableHeader.refreshAll' | translate }}

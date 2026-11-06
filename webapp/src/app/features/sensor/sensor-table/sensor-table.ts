@@ -44,11 +44,10 @@ export default class SensorTable {
   readonly searchTerm = signal<string>('');
 
   protected wrappedCols = createColumns();
-  // one row per parameter, a sensor counts once however many of its rows are selected
-  protected selectedSensors = signal<SensorParameterRowResponseDto[]>([]);
+  protected selectedSensorRows = signal<SensorParameterRowResponseDto[]>([]);
   protected selectedSensorId = computed(() => {
-    const sensors = this.selectedSensors();
-    return sensors.length === 1 ? sensors[0].sensorId : undefined;
+    const rows = this.selectedSensorRows();
+    return rows.length === 1 ? rows[0].sensorId : undefined;
   });
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
@@ -81,8 +80,9 @@ export default class SensorTable {
   }
 
   onSelectionChanged(rows: SensorParameterRowResponseDto[]): void {
+    // one row per parameter, a sensor counts once however many of its rows are selected
     const bySensorId = new Map(rows.map((row) => [row.sensorId, row]));
-    this.selectedSensors.set([...bySensorId.values()]);
+    this.selectedSensorRows.set([...bySensorId.values()]);
   }
 
   onCreate(): void {
@@ -121,12 +121,10 @@ export default class SensorTable {
   }
 
   async onRefresh(): Promise<void> {
-    const sensors = this.selectedSensors();
+    const rows = this.selectedSensorRows();
     this.refreshing.set(true);
     try {
-      const result = await this.sensorService.refreshFromFulcrum(
-        sensors.map((sensor) => sensor.sensorId!),
-      );
+      const result = await this.sensorService.refreshFromFulcrum(rows.map((row) => row.sensorId!));
       this.toastRefreshResult(result);
     } catch {
       // the global error toast already reports it
