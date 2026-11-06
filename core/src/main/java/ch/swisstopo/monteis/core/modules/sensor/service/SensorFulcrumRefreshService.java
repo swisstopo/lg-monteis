@@ -22,7 +22,6 @@ import java.util.stream.Stream;
 import org.jooq.exception.DataChangedException;
 import org.springframework.stereotype.Service;
 
-/** Takes the current coordinates from Fulcrum over into the sensors the caller can see. */
 @Service
 public class SensorFulcrumRefreshService {
 
