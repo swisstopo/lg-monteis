@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
-import java.util.Optional;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -13,10 +12,6 @@ public record SkippedSensor(UUID sensorId, @Nullable String sensorName, Reason r
 
   public static SkippedSensor of(Sensor sensor, Reason reason) {
     return new SkippedSensor(sensor.getId(), sensor.getName(), reason);
-  }
-
-  public Optional<String> nameIfFound() {
-    return Optional.ofNullable(sensorName);
   }
 
   public enum Reason {

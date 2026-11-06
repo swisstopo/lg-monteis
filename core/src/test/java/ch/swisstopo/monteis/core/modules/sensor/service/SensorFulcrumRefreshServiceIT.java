@@ -194,7 +194,6 @@ class SensorFulcrumRefreshServiceIT {
         .containsExactlyInAnyOrder(
             new SkippedSensor(unknown, null, Reason.NOT_FOUND),
             new SkippedSensor(hidden, null, Reason.NOT_FOUND));
-    assertThat(result.skipped()).allSatisfy(skipped -> assertThat(skipped.nameIfFound()).isEmpty());
     assertThat(storedSensor(hidden).getCoordinates()).isEqualTo(STORED);
   }
 
