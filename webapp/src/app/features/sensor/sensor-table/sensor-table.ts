@@ -159,14 +159,13 @@ export default class SensorTable {
       .slice(0, MAX_NAMED_SKIPPED_SENSORS)
       .map((sensor) => `${sensor.sensorName ?? sensor.sensorId} (${this.skipReasonOf(sensor)})`);
     const notListedCount = skipped.length - listed.length;
-    if (notListedCount > 0) {
-      listed.push(
-        this.translateService.translate('sensor.fulcrumRefresh.andMore', {
-          count: notListedCount,
-        })(),
-      );
+    if (notListedCount === 0) {
+      return listed.join(', ');
     }
-    return listed.join(', ');
+    return this.translateService.translate('sensor.fulcrumRefresh.andMore', {
+      sensors: listed.join(', '),
+      count: notListedCount,
+    })();
   }
 
   private skipReasonOf(sensor: SkippedSensorDto): string {

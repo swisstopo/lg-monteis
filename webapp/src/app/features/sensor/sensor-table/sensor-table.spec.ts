@@ -34,7 +34,7 @@ const TRANSLATIONS = {
     fulcrumRefresh: {
       success: '{{checked}} checked, {{updated}} updated.',
       partial: '{{checked}} checked, {{updated}} updated. Skipped: {{skippedSensors}}.',
-      andMore: 'and {{count}} more',
+      andMore: '{{sensors}} and {{count}} more',
       reason: {
         NOT_FOUND: 'not found',
         NOT_IN_FULCRUM: 'not in Fulcrum',
@@ -189,7 +189,7 @@ describe('SensorTable', () => {
     await vi.waitFor(() => expect(toast.warning).toHaveBeenCalled());
     const message: string = toast.warning.mock.calls[0][0];
     expect(message).toContain(
-      'Sensor s9 (coordinates missing), Sensor s10 (coordinates missing), and 2 more.',
+      'Sensor s9 (coordinates missing), Sensor s10 (coordinates missing) and 2 more.',
     );
     expect(message).not.toContain('Sensor s11');
   });
