@@ -73,9 +73,14 @@ export class SensorService {
   }
 
   async refreshFromFulcrum(sensorIds: string[]): Promise<FulcrumRefreshResponseDto> {
-    const result = await firstValueFrom(this.api.refreshFromFulcrum({ sensorIds }));
-    this.saveCount.update((count) => count + 1);
-    return result;
+    // backend rejects an empty list, absent ids mean all visible sensors
+    const request = sensorIds.length > 0 ? { sensorIds } : {};
+    try {
+      return await firstValueFrom(this.api.refreshFromFulcrum(request));
+    } finally {
+      // a failed refresh keeps the sensors refreshed before the failure
+      this.saveCount.update((count) => count + 1);
+    }
   }
 
   getSensors(params: IGetRowsParams) {
