@@ -116,7 +116,8 @@ class SecurityConfigAuthorizationTest {
         // write grant only, the delete policy decides per sensor
         Arguments.of(
             HttpMethod.DELETE, sensor + "/documents/" + UUID.randomUUID(), assignedExperiment),
-        Arguments.of(HttpMethod.POST, "/api/sensors/fulcrum-refresh", everyone),
+        // write grant only, although the sensor rule below it is admin-only
+        Arguments.of(HttpMethod.POST, "/api/sensors/fulcrum-refresh", assignedExperiment),
         Arguments.of(HttpMethod.GET, "/api/organisations", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/all", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/csv", everyone),
