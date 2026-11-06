@@ -7,6 +7,8 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSORS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_PARAMETER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doCallRealMethod;
 
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
@@ -33,6 +35,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.javers.core.metamodel.object.CdoSnapshot;
 import org.javers.repository.jql.QueryBuilder;
@@ -45,7 +48,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -62,7 +67,7 @@ class SensorFulcrumRefreshServiceIT {
   private static final Coordinates IN_FULCRUM = new Coordinates(2579321.5, 1247865.25, 512.0);
 
   @Autowired private SensorFulcrumRefreshService service;
-  @Autowired private SensorRepository sensorRepository;
+  @MockitoSpyBean private SensorRepository sensorRepository;
   @Autowired private ExperimentRepository experimentRepository;
   @Autowired private FulcrumStub fulcrum;
   @Autowired private Javers javers;
@@ -288,6 +293,37 @@ class SensorFulcrumRefreshServiceIT {
 
     // then
     assertThat(storedSensor(sensorId).getCoordinates()).isEqualTo(IN_FULCRUM);
+  }
+
+  @Test
+  void should_keep_the_sensors_saved_before_a_save_fails() {
+    // given
+    UUID firstFulcrumId = UUID.randomUUID();
+    UUID first = createSensor(writtenByPi, firstFulcrumId, STORED);
+    UUID secondFulcrumId = UUID.randomUUID();
+    UUID second = createSensor(writtenByPi, secondFulcrumId, STORED);
+    UUID unchangedFulcrumId = UUID.randomUUID();
+    UUID unchanged = createSensor(writtenByPi, unchangedFulcrumId, IN_FULCRUM);
+    fulcrum.serveSensors(
+        inFulcrum(firstFulcrumId, IN_FULCRUM),
+        inFulcrum(secondFulcrumId, IN_FULCRUM),
+        inFulcrum(unchangedFulcrumId, IN_FULCRUM));
+    doCallRealMethod()
+        .doThrow(new DataAccessResourceFailureException("connection lost"))
+        .when(sensorRepository)
+        .updateRefreshedCoordinates(any());
+    Set<UUID> selected = Set.of(first, second, unchanged);
+
+    // when
+    assertThrows(
+        DataAccessResourceFailureException.class,
+        () -> asPi(() -> service.refreshSelected(selected)));
+
+    // then
+    // save order follows the db read: either sensor may be the one saved before the failure
+    assertThat(Stream.of(first, second).map(id -> storedSensor(id).getCoordinates()))
+        .containsExactlyInAnyOrder(IN_FULCRUM, STORED);
+    assertThat(storedSensor(unchanged).getLastFulcrumRefreshAt()).isNotNull();
   }
 
   @ParameterizedTest
