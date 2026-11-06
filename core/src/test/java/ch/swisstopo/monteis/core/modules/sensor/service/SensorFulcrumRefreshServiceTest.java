@@ -24,8 +24,12 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,8 +59,8 @@ class SensorFulcrumRefreshServiceTest {
     Sensor unchanged = sensor(UUID.randomUUID());
     given(repository.findAllByIds(Set.of(moved.getId(), unchanged.getId())))
         .willReturn(List.of(moved, unchanged));
-    given(fulcrumService.getSensorsByIds(anyCollection()))
-        .willReturn(List.of(fulcrumSensor(moved, MOVED), fulcrumSensor(unchanged, STORED)));
+    given(fulcrumService.findAllSensorsByFulcrumId())
+        .willReturn(byFulcrumId(fulcrumSensor(moved, MOVED), fulcrumSensor(unchanged, STORED)));
 
     // when
     FulcrumRefreshResult result = service.refresh(Set.of(moved.getId(), unchanged.getId()));
@@ -89,9 +93,9 @@ class SensorFulcrumRefreshServiceTest {
             moved.getId());
     given(repository.findAllByIds(ids))
         .willReturn(List.of(withoutFulcrumId, unknownToFulcrum, withoutHeight, moved));
-    given(fulcrumService.getSensorsByIds(anyCollection()))
+    given(fulcrumService.findAllSensorsByFulcrumId())
         .willReturn(
-            List.of(
+            byFulcrumId(
                 fulcrumSensor(withoutHeight, new Coordinates(2579000.0, 1247000.0, null)),
                 fulcrumSensor(moved, MOVED)));
 
@@ -119,8 +123,9 @@ class SensorFulcrumRefreshServiceTest {
     Sensor moved = sensor(UUID.randomUUID());
     Set<UUID> ids = Set.of(changedMeanwhile.getId(), moved.getId());
     given(repository.findAllByIds(ids)).willReturn(List.of(changedMeanwhile, moved));
-    given(fulcrumService.getSensorsByIds(anyCollection()))
-        .willReturn(List.of(fulcrumSensor(changedMeanwhile, MOVED), fulcrumSensor(moved, MOVED)));
+    given(fulcrumService.findAllSensorsByFulcrumId())
+        .willReturn(
+            byFulcrumId(fulcrumSensor(changedMeanwhile, MOVED), fulcrumSensor(moved, MOVED)));
     willThrow(new DataChangedException("changed"))
         .given(sensorService)
         .saveRefreshedCoordinates(changedMeanwhile);
@@ -141,7 +146,7 @@ class SensorFulcrumRefreshServiceTest {
     // given
     Sensor sensor = sensor(UUID.randomUUID());
     given(repository.findAllByIds(Set.of(sensor.getId()))).willReturn(List.of(sensor));
-    given(fulcrumService.getSensorsByIds(anyCollection()))
+    given(fulcrumService.findAllSensorsByFulcrumId())
         .willThrow(new FulcrumAuthenticationException("rejected"));
 
     // when / then
@@ -174,5 +179,10 @@ class SensorFulcrumRefreshServiceTest {
         coordinates.x(),
         coordinates.y(),
         coordinates.z());
+  }
+
+  private static Map<UUID, FulcrumSensor> byFulcrumId(FulcrumSensor... fulcrumSensors) {
+    return Stream.of(fulcrumSensors)
+        .collect(Collectors.toMap(FulcrumSensor::fulcrumId, Function.identity()));
   }
 }

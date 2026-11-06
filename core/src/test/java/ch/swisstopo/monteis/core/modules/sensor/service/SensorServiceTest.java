@@ -37,8 +37,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class SensorServiceTest {
 
-  private static final UUID FULCRUM_RECORD_ID =
-      UUID.fromString("29d8aee7-d9c6-4459-ac9d-bbd6e10f6518");
+  private static final UUID FULCRUM_ID = UUID.fromString("29d8aee7-d9c6-4459-ac9d-bbd6e10f6518");
 
   @Mock private SensorRepository repository;
   @Mock private SensorConfigPublisher configPublisher;
@@ -151,8 +150,8 @@ class SensorServiceTest {
     // given
     Sensor inputSensor = mock(Sensor.class);
 
-    given(inputSensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
-    given(fulcrumService.getSensorById(FULCRUM_RECORD_ID)).willReturn(Optional.empty());
+    given(inputSensor.getFulcrumId()).willReturn(FULCRUM_ID);
+    given(fulcrumService.findSensorByFulcrumId(FULCRUM_ID)).willReturn(Optional.empty());
 
     // when
     ObjectBusinessValidationException exception =
@@ -177,7 +176,7 @@ class SensorServiceTest {
     Sensor actualSensor = service.createSensor(inputSensor);
 
     // then
-    then(fulcrumService).should(never()).getSensorById(any());
+    then(fulcrumService).should(never()).findSensorByFulcrumId(any());
     then(inputSensor).should(never()).setCoordinates(any());
     then(repository).should().create(inputSensor);
     assertEquals(expectedSensor, actualSensor);
@@ -195,7 +194,7 @@ class SensorServiceTest {
     Sensor actualSensor = service.updateSensor(inputSensor);
 
     // then
-    then(fulcrumService).should(never()).getSensorById(any());
+    then(fulcrumService).should(never()).findSensorByFulcrumId(any());
     then(inputSensor).should(never()).setCoordinates(any());
     then(repository).should().update(inputSensor);
     assertEquals(expectedSensor, actualSensor);
@@ -206,8 +205,8 @@ class SensorServiceTest {
     // given
     Sensor inputSensor = mock(Sensor.class);
 
-    given(inputSensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
-    given(fulcrumService.getSensorById(FULCRUM_RECORD_ID)).willReturn(Optional.empty());
+    given(inputSensor.getFulcrumId()).willReturn(FULCRUM_ID);
+    given(fulcrumService.findSensorByFulcrumId(FULCRUM_ID)).willReturn(Optional.empty());
 
     // when
     ObjectBusinessValidationException exception =
@@ -234,7 +233,7 @@ class SensorServiceTest {
     // then
     assertEquals("sensor.fulcrum.coordinatesMissing", exception.getMessageKey());
     assertEquals("z", exception.getParams().get("missing"));
-    assertEquals(FULCRUM_RECORD_ID.toString(), exception.getParams().get("fulcrumId"));
+    assertEquals(FULCRUM_ID.toString(), exception.getParams().get("fulcrumId"));
     then(inputSensor).should(never()).setCoordinates(any());
     then(repository).should(never()).create(any());
   }
@@ -354,9 +353,9 @@ class SensorServiceTest {
    */
   private void givenTheSensorExistsInFulcrum(Sensor sensor, Double x, Double y, Double z) {
     FulcrumSensor fulcrumSensor =
-        new FulcrumSensor(FULCRUM_RECORD_ID, "BSW04_PP_1", List.of("Sensor"), x, y, z);
+        new FulcrumSensor(FULCRUM_ID, "BSW04_PP_1", List.of("Sensor"), x, y, z);
 
-    given(sensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
-    given(fulcrumService.getSensorById(FULCRUM_RECORD_ID)).willReturn(Optional.of(fulcrumSensor));
+    given(sensor.getFulcrumId()).willReturn(FULCRUM_ID);
+    given(fulcrumService.findSensorByFulcrumId(FULCRUM_ID)).willReturn(Optional.of(fulcrumSensor));
   }
 }
