@@ -1,5 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.service;
 
+import static ch.swisstopo.monteis.core.modules.sensor.service.FulcrumCoordinatesMapper.coordinatesOf;
+
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
@@ -84,17 +86,13 @@ public class SensorFulcrumRefreshService {
     if (fulcrumSensor == null) {
       return new Comparison.Skipped(Reason.NOT_IN_FULCRUM);
     }
-    if (!fulcrumSensor.missingCoordinateAxes().isEmpty()) {
-      return new Comparison.Skipped(Reason.COORDINATES_MISSING);
-    }
-    Coordinates coordinates =
-        new Coordinates(
-            fulcrumSensor.xPointWithOffset(),
-            fulcrumSensor.yPointWithOffset(),
-            fulcrumSensor.zPointWithOffset());
-    return coordinates.equals(sensor.getCoordinates())
-        ? new Comparison.Unchanged()
-        : new Comparison.Changed(coordinates);
+    return coordinatesOf(fulcrumSensor)
+        .<Comparison>map(
+            coordinates ->
+                coordinates.equals(sensor.getCoordinates())
+                    ? new Comparison.Unchanged()
+                    : new Comparison.Changed(coordinates))
+        .orElseGet(() -> new Comparison.Skipped(Reason.COORDINATES_MISSING));
   }
 
   private List<SkippedSensor> saveChanged(List<Sensor> changed, OffsetDateTime refreshedAt) {
