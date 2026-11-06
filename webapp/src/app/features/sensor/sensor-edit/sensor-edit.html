@@ -111,7 +111,7 @@
           <input
             matInput
             readonly
-            [value]="sensor()?.lastFulcrumRefreshAt | date: 'dd.MM.yyyy HH:mm'"
+            [value]="sensor()?.lastFulcrumRefreshAt | date: dateTimeFormat"
           />
         </mat-form-field>
       }
