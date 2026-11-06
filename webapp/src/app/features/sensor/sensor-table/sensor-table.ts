@@ -3,6 +3,7 @@ import { Component, computed, effect, inject, signal, untracked } from '@angular
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { PermissionsService } from '@core/auth/permissions.service';
 import {
   FulcrumRefreshResponseDto,
   SensorParameterRowResponseDto,
@@ -23,6 +24,8 @@ import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
 import { createColumns } from './columns';
 
+const MAX_NAMED_SKIPPED_SENSORS = 10;
+
 @Component({
   selector: 'app-sensor-table',
   imports: [Table, TableHeader, TranslatePipe, MatIcon, MatButton, MatProgressSpinner, InlineError],
@@ -37,6 +40,7 @@ export default class SensorTable {
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   private readonly datePipe = inject(DatePipe);
+  protected readonly permissions = inject(PermissionsService);
 
   readonly searchTerm = signal<string>('');
 
@@ -144,16 +148,35 @@ export default class SensorTable {
       );
       return;
     }
-    const namesById = new Map(sensors.map((sensor) => [sensor.sensorId, sensor.name]));
-    const skippedSensors = skipped
-      .map((sensor) => `${namesById.get(sensor.sensorId)} (${this.skipReasonOf(sensor)})`)
-      .join(', ');
     this.toastService.warning(
       this.translateService.translate('sensor.fulcrumRefresh.partial', {
         ...counts,
-        skippedSensors,
+        skippedSensors: this.describeSkipped(skipped, sensors),
       })(),
     );
+  }
+
+  private describeSkipped(
+    skipped: SkippedSensorDto[],
+    sensors: SensorParameterRowResponseDto[],
+  ): string {
+    const namesById = new Map(sensors.map((sensor) => [sensor.sensorId, sensor.name]));
+    // a refresh of all visible sensors knows no names, the response only carries ids
+    const listed = skipped
+      .slice(0, MAX_NAMED_SKIPPED_SENSORS)
+      .map(
+        (sensor) =>
+          `${namesById.get(sensor.sensorId) ?? sensor.sensorId} (${this.skipReasonOf(sensor)})`,
+      );
+    const notListedCount = skipped.length - listed.length;
+    if (notListedCount > 0) {
+      listed.push(
+        this.translateService.translate('sensor.fulcrumRefresh.andMore', {
+          count: notListedCount,
+        })(),
+      );
+    }
+    return listed.join(', ');
   }
 
   private skipReasonOf(sensor: SkippedSensorDto): string {
