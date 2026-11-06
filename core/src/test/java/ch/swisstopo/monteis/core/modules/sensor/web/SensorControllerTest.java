@@ -599,10 +599,12 @@ class SensorControllerTest {
     then(service).should().republishAllActiveParameterConfigs();
   }
 
-  /** Anyone who sees a sensor may refresh it, RLS decides which of the ids are visible. */
+  // denied levels: SecurityConfigAuthorizationTest
   @ParameterizedTest
-  @EnumSource(PrivilegeLevel.class)
-  void should_let_every_privilege_level_refresh_sensors_from_fulcrum(PrivilegeLevel level)
+  @EnumSource(
+      value = PrivilegeLevel.class,
+      names = {"EXPERIMENT_PI", "GLOBAL_EDITOR", "MONTEIS_ADMIN"})
+  void should_let_experiment_writers_refresh_sensors_from_fulcrum(PrivilegeLevel level)
       throws Exception {
     // given
     FulcrumRefreshResult result =
