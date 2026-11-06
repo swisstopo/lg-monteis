@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { OwnersCellRenderer } from '@features/experiment/owners/owners-cell-renderer';
@@ -9,30 +10,33 @@ import { ValueFormatterParams } from 'ag-grid-community';
 import { beforeEach, describe, expect, it, Mocked, vi } from 'vitest';
 import { createColumns } from './columns';
 
+const ORGANISATION_NAMES: Record<string, string> = { beta: 'Beta', gamma: 'Gamma' };
+
 describe('experiment columns', () => {
   let experimentService: Mocked<Pick<ExperimentService, 'findAllVisibleOwners'>>;
-  let organisationService: Mocked<Pick<OrganisationService, 'findAllOrganisations'>>;
 
   beforeEach(() => {
     experimentService = { findAllVisibleOwners: vi.fn().mockResolvedValue([ALICE, BOB]) };
-    organisationService = {
-      findAllOrganisations: vi.fn().mockResolvedValue([
-        { id: 'eth', name: 'ETH Zürich' },
-        { id: 'swisstopo', name: 'swisstopo' },
-      ]),
-    };
     TestBed.configureTestingModule({
       providers: [
         provideTranslateService(),
         { provide: ExperimentService, useValue: experimentService },
-        { provide: OrganisationService, useValue: organisationService },
+        {
+          provide: OrganisationService,
+          useValue: {
+            allOrganisations: signal([
+              { id: 'eth', name: 'ETH Zürich' },
+              { id: 'swisstopo', name: 'swisstopo' },
+            ]),
+          },
+        },
       ],
     });
   });
 
   function column(field: string) {
     const columns = TestBed.runInInjectionContext(() =>
-      createColumns(new DatePipe('en-US'), (id) => id),
+      createColumns(new DatePipe('en-US'), (id) => ORGANISATION_NAMES[id] ?? id),
     );
     return columns.find((column) => column.field === field)!;
   }
@@ -78,13 +82,19 @@ describe('experiment columns', () => {
     expect(organisationColumn().sortable).toBe(true);
   });
 
-  it('filters by the organisation names', async () => {
+  it('filters by the organisations, by name but on their id', async () => {
     const values = await organisationColumn().filterParams.valuesProvider();
 
     expect(values).toEqual([
-      { displayName: 'ETH Zürich', value: 'ETH Zürich' },
+      { displayName: 'ETH Zürich', value: 'eth' },
       { displayName: 'swisstopo', value: 'swisstopo' },
     ]);
+  });
+
+  it('shows the organisation names sorted, like the column sorts', () => {
+    const format = organisationColumn().valueFormatter as (params: ValueFormatterParams) => string;
+
+    expect(format({ value: ['gamma', 'beta'] } as ValueFormatterParams)).toBe('Beta, Gamma');
   });
 
   it('offers no organisation as a filter value', () => {

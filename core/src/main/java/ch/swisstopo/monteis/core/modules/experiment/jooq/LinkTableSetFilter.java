@@ -61,7 +61,12 @@ record LinkTableSetFilter(
       return DSL.noCondition();
     }
     Set<String> selected = selectedValuesOf(filter);
-    return hasLinkedRowAmong(selectedIds(selected));
+    Condition hasSelectedRow = hasLinkedRowAmong(selectedIds(selected));
+    // not contains(null): an immutable Set.of throws on it
+    if (selected.stream().anyMatch(Objects::isNull)) {
+      return hasSelectedRow.or(hasNoLinkedRow());
+    }
+    return hasSelectedRow;
   }
 
   private Set<String> selectedValuesOf(FilterModelItem filter) {

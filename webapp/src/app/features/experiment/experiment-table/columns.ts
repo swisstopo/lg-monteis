@@ -107,17 +107,17 @@ export function createColumns(
       sortable: true,
       filter: MultiSelectFilter,
       filterParams: {
-        valuesProvider: async () => {
-          const organisations = await organisationService.findAllOrganisations();
-          return organisations
-            .map((organisation) => organisation.name)
-            .filter((name): name is string => !!name)
-            .map((name) => ({ displayName: name, value: name }));
-        },
+        valuesProvider: () =>
+          Promise.resolve(
+            organisationService
+              .allOrganisations()
+              .flatMap(({ id, name }) => (id ? [{ displayName: name ?? id, value: id }] : [])),
+          ),
         blankOptionLabel: translateService.translate('experiment.organisations.none')(),
       },
-      valueFormatter: (params) => (params.value ?? []).map(organisationName).join(', '),
-      tooltip: (params) => (params.value ?? []).map(organisationName).join(', '),
+      // sorted like the backend sorts the column, by the alphabetically first organisation
+      valueFormatter: (params) => sortedNames(params.value, organisationName),
+      tooltip: (params) => sortedNames(params.value, organisationName),
     },
     {
       field: 'comment',
@@ -136,4 +136,11 @@ export function createColumns(
       cellRenderer: CopyCellRenderer,
     },
   ];
+}
+
+function sortedNames(ids: string[] | undefined, name: (id: string) => string): string {
+  return (ids ?? [])
+    .map(name)
+    .sort((a, b) => a.localeCompare(b))
+    .join(', ');
 }
