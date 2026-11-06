@@ -1,11 +1,18 @@
 package ch.swisstopo.monteis.core.modules.measurement.web;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willAnswer;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.contracts.Das;
@@ -22,6 +29,7 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
 import ch.swisstopo.monteis.core.modules.experiment.query.OwnersStatus;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
+import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.nested.ChartPointDto;
 import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.ChartDataResponseDto;
@@ -35,6 +43,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
+import java.io.Writer;
 import java.time.*;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +54,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 @ControllerTest(MeasurementController.class)
 class MeasurementControllerTest {
@@ -58,6 +68,8 @@ class MeasurementControllerTest {
   @MockitoBean private PagedRequestParser pagedRequestParser;
 
   @MockitoBean private Clock clock;
+
+  @MockitoBean private MeasurementCsvExportQueryRepository csvExportQueryRepository;
 
   @BeforeEach
   void setUpClock() {
@@ -523,5 +535,63 @@ class MeasurementControllerTest {
         .perform(get("/api/measurements/sensors/{id}", SENSOR_ID).with(jwt()))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.messageKey").value("object.not-found"));
+  }
+
+  @Test
+  void should_route_get_measurements_csv_and_stream_csv_content() throws Exception {
+    // given
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    willAnswer(
+            invocation -> {
+              Writer writer = invocation.getArgument(1);
+              writer.write("experimentName,dasKey\r\nMont Terri Alpha,SOL_EXPERTS__TEMP-1__t\r\n");
+              return null;
+            })
+        .given(csvExportQueryRepository)
+        .streamCsv(eq(exportRequest), any());
+
+    // when / then
+    MvcResult csv =
+        mockMvc
+            .perform(get("/api/measurements/csv").with(jwt()))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+
+    mockMvc
+        .perform(asyncDispatch(csv))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType("text/csv;charset=UTF-8"))
+        .andExpect(
+            header().string("Content-Disposition", "attachment; filename=\"measurements.csv\""))
+        .andExpect(
+            content()
+                .string("experimentName,dasKey\r\nMont Terri Alpha,SOL_EXPERTS__TEMP-1__t\r\n"));
+
+    then(pagedRequestParser).should().parseForExport(any());
+    then(csvExportQueryRepository).should().streamCsv(eq(exportRequest), any());
+  }
+
+  @Test
+  void should_return_bad_request_when_measurements_csv_export_query_rejects_the_filter()
+      throws Exception {
+    // given
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    willThrow(new InvalidPagedRequestException("Unknown sortable/filterable column: bogus"))
+        .given(csvExportQueryRepository)
+        .streamCsv(eq(exportRequest), any());
+
+    // when / then
+    MvcResult csv =
+        mockMvc
+            .perform(get("/api/measurements/csv").with(jwt()))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+
+    mockMvc
+        .perform(asyncDispatch(csv))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
   }
 }

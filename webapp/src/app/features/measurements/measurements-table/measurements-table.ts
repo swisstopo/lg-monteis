@@ -18,6 +18,7 @@ import {
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel, MatSuffix } from '@angular/material/input';
+import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import {
   MatTimepicker,
   MatTimepickerInput,
@@ -25,17 +26,23 @@ import {
 } from '@angular/material/timepicker';
 import { APP_ISO_TIMESTAMP_FORMAT } from '@core/date/date.provider';
 import { MeasurementResponseDto } from '@core/generated';
+import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { MeasurementsService } from '@features/measurements/services/measurements.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions } from '@ui/chart';
+import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
+import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
 import { subDays } from 'date-fns';
 import { createColumns } from './columns';
+
+/** The most rows a CSV download may hold, a larger filtered table has to be narrowed first. */
+export const MAX_DOWNLOAD_ROWS = 1000;
 
 interface DateTimeModel {
   date: Date | null;
@@ -83,6 +90,7 @@ function combineDateAndTime(date: Date | null, time: Date | null): Date | null {
     FormField,
     MatError,
     InlineError,
+    MatProgressSpinner,
   ],
   providers: [DatePipe],
   templateUrl: './measurements-table.html',
@@ -94,6 +102,8 @@ export default class MeasurementsTable {
   private readonly dialog = inject(MatDialog);
   protected readonly measurementsService = inject(MeasurementsService);
   private readonly formErrorService = inject(FormErrorService);
+  private readonly fileDownloadService = inject(FileDownloadService);
+  private readonly toastService = inject(ToastService);
   readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
   readonly dateRangeModel = signal<DateRangeModel>({
@@ -113,6 +123,7 @@ export default class MeasurementsTable {
 
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
+  protected downloading = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
 
   protected datasource = createPagedDatasource(
@@ -161,6 +172,33 @@ export default class MeasurementsTable {
 
   onReload(): void {
     this.gridApi()?.refreshInfiniteCache();
+  }
+
+  async onDownload(): Promise<void> {
+    const api = this.gridApi();
+    if (!api) return;
+
+    if ((this.totalCount() ?? 0) > MAX_DOWNLOAD_ROWS) {
+      this.toastService.warning(
+        this.translateService.translate('measurements-table.downloadTooManyRows', {
+          max: MAX_DOWNLOAD_ROWS,
+        })(),
+      );
+      return;
+    }
+
+    this.downloading.set(true);
+    try {
+      const { sortModel, filterModel } = toGridFilterSortParams(api);
+      const blob = await this.measurementsService.getMeasurementsCsv(sortModel, filterModel);
+      this.fileDownloadService.download(blob, 'measurements.csv');
+    } catch {
+      this.toastService.error(
+        this.translateService.translate('measurements-table.downloadFailed')(),
+      );
+    } finally {
+      this.downloading.set(false);
+    }
   }
 
   resetRange(): void {

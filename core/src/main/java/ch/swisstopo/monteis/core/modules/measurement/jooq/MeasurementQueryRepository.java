@@ -59,7 +59,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
   // valid when they were ingested even if the sensor/parameter alias is later remapped (see
   // db/meta/schema/V14) - falling back to composing it from current metadata (mirrors
   // ch.swisstopo.monteis.contracts.DasKey.compose) for a parameter with no readings yet.
-  private static final Field<String> DAS_KEY =
+  static final Field<String> DAS_KEY =
       DSL.coalesce(
               LATEST_READINGS.field(SENSOR_READING_SECURED.DAS_KEY),
               DSL.concat(
@@ -70,7 +70,18 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                   SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
           .as("das_key");
 
-  private static final Map<String, Field<?>> MEASUREMENT_COLUMNS_BY_COL_ID =
+  private static final Table<?> BASE_TABLE =
+      SENSORS
+          .join(SENSOR_PARAMETER)
+          .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
+          .leftJoin(EXPERIMENTS)
+          .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+          .leftJoin(SENSOR_TYPES)
+          .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID));
+
+  static final Table<?> JOINED_FROM = BASE_TABLE.leftJoin(LATEST_READINGS).on(trueCondition());
+
+  static final Map<String, Field<?>> MEASUREMENT_COLUMNS_BY_COL_ID =
       Map.ofEntries(
           Map.entry("sensorParameterId", SENSOR_PARAMETER.ID),
           Map.entry("dasKey", DAS_KEY),
@@ -189,16 +200,8 @@ public class MeasurementQueryRepository implements MeasurementQuery {
         PagedRequestJooqTranslator.translate(
             request, MEASUREMENT_COLUMNS_BY_COL_ID, SENSOR_PARAMETER.SENSOR_ID.asc());
 
-    var baseTable =
-        SENSORS
-            .join(SENSOR_PARAMETER)
-            .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
-            .leftJoin(EXPERIMENTS)
-            .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
-            .leftJoin(SENSOR_TYPES)
-            .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID));
-
-    var fullTable = baseTable.leftJoin(LATEST_READINGS).on(trueCondition());
+    var baseTable = BASE_TABLE;
+    var fullTable = JOINED_FROM;
 
     List<MeasurementRow> rows =
         dsl.select(

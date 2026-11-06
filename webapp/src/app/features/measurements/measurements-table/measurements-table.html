@@ -79,6 +79,20 @@
       <mat-icon fontIcon="refresh"></mat-icon>
       {{ 'measurements-table.reload' | translate }}
     </button>
+
+    <button
+      matButton="text"
+      class="download-button"
+      [disabled]="downloading()"
+      (click)="onDownload()"
+    >
+      @if (downloading()) {
+        <mat-spinner diameter="16"></mat-spinner>
+      } @else {
+        <mat-icon fontIcon="download"></mat-icon>
+      }
+      {{ 'measurements-table.download' | translate }}
+    </button>
   </div>
 
   @if (loadError()) {
