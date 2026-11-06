@@ -97,7 +97,7 @@ public class SensorFulcrumRefreshService {
   }
 
   private static Comparison compare(Sensor sensor, Map<UUID, FulcrumSensor> fulcrumSensorsById) {
-    if (sensor.getFulcrumId() == null) {
+    if (!sensor.hasFulcrumId()) {
       return new Comparison.WithoutFulcrumId();
     }
     return Optional.ofNullable(fulcrumSensorsById.get(sensor.getFulcrumId()))

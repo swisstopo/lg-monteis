@@ -154,6 +154,7 @@ class SensorServiceTest {
     // given
     Sensor inputSensor = mock(Sensor.class);
 
+    given(inputSensor.hasFulcrumId()).willReturn(true);
     given(inputSensor.getFulcrumId()).willReturn(FULCRUM_ID);
     given(fulcrumService.findSensorByFulcrumId(FULCRUM_ID)).willReturn(Optional.empty());
 
@@ -209,6 +210,7 @@ class SensorServiceTest {
     // given
     Sensor inputSensor = mock(Sensor.class);
 
+    given(inputSensor.hasFulcrumId()).willReturn(true);
     given(inputSensor.getFulcrumId()).willReturn(FULCRUM_ID);
     given(fulcrumService.findSensorByFulcrumId(FULCRUM_ID)).willReturn(Optional.empty());
 
@@ -372,6 +374,7 @@ class SensorServiceTest {
    * write to go through has to hand the record a complete position.
    */
   private void givenTheSensorExistsInFulcrum(Sensor sensor, Double x, Double y, Double z) {
+    given(sensor.hasFulcrumId()).willReturn(true);
     given(sensor.getFulcrumId()).willReturn(FULCRUM_ID);
     givenFulcrumHolds(x, y, z);
   }
