@@ -105,7 +105,7 @@
         }
       </mat-form-field>
 
-      @if (mode() === 'edit') {
+      @if (mode() !== 'create') {
         <mat-form-field appearance="outline">
           <mat-label>{{ 'sensor.lastFulcrumRefresh.label' | translate }}</mat-label>
           <input
