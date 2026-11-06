@@ -124,6 +124,10 @@ public class Sensor implements Auditable {
     this.fulcrumId = fulcrumId;
   }
 
+  public boolean hasFulcrumId() {
+    return fulcrumId != null;
+  }
+
   public OffsetDateTime getLastFulcrumRefreshAt() {
     return lastFulcrumRefreshAt;
   }

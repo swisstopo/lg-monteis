@@ -74,7 +74,7 @@ public class SensorService {
   }
 
   private void takeCoordinatesFromFulcrum(Sensor sensor) {
-    if (sensor.getFulcrumId() == null) {
+    if (!sensor.hasFulcrumId()) {
       sensor.setLastFulcrumRefreshAt(null);
       return;
     }
