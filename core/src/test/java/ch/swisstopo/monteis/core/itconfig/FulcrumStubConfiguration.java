@@ -88,6 +88,18 @@ public class FulcrumStubConfiguration {
 
   private static void handleQuery(HttpExchange exchange, FulcrumStub stub) throws IOException {
     try (exchange) {
+      stub.whileQueried().run();
+      switch (stub.queryFailure()) {
+        case NONE -> {}
+        // closed without status line => client sees an i/o error, like an unreachable host
+        case UNREACHABLE -> {
+          return;
+        }
+        case TOKEN_REJECTED -> {
+          exchange.sendResponseHeaders(HttpStatus.UNAUTHORIZED.value(), -1);
+          return;
+        }
+      }
       String body = queryResponseFor(exchange.getRequestURI(), stub);
       log.warn(body);
       sendJson(exchange, body);
@@ -102,9 +114,10 @@ public class FulcrumStubConfiguration {
       return literatureResponse(stub.documents());
     }
     UUID recordId = recordIdOf(requestUri);
-    return recordId == null || UNKNOWN_RECORD_ID.equals(recordId)
-        ? emptyResponse()
-        : sensorResponse(recordId);
+    if (recordId == null) {
+      return sensorTableResponse(stub.sensors());
+    }
+    return UNKNOWN_RECORD_ID.equals(recordId) ? emptyResponse() : sensorResponse(recordId);
   }
 
   private static void handleAttachment(HttpExchange exchange, FulcrumStub stub) throws IOException {
@@ -197,6 +210,26 @@ public class FulcrumStubConfiguration {
     }
     """
         .formatted(recordId, STUB_X, STUB_Y, STUB_Z);
+  }
+
+  private static String sensorTableResponse(List<StubSensor> sensors) {
+    return "{\"rows\": [%s]}"
+        .formatted(
+            String.join(",", sensors.stream().map(FulcrumStubConfiguration::rowOf).toList()));
+  }
+
+  private static String rowOf(StubSensor sensor) {
+    return """
+    {
+      "_record_id": "%s",
+      "_title": "STUB SENSOR",
+      "system_or_component_category_and_type": ["Sensor", "Point", "T"],
+      "fx_point_with_offset": %s,
+      "fy_point_with_offset": %s,
+      "fz_point_with_offset": %s
+    }
+    """
+        .formatted(sensor.fulcrumId(), sensor.x(), sensor.y(), sensor.z());
   }
 
   private static String literatureResponse(List<StubDocument> documents) {
@@ -324,6 +357,16 @@ public class FulcrumStubConfiguration {
     }
   }
 
+  // null axis => json null, like Fulcrum leaves an unmeasured coordinate
+  public record StubSensor(
+      UUID fulcrumId, @Nullable Double x, @Nullable Double y, @Nullable Double z) {}
+
+  public enum QueryFailure {
+    NONE,
+    UNREACHABLE,
+    TOKEN_REJECTED
+  }
+
   public record StubFile(UUID attachmentId, String name, byte @Nullable [] content) {
 
     public static StubFile of(String name, byte[] content) {
@@ -350,6 +393,9 @@ public class FulcrumStubConfiguration {
 
     private final HttpServer server;
     private volatile List<StubDocument> documents = e2eDocuments();
+    private volatile List<StubSensor> sensors = List.of();
+    private volatile QueryFailure queryFailure = QueryFailure.NONE;
+    private volatile Runnable whileQueried = () -> {};
 
     FulcrumStub(HttpServer server) {
       this.server = server;
@@ -369,6 +415,38 @@ public class FulcrumStubConfiguration {
 
     List<StubDocument> documents() {
       return documents;
+    }
+
+    // answer to the unfiltered sensor table query, the filtered one keeps its synthetic sensor
+    public void serveSensors(StubSensor... sensors) {
+      this.sensors = List.of(sensors);
+    }
+
+    public void failQueriesWith(QueryFailure queryFailure) {
+      this.queryFailure = queryFailure;
+    }
+
+    // runs on the stub's thread before it answers, to change data while a caller waits for Fulcrum
+    public void whileQueried(Runnable action) {
+      this.whileQueried = action;
+    }
+
+    public void resetQueries() {
+      sensors = List.of();
+      queryFailure = QueryFailure.NONE;
+      whileQueried = () -> {};
+    }
+
+    List<StubSensor> sensors() {
+      return sensors;
+    }
+
+    QueryFailure queryFailure() {
+      return queryFailure;
+    }
+
+    Runnable whileQueried() {
+      return whileQueried;
     }
 
     Optional<StubFile> fileOf(String attachmentId) {
