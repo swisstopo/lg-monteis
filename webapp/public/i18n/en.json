@@ -102,9 +102,9 @@
     "fulcrumRefresh": {
       "success": "{{checked}} sensors checked against Fulcrum, {{updated}} updated.",
       "partial": "{{checked}} sensors checked against Fulcrum, {{updated}} updated. Skipped: {{skippedSensors}}.",
+      "andMore": "and {{count}} more",
       "reason": {
         "NOT_FOUND": "not found",
-        "NO_FULCRUM_ID": "no Fulcrum ID",
         "NOT_IN_FULCRUM": "not in Fulcrum",
         "COORDINATES_MISSING": "coordinates missing in Fulcrum",
         "CHANGED_MEANWHILE": "changed meanwhile, try again"
@@ -273,7 +273,8 @@
     "tableHeader": {
       "search": "Search",
       "download": "Download",
-      "refresh": "Refresh",
+      "refreshSelected": "Refresh selected from Fulcrum",
+      "refreshAll": "Refresh all from Fulcrum",
       "create": "Create Sensor",
       "edit": "Edit Sensor",
       "view": "View"
