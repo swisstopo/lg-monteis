@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -476,7 +477,9 @@ class JooqSensorRepositoryIT {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          UUID id = repository.create(createDummySensor("REF-003", "Unchanged", "x")).getId();
+          Sensor sensor = createDummySensor("REF-003", "Unchanged", "x");
+          sensor.setFulcrumId(UUID.randomUUID());
+          UUID id = repository.create(sensor).getId();
           int versionBefore = repository.findById(id).orElseThrow().getVersion();
 
           // Act
@@ -486,6 +489,47 @@ class JooqSensorRepositoryIT {
           Sensor stored = repository.findById(id).orElseThrow();
           assertEquals(versionBefore, stored.getVersion());
           assertTrue(REFRESHED_AT.isEqual(stored.getLastFulcrumRefreshAt()));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_not_mark_a_sensor_without_fulcrum_id_as_refreshed() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          UUID id = repository.create(createDummySensor("REF-005", "No Fulcrum ID", "x")).getId();
+
+          // Act
+          repository.markFulcrumRefreshed(List.of(id), REFRESHED_AT);
+
+          // Assert
+          assertNull(repository.findById(id).orElseThrow().getLastFulcrumRefreshAt());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_find_only_sensors_with_a_fulcrum_id_with_their_parameters() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Sensor withFulcrumId = createDummySensor("REF-006", "With Fulcrum ID", "x");
+          withFulcrumId.setFulcrumId(UUID.randomUUID());
+          UUID withId = repository.create(withFulcrumId).getId();
+          UUID withoutId =
+              repository.create(createDummySensor("REF-007", "Without Fulcrum ID", "x")).getId();
+
+          // Act
+          List<Sensor> found = repository.findAllWithFulcrumId();
+
+          // Assert
+          List<UUID> foundIds = found.stream().map(Sensor::getId).toList();
+          assertTrue(foundIds.contains(withId));
+          assertFalse(foundIds.contains(withoutId));
+          Sensor foundWithId =
+              found.stream().filter(s -> s.getId().equals(withId)).findFirst().orElseThrow();
+          assertEquals(1, foundWithId.getParameters().size());
         });
   }
 

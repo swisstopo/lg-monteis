@@ -61,6 +61,8 @@ public interface SensorRepository {
    */
   List<Sensor> findAllByIds(Collection<UUID> ids);
 
+  List<Sensor> findAllWithFulcrumId();
+
   /**
    * Writes the sensor's coordinates and last Fulcrum refresh, leaving every other field as stored.
    *
@@ -72,7 +74,8 @@ public interface SensorRepository {
 
   /**
    * Sets the last Fulcrum refresh of sensors whose coordinates did not change, without counting
-   * it as a change of the sensor: the version stays.
+   * it as a change of the sensor: the version stays. Sensors whose Fulcrum ID was removed
+   * meanwhile are left without a last Fulcrum refresh.
    *
    * @param sensorIds the refreshed sensors
    * @param refreshedAt when their coordinates were read from Fulcrum

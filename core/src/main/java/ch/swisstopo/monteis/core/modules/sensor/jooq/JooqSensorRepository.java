@@ -278,6 +278,17 @@ public class JooqSensorRepository implements SensorRepository {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public List<Sensor> findAllWithFulcrumId() {
+    List<Sensor> sensors =
+        sensorsWithExperiments()
+            .where(SENSORS.FULCRUM_ID.isNotNull())
+            .fetch(this::toSensorWithExperiment);
+    attachParameters(sensors);
+    return sensors;
+  }
+
+  @Override
   @Transactional
   public Sensor updateRefreshedCoordinates(Sensor sensor) {
     // not via update(): that rewrites every column and the experiment memberships
@@ -306,6 +317,7 @@ public class JooqSensorRepository implements SensorRepository {
     dsl.update(SENSORS)
         .set(SENSORS.LAST_FULCRUM_REFRESH_AT, refreshedAt)
         .where(SENSORS.ID.in(sensorIds))
+        .and(SENSORS.FULCRUM_ID.isNotNull())
         .execute();
   }
 
