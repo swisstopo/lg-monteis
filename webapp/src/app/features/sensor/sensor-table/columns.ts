@@ -12,8 +12,9 @@ import { MultiSelectFilter } from '@ui/filters/multi-select-filter/multi-select-
 import { TableColumn } from '@ui/table/table.types';
 import { firstValueFrom } from 'rxjs';
 
-export function createColumns(datePipe: DatePipe): TableColumn<SensorParameterRowResponseDto>[] {
+export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
   const translateService = inject(TranslateService);
+  const datePipe = inject(DatePipe);
   const experimentApi = inject(ExperimentControllerService);
   const dasMetadata = getDasMetadata();
   const unitMetadata = getUnitMetadata();

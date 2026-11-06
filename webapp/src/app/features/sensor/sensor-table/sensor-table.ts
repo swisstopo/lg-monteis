@@ -39,12 +39,11 @@ export default class SensorTable {
   private readonly translateService = inject(TranslateService);
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
-  private readonly datePipe = inject(DatePipe);
   protected readonly permissions = inject(PermissionsService);
 
   readonly searchTerm = signal<string>('');
 
-  protected wrappedCols = createColumns(this.datePipe);
+  protected wrappedCols = createColumns();
   // one row per parameter, a sensor counts once however many of its rows are selected
   protected selectedSensors = signal<SensorParameterRowResponseDto[]>([]);
   protected selectedSensorId = computed(() => {

@@ -12,14 +12,13 @@ describe('sensor columns', () => {
       providers: [
         provideTranslateService(),
         { provide: ExperimentControllerService, useValue: {} },
+        { provide: DatePipe, useValue: new DatePipe('en-US', 'UTC') },
       ],
     });
   });
 
   function lastFulcrumRefreshColumn() {
-    const columns = TestBed.runInInjectionContext(() =>
-      createColumns(new DatePipe('en-US', 'UTC')),
-    );
+    const columns = TestBed.runInInjectionContext(() => createColumns());
     return columns.find((column) => column.field === 'lastFulcrumRefreshAt')!;
   }
 
