@@ -128,7 +128,7 @@ export default class SensorTable {
       const result = await this.sensorService.refreshFromFulcrum(
         sensors.map((sensor) => sensor.sensorId!),
       );
-      this.toastRefreshResult(result, sensors);
+      this.toastRefreshResult(result);
     } catch {
       // the global error toast already reports it
     } finally {
@@ -136,10 +136,7 @@ export default class SensorTable {
     }
   }
 
-  private toastRefreshResult(
-    result: FulcrumRefreshResponseDto,
-    sensors: SensorParameterRowResponseDto[],
-  ): void {
+  private toastRefreshResult(result: FulcrumRefreshResponseDto): void {
     const counts = { checked: result.checked, updated: result.updated };
     const skipped = result.skipped ?? [];
     if (skipped.length === 0) {
@@ -151,23 +148,16 @@ export default class SensorTable {
     this.toastService.warning(
       this.translateService.translate('sensor.fulcrumRefresh.partial', {
         ...counts,
-        skippedSensors: this.describeSkipped(skipped, sensors),
+        skippedSensors: this.describeSkipped(skipped),
       })(),
     );
   }
 
-  private describeSkipped(
-    skipped: SkippedSensorDto[],
-    sensors: SensorParameterRowResponseDto[],
-  ): string {
-    const namesById = new Map(sensors.map((sensor) => [sensor.sensorId, sensor.name]));
-    // a refresh of all visible sensors knows no names, the response only carries ids
+  private describeSkipped(skipped: SkippedSensorDto[]): string {
+    // no name for NOT_FOUND: sensor unknown or hidden from caller
     const listed = skipped
       .slice(0, MAX_NAMED_SKIPPED_SENSORS)
-      .map(
-        (sensor) =>
-          `${namesById.get(sensor.sensorId) ?? sensor.sensorId} (${this.skipReasonOf(sensor)})`,
-      );
+      .map((sensor) => `${sensor.sensorName ?? sensor.sensorId} (${this.skipReasonOf(sensor)})`);
     const notListedCount = skipped.length - listed.length;
     if (notListedCount > 0) {
       listed.push(

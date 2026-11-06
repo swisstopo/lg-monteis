@@ -152,8 +152,8 @@ describe('SensorTable', () => {
       checked: 2,
       updated: 0,
       skipped: [
-        { sensorId: 'sensor-1', reason: 'NOT_IN_FULCRUM' },
-        { sensorId: 'sensor-2', reason: 'CHANGED_MEANWHILE' },
+        { sensorId: 'sensor-1', sensorName: 'Inclinometer 1', reason: 'NOT_IN_FULCRUM' },
+        { sensorId: 'sensor-2', sensorName: 'Inclinometer 2', reason: 'CHANGED_MEANWHILE' },
       ],
     });
     const view = await render();
@@ -163,8 +163,8 @@ describe('SensorTable', () => {
 
     await vi.waitFor(() =>
       expect(toast.warning).toHaveBeenCalledWith(
-        '2 checked, 0 updated. Skipped: Sensor sensor-1 (not in Fulcrum), ' +
-          'Sensor sensor-2 (changed meanwhile).',
+        '2 checked, 0 updated. Skipped: Inclinometer 1 (not in Fulcrum), ' +
+          'Inclinometer 2 (changed meanwhile).',
       ),
     );
     expect(toast.success).not.toHaveBeenCalled();
@@ -177,6 +177,7 @@ describe('SensorTable', () => {
       updated: 0,
       skipped: selected.map((sensor) => ({
         sensorId: sensor.sensorId,
+        sensorName: sensor.name,
         reason: 'COORDINATES_MISSING' as const,
       })),
     });
@@ -187,15 +188,17 @@ describe('SensorTable', () => {
 
     await vi.waitFor(() => expect(toast.warning).toHaveBeenCalled());
     const message: string = toast.warning.mock.calls[0][0];
-    expect(message).toContain('Sensor s10 (coordinates missing), and 2 more.');
+    expect(message).toContain(
+      'Sensor s9 (coordinates missing), Sensor s10 (coordinates missing), and 2 more.',
+    );
     expect(message).not.toContain('Sensor s11');
   });
 
-  it('names a skipped sensor outside the selection by its id', async () => {
+  it('names skipped sensors outside the loaded rows after a refresh of all', async () => {
     refreshAnswers({
       checked: 1,
       updated: 0,
-      skipped: [{ sensorId: 'unseen', reason: 'NOT_FOUND' }],
+      skipped: [{ sensorId: 'unloaded', sensorName: 'Piezometer 7', reason: 'NOT_IN_FULCRUM' }],
     });
     const view = await render();
 
@@ -203,7 +206,24 @@ describe('SensorTable', () => {
 
     await vi.waitFor(() =>
       expect(toast.warning).toHaveBeenCalledWith(
-        '1 checked, 0 updated. Skipped: unseen (not found).',
+        '1 checked, 0 updated. Skipped: Piezometer 7 (not in Fulcrum).',
+      ),
+    );
+  });
+
+  it('names a sensor that was not found by its id', async () => {
+    refreshAnswers({
+      checked: 1,
+      updated: 0,
+      skipped: [{ sensorId: 'unknown', sensorName: null, reason: 'NOT_FOUND' }],
+    });
+    const view = await render();
+
+    view.button(REFRESH_ALL)!.click();
+
+    await vi.waitFor(() =>
+      expect(toast.warning).toHaveBeenCalledWith(
+        '1 checked, 0 updated. Skipped: unknown (not found).',
       ),
     );
   });
