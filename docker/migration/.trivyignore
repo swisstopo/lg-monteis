@@ -40,3 +40,7 @@ CVE-2026-91777
 # at.yawk.lz4:lz4-java (Cassandra driver, via cassandra-jdbc-wrapper / java-driver-core 4.19.2)
 # flyway 13.10.0 still ships the same driver, so bumping the base does not fix it
 CVE-2026-106451
+# com.google.guava:guava — standalone in drivers/gcp (Spanner/BigQuery), shaded inside
+# databricks-jdbc (33.0.0) and couchbase core-io (33.4.0). No guava on the Postgres
+# migration path. flyway 13.12.1 still ships the same jars
+CVE-2026-102554
