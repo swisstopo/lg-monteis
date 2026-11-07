@@ -168,7 +168,7 @@ overrides:
   brace-expansion@^2: 2.1.7
   brace-expansion@^5: 5.0.12
   fast-uri@^3: 4.2.3
-  ip-address@^10: 10.7.5
+  ip-address@^10: 10.7.6
 
 importers:
 
@@ -254,8 +254,8 @@ importers:
         version: 2.9.1
     devDependencies:
       '@analogjs/vite-plugin-angular':
-        specifier: ^2.9.5
-        version: 2.9.5(@angular/build@22.1.8(@angular/compiler-cli@22.1.6(@angular/compiler@22.1.6)(typescript@6.0.3))(@angular/compiler@22.1.6)(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(@angular/platform-browser@22.1.6(@angular/animations@22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@types/node@26.6.6)(chokidar@5.0.0)(postcss@8.5.22)(rollup@4.62.2)(supports-color@10.2.2)(tslib@2.9.1)(typescript@6.0.3)(vitest@5.1.0))(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(vite@8.1.5(@types/node@26.6.6)(esbuild@0.28.2)(sass@1.101.0))
+        specifier: ^2.9.6
+        version: 2.9.6(@angular/build@22.1.8(@angular/compiler-cli@22.1.6(@angular/compiler@22.1.6)(typescript@6.0.3))(@angular/compiler@22.1.6)(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(@angular/platform-browser@22.1.6(@angular/animations@22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@types/node@26.6.6)(chokidar@5.0.0)(postcss@8.5.22)(rollup@4.62.2)(supports-color@10.2.2)(tslib@2.9.1)(typescript@6.0.3)(vitest@5.1.0))(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(vite@8.1.5(@types/node@26.6.6)(esbuild@0.28.2)(sass@1.101.0))
       '@angular-eslint/builder':
         specifier: 22.6.0
         version: 22.6.0(chokidar@5.0.0)(eslint@10.14.0(supports-color@10.2.2))(typescript@6.0.3)
@@ -343,8 +343,8 @@ packages:
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
 
-  '@analogjs/vite-plugin-angular@2.9.5':
-    resolution: {integrity: sha512-iGhtiViuLMhQleH/MMeG1LXXmeWcDggf6OB6F17X8SbPsGKbjZPC8DrdJMAQ7lg1DaxqYsN0spu0oY6akZFJiQ==}
+  '@analogjs/vite-plugin-angular@2.9.6':
+    resolution: {integrity: sha512-mgFc3GdHWH1D4xpFn1N5R352Q/vwALkSt02s95pGRJw9lrt7MSH3w15+TDJjDxmsLCbe+/51usU6MMTVJz+79A==}
     peerDependencies:
       '@angular-devkit/build-angular': ^17.0.0 || ^18.0.0 || ^19.0.0 || ^20.0.0 || ^21.0.0 || ^22.0.0
       '@angular/build': ^18.0.0 || ^19.0.0 || ^20.0.0 || ^21.0.0 || ^22.0.0
@@ -3119,8 +3119,8 @@ packages:
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
 
-  ip-address@10.7.5:
-    resolution: {integrity: sha512-t2v0rkILYv9WXmSL7TpAaU3HXgaFYOPUcH3QHgwQ++gpJuH3bqyMy4Fvt/DJCTKwzH3Cf+bAp5W/mFL39KPLzA==}
+  ip-address@10.7.6:
+    resolution: {integrity: sha512-00LYkM6byILa9eQIx6qoaXCM40xTLd56AZ4vyaPW3YTyb49VZYPo5xsiAq4tuQ54GH4R7gVdYScJ1B7B77PuTg==}
     engines: {node: '>= 12'}
 
   ipaddr.js@1.9.1:
@@ -4260,7 +4260,7 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
 
-  '@analogjs/vite-plugin-angular@2.9.5(@angular/build@22.1.8(@angular/compiler-cli@22.1.6(@angular/compiler@22.1.6)(typescript@6.0.3))(@angular/compiler@22.1.6)(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(@angular/platform-browser@22.1.6(@angular/animations@22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@types/node@26.6.6)(chokidar@5.0.0)(postcss@8.5.22)(rollup@4.62.2)(supports-color@10.2.2)(tslib@2.9.1)(typescript@6.0.3)(vitest@5.1.0))(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(vite@8.1.5(@types/node@26.6.6)(esbuild@0.28.2)(sass@1.101.0))':
+  '@analogjs/vite-plugin-angular@2.9.6(@angular/build@22.1.8(@angular/compiler-cli@22.1.6(@angular/compiler@22.1.6)(typescript@6.0.3))(@angular/compiler@22.1.6)(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(@angular/platform-browser@22.1.6(@angular/animations@22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@types/node@26.6.6)(chokidar@5.0.0)(postcss@8.5.22)(rollup@4.62.2)(supports-color@10.2.2)(tslib@2.9.1)(typescript@6.0.3)(vitest@5.1.0))(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(vite@8.1.5(@types/node@26.6.6)(esbuild@0.28.2)(sass@1.101.0))':
     dependencies:
       magic-string: 0.30.21
       obug: 2.1.4
@@ -6552,7 +6552,7 @@ snapshots:
     dependencies:
       debug: 4.4.3(supports-color@10.2.2)
       express: 5.2.1(supports-color@10.2.2)
-      ip-address: 10.7.5
+      ip-address: 10.7.6
     transitivePeerDependencies:
       - supports-color
 
@@ -6832,7 +6832,7 @@ snapshots:
 
   inherits@2.0.4: {}
 
-  ip-address@10.7.5: {}
+  ip-address@10.7.6: {}
 
   ipaddr.js@1.9.1: {}
 
@@ -7623,7 +7623,7 @@ snapshots:
 
   socks@2.8.9:
     dependencies:
-      ip-address: 10.7.5
+      ip-address: 10.7.6
       smart-buffer: 4.2.0
 
   source-map-js@1.2.1: {}
