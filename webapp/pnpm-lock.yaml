@@ -205,20 +205,20 @@ importers:
         specifier: ^18.1.0
         version: 18.1.0(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2)
       '@scion/components':
-        specifier: ^22.5.0
-        version: 22.5.0(2a0efb8388d85476119c0ad48a293fca)
+        specifier: ^22.6.0
+        version: 22.6.0(6e913be626872af3d360acde670c4e34)
       '@scion/microfrontend-platform':
         specifier: ^3.0.0
-        version: 3.0.0(@scion/toolkit@2.3.0(rxjs@7.8.2))(rxjs@7.8.2)
+        version: 3.0.0(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2)
       '@scion/toolkit':
-        specifier: ^2.3.0
-        version: 2.3.0(rxjs@7.8.2)
+        specifier: ^2.4.0
+        version: 2.4.0(rxjs@7.8.2)
       '@scion/workbench':
         specifier: 22.0.0-beta.2
-        version: 22.0.0-beta.2(4a4006ea900adda04ae372b206ce19b0)
+        version: 22.0.0-beta.2(9212cb95ba85c173aa29f39c3b41ea3f)
       '@scion/workbench-client':
         specifier: 1.0.0-beta.43
-        version: 1.0.0-beta.43(@scion/microfrontend-platform@3.0.0(@scion/toolkit@2.3.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.3.0(rxjs@7.8.2))(rxjs@7.8.2)
+        version: 1.0.0-beta.43(@scion/microfrontend-platform@3.0.0(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2)
       ag-grid-angular:
         specifier: ^36.2.0
         version: 36.2.0(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))
@@ -2093,14 +2093,14 @@ packages:
     resolution: {integrity: sha512-V37T9uHOQVHyxxOqwcJ9xjSIW/mW9UuSfjOc7WJE4V8+3zj0abDJLHuoxDZKe0icYGapgOcvHyYjtNOjSeSivw==}
     engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0, npm: ^6.11.0 || ^7.5.6 || >=8.0.0, yarn: '>= 1.13.0'}
 
-  '@scion/components@22.5.0':
-    resolution: {integrity: sha512-NYJKyYkN4W8K0HSQHR1AUAzX2Vl+GAE2aDa7yH85EgvxcSukdEk5kJHg3hwWPT7ng4bqKChpxGdIdXzvM9TJPQ==}
+  '@scion/components@22.6.0':
+    resolution: {integrity: sha512-9NPiRVLsjljCR4jtyKfFZysXO3pSr4gsN2HZG1mtcImeh0hoYKPajjB5b3mK1DYL0LUuk8pKN58weTRm0okSlA==}
     peerDependencies:
       '@angular/animations': ^22.0.0
       '@angular/cdk': ^22.0.0
       '@angular/common': ^22.0.0
       '@angular/core': ^22.0.0
-      '@scion/toolkit': ^2.3.0
+      '@scion/toolkit': ^2.4.0
       rxjs: ^7.8.0
 
   '@scion/microfrontend-platform@3.0.0':
@@ -2109,8 +2109,8 @@ packages:
       '@scion/toolkit': ^1.6.0 || ^2.0.0
       rxjs: ^7.5.0
 
-  '@scion/toolkit@2.3.0':
-    resolution: {integrity: sha512-j+gaXNqDA98/HLqyXpZTmJa4pA+zVIPnzeJhMnv1nYDzKTgn4vw1cdakisERQzvD7/u23nePooxGzLPlJ9VyMQ==}
+  '@scion/toolkit@2.4.0':
+    resolution: {integrity: sha512-wkaRZtsZWp+9cVEaeO+1PZJu6395Ko/+4p2mE7ZYezteKn+7wif6b+rhQZco5z47GZJBfvOPxQEj12m/I59ndQ==}
     peerDependencies:
       rxjs: ^7.8.0
 
@@ -5661,35 +5661,35 @@ snapshots:
     transitivePeerDependencies:
       - chokidar
 
-  '@scion/components@22.5.0(2a0efb8388d85476119c0ad48a293fca)':
+  '@scion/components@22.6.0(6e913be626872af3d360acde670c4e34)':
     dependencies:
       '@angular/animations': 22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))
       '@angular/cdk': 22.1.7(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(@angular/forms@22.1.6(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(@angular/platform-browser@22.1.6(@angular/animations@22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(rxjs@7.8.2))(@angular/platform-browser@22.1.6(@angular/animations@22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(rxjs@7.8.2)
       '@angular/common': 22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2)
       '@angular/core': 22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)
-      '@scion/toolkit': 2.3.0(rxjs@7.8.2)
+      '@scion/toolkit': 2.4.0(rxjs@7.8.2)
       rxjs: 7.8.2
       tslib: 2.9.1
 
-  '@scion/microfrontend-platform@3.0.0(@scion/toolkit@2.3.0(rxjs@7.8.2))(rxjs@7.8.2)':
+  '@scion/microfrontend-platform@3.0.0(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2)':
     dependencies:
-      '@scion/toolkit': 2.3.0(rxjs@7.8.2)
+      '@scion/toolkit': 2.4.0(rxjs@7.8.2)
       rxjs: 7.8.2
       tslib: 2.9.1
 
-  '@scion/toolkit@2.3.0(rxjs@7.8.2)':
+  '@scion/toolkit@2.4.0(rxjs@7.8.2)':
     dependencies:
       rxjs: 7.8.2
       tslib: 2.9.1
 
-  '@scion/workbench-client@1.0.0-beta.43(@scion/microfrontend-platform@3.0.0(@scion/toolkit@2.3.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.3.0(rxjs@7.8.2))(rxjs@7.8.2)':
+  '@scion/workbench-client@1.0.0-beta.43(@scion/microfrontend-platform@3.0.0(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2)':
     dependencies:
-      '@scion/microfrontend-platform': 3.0.0(@scion/toolkit@2.3.0(rxjs@7.8.2))(rxjs@7.8.2)
-      '@scion/toolkit': 2.3.0(rxjs@7.8.2)
+      '@scion/microfrontend-platform': 3.0.0(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2)
+      '@scion/toolkit': 2.4.0(rxjs@7.8.2)
       rxjs: 7.8.2
       tslib: 2.9.1
 
-  '@scion/workbench@22.0.0-beta.2(4a4006ea900adda04ae372b206ce19b0)':
+  '@scion/workbench@22.0.0-beta.2(9212cb95ba85c173aa29f39c3b41ea3f)':
     dependencies:
       '@angular/animations': 22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))
       '@angular/cdk': 22.1.7(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(@angular/forms@22.1.6(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(@angular/platform-browser@22.1.6(@angular/animations@22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(rxjs@7.8.2))(@angular/platform-browser@22.1.6(@angular/animations@22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(rxjs@7.8.2)
@@ -5697,13 +5697,13 @@ snapshots:
       '@angular/core': 22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)
       '@angular/forms': 22.1.6(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(@angular/platform-browser@22.1.6(@angular/animations@22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(rxjs@7.8.2)
       '@angular/router': 22.2.1(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(@angular/platform-browser@22.1.6(@angular/animations@22.1.5(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)))(rxjs@7.8.2)
-      '@scion/components': 22.5.0(2a0efb8388d85476119c0ad48a293fca)
-      '@scion/toolkit': 2.3.0(rxjs@7.8.2)
+      '@scion/components': 22.6.0(6e913be626872af3d360acde670c4e34)
+      '@scion/toolkit': 2.4.0(rxjs@7.8.2)
       rxjs: 7.8.2
       tslib: 2.9.1
     optionalDependencies:
-      '@scion/microfrontend-platform': 3.0.0(@scion/toolkit@2.3.0(rxjs@7.8.2))(rxjs@7.8.2)
-      '@scion/workbench-client': 1.0.0-beta.43(@scion/microfrontend-platform@3.0.0(@scion/toolkit@2.3.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.3.0(rxjs@7.8.2))(rxjs@7.8.2)
+      '@scion/microfrontend-platform': 3.0.0(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2)
+      '@scion/workbench-client': 1.0.0-beta.43(@scion/microfrontend-platform@3.0.0(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2)
 
   '@standard-schema/spec@1.1.0': {}
 
