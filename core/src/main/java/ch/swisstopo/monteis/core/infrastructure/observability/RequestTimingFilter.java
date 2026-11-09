@@ -23,10 +23,21 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *
  * <p>Response size is deliberately not measured — counting bytes needs a response wrapper around
  * the output stream, and Tomcat's access log already provides it via {@code server.tomcat.accesslog}.
+ *
+ * <p>Actuator requests are skipped: in Kubernetes the kubelet polls the liveness and readiness
+ * probes every few seconds, which would bury the real traffic under one line per probe.
  */
 public class RequestTimingFilter extends OncePerRequestFilter {
 
   private static final Logger log = LoggerFactory.getLogger(RequestTimingFilter.class);
+
+  private static final String ACTUATOR_PATH = "/actuator";
+
+  @Override
+  protected boolean shouldNotFilter(HttpServletRequest request) {
+    String path = request.getRequestURI().substring(request.getContextPath().length());
+    return path.equals(ACTUATOR_PATH) || path.startsWith(ACTUATOR_PATH + "/");
+  }
 
   @Override
   protected void doFilterInternal(
