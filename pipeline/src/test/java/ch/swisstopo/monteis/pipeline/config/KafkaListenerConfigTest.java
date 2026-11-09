@@ -107,8 +107,6 @@ class KafkaListenerConfigTest {
     // given
     for (Exception databaseUnavailable :
         new Exception[] {
-          new QueryTimeoutException("statement timeout"),
-          new CannotAcquireLockException("deadlock"),
           new CannotGetJdbcConnectionException("no connection"),
           new CannotCreateTransactionException(
               "Could not open JDBC Connection for transaction",
@@ -136,6 +134,18 @@ class KafkaListenerConfigTest {
     assertThat(
             KafkaListenerConfig.backOffFor(
                 listenerFailure(new DataIntegrityViolationException("duplicate key"))))
+        .isNull();
+  }
+
+  @Test
+  void should_use_the_default_backoff_when_a_lock_or_query_times_out() {
+    assertThat(
+            KafkaListenerConfig.backOffFor(
+                listenerFailure(new QueryTimeoutException("statement timeout"))))
+        .isNull();
+    assertThat(
+            KafkaListenerConfig.backOffFor(
+                listenerFailure(new CannotAcquireLockException("deadlock"))))
         .isNull();
   }
 

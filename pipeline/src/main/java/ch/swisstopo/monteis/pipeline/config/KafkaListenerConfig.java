@@ -1,12 +1,10 @@
 package ch.swisstopo.monteis.pipeline.config;
 
-import java.sql.SQLTransientException;
+import java.sql.SQLTransientConnectionException;
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.dao.RecoverableDataAccessException;
-import org.springframework.dao.TransientDataAccessException;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -83,11 +81,10 @@ public class KafkaListenerConfig {
 
   private static boolean isDatabaseUnavailable(Exception ex) {
     for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
-      if (cause instanceof TransientDataAccessException
-          || cause instanceof RecoverableDataAccessException
-          || cause instanceof DataAccessResourceFailureException
+      // no TransientDataAccessException: lock or query timeout can fail one record forever
+      if (cause instanceof DataAccessResourceFailureException
           || cause instanceof CannotCreateTransactionException
-          || cause instanceof SQLTransientException) {
+          || cause instanceof SQLTransientConnectionException) {
         return true;
       }
     }
