@@ -26,7 +26,7 @@ public class SensorDataBatchListener {
       topics = "${app.kafka.topics.normalized}",
       groupId = "pipeline-master-group",
       concurrency = "${app.kafka.concurrency:6}",
-      containerFactory = "manualAckFactory")
+      containerFactory = "sensorDataFactory")
   public void consumeNormalizedSensorData(
       List<NormalizedSensorData> batch,
       @Header(KafkaHeaders.RECEIVED_TIMESTAMP) List<Long> receivedTimestamps,

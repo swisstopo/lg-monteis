@@ -355,12 +355,15 @@ Beide Flows stützen sich auf gemeinsame Komponenten und eine strikte Kafka-Konf
 * **Cache Broadcast Pattern:** Damit jeder Pipeline-Pod einen synchronen Metadaten-Cache besitzt, generiert der `SensorConfigCacheHydrationListener` beim Start eine zufällige UUID als Consumer Group (`cache-hydrator-#{UUID}`). Dadurch wird jedes Metadaten-Update an *jeden* laufenden Pod gebroadcastet.
 * **Deaktiviertes Auto-Commit (`enable-auto-commit: false`):** Spring Boot darf Kafka-Offsets niemals im Hintergrund bestätigen. Das System verlässt sich ausschliesslich auf manuelle Bestätigungen (`ack-mode: manual`).
 * **Das Guarded Acknowledgment Pattern (At-Least-Once):** In allen Listenern wird der Kafka-Offset erst explizit committet (`ack.acknowledge()`), **nachdem** die Daten sicher in die nächste Schicht oder die TimeScaleDB persistiert wurden. Fällt ein Pod aus, pausiert Kafka und liefert das Event nach dem Neustart erneut aus.
+* **Fehlerbehandlung im `sensorDataFactory` (Backoff & DLT):** Ist die Datenbank vorübergehend nicht erreichbar (z. B. TimescaleDB-Failover, Hikari-Timeout), wird der Datensatz mit exponentiellem Backoff (1s, verdoppelnd, max. 30s) ohne Obergrenze erneut verarbeitet. Die Partition pausiert, bis die Datenbank wieder antwortet. Alle anderen Fehler werden zweimal mit 1s Abstand wiederholt und danach in das Topic `<topic>-dlt` publiziert und committet. Schlägt das Publizieren ins DLT fehl, wird der Offset nicht committet und der Datensatz erneut verarbeitet.
 
 ===== Explizite Separation of Concerns für Container-Factories
 
-Um das Risiko von hängenden Offsets oder Datenverlust bei zustandslosen @SendTo-Integrationen zu eliminieren, verwendet das System zwei spezialisierte Container-Factories:
+Um das Risiko von hängenden Offsets oder Datenverlust bei zustandslosen @SendTo-Integrationen zu eliminieren, verwendet das System drei spezialisierte Container-Factories:
 
-* manualAckFactory: Reserviert für rein infrastrukturseitige oder datenbanknahe Konsumenten (z. B. SensorConfigCacheHydrationListener oder SensorDataBatchListener). Sie erzwingt die manuelle Injektion von Acknowledgment und ein explizites ack.acknowledge() im Code.
+* manualAckFactory: Reserviert für rein infrastrukturseitige Konsumenten (SensorConfigCacheHydrationListener, SensorConfigReprocessingListener). Sie erzwingt die manuelle Injektion von Acknowledgment und ein explizites ack.acknowledge() im Code. Fehler behandelt der Spring-Standard (10 Versuche, danach übersprungen), ohne DLT: Der Cache-Hydration-Listener hat pro Pod eine eigene Consumer Group und würde pro Pod eine DLT-Kopie schreiben.
+
+* sensorDataFactory: Wie manualAckFactory, zusätzlich mit Backoff & DLT (siehe oben). Nur für den SensorDataBatchListener.
 
 * forwardingMessageFactory: Speziell konzipiert für zustandslose EIP-Ingress-Adapter mit deklarativer @SendTo-Weiterleitung. Sie nutzt den AckMode.RECORD und stellt sicher, dass der Offset erst bestätigt wird, nachdem alle transformierten Datensätze vom Broker erfolgreich quittiert wurden.
 

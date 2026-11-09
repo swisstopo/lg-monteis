@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.pipeline.egress;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
@@ -13,62 +14,88 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 
 @ExtendWith(MockitoExtension.class)
 class AlertPublisherTest {
 
+  private static final String ALERT_TOPIC = "sensor-alerts";
+
   @Mock private KafkaTemplate<String, SensorBoundBreachedEvent> kafkaTemplate;
 
   private AlertPublisher alertPublisher;
 
-  private final String alertTopic = "sensor-alerts";
-
   @BeforeEach
   void setUp() {
-    // Instantiate the publisher directly, injecting the mock and our test topic
-    alertPublisher = new AlertPublisher(kafkaTemplate, alertTopic);
+    alertPublisher = new AlertPublisher(kafkaTemplate, ALERT_TOPIC);
   }
 
   @Test
   void should_publish_alert_successfully() {
     // given
-    SensorBoundBreachedEvent event =
-        new SensorBoundBreachedEvent("deviceA", 150.5, 100.0, BoundType.UPPER, Instant.now());
-
-    // Simulate a successful Kafka send
+    SensorBoundBreachedEvent event = event("deviceA");
     @SuppressWarnings("unchecked")
     SendResult<String, SensorBoundBreachedEvent> sendResult = mock(SendResult.class);
-    CompletableFuture<SendResult<String, SensorBoundBreachedEvent>> successFuture =
-        CompletableFuture.completedFuture(sendResult);
-
-    given(kafkaTemplate.send(alertTopic, event.sensorId(), event)).willReturn(successFuture);
+    given(kafkaTemplate.send(ALERT_TOPIC, "deviceA", event))
+        .willReturn(CompletableFuture.completedFuture(sendResult));
 
     // when
     alertPublisher.handleBoundBreach(event);
 
     // then
-    then(kafkaTemplate).should().send(alertTopic, "deviceA", event);
+    then(kafkaTemplate).should().send(ALERT_TOPIC, "deviceA", event);
   }
 
   @Test
   void should_handle_publishing_failure_gracefully() {
     // given
-    SensorBoundBreachedEvent event =
-        new SensorBoundBreachedEvent("deviceB", -10.0, 0.0, BoundType.LOWER, Instant.now());
-
-    // Simulate a failed Kafka send (e.g., broker down, timeout)
+    SensorBoundBreachedEvent event = event("deviceB");
     CompletableFuture<SendResult<String, SensorBoundBreachedEvent>> failedFuture =
         new CompletableFuture<>();
-    failedFuture.completeExceptionally(new RuntimeException("Kafka Broker timeout"));
+    failedFuture.completeExceptionally(new KafkaException("Kafka Broker timeout"));
+    given(kafkaTemplate.send(ALERT_TOPIC, "deviceB", event)).willReturn(failedFuture);
 
-    given(kafkaTemplate.send(alertTopic, event.sensorId(), event)).willReturn(failedFuture);
+    // when / then
+    assertThatCode(() -> alertPublisher.handleBoundBreach(event)).doesNotThrowAnyException();
+    then(kafkaTemplate).should().send(ALERT_TOPIC, "deviceB", event);
+  }
 
+  @Test
+  void should_not_propagate_synchronous_send_failure_to_caller() {
+    // given
+    SensorBoundBreachedEvent event = event("deviceC");
+    given(kafkaTemplate.send(ALERT_TOPIC, "deviceC", event))
+        .willThrow(new KafkaException("Topic sensor-alerts not present in metadata"));
+
+    // when / then
+    assertThatCode(() -> alertPublisher.handleBoundBreach(event)).doesNotThrowAnyException();
+    then(kafkaTemplate).should().send(ALERT_TOPIC, "deviceC", event);
+  }
+
+  @Test
+  void should_not_propagate_any_runtime_exception_from_send() {
+    // given
+    SensorBoundBreachedEvent event = event("deviceD");
+    given(kafkaTemplate.send(ALERT_TOPIC, "deviceD", event))
+        .willThrow(
+            new IllegalStateException("Cannot perform operation after producer has been closed"));
+
+    // when / then
+    assertThatCode(() -> alertPublisher.handleBoundBreach(event)).doesNotThrowAnyException();
+  }
+
+  @Test
+  void should_close_the_template_on_destroy() {
     // when
-    alertPublisher.handleBoundBreach(event);
+    alertPublisher.destroy();
 
     // then
-    then(kafkaTemplate).should().send(alertTopic, "deviceB", event);
+    then(kafkaTemplate).should().destroy();
+  }
+
+  private static SensorBoundBreachedEvent event(String sensorId) {
+    return new SensorBoundBreachedEvent(sensorId, 200.0, 100.0, BoundType.UPPER, Instant.now());
   }
 }
