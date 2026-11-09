@@ -1,7 +1,9 @@
 package ch.swisstopo.monteis.pipeline.transformation.validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.contracts.MeasurementStatus;
@@ -13,6 +15,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.UUID;
+import org.apache.kafka.common.errors.TopicAuthorizationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -101,6 +104,24 @@ class BoundsValidatorTest {
     assertThat(event.limitViolated()).isEqualTo(-10.0);
     assertThat(event.boundType()).isEqualTo(BoundType.LOWER);
     assertThat(event.timestamp()).isEqualTo(fixedTimestamp);
+  }
+
+  @Test
+  void should_return_too_high_when_publishing_breach_event_fails() {
+    // given
+    SensorParameterConfig config =
+        new SensorParameterConfig(
+            Das.SOL_EXPERTS, "deviceA", "temperature", UUID.randomUUID(), "x + 1", 100.0, 0.0, 1);
+    willThrow(new TopicAuthorizationException("Not authorized to access topics: [sensor-alerts]"))
+        .given(eventPublisher)
+        .publishEvent(any(Object.class));
+
+    // when
+    MeasurementStatus status =
+        boundsValidator.evaluateBounds("deviceA", 150.5, config, ProcessingOrigin.INGEST);
+
+    // then
+    assertThat(status).isEqualTo(MeasurementStatus.TOO_HIGH);
   }
 
   @Test
