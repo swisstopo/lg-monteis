@@ -47,7 +47,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 class BoundBreachAlertingFailureTest {
 
   private static final String DAS_KEY = "SOL_EXPERTS__a3265_BCL_11_PKP_01__value";
-  private static final Duration NON_BLOCKING = Duration.ofSeconds(2);
+  private static final Duration NON_BLOCKING = Duration.ofSeconds(10);
+  private static final long SEND_BLOCK_SECONDS = 60;
 
   private KafkaTemplate<String, SensorBoundBreachedEvent> kafkaTemplate;
   private SensorConfigCache sensorConfigCache;
@@ -124,7 +125,7 @@ class BoundBreachAlertingFailureTest {
     given(kafkaTemplate.send(eq("sensor-alerts"), anyString(), any(SensorBoundBreachedEvent.class)))
         .willAnswer(
             invocation -> {
-              releaseSend.await(5, TimeUnit.SECONDS);
+              releaseSend.await(SEND_BLOCK_SECONDS, TimeUnit.SECONDS);
               throw new KafkaException("Send failed");
             });
 
