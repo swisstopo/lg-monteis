@@ -27,7 +27,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.kafka.KafkaException;
+import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.listener.ListenerExecutionFailedException;
 import org.springframework.kafka.listener.MessageListenerContainer;
@@ -135,6 +137,23 @@ class KafkaListenerConfigTest {
             KafkaListenerConfig.backOffFor(
                 listenerFailure(new DataIntegrityViolationException("duplicate key"))))
         .isNull();
+  }
+
+  @Test
+  void should_dead_letter_only_on_the_sensor_data_factory() {
+    // given
+    ConsumerFactory<String, Object> consumerFactory = mock(ConsumerFactory.class);
+    KafkaListenerConfig config = new KafkaListenerConfig();
+
+    // when
+    ConcurrentMessageListenerContainer<String, Object> sensorData =
+        config.sensorDataFactory(consumerFactory, kafkaTemplate).createContainer(TOPIC);
+    ConcurrentMessageListenerContainer<String, Object> manualAck =
+        config.manualAckFactory(consumerFactory).createContainer("internal-sensor-config");
+
+    // then
+    assertThat(sensorData.getCommonErrorHandler()).isInstanceOf(DefaultErrorHandler.class);
+    assertThat(manualAck.getCommonErrorHandler()).isNull();
   }
 
   private boolean handle(Exception failure) {

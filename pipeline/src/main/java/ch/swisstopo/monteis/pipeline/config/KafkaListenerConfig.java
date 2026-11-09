@@ -27,9 +27,23 @@ public class KafkaListenerConfig {
    */
   @Bean("manualAckFactory")
   public ConcurrentKafkaListenerContainerFactory<String, Object> manualAckFactory(
+      ConsumerFactory<String, Object> consumerFactory) {
+    return manualAckFactoryWith(consumerFactory);
+  }
+
+  // dlt only for sensor data: cache hydration's group per pod would write one dlt copy per pod
+  @Bean("sensorDataFactory")
+  public ConcurrentKafkaListenerContainerFactory<String, Object> sensorDataFactory(
       ConsumerFactory<String, Object> consumerFactory,
       KafkaTemplate<String, Object> kafkaTemplate) {
+    ConcurrentKafkaListenerContainerFactory<String, Object> factory =
+        manualAckFactoryWith(consumerFactory);
+    factory.setCommonErrorHandler(deadLetterErrorHandler(kafkaTemplate));
+    return factory;
+  }
 
+  private static ConcurrentKafkaListenerContainerFactory<String, Object> manualAckFactoryWith(
+      ConsumerFactory<String, Object> consumerFactory) {
     ConcurrentKafkaListenerContainerFactory<String, Object> factory =
         new ConcurrentKafkaListenerContainerFactory<>();
 
@@ -38,8 +52,6 @@ public class KafkaListenerConfig {
 
     // Manuelles Acknowledgment erzwungen
     factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
-
-    factory.setCommonErrorHandler(deadLetterErrorHandler(kafkaTemplate));
 
     return factory;
   }
