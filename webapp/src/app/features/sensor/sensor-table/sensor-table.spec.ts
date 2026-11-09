@@ -35,6 +35,7 @@ const TRANSLATIONS = {
       success: '{{checked}} checked, {{updated}} updated.',
       partial: '{{checked}} checked, {{updated}} updated. Skipped: {{skippedSensors}}.',
       andMore: '{{sensors}} and {{count}} more',
+      withoutFulcrumId: 'No Fulcrum ID: {{sensors}}.',
       reason: {
         NOT_FOUND: 'not found',
         NOT_IN_FULCRUM: 'not in Fulcrum',
@@ -57,8 +58,13 @@ function row(sensorId: string, parameterId?: string): SensorParameterRowResponse
   return {
     sensorId,
     name: `Sensor ${sensorId}`,
+    fulcrumId: `fulcrum-${sensorId}`,
     parameter: parameterId ? { id: parameterId } : undefined,
   };
+}
+
+function rowWithoutFulcrumId(sensorId: string): SensorParameterRowResponseDto {
+  return { ...row(sensorId), fulcrumId: undefined };
 }
 
 describe('SensorTable', () => {
@@ -135,6 +141,40 @@ describe('SensorTable', () => {
       }),
     );
     expect(view.button(REFRESH_ALL)).toBeUndefined();
+  });
+
+  it('warns at once about selected sensors without fulcrum id and sends only the others', async () => {
+    const view = await render();
+
+    await view.select(row('sensor-1'), rowWithoutFulcrumId('sensor-2'));
+    view.button(REFRESH_SELECTED)!.click();
+
+    expect(toast.warning).toHaveBeenCalledWith('No Fulcrum ID: Sensor sensor-2.');
+    await vi.waitFor(() =>
+      expect(api['refreshFromFulcrum']).toHaveBeenCalledWith({ sensorIds: ['sensor-1'] }),
+    );
+  });
+
+  it('sends nothing when no selected sensor has a fulcrum id', async () => {
+    const view = await render();
+
+    await view.select(rowWithoutFulcrumId('sensor-1'), rowWithoutFulcrumId('sensor-2'));
+    view.button(REFRESH_SELECTED)!.click();
+
+    expect(toast.warning).toHaveBeenCalledWith('No Fulcrum ID: Sensor sensor-1, Sensor sensor-2.');
+    await view.settle();
+    expect(api['refreshFromFulcrum']).not.toHaveBeenCalled();
+  });
+
+  it('names at most 10 sensors without fulcrum id and counts the rest', async () => {
+    const view = await render();
+
+    await view.select(...Array.from({ length: 12 }, (_, i) => rowWithoutFulcrumId(`s${i + 1}`)));
+    view.button(REFRESH_SELECTED)!.click();
+
+    expect(toast.warning).toHaveBeenCalledWith(
+      `No Fulcrum ID: ${Array.from({ length: 10 }, (_, i) => `Sensor s${i + 1}`).join(', ')} and 2 more.`,
+    );
   });
 
   it('toasts the counts when no sensor was skipped', async () => {

@@ -24,7 +24,7 @@ import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
 import { createColumns } from './columns';
 
-const MAX_NAMED_SKIPPED_SENSORS = 10;
+const MAX_NAMED_SENSORS = 10;
 
 @Component({
   selector: 'app-sensor-table',
@@ -122,15 +122,32 @@ export default class SensorTable {
 
   async onRefresh(): Promise<void> {
     const rows = this.selectedSensorRows();
+    const withoutFulcrumId = rows.filter((row) => !row.fulcrumId);
+    if (withoutFulcrumId.length > 0) {
+      this.toastWithoutFulcrumId(withoutFulcrumId);
+    }
+    const sensorIds = rows.filter((row) => row.fulcrumId).map((row) => row.sensorId!);
+    // empty list = refresh of all visible sensors, not of this selection
+    if (rows.length > 0 && sensorIds.length === 0) {
+      return;
+    }
     this.refreshing.set(true);
     try {
-      const result = await this.sensorService.refreshFromFulcrum(rows.map((row) => row.sensorId!));
+      const result = await this.sensorService.refreshFromFulcrum(sensorIds);
       this.toastRefreshResult(result);
     } catch {
       // the global error toast already reports it
     } finally {
       this.refreshing.set(false);
     }
+  }
+
+  private toastWithoutFulcrumId(rows: SensorParameterRowResponseDto[]): void {
+    this.toastService.warning(
+      this.translateService.translate('sensor.fulcrumRefresh.withoutFulcrumId', {
+        sensors: this.listCapped(rows.map((row) => row.name ?? row.sensorId!)),
+      })(),
+    );
   }
 
   private toastRefreshResult(result: FulcrumRefreshResponseDto): void {
@@ -152,10 +169,16 @@ export default class SensorTable {
 
   private describeSkipped(skipped: SkippedSensorDto[]): string {
     // no name for NOT_FOUND: sensor unknown or hidden from caller
-    const listed = skipped
-      .slice(0, MAX_NAMED_SKIPPED_SENSORS)
-      .map((sensor) => `${sensor.sensorName ?? sensor.sensorId} (${this.skipReasonOf(sensor)})`);
-    const notListedCount = skipped.length - listed.length;
+    return this.listCapped(
+      skipped.map(
+        (sensor) => `${sensor.sensorName ?? sensor.sensorId} (${this.skipReasonOf(sensor)})`,
+      ),
+    );
+  }
+
+  private listCapped(sensors: string[]): string {
+    const listed = sensors.slice(0, MAX_NAMED_SENSORS);
+    const notListedCount = sensors.length - listed.length;
     if (notListedCount === 0) {
       return listed.join(', ');
     }
