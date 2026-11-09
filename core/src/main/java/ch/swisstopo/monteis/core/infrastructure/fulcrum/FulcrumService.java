@@ -1,10 +1,12 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
+import ch.swisstopo.monteis.contracts.fulcrum.QueryRequest;
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -27,21 +29,14 @@ import tools.jackson.databind.ObjectMapper;
  * means.
  *
  * <p>The SELECT statements below are therefore request payload, not a query this application runs:
- * they travel as the {@code q} parameter of an HTTP GET and are executed by Fulcrum against its own
+ * they travel as the {@code q} field of an HTTP POST body and are executed by Fulcrum against its own
  * storage. Nothing here touches a Monteis database or a JDBC connection.
  */
 @Service
 public class FulcrumService {
 
   private static final Logger log = LoggerFactory.getLogger(FulcrumService.class);
-  private static final String JSON_FORMAT = "json";
-
-  private static final boolean WITH_HEADERS = true;
-  private static final boolean WITHOUT_COLUMN_METADATA = false;
-  private static final boolean ROWS_AS_OBJECTS = false;
   private static final int FIRST_PAGE = 1;
-
-  private static final String USER_AGENT = "monteis-core";
 
   private static final TypeReference<FulcrumQueryResponse<FulcrumSensor>> SENSOR_ROWS =
       new TypeReference<>() {};
@@ -98,12 +93,20 @@ public class FulcrumService {
     return Optional.ofNullable(firstPerFulcrumId(rows).get(fulcrumId));
   }
 
-  // whole table in one short GET: an IN list of ids would outgrow the URL length limit
-  public Map<UUID, FulcrumSensor> findAllSensorsByFulcrumId() {
+  public Map<UUID, FulcrumSensor> findSensorsByFulcrumId(Set<UUID> fulcrumIds) {
+    if (fulcrumIds.isEmpty()) {
+      return Map.of();
+    }
     return firstPerFulcrumId(
         query(
-            "SELECT %s FROM \"%s\";".formatted(SENSOR_COLUMNS, properties.sensorTable()),
+            "SELECT %s FROM \"%s\" WHERE _record_id IN (%s);"
+                .formatted(SENSOR_COLUMNS, properties.sensorTable(), quotedListOf(fulcrumIds)),
             SENSOR_ROWS));
+  }
+
+  // UUID = hex and dashes only, safe to inline
+  private static String quotedListOf(Set<UUID> fulcrumIds) {
+    return fulcrumIds.stream().map("'%s'"::formatted).collect(Collectors.joining(", "));
   }
 
   // one Fulcrum ID per record expected, more = data error in Fulcrum
@@ -183,22 +186,15 @@ public class FulcrumService {
     return rows;
   }
 
+  // POST, not GET: Fulcrum caps the url at ~12-16 KB (~300 ids), a refresh sends up to 1000 ids
   private Object queryApi(String statement) {
     try {
       return fulcrumApi
-          .queryGet(
-              statement,
-              JSON_FORMAT,
-              WITH_HEADERS,
-              WITHOUT_COLUMN_METADATA,
-              ROWS_AS_OBJECTS,
-              null, // table_name applies to the postgres format only
-              null, // sorting is expressed in the statement itself
-              null,
+          .queryPost(
               FIRST_PAGE,
               properties.perPage(),
               MediaType.APPLICATION_JSON_VALUE,
-              USER_AGENT)
+              new QueryRequest(statement).format(QueryRequest.FormatEnum.JSON))
           .getBody();
     } catch (RestClientResponseException e) {
       throw FulcrumAuthenticationException.translateRejectedToken(e);

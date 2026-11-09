@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jooq.exception.DataChangedException;
 import org.springframework.stereotype.Service;
@@ -62,7 +63,8 @@ public class SensorFulcrumRefreshService {
   // no transaction around it: each save commits, a failed refresh keeps what it saved
   private FulcrumRefreshResult refresh(List<Sensor> sensors, List<SkippedSensor> notFound) {
     // read before any write: Fulcrum failing leaves every sensor as it was
-    Map<UUID, FulcrumSensor> fulcrumSensorsById = fulcrumService.findAllSensorsByFulcrumId();
+    Map<UUID, FulcrumSensor> fulcrumSensorsById =
+        fulcrumService.findSensorsByFulcrumId(fulcrumIdsOf(sensors));
     OffsetDateTime refreshedAt = OffsetDateTime.now(clock);
     Classification classification = classify(sensors, fulcrumSensorsById);
 
@@ -77,6 +79,13 @@ public class SensorFulcrumRefreshService {
             .flatMap(List::stream)
             .toList();
     return new FulcrumRefreshResult(classification.unchanged().size() + updated, updated, skipped);
+  }
+
+  private static Set<UUID> fulcrumIdsOf(List<Sensor> sensors) {
+    return sensors.stream()
+        .filter(Sensor::hasFulcrumId)
+        .map(Sensor::getFulcrumId)
+        .collect(Collectors.toSet());
   }
 
   private static Classification classify(

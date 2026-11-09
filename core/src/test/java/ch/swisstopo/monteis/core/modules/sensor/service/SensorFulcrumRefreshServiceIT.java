@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.javers.core.Javers;
 import org.javers.core.metamodel.object.CdoSnapshot;
@@ -352,21 +352,26 @@ class SensorFulcrumRefreshServiceIT {
   @Test
   void should_fail_and_write_nothing_when_fulcrum_returns_a_full_page() {
     // given
-    UUID fulcrumId = UUID.randomUUID();
-    UUID sensorId = createSensor(writtenByPi, fulcrumId, STORED);
-    StubSensor[] fullPage =
-        IntStream.range(0, FULCRUM_PAGE_SIZE)
-            .mapToObj(i -> inFulcrum(i == 0 ? fulcrumId : UUID.randomUUID(), IN_FULCRUM))
-            .toArray(StubSensor[]::new);
-    fulcrum.serveSensors(fullPage);
+    List<UUID> fulcrumIds = Stream.generate(UUID::randomUUID).limit(FULCRUM_PAGE_SIZE).toList();
+    Set<UUID> selected =
+        fulcrumIds.stream()
+            .map(fulcrumId -> createSensor(writtenByPi, fulcrumId, STORED))
+            .collect(Collectors.toSet());
+    fulcrum.serveSensors(
+        fulcrumIds.stream()
+            .map(fulcrumId -> inFulcrum(fulcrumId, IN_FULCRUM))
+            .toArray(StubSensor[]::new));
 
     // when
-    assertThrows(
-        IllegalStateException.class, () -> asPi(() -> service.refreshSelected(Set.of(sensorId))));
+    assertThrows(IllegalStateException.class, () -> asPi(() -> service.refreshSelected(selected)));
 
     // then
-    assertThat(storedSensor(sensorId).getCoordinates()).isEqualTo(STORED);
-    assertThat(storedSensor(sensorId).getLastFulcrumRefreshAt()).isNull();
+    assertThat(selected)
+        .allSatisfy(
+            sensorId -> {
+              assertThat(storedSensor(sensorId).getCoordinates()).isEqualTo(STORED);
+              assertThat(storedSensor(sensorId).getLastFulcrumRefreshAt()).isNull();
+            });
   }
 
   private Experiment createExperiment() {
