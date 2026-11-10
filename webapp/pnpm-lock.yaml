@@ -220,11 +220,11 @@ importers:
         specifier: 1.0.0-beta.43
         version: 1.0.0-beta.43(@scion/microfrontend-platform@3.0.0(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2))(@scion/toolkit@2.4.0(rxjs@7.8.2))(rxjs@7.8.2)
       ag-grid-angular:
-        specifier: ^36.2.0
-        version: 36.2.0(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))
+        specifier: ^36.3.0
+        version: 36.3.0(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))
       ag-grid-community:
-        specifier: ^36.2.0
-        version: 36.2.0
+        specifier: ^36.3.0
+        version: 36.3.0
       angular-eslint:
         specifier: ^22.6.0
         version: 22.6.0(chokidar@5.0.0)(eslint@10.14.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript-eslint@8.72.1(eslint@10.14.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(typescript@6.0.3)
@@ -2360,20 +2360,20 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  ag-charts-types@14.2.0:
-    resolution: {integrity: sha512-4pDV6/4zbzPN7t607Gr1o6DO9RhmPafQGr+hIpTJBaerbaMoC+WOO3v/wkxFbvCNrHKOexEKSfNTH7PaAR4UzA==}
+  ag-charts-types@14.3.0:
+    resolution: {integrity: sha512-6VtzUYBKN5mFY24/Eye3RUn1AAq7s+/B4hEu83ZOK/Pjqx26tHq2MoxiXlBE8F7oQO0VpjV5rZZaw6wxSpMNJg==}
 
-  ag-grid-angular@36.2.0:
-    resolution: {integrity: sha512-efr4sZVLUX9y+5sLdwub9IV0vqpSpkKknZPLoLvF4+pRbCXUjneybiI9uiFTJCOk/xIvIFdNhUYPbVgb/rVceA==}
+  ag-grid-angular@36.3.0:
+    resolution: {integrity: sha512-Ci+C0Me8TtxwxHVeWGqBY/6buaLB+Yq4W8EAfyhuJzpqt3L9R65k8NThELL7HwWQq4Qz83Df1ZiBXLFrK+8dow==}
     peerDependencies:
       '@angular/common': '>= 20.0.0'
       '@angular/core': '>= 20.0.0'
 
-  ag-grid-community@36.2.0:
-    resolution: {integrity: sha512-tK0Toj7t0fV/OMLPnDc0xlYKAqDbnCT3iJodYSn2TJ541caU8jPdYwWhMdW+AP2+pUNwFiJVgc04eJNfvBPsWw==}
+  ag-grid-community@36.3.0:
+    resolution: {integrity: sha512-0JRaIwE82TuOcx+upA3OnTyhDAIUDqrMxLoBib6yVON0SyfICdpOnwD4QdiT0A1lgrC8SkzLBFRst73bTREF6Q==}
 
-  ag-stack@36.2.0:
-    resolution: {integrity: sha512-f3XT2htFs9dUPcHni2z9ak69QNta5ODEpooHuuNvbjN98JkokpEqRQ9YLQHQJFdCcgi9Ybs/j3zkkvmNRamIPg==}
+  ag-stack@36.3.0:
+    resolution: {integrity: sha512-KbX/b6cM0GIJ4cz6W3jk8YoDG/XpqOC4WurYl8CDuQtER2d4rihjPI4tOLN4LqS0yfVspZ31ED1273kfG+6m0w==}
 
   agent-base@6.0.2:
     resolution: {integrity: sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==}
@@ -5995,21 +5995,21 @@ snapshots:
 
   acorn@8.18.0: {}
 
-  ag-charts-types@14.2.0: {}
+  ag-charts-types@14.3.0: {}
 
-  ag-grid-angular@36.2.0(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)):
+  ag-grid-angular@36.3.0(@angular/common@22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)):
     dependencies:
       '@angular/common': 22.1.6(@angular/core@22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2))(rxjs@7.8.2)
       '@angular/core': 22.1.6(@angular/compiler@22.1.6)(rxjs@7.8.2)
-      ag-grid-community: 36.2.0
+      ag-grid-community: 36.3.0
       tslib: 2.9.1
 
-  ag-grid-community@36.2.0:
+  ag-grid-community@36.3.0:
     dependencies:
-      ag-charts-types: 14.2.0
-      ag-stack: 36.2.0
+      ag-charts-types: 14.3.0
+      ag-stack: 36.3.0
 
-  ag-stack@36.2.0: {}
+  ag-stack@36.3.0: {}
 
   agent-base@6.0.2(supports-color@10.2.2):
     dependencies:
