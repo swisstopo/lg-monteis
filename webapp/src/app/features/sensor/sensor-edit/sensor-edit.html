@@ -104,17 +104,6 @@
           </mat-error>
         }
       </mat-form-field>
-
-      @if (mode() !== 'create') {
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'sensor.lastFulcrumRefresh.label' | translate }}</mat-label>
-          <input
-            matInput
-            readonly
-            [value]="sensor()?.lastFulcrumRefreshAt | date: dateTimeFormat"
-          />
-        </mat-form-field>
-      }
     </div>
 
     <div class="form-column">

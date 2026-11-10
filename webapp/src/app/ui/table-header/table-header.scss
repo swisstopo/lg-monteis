@@ -6,6 +6,7 @@
 
 .table-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
 
@@ -21,11 +22,13 @@
   .header-actions {
     gap: 0.75rem;
     display: flex;
+    flex-wrap: wrap;
   }
 }
 
 .search-field {
-  flex: 2;
+  // basis needed: without it header actions squeeze field to 0 width (e2e search box test)
+  flex: 2 1 16rem;
   --mat-form-field-container-height: 40px;
   --mat-form-field-container-vertical-padding: 8px;
 }

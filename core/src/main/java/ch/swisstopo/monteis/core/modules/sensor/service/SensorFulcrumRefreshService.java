@@ -50,12 +50,14 @@ public class SensorFulcrumRefreshService {
     Map<UUID, FulcrumSensor> fulcrumSensorsById =
         fulcrumService.findSensorsByFulcrumId(fulcrumIdsOf(sensors));
     OffsetDateTime refreshedAt = OffsetDateTime.now(clock);
-    Map<Boolean, List<FulcrumReading>> readingsByChange =
-        readingsOf(sensors, fulcrumSensorsById).stream()
-            .collect(Collectors.partitioningBy(FulcrumReading::changesCoordinates));
+    List<FulcrumReading> readings = readingsOf(sensors, fulcrumSensorsById);
+    List<FulcrumReading> unchanged =
+        readings.stream().filter(reading -> !reading.changesCoordinates()).toList();
+    List<FulcrumReading> changed =
+        readings.stream().filter(FulcrumReading::changesCoordinates).toList();
 
-    repository.markFulcrumRefreshed(idsOf(readingsByChange.get(false)), refreshedAt);
-    readingsByChange.get(true).forEach(reading -> saveCoordinates(reading, refreshedAt));
+    repository.markFulcrumRefreshed(idsOf(unchanged), refreshedAt);
+    changed.forEach(reading -> saveCoordinates(reading, refreshedAt));
   }
 
   private static Set<UUID> fulcrumIdsOf(List<Sensor> sensors) {
