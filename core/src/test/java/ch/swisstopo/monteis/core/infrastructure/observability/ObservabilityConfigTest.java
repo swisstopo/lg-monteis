@@ -6,6 +6,9 @@ import org.jooq.ExecuteListenerProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 /**
  * Pins the per-environment switch: nothing is registered unless {@code
@@ -43,10 +46,45 @@ class ObservabilityConfigTest {
             context -> {
               assertThat(context).hasSingleBean(ObservabilityConfig.class);
               assertThat(context).hasSingleBean(ExecuteListenerProvider.class);
-              assertThat(
-                      context.getBean(ObservabilityConfig.class).requestTimingFilter().getFilter())
+              assertThat(context.getBean(FilterRegistrationBean.class).getFilter())
                   .isInstanceOf(RequestTimingFilter.class);
             });
+  }
+
+  @Test
+  void should_skip_the_default_actuator_path_when_none_is_configured() {
+    contextRunner
+        .withPropertyValues("monteis.observability.request-timing.enabled=true")
+        .run(
+            context -> {
+              RequestTimingFilter filter = filterFrom(context);
+
+              assertThat(filter.shouldNotFilter(get("/actuator/health/liveness"))).isTrue();
+              assertThat(filter.shouldNotFilter(get("/api/overview/metrics"))).isFalse();
+            });
+  }
+
+  @Test
+  void should_take_the_actuator_path_from_management_endpoints_web_base_path() {
+    contextRunner
+        .withPropertyValues(
+            "monteis.observability.request-timing.enabled=true",
+            "management.endpoints.web.base-path=/management")
+        .run(
+            context -> {
+              RequestTimingFilter filter = filterFrom(context);
+
+              assertThat(filter.shouldNotFilter(get("/management/health/readiness"))).isTrue();
+              assertThat(filter.shouldNotFilter(get("/actuator/health/readiness"))).isFalse();
+            });
+  }
+
+  private static RequestTimingFilter filterFrom(ApplicationContext context) {
+    return (RequestTimingFilter) context.getBean(FilterRegistrationBean.class).getFilter();
+  }
+
+  private static MockHttpServletRequest get(String uri) {
+    return new MockHttpServletRequest("GET", uri);
   }
 
   @Test

@@ -25,18 +25,39 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * the output stream, and Tomcat's access log already provides it via {@code server.tomcat.accesslog}.
  *
  * <p>Actuator requests are skipped: in Kubernetes the kubelet polls the liveness and readiness
- * probes every few seconds, which would bury the real traffic under one line per probe.
+ * probes every few seconds, which would bury the real traffic under one line per probe. The path
+ * comes from {@code management.endpoints.web.base-path}, so moving the actuator moves the exclusion
+ * with it.
  */
 public class RequestTimingFilter extends OncePerRequestFilter {
 
   private static final Logger log = LoggerFactory.getLogger(RequestTimingFilter.class);
 
-  private static final String ACTUATOR_PATH = "/actuator";
+  /** Normalized actuator base path without trailing slash; empty when nothing is skipped. */
+  private final String actuatorBasePath;
+
+  /**
+   * @param actuatorBasePath value of {@code management.endpoints.web.base-path}. A root base path
+   *     ({@code "/"} or empty) skips nothing — otherwise every request would go unlogged.
+   */
+  public RequestTimingFilter(String actuatorBasePath) {
+    String path = actuatorBasePath == null ? "" : actuatorBasePath.strip();
+    while (path.endsWith("/")) {
+      path = path.substring(0, path.length() - 1);
+    }
+    if (!path.isEmpty() && !path.startsWith("/")) {
+      path = "/" + path;
+    }
+    this.actuatorBasePath = path;
+  }
 
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
+    if (actuatorBasePath.isEmpty()) {
+      return false;
+    }
     String path = request.getRequestURI().substring(request.getContextPath().length());
-    return path.equals(ACTUATOR_PATH) || path.startsWith(ACTUATOR_PATH + "/");
+    return path.equals(actuatorBasePath) || path.startsWith(actuatorBasePath + "/");
   }
 
   @Override
