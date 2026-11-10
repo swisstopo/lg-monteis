@@ -17,7 +17,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 class RequestTimingFilterTest {
 
-  private final RequestTimingFilter filter = new RequestTimingFilter();
+  private final RequestTimingFilter filter = new RequestTimingFilter("/actuator");
   private final MockHttpServletResponse response = new MockHttpServletResponse();
 
   @AfterEach
@@ -125,6 +125,90 @@ class RequestTimingFilterTest {
       // A failed request is exactly when the timing breakdown is most interesting
       assertEquals(1, logs.messages().size());
       assertTrue(logs.messages().getFirst().contains("db=5ms"));
+    }
+  }
+
+  @Test
+  void should_not_log_kubernetes_probe_requests() throws Exception {
+    try (LogCapture logs = LogCapture.of(RequestTimingFilter.class, Level.INFO)) {
+      filter.doFilter(request("/actuator/health/liveness", null), response, new MockFilterChain());
+      filter.doFilter(request("/actuator/health/readiness", null), response, new MockFilterChain());
+      filter.doFilter(request("/actuator", null), response, new MockFilterChain());
+
+      assertTrue(logs.messages().isEmpty(), logs.messages().toString());
+    }
+  }
+
+  @Test
+  void should_not_start_timing_for_skipped_requests() throws Exception {
+    MockFilterChain chain =
+        new MockFilterChain() {
+          @Override
+          public void doFilter(
+              jakarta.servlet.ServletRequest req, jakarta.servlet.ServletResponse res) {
+            // The readiness DB check must not open a timing scope on the pooled thread
+            assertNull(RequestTiming.current());
+          }
+        };
+
+    filter.doFilter(request("/actuator/health/readiness", null), response, chain);
+
+    assertNull(RequestTiming.current());
+  }
+
+  @Test
+  void should_skip_actuator_behind_a_context_path() throws Exception {
+    MockHttpServletRequest request = request("/core/actuator/health/liveness", null);
+    request.setContextPath("/core");
+
+    try (LogCapture logs = LogCapture.of(RequestTimingFilter.class, Level.INFO)) {
+      filter.doFilter(request, response, new MockFilterChain());
+
+      assertTrue(logs.messages().isEmpty(), logs.messages().toString());
+    }
+  }
+
+  @Test
+  void should_still_log_paths_that_only_start_like_actuator() throws Exception {
+    try (LogCapture logs = LogCapture.of(RequestTimingFilter.class, Level.INFO)) {
+      filter.doFilter(request("/actuatorish", null), response, new MockFilterChain());
+      filter.doFilter(request("/api/actuator", null), response, new MockFilterChain());
+
+      assertEquals(2, logs.messages().size(), logs.messages().toString());
+    }
+  }
+
+  @Test
+  void should_follow_a_moved_actuator_base_path() throws Exception {
+    RequestTimingFilter moved = new RequestTimingFilter("/management/");
+
+    try (LogCapture logs = LogCapture.of(RequestTimingFilter.class, Level.INFO)) {
+      moved.doFilter(request("/management/health/liveness", null), response, new MockFilterChain());
+      moved.doFilter(request("/actuator/health/liveness", null), response, new MockFilterChain());
+
+      // Only the old default path is logged — the exclusion moved with the actuator
+      assertEquals(1, logs.messages().size(), logs.messages().toString());
+      assertTrue(logs.messages().getFirst().contains("GET /actuator/health/liveness"));
+    }
+  }
+
+  @Test
+  void should_add_a_missing_leading_slash() {
+    RequestTimingFilter noSlash = new RequestTimingFilter("management");
+
+    assertTrue(noSlash.shouldNotFilter(request("/management/health", null)));
+  }
+
+  @Test
+  void should_skip_nothing_when_the_actuator_sits_at_the_root() throws Exception {
+    try (LogCapture logs = LogCapture.of(RequestTimingFilter.class, Level.INFO)) {
+      for (String basePath : new String[] {"/", "", null}) {
+        new RequestTimingFilter(basePath)
+            .doFilter(request("/api/overview/metrics", null), response, new MockFilterChain());
+      }
+
+      // A root base path must not silence every request
+      assertEquals(3, logs.messages().size(), logs.messages().toString());
     }
   }
 

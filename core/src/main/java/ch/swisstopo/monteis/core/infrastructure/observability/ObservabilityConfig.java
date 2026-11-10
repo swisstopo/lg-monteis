@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.observability;
 
 import org.jooq.ExecuteListenerProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -24,8 +25,9 @@ public class ObservabilityConfig {
 
   /** Ordered first so the measured time covers the whole filter chain and MVC stack. */
   @Bean
-  public FilterRegistrationBean<RequestTimingFilter> requestTimingFilter() {
-    var registration = new FilterRegistrationBean<>(new RequestTimingFilter());
+  public FilterRegistrationBean<RequestTimingFilter> requestTimingFilter(
+      @Value("${management.endpoints.web.base-path:/actuator}") String actuatorBasePath) {
+    var registration = new FilterRegistrationBean<>(new RequestTimingFilter(actuatorBasePath));
     registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
     return registration;
   }
