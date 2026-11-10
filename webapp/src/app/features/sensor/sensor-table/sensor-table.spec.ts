@@ -3,7 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PermissionsService } from '@core/auth/permissions.service';
 import {
   ExperimentControllerService,
-  FulcrumRefreshResponseDto,
   SensorControllerService,
   SensorParameterRowResponseDto,
 } from '@core/generated';
@@ -13,7 +12,7 @@ import { WorkbenchView } from '@scion/workbench';
 import { FormDialogService } from '@ui/dialog/form-dialog.service';
 import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
-import { Observable, of, Subject, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SensorTable from './sensor-table';
 
@@ -32,16 +31,9 @@ const TRANSLATIONS = {
       refreshAll: REFRESH_ALL,
     },
     fulcrumRefresh: {
-      success: '{{checked}} checked, {{updated}} updated.',
-      partial: '{{checked}} checked, {{updated}} updated. Skipped: {{skippedSensors}}.',
+      success: 'Refreshed.',
       andMore: '{{sensors}} and {{count}} more',
       withoutFulcrumId: 'No Fulcrum ID: {{sensors}}.',
-      reason: {
-        NOT_FOUND: 'not found',
-        NOT_IN_FULCRUM: 'not in Fulcrum',
-        COORDINATES_MISSING: 'coordinates missing',
-        CHANGED_MEANWHILE: 'changed meanwhile',
-      },
     },
   },
 };
@@ -76,7 +68,7 @@ describe('SensorTable', () => {
       getSensors: vi.fn(() => of({ rows: [], totalCount: 0 })),
       findAllFormulas: vi.fn(() => of([])),
       findAllTypes: vi.fn(() => of([])),
-      refreshFromFulcrum: vi.fn(() => of({ checked: 0, updated: 0, skipped: [] })),
+      refreshFromFulcrum: vi.fn(() => of(null)),
     };
     toast = { success: vi.fn(), warning: vi.fn(), error: vi.fn() };
   });
@@ -110,8 +102,8 @@ describe('SensorTable', () => {
     return new TableView(fixture, api);
   }
 
-  function refreshAnswers(result: FulcrumRefreshResponseDto | Observable<never>) {
-    api['refreshFromFulcrum'].mockReturnValue(result instanceof Observable ? result : of(result));
+  function refreshFails() {
+    api['refreshFromFulcrum'].mockReturnValue(throwError(() => new Error('502')));
   }
 
   it('offers no refresh to a user who can write no experiment', async () => {
@@ -177,99 +169,17 @@ describe('SensorTable', () => {
     );
   });
 
-  it('toasts the counts when no sensor was skipped', async () => {
-    refreshAnswers({ checked: 3, updated: 1, skipped: [] });
+  it('toasts the success of a refresh', async () => {
     const view = await render();
 
     view.button(REFRESH_ALL)!.click();
 
-    await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith('3 checked, 1 updated.'));
+    await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith('Refreshed.'));
     expect(toast.warning).not.toHaveBeenCalled();
   });
 
-  it('warns with the skipped sensors and why they were skipped', async () => {
-    refreshAnswers({
-      checked: 2,
-      updated: 0,
-      skipped: [
-        { sensorId: 'sensor-1', sensorName: 'Inclinometer 1', reason: 'NOT_IN_FULCRUM' },
-        { sensorId: 'sensor-2', sensorName: 'Inclinometer 2', reason: 'CHANGED_MEANWHILE' },
-      ],
-    });
-    const view = await render();
-
-    await view.select(row('sensor-1'), row('sensor-2'));
-    view.button(REFRESH_SELECTED)!.click();
-
-    await vi.waitFor(() =>
-      expect(toast.warning).toHaveBeenCalledWith(
-        '2 checked, 0 updated. Skipped: Inclinometer 1 (not in Fulcrum), ' +
-          'Inclinometer 2 (changed meanwhile).',
-      ),
-    );
-    expect(toast.success).not.toHaveBeenCalled();
-  });
-
-  it('names at most 10 skipped sensors and counts the rest', async () => {
-    const selected = Array.from({ length: 12 }, (_, i) => row(`s${i + 1}`));
-    refreshAnswers({
-      checked: 12,
-      updated: 0,
-      skipped: selected.map((sensor) => ({
-        sensorId: sensor.sensorId,
-        sensorName: sensor.name,
-        reason: 'COORDINATES_MISSING' as const,
-      })),
-    });
-    const view = await render();
-
-    await view.select(...selected);
-    view.button(REFRESH_SELECTED)!.click();
-
-    await vi.waitFor(() => expect(toast.warning).toHaveBeenCalled());
-    const message: string = toast.warning.mock.calls[0][0];
-    expect(message).toContain(
-      'Sensor s9 (coordinates missing), Sensor s10 (coordinates missing) and 2 more.',
-    );
-    expect(message).not.toContain('Sensor s11');
-  });
-
-  it('names skipped sensors outside the loaded rows after a refresh of all', async () => {
-    refreshAnswers({
-      checked: 1,
-      updated: 0,
-      skipped: [{ sensorId: 'unloaded', sensorName: 'Piezometer 7', reason: 'NOT_IN_FULCRUM' }],
-    });
-    const view = await render();
-
-    view.button(REFRESH_ALL)!.click();
-
-    await vi.waitFor(() =>
-      expect(toast.warning).toHaveBeenCalledWith(
-        '1 checked, 0 updated. Skipped: Piezometer 7 (not in Fulcrum).',
-      ),
-    );
-  });
-
-  it('names a sensor that was not found by its id', async () => {
-    refreshAnswers({
-      checked: 1,
-      updated: 0,
-      skipped: [{ sensorId: 'unknown', sensorName: null, reason: 'NOT_FOUND' }],
-    });
-    const view = await render();
-
-    view.button(REFRESH_ALL)!.click();
-
-    await vi.waitFor(() =>
-      expect(toast.warning).toHaveBeenCalledWith(
-        '1 checked, 0 updated. Skipped: unknown (not found).',
-      ),
-    );
-  });
-
   it('disables the refresh while it runs', async () => {
-    const answer = new Subject<FulcrumRefreshResponseDto>();
+    const answer = new Subject<null>();
     api['refreshFromFulcrum'].mockReturnValue(answer);
     const view = await render();
 
@@ -277,13 +187,13 @@ describe('SensorTable', () => {
     await view.settle();
     expect(view.button(REFRESH_ALL)?.disabled).toBe(true);
 
-    answer.next({ checked: 0, updated: 0, skipped: [] });
+    answer.next(null);
     answer.complete();
     await vi.waitFor(() => expect(view.button(REFRESH_ALL)?.disabled).toBe(false));
   });
 
   it('leaves a failed refresh to the global error toast, re-enables it and reloads the rows', async () => {
-    refreshAnswers(throwError(() => new Error('502')));
+    refreshFails();
     const view = await render();
     await view.gridReady();
     const loadsBefore = api['getSensors'].mock.calls.length;

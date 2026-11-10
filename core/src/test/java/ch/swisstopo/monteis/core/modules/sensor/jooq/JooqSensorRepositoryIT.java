@@ -535,14 +535,20 @@ class JooqSensorRepositoryIT {
 
   @Test
   @Transactional
-  void should_find_only_existing_sensors_by_ids_with_their_parameters() {
+  void should_find_only_existing_sensors_with_a_fulcrum_id_among_ids_with_their_parameters() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
           // Arrange
-          UUID id = repository.create(createDummySensor("REF-004", "Found", "x")).getId();
+          Sensor withFulcrumId = createDummySensor("REF-004", "Found", "x");
+          withFulcrumId.setFulcrumId(UUID.randomUUID());
+          UUID id = repository.create(withFulcrumId).getId();
+          UUID withoutFulcrumId =
+              repository.create(createDummySensor("REF-008", "Without Fulcrum ID", "x")).getId();
 
           // Act
-          List<Sensor> found = repository.findAllByIds(List.of(id, UUID.randomUUID()));
+          List<Sensor> found =
+              repository.findAllWithFulcrumIdAmong(
+                  List.of(id, withoutFulcrumId, UUID.randomUUID()));
 
           // Assert
           assertEquals(1, found.size());

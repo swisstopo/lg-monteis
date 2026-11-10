@@ -23,11 +23,8 @@ import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
-import ch.swisstopo.monteis.core.modules.sensor.domain.FulcrumRefreshResult;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SkippedSensor;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SkippedSensor.Reason;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +37,7 @@ import org.javers.core.Javers;
 import org.javers.core.metamodel.object.CdoSnapshot;
 import org.javers.repository.jql.QueryBuilder;
 import org.jooq.DSLContext;
+import org.jooq.exception.DataChangedException;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -109,10 +107,9 @@ class SensorFulcrumRefreshServiceIT {
     fulcrum.serveSensors(inFulcrum(fulcrumId, IN_FULCRUM));
 
     // when
-    FulcrumRefreshResult result = asPi(() -> service.refreshSelected(Set.of(sensorId)));
+    asPi(() -> service.refreshSelected(Set.of(sensorId)));
 
     // then
-    assertThat(result).isEqualTo(new FulcrumRefreshResult(1, 1, List.of()));
     Sensor stored = storedSensor(sensorId);
     assertThat(stored.getCoordinates()).isEqualTo(IN_FULCRUM);
     assertThat(stored.getLastFulcrumRefreshAt()).isNotNull();
@@ -131,10 +128,9 @@ class SensorFulcrumRefreshServiceIT {
     fulcrum.serveSensors(inFulcrum(fulcrumId, IN_FULCRUM));
 
     // when
-    FulcrumRefreshResult result = asPi(() -> service.refreshSelected(Set.of(sensorId)));
+    asPi(() -> service.refreshSelected(Set.of(sensorId)));
 
     // then
-    assertThat(result).isEqualTo(new FulcrumRefreshResult(1, 0, List.of()));
     Sensor stored = storedSensor(sensorId);
     assertThat(stored.getLastFulcrumRefreshAt()).isNotNull();
     assertThat(stored.getVersion()).isEqualTo(versionBefore);
@@ -147,15 +143,14 @@ class SensorFulcrumRefreshServiceIT {
     UUID sensorId = createSensor(writtenByPi, null, STORED);
 
     // when
-    FulcrumRefreshResult result = asPi(() -> service.refreshSelected(Set.of(sensorId)));
+    asPi(() -> service.refreshSelected(Set.of(sensorId)));
 
     // then
-    assertThat(result).isEqualTo(new FulcrumRefreshResult(0, 0, List.of()));
     assertThat(storedSensor(sensorId).getLastFulcrumRefreshAt()).isNull();
   }
 
   @Test
-  void should_report_sensors_missing_or_incomplete_in_fulcrum_with_their_names() {
+  void should_leave_sensors_missing_or_incomplete_in_fulcrum_as_they_were() {
     // given
     UUID notInFulcrum = createSensor(writtenByPi, UUID.randomUUID(), STORED);
     UUID withoutHeightFulcrumId = UUID.randomUUID();
@@ -164,22 +159,19 @@ class SensorFulcrumRefreshServiceIT {
         new StubSensor(withoutHeightFulcrumId, IN_FULCRUM.x(), IN_FULCRUM.y(), null));
 
     // when
-    FulcrumRefreshResult result =
-        asPi(() -> service.refreshSelected(Set.of(notInFulcrum, withoutHeight)));
+    asPi(() -> service.refreshSelected(Set.of(notInFulcrum, withoutHeight)));
 
     // then
-    assertThat(result.checked()).isZero();
-    assertThat(result.updated()).isZero();
-    assertThat(result.skipped())
-        .containsExactlyInAnyOrder(
-            new SkippedSensor(notInFulcrum, nameOf(notInFulcrum), Reason.NOT_IN_FULCRUM),
-            new SkippedSensor(withoutHeight, nameOf(withoutHeight), Reason.COORDINATES_MISSING));
-    assertThat(storedSensor(withoutHeight).getCoordinates()).isEqualTo(STORED);
-    assertThat(storedSensor(withoutHeight).getLastFulcrumRefreshAt()).isNull();
+    assertThat(Stream.of(notInFulcrum, withoutHeight).map(this::storedSensor))
+        .allSatisfy(
+            sensor -> {
+              assertThat(sensor.getCoordinates()).isEqualTo(STORED);
+              assertThat(sensor.getLastFulcrumRefreshAt()).isNull();
+            });
   }
 
   @Test
-  void should_report_unknown_and_hidden_sensors_as_not_found_without_their_names() {
+  void should_leave_out_unknown_and_hidden_sensors_silently() {
     // given
     UUID unknown = UUID.randomUUID();
     UUID hiddenFulcrumId = UUID.randomUUID();
@@ -187,14 +179,11 @@ class SensorFulcrumRefreshServiceIT {
     fulcrum.serveSensors(inFulcrum(hiddenFulcrumId, IN_FULCRUM));
 
     // when
-    FulcrumRefreshResult result = asPi(() -> service.refreshSelected(Set.of(unknown, hidden)));
+    asPi(() -> service.refreshSelected(Set.of(unknown, hidden)));
 
     // then
-    assertThat(result.skipped())
-        .containsExactlyInAnyOrder(
-            new SkippedSensor(unknown, null, Reason.NOT_FOUND),
-            new SkippedSensor(hidden, null, Reason.NOT_FOUND));
     assertThat(storedSensor(hidden).getCoordinates()).isEqualTo(STORED);
+    assertThat(storedSensor(hidden).getLastFulcrumRefreshAt()).isNull();
   }
 
   @Test
@@ -205,10 +194,9 @@ class SensorFulcrumRefreshServiceIT {
     fulcrum.serveSensors(inFulcrum(fulcrumId, IN_FULCRUM));
 
     // when
-    FulcrumRefreshResult result = asPi(() -> service.refreshSelected(Set.of(sensorId)));
+    asPi(() -> service.refreshSelected(Set.of(sensorId)));
 
     // then
-    assertThat(result).isEqualTo(new FulcrumRefreshResult(1, 1, List.of()));
     assertThat(storedSensor(sensorId).getCoordinates()).isEqualTo(IN_FULCRUM);
   }
 
@@ -228,10 +216,9 @@ class SensorFulcrumRefreshServiceIT {
         inFulcrum(hiddenFulcrumId, IN_FULCRUM));
 
     // when
-    FulcrumRefreshResult result = asPi(() -> service.refreshAllVisible());
+    asPi(() -> service.refreshAllVisible());
 
     // then
-    assertThat(result).isEqualTo(new FulcrumRefreshResult(2, 1, List.of()));
     assertThat(storedSensor(changed).getCoordinates()).isEqualTo(IN_FULCRUM);
     assertThat(storedSensor(unchanged).getLastFulcrumRefreshAt()).isNotNull();
     assertThat(storedSensor(withoutFulcrumId).getLastFulcrumRefreshAt()).isNull();
@@ -240,7 +227,7 @@ class SensorFulcrumRefreshServiceIT {
   }
 
   @Test
-  void should_report_a_sensor_saved_meanwhile_as_changed_meanwhile_and_keep_that_save() {
+  void should_fail_on_a_changed_sensor_saved_meanwhile_and_keep_that_save() {
     // given
     UUID fulcrumId = UUID.randomUUID();
     UUID sensorId = createSensor(writtenByPi, fulcrumId, STORED);
@@ -248,15 +235,10 @@ class SensorFulcrumRefreshServiceIT {
     fulcrum.whileQueried(() -> saveCommentMeanwhile(sensorId));
 
     // when
-    FulcrumRefreshResult result = asPi(() -> service.refreshSelected(Set.of(sensorId)));
+    assertThrows(
+        DataChangedException.class, () -> asPi(() -> service.refreshSelected(Set.of(sensorId))));
 
     // then
-    assertThat(result)
-        .isEqualTo(
-            new FulcrumRefreshResult(
-                0,
-                0,
-                List.of(new SkippedSensor(sensorId, nameOf(sensorId), Reason.CHANGED_MEANWHILE))));
     Sensor stored = storedSensor(sensorId);
     assertThat(stored.getCoordinates()).isEqualTo(STORED);
     assertThat(stored.getComment()).isEqualTo("saved meanwhile");
@@ -428,24 +410,23 @@ class SensorFulcrumRefreshServiceIT {
                 .execute());
   }
 
-  private <T> T asPi(Supplier<T> action) {
+  private void asPi(Runnable action) {
     MonteisPrincipal pi =
         new MonteisPrincipal(
             PI_SUBJECT,
             "pi",
             List.of(writtenByPi.getId(), readByPi.getId()),
             List.of(writtenByPi.getId()));
-    return callAs(
+    callAs(
         new MonteisAuthenticationToken(null, pi, PrivilegeLevel.EXPERIMENT_PI.grantedAuthorities()),
-        action);
+        () -> {
+          action.run();
+          return null;
+        });
   }
 
   private Sensor storedSensor(UUID sensorId) {
     return callAsAdmin(() -> sensorRepository.findById(sensorId)).orElseThrow();
-  }
-
-  private String nameOf(UUID sensorId) {
-    return storedSensor(sensorId).getName();
   }
 
   private List<CdoSnapshot> snapshotsOf(UUID sensorId) {

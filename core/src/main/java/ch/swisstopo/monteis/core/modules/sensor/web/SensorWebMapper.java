@@ -5,7 +5,6 @@ import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapper;
 import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
-import ch.swisstopo.monteis.core.modules.sensor.domain.FulcrumRefreshResult;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
@@ -16,7 +15,6 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeD
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FulcrumRefreshResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
@@ -111,6 +109,4 @@ public interface SensorWebMapper {
   CoordinatesDto toDto(Coordinates domain);
 
   AlarmLimitsDto toDto(AlarmLimits domain);
-
-  FulcrumRefreshResponseDto toDto(FulcrumRefreshResult result);
 }

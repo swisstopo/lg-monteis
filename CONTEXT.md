@@ -26,7 +26,7 @@ The optional link from a Sensor to its record in Fulcrum; only a Sensor with a F
 _Avoid_: Fulcrum record id, external id
 
 **Fulcrum refresh**:
-Taking the current coordinates from Fulcrum over into the selected Sensors, or every visible Sensor when none is selected, on request; PIs, global editors and admins may refresh every Sensor they can see, and a Sensor counts as updated only when its coordinates changed.
+Taking the current coordinates from Fulcrum over into the selected Sensors, or every visible Sensor when none is selected, on request; PIs, global editors and admins may refresh every Sensor they can see.
 _Avoid_: Sync, import, Aktualisieren (alone)
 
 **Last Fulcrum refresh**:

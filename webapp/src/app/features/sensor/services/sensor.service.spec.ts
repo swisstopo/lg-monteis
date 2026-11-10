@@ -1,10 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { FulcrumRefreshResponseDto, SensorControllerService } from '@core/generated';
+import { SensorControllerService } from '@core/generated';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SensorService } from './sensor.service';
-
-const REFRESHED: FulcrumRefreshResponseDto = { checked: 2, updated: 1, skipped: [] };
 
 describe('SensorService', () => {
   let api: Record<string, ReturnType<typeof vi.fn>>;
@@ -14,7 +12,7 @@ describe('SensorService', () => {
     api = {
       findAllFormulas: vi.fn(() => of([])),
       findAllTypes: vi.fn(() => of([])),
-      refreshFromFulcrum: vi.fn(() => of(REFRESHED)),
+      refreshFromFulcrum: vi.fn(() => of(null)),
     };
     TestBed.configureTestingModule({
       providers: [{ provide: SensorControllerService, useValue: api }],
@@ -23,7 +21,7 @@ describe('SensorService', () => {
   });
 
   it('refreshes the given sensors from Fulcrum and reloads the table', async () => {
-    await expect(service.refreshFromFulcrum(['sensor-1', 'sensor-2'])).resolves.toEqual(REFRESHED);
+    await service.refreshFromFulcrum(['sensor-1', 'sensor-2']);
 
     expect(api['refreshFromFulcrum']).toHaveBeenCalledWith({ sensorIds: ['sensor-1', 'sensor-2'] });
     expect(service.sensorsSaved()).toBe(1);

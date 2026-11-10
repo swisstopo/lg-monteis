@@ -1,26 +1,18 @@
 package ch.swisstopo.monteis.core.modules.sensor.service;
 
-import static ch.swisstopo.monteis.core.modules.sensor.service.FulcrumCoordinatesMapper.coordinatesOf;
-
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
-import ch.swisstopo.monteis.core.modules.sensor.domain.FulcrumRefreshResult;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SkippedSensor;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SkippedSensor.Reason;
 import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import org.jooq.exception.DataChangedException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -43,116 +35,62 @@ public class SensorFulcrumRefreshService {
     this.clock = clock;
   }
 
-  public FulcrumRefreshResult refreshSelected(Set<UUID> sensorIds) {
-    List<Sensor> visible = repository.findAllByIds(sensorIds);
-    return refresh(visible, notFoundAmong(sensorIds, visible));
+  // unknown, hidden or without fulcrum id dropped silently: tells nothing about hidden sensors
+  public void refreshSelected(Set<UUID> sensorIds) {
+    refresh(repository.findAllWithFulcrumIdAmong(sensorIds));
   }
 
-  public FulcrumRefreshResult refreshAllVisible() {
-    return refresh(repository.findAllWithFulcrumId(), List.of());
-  }
-
-  private static List<SkippedSensor> notFoundAmong(Set<UUID> sensorIds, List<Sensor> visible) {
-    Set<UUID> visibleIds = Set.copyOf(visible.stream().map(Sensor::getId).toList());
-    return sensorIds.stream()
-        .filter(id -> !visibleIds.contains(id))
-        .map(SkippedSensor::notFound)
-        .toList();
+  public void refreshAllVisible() {
+    refresh(repository.findAllWithFulcrumId());
   }
 
   // no transaction around it: each save commits, a failed refresh keeps what it saved
-  private FulcrumRefreshResult refresh(List<Sensor> sensors, List<SkippedSensor> notFound) {
+  private void refresh(List<Sensor> sensors) {
     // read before any write: Fulcrum failing leaves every sensor as it was
     Map<UUID, FulcrumSensor> fulcrumSensorsById =
         fulcrumService.findSensorsByFulcrumId(fulcrumIdsOf(sensors));
     OffsetDateTime refreshedAt = OffsetDateTime.now(clock);
-    Classification classification = classify(sensors, fulcrumSensorsById);
+    Map<Boolean, List<FulcrumReading>> readingsByChange =
+        readingsOf(sensors, fulcrumSensorsById).stream()
+            .collect(Collectors.partitioningBy(FulcrumReading::changesCoordinates));
 
-    repository.markFulcrumRefreshed(
-        classification.unchanged().stream().map(Sensor::getId).toList(), refreshedAt);
-    List<SkippedSensor> changedMeanwhile =
-        saveSkippingConflicts(classification.changed(), refreshedAt);
-
-    int updated = classification.changed().size() - changedMeanwhile.size();
-    List<SkippedSensor> skipped =
-        Stream.of(notFound, classification.skipped(), changedMeanwhile)
-            .flatMap(List::stream)
-            .toList();
-    return new FulcrumRefreshResult(classification.unchanged().size() + updated, updated, skipped);
+    repository.markFulcrumRefreshed(idsOf(readingsByChange.get(false)), refreshedAt);
+    readingsByChange.get(true).forEach(reading -> saveCoordinates(reading, refreshedAt));
   }
 
   private static Set<UUID> fulcrumIdsOf(List<Sensor> sensors) {
-    return sensors.stream()
-        .filter(Sensor::hasFulcrumId)
-        .map(Sensor::getFulcrumId)
-        .collect(Collectors.toSet());
+    return sensors.stream().map(Sensor::getFulcrumId).collect(Collectors.toSet());
   }
 
-  private static Classification classify(
+  // record missing or incomplete in Fulcrum => no reading, stale last refresh shows it
+  private static List<FulcrumReading> readingsOf(
       List<Sensor> sensors, Map<UUID, FulcrumSensor> fulcrumSensorsById) {
-    List<SkippedSensor> skipped = new ArrayList<>();
-    List<Sensor> unchanged = new ArrayList<>();
-    List<ChangedSensor> changed = new ArrayList<>();
-    for (Sensor sensor : sensors) {
-      switch (compare(sensor, fulcrumSensorsById)) {
-        case Comparison.WithoutFulcrumId() -> {}
-        case Comparison.Skipped(Reason reason) -> skipped.add(SkippedSensor.of(sensor, reason));
-        case Comparison.Unchanged() -> unchanged.add(sensor);
-        case Comparison.Changed(Coordinates coordinates) ->
-            changed.add(new ChangedSensor(sensor, coordinates));
-      }
+    return sensors.stream()
+        .flatMap(
+            sensor ->
+                Optional.ofNullable(fulcrumSensorsById.get(sensor.getFulcrumId()))
+                    .flatMap(FulcrumCoordinatesMapper::coordinatesOf)
+                    .map(coordinates -> new FulcrumReading(sensor, coordinates))
+                    .stream())
+        .toList();
+  }
+
+  private static List<UUID> idsOf(List<FulcrumReading> readings) {
+    return readings.stream().map(reading -> reading.sensor().getId()).toList();
+  }
+
+  // optimistic lock: a sensor saved meanwhile fails the refresh, the other save is not overwritten
+  private void saveCoordinates(FulcrumReading reading, OffsetDateTime refreshedAt) {
+    Sensor sensor = reading.sensor();
+    sensor.setCoordinates(reading.coordinates());
+    sensor.setLastFulcrumRefreshAt(refreshedAt);
+    sensorService.saveRefreshedCoordinates(sensor);
+  }
+
+  private record FulcrumReading(Sensor sensor, Coordinates coordinates) {
+
+    boolean changesCoordinates() {
+      return !coordinates.equals(sensor.getCoordinates());
     }
-    return new Classification(skipped, unchanged, changed);
   }
-
-  private static Comparison compare(Sensor sensor, Map<UUID, FulcrumSensor> fulcrumSensorsById) {
-    if (!sensor.hasFulcrumId()) {
-      return new Comparison.WithoutFulcrumId();
-    }
-    return Optional.ofNullable(fulcrumSensorsById.get(sensor.getFulcrumId()))
-        .map(fulcrumSensor -> compareCoordinates(sensor, fulcrumSensor))
-        .orElseGet(() -> new Comparison.Skipped(Reason.NOT_IN_FULCRUM));
-  }
-
-  private static Comparison compareCoordinates(Sensor sensor, FulcrumSensor fulcrumSensor) {
-    return coordinatesOf(fulcrumSensor)
-        .<Comparison>map(
-            coordinates ->
-                coordinates.equals(sensor.getCoordinates())
-                    ? new Comparison.Unchanged()
-                    : new Comparison.Changed(coordinates))
-        .orElseGet(() -> new Comparison.Skipped(Reason.COORDINATES_MISSING));
-  }
-
-  private List<SkippedSensor> saveSkippingConflicts(
-      List<ChangedSensor> changed, OffsetDateTime refreshedAt) {
-    List<SkippedSensor> changedMeanwhile = new ArrayList<>();
-    for (ChangedSensor change : changed) {
-      Sensor sensor = change.sensor();
-      sensor.setCoordinates(change.coordinates());
-      sensor.setLastFulcrumRefreshAt(refreshedAt);
-      try {
-        sensorService.saveRefreshedCoordinates(sensor);
-      } catch (DataChangedException _) {
-        // saved by someone else since it was read, one conflict must not block the others
-        changedMeanwhile.add(SkippedSensor.of(sensor, Reason.CHANGED_MEANWHILE));
-      }
-    }
-    return changedMeanwhile;
-  }
-
-  private sealed interface Comparison {
-    record WithoutFulcrumId() implements Comparison {}
-
-    record Skipped(Reason reason) implements Comparison {}
-
-    record Unchanged() implements Comparison {}
-
-    record Changed(Coordinates coordinates) implements Comparison {}
-  }
-
-  private record ChangedSensor(Sensor sensor, Coordinates coordinates) {}
-
-  private record Classification(
-      List<SkippedSensor> skipped, List<Sensor> unchanged, List<ChangedSensor> changed) {}
 }

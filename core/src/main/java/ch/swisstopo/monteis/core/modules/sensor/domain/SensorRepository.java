@@ -53,7 +53,7 @@ public interface SensorRepository {
   /** Whether the caller may upload documents to the sensor, see {@code V22}. */
   boolean canWriteAnExperimentOf(UUID id);
 
-  List<Sensor> findAllByIds(Collection<UUID> ids);
+  List<Sensor> findAllWithFulcrumIdAmong(Collection<UUID> ids);
 
   List<Sensor> findAllWithFulcrumId();
 

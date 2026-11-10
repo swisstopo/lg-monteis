@@ -100,16 +100,9 @@
       "coordinatesMissing": "Fulcrum record {{fulcrumId}} has no coordinates ({{missing}} missing). Add them in Fulcrum, or clear the Fulcrum ID and enter the coordinates manually."
     },
     "fulcrumRefresh": {
-      "success": "{{checked}} sensors checked against Fulcrum, {{updated}} updated.",
-      "partial": "{{checked}} sensors checked against Fulcrum, {{updated}} updated. Skipped: {{skippedSensors}}.",
+      "success": "Refreshed from Fulcrum.",
       "andMore": "{{sensors}} and {{count}} more",
-      "withoutFulcrumId": "Not refreshed, no Fulcrum ID: {{sensors}}.",
-      "reason": {
-        "NOT_FOUND": "not found",
-        "NOT_IN_FULCRUM": "not in Fulcrum",
-        "COORDINATES_MISSING": "coordinates missing in Fulcrum",
-        "CHANGED_MEANWHILE": "changed meanwhile, try again"
-      }
+      "withoutFulcrumId": "Not refreshed, no Fulcrum ID: {{sensors}}."
     },
     "lastFulcrumRefresh": {
       "label": "Last Fulcrum refresh"

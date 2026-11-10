@@ -18,7 +18,6 @@ import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.FulcrumRefreshRequestDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FulcrumRefreshResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
@@ -128,22 +127,18 @@ public class SensorController {
       summary = "Refresh sensors from Fulcrum",
       description =
           "Takes the current coordinates from Fulcrum over into the given sensors, or into every"
-              + " sensor the caller can see when no sensorIds are given. Sensors without a Fulcrum"
-              + " ID are left out and not reported. Sensors the caller can't see, unknown to"
-              + " Fulcrum, without complete coordinates there or changed meanwhile are reported as"
-              + " skipped, the others are refreshed and counted as checked. Nothing is written when"
-              + " Fulcrum can't be read.")
-  @ApiResponse(responseCode = "200", description = "Sensors refreshed")
-  @PostMapping(
-      path = ApiPaths.FULCRUM_REFRESH_SEGMENT,
-      consumes = MediaType.APPLICATION_JSON_VALUE,
-      produces = MediaType.APPLICATION_JSON_VALUE)
-  public FulcrumRefreshResponseDto refreshFromFulcrum(
-      @Valid @RequestBody FulcrumRefreshRequestDto dto) {
-    return mapper.toDto(
-        dto.selectedSensorIds()
-            .map(sensorIds -> fulcrumRefreshService.refreshSelected(Set.copyOf(sensorIds)))
-            .orElseGet(fulcrumRefreshService::refreshAllVisible));
+              + " sensor the caller can see when no sensorIds are given. Sensors the caller can't"
+              + " see or without a Fulcrum ID are left out, sensors whose Fulcrum record is missing"
+              + " or incomplete are left as they were; none of them is reported. Nothing is"
+              + " written when Fulcrum can't be read, a sensor saved meanwhile fails the refresh.")
+  @ApiResponse(responseCode = "204", description = "Sensors refreshed")
+  @PostMapping(path = ApiPaths.FULCRUM_REFRESH_SEGMENT, consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<Void> refreshFromFulcrum(@Valid @RequestBody FulcrumRefreshRequestDto dto) {
+    dto.selectedSensorIds()
+        .ifPresentOrElse(
+            sensorIds -> fulcrumRefreshService.refreshSelected(Set.copyOf(sensorIds)),
+            fulcrumRefreshService::refreshAllVisible);
+    return ResponseEntity.noContent().build();
   }
 
   @Operation(

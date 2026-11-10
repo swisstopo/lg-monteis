@@ -26,11 +26,8 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
-import ch.swisstopo.monteis.core.modules.sensor.domain.FulcrumRefreshResult;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SkippedSensor;
-import ch.swisstopo.monteis.core.modules.sensor.domain.SkippedSensor.Reason;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
@@ -44,7 +41,6 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeD
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
-import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FulcrumRefreshResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
@@ -609,21 +605,6 @@ class SensorControllerTest {
       names = {"EXPERIMENT_PI", "GLOBAL_EDITOR", "MONTEIS_ADMIN"})
   void should_let_experiment_writers_refresh_sensors_from_fulcrum(PrivilegeLevel level)
       throws Exception {
-    // given
-    FulcrumRefreshResult result =
-        new FulcrumRefreshResult(
-            1, 1, List.of(new SkippedSensor(OTHER_SENSOR_ID, "TEMP-1", Reason.NOT_IN_FULCRUM)));
-    given(fulcrumRefreshService.refreshSelected(Set.of(SENSOR_ID, OTHER_SENSOR_ID)))
-        .willReturn(result);
-    given(mapper.toDto(result))
-        .willReturn(
-            new FulcrumRefreshResponseDto(
-                1,
-                1,
-                List.of(
-                    new FulcrumRefreshResponseDto.SkippedSensorDto(
-                        OTHER_SENSOR_ID, "TEMP-1", Reason.NOT_IN_FULCRUM))));
-
     // when / then
     mockMvc
         .perform(
@@ -632,21 +613,13 @@ class SensorControllerTest {
                 .with(authentication(level.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"sensorIds\":[\"%s\",\"%s\"]}".formatted(SENSOR_ID, OTHER_SENSOR_ID)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.checked").value(1))
-        .andExpect(jsonPath("$.updated").value(1))
-        .andExpect(jsonPath("$.skipped[0].sensorId").value(OTHER_SENSOR_ID.toString()))
-        .andExpect(jsonPath("$.skipped[0].sensorName").value("TEMP-1"))
-        .andExpect(jsonPath("$.skipped[0].reason").value("NOT_IN_FULCRUM"));
+        .andExpect(status().isNoContent());
+
+    then(fulcrumRefreshService).should().refreshSelected(Set.of(SENSOR_ID, OTHER_SENSOR_ID));
   }
 
   @Test
   void should_refresh_every_visible_sensor_when_no_sensor_ids_are_given() throws Exception {
-    // given
-    FulcrumRefreshResult result = new FulcrumRefreshResult(3, 1, List.of());
-    given(fulcrumRefreshService.refreshAllVisible()).willReturn(result);
-    given(mapper.toDto(result)).willReturn(new FulcrumRefreshResponseDto(3, 1, List.of()));
-
     // when / then
     mockMvc
         .perform(
@@ -654,8 +627,7 @@ class SensorControllerTest {
                 .with(asAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.checked").value(3));
+        .andExpect(status().isNoContent());
 
     then(fulcrumRefreshService).should().refreshAllVisible();
   }

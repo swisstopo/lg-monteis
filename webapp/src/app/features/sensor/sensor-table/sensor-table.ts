@@ -4,11 +4,7 @@ import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { PermissionsService } from '@core/auth/permissions.service';
-import {
-  FulcrumRefreshResponseDto,
-  SensorParameterRowResponseDto,
-  SkippedSensorDto,
-} from '@core/generated';
+import { SensorParameterRowResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
 import { SensorService } from '@features/sensor/services/sensor.service';
@@ -133,8 +129,8 @@ export default class SensorTable {
     }
     this.refreshing.set(true);
     try {
-      const result = await this.sensorService.refreshFromFulcrum(sensorIds);
-      this.toastRefreshResult(result);
+      await this.sensorService.refreshFromFulcrum(sensorIds);
+      this.toastService.success(this.translateService.translate('sensor.fulcrumRefresh.success')());
     } catch {
       // the global error toast already reports it
     } finally {
@@ -150,32 +146,6 @@ export default class SensorTable {
     );
   }
 
-  private toastRefreshResult(result: FulcrumRefreshResponseDto): void {
-    const counts = { checked: result.checked, updated: result.updated };
-    const skipped = result.skipped ?? [];
-    if (skipped.length === 0) {
-      this.toastService.success(
-        this.translateService.translate('sensor.fulcrumRefresh.success', counts)(),
-      );
-      return;
-    }
-    this.toastService.warning(
-      this.translateService.translate('sensor.fulcrumRefresh.partial', {
-        ...counts,
-        skippedSensors: this.describeSkipped(skipped),
-      })(),
-    );
-  }
-
-  private describeSkipped(skipped: SkippedSensorDto[]): string {
-    // no name for NOT_FOUND: sensor unknown or hidden from caller
-    return this.listCapped(
-      skipped.map(
-        (sensor) => `${sensor.sensorName ?? sensor.sensorId} (${this.skipReasonOf(sensor)})`,
-      ),
-    );
-  }
-
   private listCapped(sensors: string[]): string {
     const listed = sensors.slice(0, MAX_NAMED_SENSORS);
     const notListedCount = sensors.length - listed.length;
@@ -186,10 +156,6 @@ export default class SensorTable {
       sensors: listed.join(', '),
       count: notListedCount,
     })();
-  }
-
-  private skipReasonOf(sensor: SkippedSensorDto): string {
-    return this.translateService.translate(`sensor.fulcrumRefresh.reason.${sensor.reason}`)();
   }
 
   onSearch(term: string): void {

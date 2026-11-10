@@ -14,6 +14,7 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.*;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Stream;
+import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Record;
@@ -270,19 +271,20 @@ public class JooqSensorRepository implements SensorRepository {
 
   @Override
   @Transactional(readOnly = true)
-  public List<Sensor> findAllByIds(Collection<UUID> ids) {
-    List<Sensor> sensors =
-        sensorsWithExperiments().where(SENSORS.ID.in(ids)).fetch(this::toSensorWithExperiment);
-    attachParameters(sensors);
-    return sensors;
+  public List<Sensor> findAllWithFulcrumIdAmong(Collection<UUID> ids) {
+    return findAllWithFulcrumIdWhere(SENSORS.ID.in(ids));
   }
 
   @Override
   @Transactional(readOnly = true)
   public List<Sensor> findAllWithFulcrumId() {
+    return findAllWithFulcrumIdWhere(DSL.noCondition());
+  }
+
+  private List<Sensor> findAllWithFulcrumIdWhere(Condition condition) {
     List<Sensor> sensors =
         sensorsWithExperiments()
-            .where(SENSORS.FULCRUM_ID.isNotNull())
+            .where(SENSORS.FULCRUM_ID.isNotNull().and(condition))
             .fetch(this::toSensorWithExperiment);
     attachParameters(sensors);
     return sensors;
