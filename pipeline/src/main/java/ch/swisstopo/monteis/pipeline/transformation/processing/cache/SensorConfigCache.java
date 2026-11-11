@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.pipeline.transformation.processing.cache;
 
-import ch.swisstopo.monteis.contracts.DasKey;
 import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -39,11 +38,6 @@ public class SensorConfigCache {
 
   public void updateSensorConfig(SensorParameterConfig sensorParameterConfig) {
     ActiveSensorConfig activeConfig = new ActiveSensorConfig(sensorParameterConfig);
-    String dasKey =
-        DasKey.compose(
-            sensorParameterConfig.getDas(),
-            sensorParameterConfig.getDasSensorAlias(),
-            sensorParameterConfig.getDasParameterAlias());
-    cache.put(dasKey, activeConfig);
+    cache.put(activeConfig.dasKey(), activeConfig);
   }
 }

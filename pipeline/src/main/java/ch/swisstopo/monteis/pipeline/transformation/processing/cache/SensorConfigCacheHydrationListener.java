@@ -44,7 +44,7 @@ public class SensorConfigCacheHydrationListener {
         ack,
         validConfig -> {
           cacheService.updateSensorConfig(validConfig);
-          log.info("Pod cache updated for sensor parameter {}", validConfig.getSensorParameterId());
+          log.info("Pod cache updated for DAS key {}", dasKey);
         });
   }
 }
