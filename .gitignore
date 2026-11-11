@@ -89,3 +89,4 @@ sbom.spdx.json
 .claude
 .devcontainer
 .pnpm-store/
+aidlc/
