@@ -1,57 +1,59 @@
 # Migrationsplan: Fusion Meta-DB + TimescaleDB
 
-Zusammenführung der zwei Datenbanken (`monteis-meta` + `monteis-tsdb`) in **eine** PostgreSQL/TimescaleDB-Instanz, ein Schema `public`. Verzicht auf FDW; RLS nativ auf `sensor_reading`; zwei App-Rollen (`core`, `pipeline`).
+Die Meta-DB und die TimescaleDB werden zu **einer** Datenbank mit **einem** Schema `public` zusammengeführt; der FDW-Pfad entfällt, weil er der Engpass beim Lesen der Zeitreihen ist. Dieser Plan deckt nur den App-Teil (`lg-monteis`) ab. Jede Umgebung startet mit einer leeren Datenbank; übernommen wird nur das Flyway-DDL.
 
-## Ziel-Definition
+Referenz (im Workspace, nicht wiederholt): welche Dateien, Rollen und Variablen an der Zwei-DB-Topologie hängen, steht in der [Database Dependency Map](../aidlc/spaces/default/codekb/lg-monteis/dependencies.md#database-dependency-map-input-for-the-planned-db-merge); Schema, Rollen und RLS-Kontext heute in [architecture.md](../aidlc/spaces/default/codekb/lg-monteis/architecture.md#data-layer-current-state).
 
-- Eine Instanz, ein Schema `public`. Lokal/Tests: Image `timescale/timescaledb:latest-pg18`; AWS: CNPG-Cluster `timescaledb` mit `timescale/timescaledb-ha:pg18.4-ts2.28.1`, DB `monteis_ts`.
-- **Kein Rollback vorgesehen**: Auf den AWS-Instanzen existieren nur Testdaten.
-- **Zielinstanz AWS: bestehende TimescaleDB-Instanz.** Die Meta-DB (klein) wird per Dump/Restore dorthin migriert; `sensor_reading` bleibt liegen (kein Daten-Copy). **RDS bleibt bestehen** (Keycloak-DB `keycloak` liegt dort, `kubernetes/keycloak/base/db-bootstrap-job.yaml`); entfernt wird nur die RDS-DB `monteis`.
-- `sensor_reading` als lokale Hypertable mit FK `sensor_parameter_id → sensor_parameter.id ON DELETE SET NULL`. Beim Löschen eines Parameters bleiben Messwerte erhalten, ihre Zuordnung wird `NULL`; dadurch sind sie für `core` via RLS unsichtbar. Veraltete IDs aus `SensorConfigCache` und konkurrierende Löschungen muss die Pipeline FK-sicher behandeln.
-- FDW komplett entfernt (`raw_sensor_reading`, `timescale_server`, `fdw_user`, `postgres_fdw`-Extension).
-- RLS nativ auf `sensor_reading`; `sensor_reading_secured` entfällt.
-- Rollen (Namen wie in AWS, lokal identisch): `monteis_ts` (Owner/DDL, Flyway; in AWS CNPG-Bootstrap-Owner), `core` (CRUD Meta + SELECT sensor_reading), `pipeline` (I/U/D + SELECT nur sensor_reading). **Keine** Mitgliedschaft in `pg_read_all_data`/`pg_write_all_data` — nur explizite Grants.
+## Änderungen gegenüber Vorversion
 
-### Tabellenrechte und fachliche Zeilenfilterung
+**Entfernt**
 
-- **Technische DB-Berechtigungen**: `GRANT`/`REVOKE` regeln die erlaubten Tabellenoperationen der DB-User `core` und `pipeline`, unabhängig von Keycloak-Gruppen. Diese DB-User sind keine fachlichen Benutzeridentitäten.
-- **RLS**: Core setzt den aus Keycloak-Gruppen abgeleiteten Berechtigungskontext des angemeldeten Benutzers in der DB-Session/Transaktion. RLS filtert anhand dieses Kontexts die zugänglichen Experimente und Messwerte. `TO core` bestimmt nur, für welchen technischen DB-User die Policy gilt, nicht die fachliche Gruppenzugehörigkeit.
-- **Pipeline ohne Keycloak-Benutzerkontext**: Die technische RLS-Policy `USING (true) WITH CHECK (true)` ermöglicht ungefilterte Zeilenverarbeitung innerhalb der separat gewährten Tabellenrechte. Sie ersetzt keine Grants und erteilt keine Rechte auf Meta-Tabellen.
+- Jede Datenübernahme aus AWS: Dump/Restore der Meta-DB (`pg_dump`, gefilterte `pg_restore`-Liste), Cutover-Skript `db/cutover/merge_meta_into_tsdb.sql`, Orphan-Bereinigung vor der FK-Anlage, `flyway baseline` auf einem bestehenden Schema, Äquivalenz-Check Cutover gegen frische Baseline.
+- Seeds: `db/seed/R__seed_dev_data.sql` und das Zusammenführen der Seeds. Auch lokal startet die Datenbank leer.
+- Phase A0 (Orphan-Zählwerte) und das Zuordnungs-Monitoring gegen A0/B0. Die Vorher-Messung der Performance steht jetzt im Abschnitt Tests.
+- Etappe B (Infra-Aufgaben, AWS-Vorbereitung, Cutover-Fenster, Abbau alter Secrets). Ersetzt durch „Umstellung AWS" und einen kurzen „Hinweis Infrastruktur".
+- Prüfpunkt Compression/Columnstore mit RLS (nicht Teil dieser Arbeit) und der Abschnitt „Geschätzter Umfang".
 
----
+**Korrigiert gegen den Code**
 
-## Etappe A — Lokales Setup, Anwendung und CI
+- Die CSV-Export-Repositories (`JooqExperimentCsvExportQueryRepository`, `JooqSensorCsvExportQueryRepository`, `JooqOrganisationCsvExportQueryRepository`) lesen `sensor_reading` nicht und sind nicht betroffen; die Vorversion führte sie in A3 auf.
+- Der `forcedType` auf `sensors.unit` in `core/pom.xml` ist seit Meta V9 veraltet (die Spalte `unit` liegt in `sensor_parameter`).
+- Der Pipeline-Codegen in `pipeline/pom.xml` hat heute keine `<includes>`; nach der Fusion würde er alle Meta-Tabellen mitgenerieren.
+- Meta V6, V9, V11 und V14 vergeben `SELECT` auf `sensor_reading_secured` hart codiert an `core_app`. Die Baseline vergibt Rechte nur an `core` und `pipeline`.
+- Gelöschte Sensor-Parameter werden heute nicht über Kafka gemeldet, und `SensorConfigMessageHandler` verwirft Tombstones, statt den Cache zu bereinigen.
+- Ein einzelner fehlerhafter Datensatz lässt heute den ganzen Batch scheitern (`SensorDataBatchProcessor`, ein Upsert pro Batch) und schickt nach zwei Retries alle Datensätze in `internal-normalized-dlt`.
+- `.env.example.local` liegt unter `docker/`, die Test-Properties unter `src/main/resources`.
 
-AWS bleibt während dieser Etappe unverändert. Lokal erfolgt ein frischer Aufbau mit Seeds statt einer Datenübernahme. Bestehende lokale Volumes nur nach ausdrücklicher Freigabe löschen.
+**Neu**
 
-## Phase A0 — Lokale Vorbereitung
+- Vollständiger App-Fix für gelöschte Parameter (A5): Tombstone nach Commit, Cache-Eviction, einmaliger NULL-Retry bei SQLSTATE `23503`.
+- Kafka-Reset bei der Umstellung: `internal-sensor-config` wird neu angelegt, die Offsets auf `internal-normalized` werden auf `latest` gesetzt.
+- Rechte auf die JaVers-Tabellen `jv_*` stehen explizit in der Rechtematrix und im Permissions-IT.
+- FDW-Kommentare in `QueryTimingListener` und der Leak-Test „through the secured view" in `MeasurementQueryRepositoryIT` werden angepasst.
 
-- [ ] Repräsentative lokale Testdaten und Orphan-Zählwerte für Vorher-/Nachher-Vergleiche festhalten.
-- [ ] **Benchmark-Baseline**: `EXPLAIN ANALYZE` der Kernqueries (`findChartData`, Overview `LIMIT 100`, 52k-Range-Scan) gegen den FDW-Pfad festhalten — je mit `read_all` und mit eingeschränktem User.
+## Zielbild
 
-## Phase A1 — Neue Flyway-Baseline
+- Eine PostgreSQL-18-Datenbank mit TimescaleDB, ein Schema `public`. Lokal und in Tests das Image `timescale/timescaledb:latest-pg18`.
+- Keine FDW-Objekte: weder Extension `postgres_fdw` noch Server `timescale_server`, User Mapping oder Foreign Table `raw_sensor_reading`.
+- Kein View `sensor_reading_secured`.
+- `sensor_reading` ist eine lokale Hypertable mit nativer RLS (`ENABLE ROW LEVEL SECURITY`, zwei Policies, siehe SQL unten).
+- FK `sensor_reading.sensor_parameter_id → sensor_parameter.id ON DELETE SET NULL`. Wird ein Parameter gelöscht, bleiben seine Messwerte erhalten, ihre Zuordnung wird `NULL`, und `core` sieht sie nicht mehr. `NULL` ist erlaubt; eine unbekannte Nicht-NULL-ID weist die Datenbank mit `23503` ab.
+- Jede Umgebung (lokal, Testcontainers, CI, AWS) startet leer. Flyway läuft als `monteis_ts` mit der einzigen Location `db/schema` und wendet `db/schema/V1__baseline.sql` an; spätere Änderungen folgen ab `V2__…`. Flyway bleibt ausserhalb der Apps (Migration-Image, Jobs, Tests und Codegen programmatisch).
+- Backfill: Das Reprocessing ordnet Messwerte mit `sensor_parameter_id = NULL` dem aktuellen Parameter mit demselben DAS-Key zu. Das gilt auch für Messwerte, deren Parameter gelöscht wurde: Wird unter demselben DAS-Key wieder ein Parameter angelegt, erhält er diese Messwerte.
 
-Strategie: Alle Meta- (V1–V23) und TS-Migrationen (V1–V4) werden zu **einem** Baseline-Skript konsolidiert, das direkt den fusionierten Zielzustand beschreibt (ohne FDW, ohne `sensor_reading_secured`).
+### Erstellung `db/schema/V1__baseline.sql`
 
-- **Neue Struktur**: `db/schema/V1__baseline.sql`, `db/seed/R__seed_dev_data.sql` (Seeds zusammengeführt). Alte Migrationen nach `db/archive/meta` bzw. `db/archive/timescale` (nicht mehr in den Flyway-`locations`).
-- **Frische Setups** (Dev, Testcontainers, CI): Flyway führt `V1__baseline.sql` normal aus.
-
-### A1a. Erstellung `V1__baseline.sql`
-
-- [ ] Meta-Teil generieren: frisches Dev-Setup auf Stand V23 → `pg_dump --schema-only --no-owner` → bereinigen: FDW-Objekte (`postgres_fdw`, `timescale_server`, User Mapping, `raw_sensor_reading`, `sensor_reading_secured`) entfernen; Default-Privileges gehören ins Init, nicht in die Baseline.
-- [ ] Vollständig erhalten: RLS-Funktionen (`can_read_all_experiments`, `current_experiment_ids`, …), alle Policies, JaVers-Tabellen (Meta-V4), explizite Grants.
-- [ ] Zeitreihen-Teil **von Hand** schreiben (nicht aus dem Dump — dieser enthält Timescale-Interna/Chunks), siehe SQL unten.
-- [ ] Erklärende Kommentare aus den Alt-Migrationen (Index-Begründungen TS-V1/V3, RLS-Begründungen) in die Baseline übernehmen, soweit weiterhin gültig.
-
-Zeitreihen- und Fusions-Teil der Baseline:
+- Meta-Teil aus einem Schema-only-Export eines frischen Setups auf Stand Meta V23 / TimescaleDB V4. Entfernt werden: Extension `postgres_fdw`, Server `timescale_server`, User Mapping, Foreign Table `raw_sensor_reading`, View `sensor_reading_secured`, Owner-Angaben und alle Grants an alte Rollen.
+- Erhalten bleiben: RLS-Funktionen (`can_access_experiment`, `can_access_sensor`, `can_write_experiment`, `can_write_an_experiment_of_sensor`), alle Policies, die JaVers-Tabellen und -Sequenzen aus Meta V4, die Enums `unit` und `range_category`, alle Indizes und die weiterhin gültigen Kommentare (Index-Begründungen aus TS V1/V3, RLS-Begründungen aus Meta V6/V10).
+- Zeitreihen-Teil von Hand, nach `sensor_parameter` (nicht aus dem Export, der Timescale-Interna enthält):
 
 ```sql
--- 1. Enum + Tabelle (Spiegel von ts-V1..V4; ergänzt um FK auf sensor_parameter)
+-- 1. Enum + Tabelle (Spiegel von TS V1..V4, ergänzt um FK auf sensor_parameter)
 CREATE TYPE range_category AS ENUM ('too_low', 'correct', 'too_high');
 
 CREATE TABLE sensor_reading (
     "timestamp"          TIMESTAMPTZ NOT NULL,
-    das_key              VARCHAR(500) NOT NULL,   -- wie TS-V2, sonst Drift zu Prod
+    das_key              VARCHAR(500) NOT NULL,
     raw_value            DOUBLE PRECISION NOT NULL,
     norm_value           DOUBLE PRECISION,
     version              SMALLINT DEFAULT 0,
@@ -72,207 +74,158 @@ SELECT create_hypertable('sensor_reading', 'timestamp', create_default_indexes =
 
 -- 2. RLS (ersetzt sensor_reading_secured)
 -- core: gleiche Semantik wie der heutige View-Join (V14). Der Subselect auf
--- sensor_parameter läuft als core, dessen RLS (V10, can_access_sensor) filtert
--- transitiv → keine doppelte Logik, Planner kann Semi-Join/Hashed Subplan wählen.
--- NULL-sensor_parameter_id matchen nie → unsichtbar wie heute.
+-- sensor_parameter läuft als core; dessen RLS (V10, can_access_sensor) filtert
+-- transitiv. NULL-Zuordnungen matchen nie und bleiben unsichtbar.
 ALTER TABLE sensor_reading ENABLE ROW LEVEL SECURITY;
 CREATE POLICY sensor_reading_read ON sensor_reading FOR SELECT TO core
     USING (sensor_parameter_id IN (SELECT id FROM sensor_parameter));
 
--- pipeline: FOR ALL statt getrennter INSERT/UPDATE/DELETE-Policies. Ohne
--- SELECT-Policy sieht pipeline keine Zeilen — das bricht UPDATE … WHERE,
--- INSERT … ON CONFLICT DO UPDATE und die Reprocessing-Selects in
--- SensorReadingRepository (Postgres wendet dort SELECT-Policies mit an).
+-- pipeline: FOR ALL, weil Upsert (ON CONFLICT DO UPDATE), UPDATE ... FROM (VALUES ...)
+-- und die Reprocessing-Selects in SensorReadingRepository auch SELECT-Policies brauchen.
 CREATE POLICY sensor_reading_pipeline ON sensor_reading FOR ALL TO pipeline
     USING (true) WITH CHECK (true);
 
--- 3. Grants — Default-Privileges würden core sonst Schreibrecht geben!
+-- 3. Grants: die Default Privileges von monteis_ts gäben core sonst Schreibrecht
 GRANT SELECT ON sensor_reading TO core;
 REVOKE INSERT, UPDATE, DELETE ON sensor_reading FROM core;
 GRANT SELECT, INSERT, UPDATE, DELETE ON sensor_reading TO pipeline;
+
+-- 4. Lookup für den NULL-Retry der Pipeline (A5.3), ohne Leserecht auf Meta-Tabellen.
+-- Läuft als Owner monteis_ts; RLS auf sensor_parameter ist nicht FORCE, filtert also nicht.
+CREATE FUNCTION missing_sensor_parameter_ids(ids UUID[])
+    RETURNS SETOF UUID
+    LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+    SELECT t.candidate
+    FROM unnest(ids) AS t(candidate)
+    WHERE NOT EXISTS (SELECT 1 FROM sensor_parameter p WHERE p.id = t.candidate)
+$$;
+REVOKE ALL ON FUNCTION missing_sensor_parameter_ids(UUID[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION missing_sensor_parameter_ids(UUID[]) TO pipeline;
 ```
 
-## Phase A2 — Init & Compose
+- Alte Migrationen ziehen nach `db/archive/meta` und `db/archive/timescale` um und liegen damit ausserhalb jeder Flyway-Location. Die Seed-Ordner `db/meta/seed` und `db/timescale/seed` werden nicht übernommen.
 
-- [ ] `docker/dataset-init/init.sql` (ersetzt `dataset-meta` + `dataset-tsdb`): `CREATE EXTENSION timescaledb` (kein postgres_fdw), `CREATE USER monteis_ts`, `core`, `pipeline`, Schema-Grants, `ALTER DEFAULT PRIVILEGES FOR ROLE monteis_ts` für Meta-Tabellen/Sequences → `core`; Zeitreihen-Grants weiterhin pro Migration explizit (Default-Privileges können nicht pro Tabelle).
-  - Keine FDW-Grants mehr (`GRANT USAGE ON FOREIGN DATA WRAPPER`/`FOREIGN SERVER` aus `init_meta.sql` entfallen), kein `fdw_user`, kein `CREATE SERVER`/`USER MAPPING`.
-  - `pipeline` erhält **keine** `ALTER DEFAULT PRIVILEGES` (heute in `init_tsdb.sql` für alle Tabellen von `ts_flyway`) — nur `USAGE ON SCHEMA public` + explizite Grants auf `sensor_reading` aus der Baseline. Sonst bekäme die Pipeline CRUD auf alle Meta-Tabellen.
-  - AWS: Rollen werden von CNPG verwaltet (Phase B1), nicht vom Init.
-- [ ] `docker/compose.yml`: `ts_db`- und `flyway-timescale`-Services entfernen; `metadata_db` → Timescale-Image; Ports vereinheitlichen (empfohlen 5432).
-- [ ] `.env.example.local`: `TS_DB_NAME`, `TS_FLYWAY_*`, `FDW_*` entfernen; einen `DB_NAME`; `META_FLYWAY_*`/`TS_FLYWAY_*` → `DB_FLYWAY_*` (Rolle `monteis_ts`); `CORE_APP_META_DB_*` → Rolle `core`; `PIPELINE_APP_TS_DB_*` → Rolle `pipeline`.
-- [ ] Neue Struktur `db/schema` + `db/seed` (siehe Phase A1); alte Migrationen nach `db/archive/*`; Seeds zusammenführen. `sensor_parameter` vor `sensor_reading` laden; Nicht-NULL-Referenzen müssen existieren, NULL bleibt erlaubt.
-- [ ] `flyway-metadata`-Service: `locations` auf `db/schema` + `db/seed`; `-placeholders.fdw_read_user` entfällt.
-- [ ] `db/README.md`: Rollen `fdw_user`, `ts_flyway`, `core_flyway`, `core_app`, `pipeline_app` streichen, `monteis_ts`/`core`/`pipeline` dokumentieren, neue Rechtematrix.
+## Rollen und Rechte
 
-## Phase A3 — Applikations-Config
+Die DB-Rollen sind technische Benutzer, keine fachlichen Identitäten. Welche Experimente und Messwerte ein angemeldeter Benutzer sieht, entscheidet RLS anhand des Kontexts, den `RlsConnectionProvider` aus den Keycloak-Gruppen setzt (siehe [architecture.md, Row-level security context](../aidlc/spaces/default/codekb/lg-monteis/architecture.md#row-level-security-context)).
 
-- [ ] `core/application-dev.properties`: `META_DB_NAME` → `DB_NAME` (Port 5432 bleibt).
-- [ ] `pipeline/application-dev.properties`: `localhost:5433/${TS_DB_NAME}` → `localhost:5432/${DB_NAME}`; User-Variablen angleichen.
-- [ ] jOOQ-Codegen neu generieren: `SENSOR_READING_SECURED`/`RAW_SENSOR_READING` → `SENSOR_READING` in `MeasurementQueryRepository`, `OverviewQueryRepository`, `SensorDetailProjection`, CSV-Export-Repos. ⚠️ Spaltennamen prüfen (`sensor_id`→`das_key`, eingefrorene View-Spaltennamen).
-- [ ] `pipeline`-Datasource zeigt auf dieselbe DB wie Core (nur anderer User); auf AWS keine Änderung nötig, da bereits TS-Instanz.
-- [ ] **Pipeline jOOQ-Codegen** (`pipeline/pom.xml`):
-  - Testcontainer: Init-Skript `docker/dataset-tsdb/init_tsdb.sql` → fusioniertes Init; DB-Name angleichen.
-  - `flyway-maven-plugin`: `locations` `db/timescale/schema` → `db/schema`; Placeholder `fdw_read_user` entfernen.
-  - `jooq-codegen-maven`: `<database><includes>sensor_reading|range_category</includes></database>` — sonst generiert die Pipeline Klassen für alle Meta-Tabellen mit.
-- [ ] **Core jOOQ-Codegen** (`core/pom.xml`): heute zwei Container (`timescaledb` + `postgres:18-alpine`, Shared Network) und zwei Flyway-Executions (`db/timescale/schema` mit `fdw_read_user`, `db/meta/schema`) → ein Timescale-Container mit fusioniertem Init, eine Flyway-Execution auf `db/schema`.
-- [ ] **Pipeline + FK**: Veraltete Cache-IDs vor dem Schreiben erneut auflösen und gelöschte Zuordnungen als NULL behandeln. Rennen zwischen Auflösung und Parameterlöschung transaktionssicher abfangen, z.B. gezielter Retry nach FK-Verletzung mit erneuter Auflösung. Gilt auch für Reprocessing/Updates; ein betroffener Datensatz darf nicht dauerhaft den gesamten Ingest-Batch blockieren. `ON DELETE SET NULL` schützt nicht vor späterem Schreiben einer gelöschten ID.
+|    Rolle     |                                      Meta-Tabellen                                      |                 JaVers `jv_*` (4 Tabellen, 3 Sequenzen)                  |                         `sensor_reading`                         | Chunks `_timescaledb_internal._hyper_*` |
+|--------------|-----------------------------------------------------------------------------------------|--------------------------------------------------------------------------|------------------------------------------------------------------|-----------------------------------------|
+| `monteis_ts` | Owner, DDL (Flyway)                                                                     | Owner                                                                    | Owner, DDL                                                       | Owner (über TimescaleDB)                |
+| `core`       | SELECT, INSERT, UPDATE, DELETE; `USAGE, SELECT` auf Sequenzen; RLS je Tabelle wie heute | SELECT, INSERT, UPDATE, DELETE; `USAGE, SELECT` auf Sequenzen; keine RLS | nur SELECT, gefiltert durch `sensor_reading_read`                | kein direkter Zugriff                   |
+| `pipeline`   | kein Zugriff                                                                            | kein Zugriff                                                             | SELECT, INSERT, UPDATE, DELETE, Policy `sensor_reading_pipeline` | kein direkter Zugriff                   |
 
-## Phase A4 — Tests
+- `core` und `pipeline` erhalten `USAGE` auf `public`. Keine Rolle ist Mitglied von `pg_read_all_data` oder `pg_write_all_data`; es gelten nur explizite Grants.
+- Die Rechte von `core` auf Meta- und `jv_*`-Tabellen kommen aus `ALTER DEFAULT PRIVILEGES FOR ROLE monteis_ts IN SCHEMA public` (Tabellen und Sequenzen → `core`). Deshalb nimmt die Baseline `core` das Schreibrecht auf `sensor_reading` wieder weg.
+- `pipeline` erhält keine Default Privileges, nur die expliziten Grants auf `sensor_reading` aus der Baseline; sonst bekäme die Pipeline CRUD auf alle Meta-Tabellen.
+- Die Policy `sensor_reading_pipeline` filtert nicht, wirkt aber nur innerhalb dieser Grants.
+- Einzige Ausnahme für `pipeline` ausserhalb von `sensor_reading`: `EXECUTE` auf `missing_sensor_parameter_ids(UUID[])`. Die Funktion liefert nur, welche der übergebenen IDs nicht existieren, und gibt keine Meta-Daten preis.
+- Chunks: TimescaleDB überträgt die Grants der Hypertable auf die Chunks, die RLS-Policies greifen beim direkten Chunk-Select aber nicht. Der Permissions-IT (Abschnitt Tests) prüft, dass `core` keine Chunks direkt lesen kann. Schlägt er fehl, wird die Gegenmassnahme in `V1__baseline.sql` ergänzt, bevor A1 abgeschlossen ist.
 
-- [ ] `core/.../TestcontainersConfiguration.java`: zwei Container → ein Timescale-Container mit fusioniertem Init; `fdw`-Placeholder entfernen.
-- [ ] `pipeline/.../TestcontainersConfiguration.java`: analog.
-- [ ] **Gruppenbasierte RLS-Tests** (`RowLevelSecurityIT`, `RlsConnectionProviderTest`, `RowLevelSecurityTransactionTest`): Unterschiedliche Keycloak-Gruppen-/Experimentkontexte über denselben technischen DB-User `core` testen; nur berechtigte Messwerte sind sichtbar, ungesetzter Kontext liefert keine Zeilen. Kontextwechsel darf keine Berechtigungen zwischen Anfragen übertragen.
-- [ ] **Technische DB-Berechtigungen / Permissions-IT** (GRANT-Drift-Schutz, unabhängig von Keycloak): `core` hat kein INSERT auf `sensor_reading`, `pipeline` hat kein SELECT auf `experiments`, `core` kann keine Chunks direkt lesen — via `has_table_privilege`/Test-Query.
-- [ ] **FK-/Lösch-IT**: Als `core` Parameter mit Messwerten löschen: Messwerte bleiben erhalten, Zuordnung wird NULL, Core sieht sie via RLS nicht mehr. Ohne zusätzliche direkte UPDATE-Rechte auf `sensor_reading` testen. Ungültige Nicht-NULL-ID wird abgewiesen; NULL wird akzeptiert.
-- [ ] **Pipeline-Cache-/Race-IT**: Parameter nach Cache-Befüllung bzw. parallel zum Ingest löschen; FK-sichere Behandlung/Retry und erfolgreiche Verarbeitung der übrigen Batch-Datensätze prüfen.
-- [ ] **Pipeline ohne Benutzerkontext**: Upsert (`ON CONFLICT DO UPDATE`), `UPDATE … FROM (VALUES …)` und Reprocessing-Selects als `pipeline` ohne Keycloak-Kontext bei aktiviertem RLS testen; die ungefilterte technische Policy wirkt nur innerhalb der gewährten Tabellenrechte.
-- [ ] `MeasurementQueryRepositoryIT`, Overview-IT: gegen lokale Tabelle, Spalten-Mapping prüfen.
-- [ ] **Zuordnungs-Monitoring**: NULL-Zuordnungen und FK-Verletzungen/Retry-Zähler überwachen; bei validiertem FK sind verwaiste Nicht-NULL-Referenzen nicht mehr zulässig. NULL-Zählwerte lokal gegen A0 und auf AWS gegen B0 vergleichen. Integritätsabfragen als Owner/dedizierter Monitoring-User ausführen, nicht als RLS-gefilterter `core`.
-- [ ] **Performance-Vergleich** gegen Phase-A0-Baseline (erwartet: ≥ heute, Range-Scans deutlich besser) — **mit zwei Profilen**: `read_all_experiments = true` und eingeschränkter User mit wenigen Experimenten (kritisch: Overview `ORDER BY timestamp DESC LIMIT 100` scannt ggf. viele unsichtbare Zeilen rückwärts).
+## Phasen
 
-### A4a. Timescale-spezifische Prüfpunkte (lokal vor AWS verifizieren)
+Jede Aufgabe ist ein Ticket. Pfade relativ zu `lg-monteis/`; `core/.../` steht für `core/src/main/java/ch/swisstopo/monteis/core/`, `pipeline/.../` für `pipeline/src/main/java/ch/swisstopo/monteis/pipeline/`. Neue Variablennamen: `DB_NAME`, `DB_FLYWAY_USER/PWD` (Rolle `monteis_ts`), `CORE_DB_USER/PWD` (`core`), `PIPELINE_DB_USER/PWD` (`pipeline`), `CORE_DB_JDBC_URL` (prod).
 
-- [ ] **Hypertable-FK + SET NULL**: FK von Hypertable auf reguläre Tabelle, Löschaktion, RLS und ggf. Compression auf der eingesetzten TimescaleDB-Version gemeinsam testen. `sensor_parameter` muss vor `sensor_reading` existieren. Löschkosten über viele Chunks benchmarken.
+### A1 — Baseline
 
-- [ ] **Compression/Columnstore + RLS**: Auf `ts2.28.1` testen (lokal mit `timescale/timescaledb-ha:pg18.4-ts2.28.1`), ob Compression auf Hypertables mit aktivem RLS erlaubt ist (ältere Versionen lehnten das ab). Relevant für geplante Retention/Compression (`timescale-retention.svg`).
+- [ ] **A1.1** `db/schema/V1__baseline.sql` — Baseline wie unter „Erstellung" beschrieben schreiben, inkl. Funktion `missing_sensor_parameter_ids`. *Fertig:* Flyway wendet sie als `monteis_ts` fehlerfrei auf eine leere Datenbank an; das Ergebnis enthält kein FDW-Objekt und keinen View `sensor_reading_secured`; ein Objektvergleich (Funktionen, Policies, Indizes, Enums) mit einem frischen Setup auf heutigem Stand zeigt nur die gewollten Unterschiede.
+- [ ] **A1.2** `db/archive/meta`, `db/archive/timescale` — Meta V1–V23 und TS V1–V4 dorthin verschieben; `db/meta/seed` und `db/timescale/seed` löschen. *Fertig:* `db/schema` enthält nur `V1__baseline.sql`; keine Flyway-Location zeigt auf `db/archive` oder einen Seed-Ordner.
 
-- [ ] **Chunk-Direktzugriff**: Grants werden auf Chunks (`_timescaledb_internal._hyper_*`) kopiert; RLS-Policies der Hypertable greifen beim direkten Chunk-Select voraussichtlich nicht. Verifizieren, dass `core` keine Chunks direkt lesen kann. **In AWS zu prüfen**: `core`/`pipeline` sind Mitglied von `pg_read_all_data` → lesen jede Tabelle in jedem Schema inkl. Chunks; ein möglicher RLS-Bypass über direkten Chunk-Zugriff ist zu verifizieren. Wird in Phase B1 entfernt. In Permissions-IT aufnehmen.
+### A2 — Lokales Setup
 
-## Phase A5 — Doku & Cleanup
+- [ ] **A2.1** `docker/dataset-init/init.sql` (ersetzt `docker/dataset-meta/init_meta.sql` und `docker/dataset-tsdb/init_tsdb.sql`) — `CREATE EXTENSION timescaledb`; Rollen `monteis_ts`, `core`, `pipeline` (lokale Dev-Passwörter wie heute); `CREATE` auf `public` für `monteis_ts`, `USAGE` für `core` und `pipeline`; Default Privileges von `monteis_ts` an `core` für Tabellen und Sequenzen; nichts davon für `pipeline`; keine FDW-Grants, kein Server, kein User Mapping. *Fertig:* beide alten Init-Ordner sind gelöscht; `\ddp` zeigt keine Default Privileges für `pipeline`.
+- [ ] **A2.2** `docker/compose.yml` — Services `ts_db` und `flyway-timescale` entfernen; `metadata_db` auf das TimescaleDB-Image mit `docker/dataset-init` umstellen (Port 5432); `flyway-metadata` nur noch mit Location `db/schema`, ohne Seed-Mount und ohne `-placeholders.fdw_read_user`. *Fertig:* `docker compose --profile core --profile pipeline up` startet auf leerem Volume genau eine Datenbank und einen Flyway-Lauf.
+- [ ] **A2.3** `docker/Makefile` — `TS_FLYWAY_LOCATIONS` und alle Ziele für die zweite Datenbank entfernen. *Fertig:* kein `TS_`/`META_`/`FDW_` mehr im Makefile.
+- [ ] **A2.4** `docker/.env.example.local` — auf die neuen Variablennamen umstellen; `TS_*`, `META_*`, `FDW_*`, `CORE_APP_META_DB_*`, `PIPELINE_APP_TS_DB_*` entfernen. *Fertig:* die Datei enthält keines dieser Präfixe mehr.
+- [ ] **A2.5** `db/README.md` — Rollen `fdw_user`, `ts_flyway`, `core_flyway`, `core_app`, `pipeline_app` streichen; `monteis_ts`, `core`, `pipeline` und die Rechtematrix dieses Plans dokumentieren; Hinweis „Datenbank startet leer". *Fertig:* README beschreibt nur die neue Struktur `db/schema` + `db/archive`.
 
-- [ ] arc42 `05_building_block_view`, `06_runtime_view`, `09_architecture_decisions` (neue ADR „DB-Fusion, RLS auf Hypertable"), `08_concepts`, PUML-Diagramme (`overview.puml`, `erd-metadata.puml`).
-- [ ] `.github/workflows/pr-gate.yml` und `docker/migration/Dockerfile` prüfen (FDW/TS-Flyway-Verdrahtung).
-- [ ] `.trivyignore`, `renovate.json` ggf. anpassen.
+### A3 — Applikations-Konfiguration
 
-## Abnahme-Gate A → B
+- [ ] **A3.1** `core/src/main/resources/application-dev.properties`, `application-prod.properties` — Datasource auf `${DB_NAME}` bzw. `${CORE_DB_JDBC_URL}` und `CORE_DB_USER/PWD`. *Fertig:* kein `META_` mehr in beiden Dateien; Core startet lokal gegen die eine Datenbank.
+- [ ] **A3.2** `pipeline/src/main/resources/application-dev.properties` — `localhost:5433/${TS_DB_NAME}` → `localhost:5432/${DB_NAME}`, `PIPELINE_DB_USER/PWD`. *Fertig:* Pipeline schreibt lokal in dieselbe Datenbank wie Core, als Rolle `pipeline`.
 
-- [ ] Frisches lokales Setup mit Init, Baseline und Seeds funktioniert reproduzierbar.
-- [ ] Core und Pipeline laufen gegen dieselbe DB; jOOQ-Codegen, Tests und CI sind grün.
-- [ ] RLS, explizite Grants, FK mit SET NULL, Pipeline-Cache-/Löschrennen, Upserts und direkter Chunk-Zugriff sind getestet; Compression-Kompatibilität ist geklärt oder Compression bleibt deaktiviert.
-- [ ] Lokaler Performance-Vergleich ist abgeschlossen.
-- [ ] **Deployment-Sperre:** Neue Anwendung und neue Baseline bis zum koordinierten AWS-Cutover nicht auf das alte AWS-Schema ausrollen. Release/Branch bzw. Deployment-Pipeline absichern; bisherige AWS-Migrations-Jobs bis dahin unverändert betreiben.
+### A4 — jOOQ-Codegen und Lesepfade
 
-## Etappe B — Infra und AWS
+- [ ] **A4.1** `core/pom.xml` — ein TimescaleDB-Container mit `docker/dataset-init/init.sql` statt zwei Containern auf `Network.SHARED`; eine Flyway-Execution auf `db/schema` (Execution `flyway-migrate-timescale` und Placeholder `fdw_read_user` entfallen); `forcedType` von `sensors.unit` auf `sensor_parameter.unit` korrigieren. *Fertig:* Codegen erzeugt `SensorReading` und `RangeCategory`, aber weder `SensorReadingSecured` noch `RawSensorReading`, und `SENSOR_PARAMETER.UNIT` hat den Typ `Unit`.
+- [ ] **A4.2** `pipeline/pom.xml` — Testcontainer mit dem neuen Init, Flyway auf `db/schema` ohne Placeholder, `<includes>sensor_reading|range_category</includes>` im jOOQ-Codegen. *Fertig:* die Pipeline generiert nur diese beiden Objekte; `missing_sensor_parameter_ids` ruft A5.3 per Plain-SQL auf.
+- [ ] **A4.3** `core/.../modules/measurement/jooq/MeasurementQueryRepository.java` — `SENSOR_READING_SECURED` → `SENSOR_READING`; `DSL.inline(...)` für `from`/`to`/IDs durch Bind-Werte ersetzen; `status` als `RangeCategory` statt `String` lesen. *Fertig:* kein Import von `SensorReadingSecured`, kein `DSL.inline` mehr für Pushdown.
+- [ ] **A4.4** `core/.../modules/measurement/jooq/SensorDetailProjection.java` — Felder aus `SENSOR_READING`, `status` als Enum. *Fertig:* kein `String.class` mehr für `status`.
+- [ ] **A4.5** `core/.../modules/overview/jooq/OverviewQueryRepository.java` — liest `SENSOR_READING`; Kommentar zum lokalen LIMIT und `fetch_size` an die neue Lage anpassen. *Fertig:* kein Bezug auf den View oder FDW mehr in der Klasse.
+- [ ] **A4.6** `core/src/test/java/ch/swisstopo/monteis/core/modules/measurement/jooq/MeasurementQueryRepositoryIT.java` — liest `SENSOR_READING`; der Test `should_not_leak_readings_of_invisible_sensors_through_the_secured_view` wird in `..._through_row_level_security` umbenannt und bleibt erhalten. *Fertig:* IT grün, kein Bezug auf den View.
 
-Erst nach bestandenem Abnahme-Gate A werden Infra und AWS umgestellt. Die lokal geprüfte Baseline wird übernommen; AWS-Daten werden weiterhin per Dump/Restore migriert, ohne Rollback. RDS bleibt für Keycloak bestehen.
+### A5 — Gelöschte Sensor-Parameter
 
-## Phase B0 — AWS-Vorbereitung
+- [ ] **A5.1** `core/.../modules/sensor/jooq/JooqSensorRepository.java`, `core/.../modules/sensor/service/SensorService.java`, `core/.../infrastructure/kafka/SensorConfigPublisher.java` — `update` liefert die entfernten Parameter; `SensorService` berechnet für jeden den DAS-Key `<das>__<das_sensor_alias>__<das_parameter_alias>` aus den Zeilen vor dem Löschen und sendet nach dem Commit (`TransactionSynchronization.afterCommit`) einen Tombstone (Key = DAS-Key, Value = `null`) auf `internal-sensor-config`. *Fertig:* Test zeigt genau einen Tombstone pro entferntem Parameter nach Commit und keinen bei Rollback.
+- [ ] **A5.2** `pipeline/.../transformation/processing/cache/SensorConfigCacheHydrationListener.java`, `SensorConfigCache.java`, `pipeline/.../transformation/processing/SensorConfigMessageHandler.java` — bei `null`-Value den DAS-Key aus dem Cache entfernen (nur im Hydration-Listener; der Reprocessing-Listener ignoriert Tombstones weiter). *Fertig:* Test zeigt: nach dem Tombstone fehlt der Key im Cache, ein folgender Messwert wird mit `sensor_parameter_id = NULL` geschrieben.
+- [ ] **A5.3** `pipeline/.../transformation/processing/SensorDataBatchProcessor.java`, `pipeline/.../persistence/SensorReadingRepository.java` — bei SQLSTATE `23503` die IDs des Batches einmal über `missing_sensor_parameter_ids` prüfen, fehlende auf `NULL` setzen und den Batch einmal wiederholen; scheitert auch das, greift die bestehende Retry-/DLT-Behandlung (`KafkaListenerConfig`). *Fertig:* Test mit einer gelöschten ID im Batch: alle Datensätze sind geschrieben, der betroffene mit `NULL`, nichts landet in `internal-normalized-dlt`.
+- [ ] **A5.4** `pipeline/.../transformation/reprocessing/SensorReprocessingOrchestrator.java`, `SensorReadingRepository.bulkUpdate` — derselbe einmalige NULL-Retry für `UPDATE … FROM (VALUES …)`. *Fertig:* Test mit gelöschter ID während des Reprocessings läuft ohne Abbruch durch.
 
-Die Angaben zu Versionen und Backups stammen aus dem Infra-Repo und ersetzen keine Prüfung des tatsächlich laufenden Clusters.
-- [ ] **AWS-Datenstand sichern** (optional, nur Testdaten): `pg_dump` beider DBs als Debug-Referenz, falls der Cutover wiederholt werden muss.
-- [ ] **Datenstand prüfen**: NULL-Zuordnungen und verwaiste Nicht-NULL-IDs als Superuser/Owner über den bisherigen FDW-Pfad zählen (`raw_sensor_reading LEFT JOIN sensor_parameter`); Referenzwerte festhalten. Nach Restore bei pausierter Pipeline verwaiste Referenzen vor FK-Anlage auf NULL setzen (B2), Messwerte erhalten. NULL-Zählwerte dienen als Monitoring-Referenz (A4).
-- [ ] **Cutover-Fenster planen**: **Core** gestoppt ab Meta-Dump bis zur Umstellung der Datasource. **Pipeline** schreibt bereits heute in die TS-Instanz und muss nur während des Cutover-Skripts (B2) pausiert werden (`ENABLE ROW LEVEL SECURITY` nimmt einen exklusiven Lock; zudem verliert `pipeline` mit dem Entfernen von `pg_write_all_data` (B1) kurz die Rechte, bis die expliziten Grants greifen); Kafka puffert.
-- [x] **PG-Version**: RDS `18.4` (alle tfvars) = CNPG `pg18.4` → Restore kompatibel.
-- [x] **Extensions**: Meta-DB braucht nur `postgres_fdw` (entfällt); `timescaledb` wird von CNPG via `postInitApplicationSQL` angelegt.
-- [x] **Backup/PITR**: CNPG Barman Cloud Plugin, WAL-Archivierung nach S3, Retention 30 Tage (`tsdb_backup_retention_days`).
-- [ ] **Collation/Encoding**: `\l` auf RDS (`monteis`) und CNPG (`monteis_ts`) vergleichen.
-- [ ] **Sizing**: dev-Cluster 1 Instanz, 0.5–1 CPU, 1–2 GiB RAM, 30 GiB gp3 — mit zusätzlicher Meta-Last prüfen; staging/prod-Overlays separat.
+Hinweise zu A5:
 
-## Phase B1 — Infra-Änderungen vorbereiten (`lg-monteis-infra`)
+- Konfigurationsnachrichten und Tombstones für einen DAS-Key haben denselben Key und landen daher geordnet in derselben Partition. Compaction- und Retention-Einstellungen des Topics bleiben wie sie sind; sie sind Sache der Infrastruktur.
+- Der Tombstone gilt nur für den aktuellen DAS-Key. Cache-Einträge unter älteren DAS-Keys eines umgemappten Parameters werden nicht entfernt; für sie greift der NULL-Retry aus A5.3. Das kostet einen zusätzlichen Lookup je betroffenem Batch und wird in Kauf genommen, weil unter alten Keys praktisch keine Messwerte mehr eintreffen.
 
-Änderungen zunächst vorbereiten, erst koordiniert mit Phase B3 ausrollen. Bestehende Deployments bis dahin unverändert lassen.
+### A6 — Test-Verdrahtung
 
-- [ ] `kubernetes/timescaledb/base/cluster.yaml`: `inRoles: pg_read_all_data` bei `core` und `pg_write_all_data`/`pg_read_all_data` bei `pipeline` **entfernen** (sonst möglicher RLS-Bypass via Chunks + Pipeline-Schreibrecht auf alle Meta-Tabellen). Achtung: ab diesem Moment braucht `pipeline` die expliziten Grants auf `sensor_reading` → zusammen mit B2 ausrollen.
-- [ ] `cluster.yaml`: `fdw_user` erst nach `DROP OWNED` in B2 auf `ensure: absent` (Löschreihenfolge mit CNPG koordinieren); `externalsecret-fdw` entfernen; `aws_secretsmanager_secret.fdw` + Eintrag in `sm_reader`-Policy/`secret_arns` in `modules/timescaledb` entfernen.
-- [ ] Core-Deployment: Datasource auf `timescaledb-rw`/`monteis_ts`, User `core` aus Secret `timescaledb-core` (statt `core/rds-credentials`).
-- [ ] Meta-Migration-Job: statt `core_flyway` (`migration/rds-credentials`) mit `monteis_ts` (Secret `timescaledb-app`) gegen `monteis_ts` — ein gemeinsamer Flyway-Job für `db/schema`.
-- [ ] Nach Cutover: RDS-DB `monteis` droppen; SM-Secrets `core/rds-credentials`, `migration/rds-credentials` + zugehörige SM-Reader-Rollen in `modules/sm-eso` entfernen; `modules/db-access` (`secret_arns`) und `kubernetes/db-relay` (Ziel `monteis`) anpassen. RDS-Instanz bleibt für Keycloak.
-- [ ] AWS: siehe Phase B1 (`lg-monteis-infra`). `application-prod.properties` bleibt unverändert (`CORE_META_DB_JDBC_URL`, `CORE_APP_META_DB_USER/PWD`), nur die Werte im Deployment ändern.
+- [ ] **A6.1** `core/src/test/java/ch/swisstopo/monteis/core/itconfig/TestcontainersConfiguration.java` — ein TimescaleDB-Container mit dem neuen Init, ein Flyway-Lauf auf `db/schema` ohne Seed, ohne Netzwerk-Alias `ts_db` und ohne Placeholder `fdw_read_user`. *Fertig:* Core-ITs starten genau einen Datenbank-Container.
+- [ ] **A6.2** `pipeline/src/test/java/ch/swisstopo/monteis/pipeline/ITConfiguration/TestcontainersConfiguration.java` — analog. *Fertig:* Pipeline-ITs grün gegen die Baseline.
+- [ ] **A6.3** `core/src/test/resources/` (neue Test-Fixtures) — `MeasurementQueryRepositoryIT`, `OverviewQueryRepositoryIT` und die E2E-Tests bauen heute auf den Seed-Daten auf; sie legen ihre Daten künftig selbst an (Fixture-SQL, das der Test nach der Baseline lädt, keine Flyway-Location). *Fertig:* diese Tests sind grün, ohne dass ein Seed-Ordner existiert.
+- [ ] **A6.4** `core/src/test/java/ch/swisstopo/monteis/core/E2ECoreApplication.java`, `webapp/playwright.config.ts` — ein Container, Fixtures aus A6.3. *Fertig:* Playwright-Lauf lokal grün.
+- [ ] **A6.5** `core/src/main/resources/application-test.properties`, `application-e2e-test.properties`, `pipeline/src/main/resources/application-test.properties` — `meta.db.name`, `ts.db.name`, `meta.flyway.user.*`, `ts.flyway.user.*`, `fdw.read.user` durch `db.name` und `db.flyway.user.*` ersetzen; Datasource-Variablen wie A3. *Fertig:* kein `META_`, `TS_`, `FDW_` oder `fdw` mehr in diesen Dateien.
 
-## Phase B2 — AWS-Cutover-Skript vorbereiten
+### A7 — CI, Image und Dokumentation
 
-- **AWS**: Bestehender Zustand wird per einmaligem Cutover-Skript (B2) auf den Baseline-Zustand gebracht, danach `flyway baseline -baselineVersion=1`. Künftige Änderungen ab `V2__…`.
+- [ ] **A7.1** `.github/workflows/pr-gate.yml` — `TS_*`, `META_*`, `FDW_READ_USER`, `CORE_APP_META_DB_*`, `PIPELINE_APP_TS_DB_*` auf die neuen Namen umstellen (Repository-Variablen entsprechend anlegen); `POSTGRES_DB_IMAGE` aus Warmup und Image-Cache entfernen. *Fertig:* PR-Gate grün, keine alten Variablen im Workflow.
+- [ ] **A7.2** `docker/migration/Dockerfile` — eine Location: `COPY db/schema /flyway/sql/schema`; Kommentare anpassen. *Fertig:* das Image enthält nur `V1__baseline.sql`.
+- [ ] **A7.3** `.github/workflows/build-and-release-migration.yml` — Pfadfilter und `change_path` auf `db/schema/**` und `docker/migration/Dockerfile`. *Fertig:* eine Änderung unter `db/schema` löst den Build aus, eine unter `db/archive` nicht.
+- [ ] **A7.4** `core/.../infrastructure/observability/QueryTimingListener.java` und `QueryTimingListenerTest.java` — FDW-Kommentare an das lokale Streaming anpassen. *Fertig:* kein „FDW" mehr in beiden Dateien.
+- [ ] **A7.5** `documentation/architecture/src/05_building_block_view.adoc`, `06_runtime_view.adoc`, `08_concepts.adoc`, `09_architecture_decisions.adoc` (neue ADR „DB-Fusion, RLS auf Hypertable" mit dem Performance-Ergebnis aus T7), `documentation/architecture/images/overview.puml`, `erd-metadata.puml`, `core-api.puml`, `downsampling-sequence.puml` samt gerenderten SVGs. *Fertig:* nach dem Neu-Rendern enthält `documentation/` keinen Bezug mehr auf FDW oder zwei Datenbanken.
 
-Läuft als Admin auf der TS-Instanz **nach** dem Meta-Restore (Phase B3) und bringt den Bestand auf exakt den Baseline-Zustand. Ablage z.B. `db/cutover/merge_meta_into_tsdb.sql`.
+## Tests
 
-```sql
-BEGIN;
+Die Tests laufen gegen einen Testcontainer mit der Baseline (A6). Testpfade relativ zu `core/src/test/java/ch/swisstopo/monteis/core/` bzw. `pipeline/src/test/java/ch/swisstopo/monteis/pipeline/`.
 
--- 1. Absicherung: FDW-Objekte werden bereits beim Restore herausgefiltert (Phase B3)
-DROP VIEW IF EXISTS sensor_reading_secured;
-DROP FOREIGN TABLE IF EXISTS raw_sensor_reading;
-DROP SERVER IF EXISTS timescale_server CASCADE;
-DROP EXTENSION IF EXISTS postgres_fdw;
+- [ ] **T1 RLS-Kontexte** — `infrastructure/security/RowLevelSecurityIT.java`, `infrastructure/jooq/RlsConnectionProviderTest.java`, `architecture/RowLevelSecurityTransactionTest.java`: verschiedene Keycloak-Gruppen- bzw. Experimentkontexte über denselben DB-User `core` sehen nur ihre Messwerte; ein ungesetzter Kontext sieht keine; ein Kontextwechsel überträgt keine Rechte auf die nächste Anfrage. *Fertig:* alle drei Tests grün gegen `sensor_reading`.
+- [ ] **T2 Rechte positiv und negativ** — neu `infrastructure/security/DatabasePermissionsIT.java` (Core-Testbaum), prüft über `has_table_privilege` und Test-Queries: `core` hat CRUD auf Meta- und `jv_*`-Tabellen und `USAGE, SELECT` auf deren Sequenzen, nur SELECT auf `sensor_reading`; `pipeline` hat CRUD auf `sensor_reading` und `EXECUTE` auf `missing_sensor_parameter_ids`, aber keinen Zugriff auf Meta- und `jv_*`-Tabellen; keine der beiden Rollen liest Chunks `_timescaledb_internal._hyper_*` direkt; keine Rolle ist Mitglied von `pg_read_all_data`/`pg_write_all_data`. *Fertig:* IT grün; er schlägt fehl, sobald ein Grant driftet.
+- [ ] **T3 FK und Löschen** — neu `modules/sensor/jooq/SensorParameterDeletionIT.java`: als `core` einen Parameter mit Messwerten löschen; die Messwerte bleiben mit `NULL`-Zuordnung erhalten und sind für `core` unsichtbar, ohne dass `core` UPDATE auf `sensor_reading` braucht; eine unbekannte Nicht-NULL-ID wird mit `23503` abgewiesen, `NULL` wird angenommen. *Fertig:* IT grün.
+- [ ] **T4 Tombstone und Race** — `infrastructure/kafka/SensorConfigPublisherTest.java` und ein Service-Test zu A5.1 (Core); `transformation/processing/SensorDataBatchProcessorTest.java` und `persistence/SensorReadingRepositoryIT.java` (Pipeline): Löschen entfernt den DAS-Key aus dem Pipeline-Cache; ein Löschen während des Ingests lässt den Batch nicht scheitern und schickt keinen gültigen Datensatz in `internal-normalized-dlt`. *Fertig:* Tests grün, inkl. Rollback-Fall ohne Tombstone.
+- [ ] **T5 Pipeline ohne Benutzerkontext** — `persistence/SensorReadingRepositoryIT.java`: Upsert (`ON CONFLICT DO UPDATE`), `UPDATE … FROM (VALUES …)` und die Reprocessing-Selects laufen als `pipeline` bei aktiver RLS. *Fertig:* IT grün als Rolle `pipeline`, nicht als Superuser.
+- [ ] **T6 Bestehende ITs** — `modules/measurement/jooq/MeasurementQueryRepositoryIT.java`, `modules/overview/jooq/OverviewQueryRepositoryIT.java`, `infrastructure/security/RowLevelSecurityIT.java` laufen gegen die lokale Tabelle; der umbenannte Leak-Test aus A4.6 bleibt erhalten. *Fertig:* alle grün, Spalten-Mapping (`das_key`, `status` als Enum) geprüft.
+- [ ] **T7 Performance-Vergleich** — `documentation/architecture/src/09_architecture_decisions.adoc` (Ergebnis in der ADR aus A7.5): `EXPLAIN ANALYZE` der drei heutigen FDW-Lesepfade, nämlich Messwerttabelle mit letztem Messwert je Parameter (`MeasurementQueryRepository`, `LATEST_READINGS`), Range-Scan `findChartData` und Overview `ORDER BY timestamp DESC LIMIT n` (`OverviewQueryRepository`), je für einen Benutzer mit allen Experimenten und einen eingeschränkten Benutzer mit wenigen Experimenten. Vorher-Messung auf dem heutigen Stand vor A2, Nachher-Messung nach A4, beide auf denselben lokalen Daten (per `generate_series` erzeugt; das Skript liegt dem Ergebnis bei und ist keine Flyway-Location). *Fertig:* Vorher-/Nachher-Tabelle ist dokumentiert. Kein Zahlenwert blockiert den Merge.
 
--- 2. Alte TS-Flyway-History entfernen — `flyway baseline` bricht sonst ab,
---    weil bereits eine nicht-leere flyway_schema_history existiert
-DROP TABLE flyway_schema_history;
+## Umstellung AWS
 
--- 3. Altrolle fdw_user entrechten (sensor_reading gehört in AWS bereits monteis_ts)
-DROP OWNED BY fdw_user;                     -- SELECT auf sensor_reading (TS-V1)
+Koordinierte Umstellung je Umgebung, zuerst dev, danach die weiteren. Nichts aus den alten AWS-Datenbanken wird übernommen, auch nicht als Kopie zum Debuggen.
 
--- 4. Meta-Grants für core neu vergeben (Restore läuft mit --no-acl, siehe Phase B3)
-GRANT USAGE ON SCHEMA public TO core, pipeline;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO core;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO core;
-ALTER DEFAULT PRIVILEGES FOR ROLE monteis_ts IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO core;
-ALTER DEFAULT PRIVILEGES FOR ROLE monteis_ts IN SCHEMA public
-    GRANT USAGE, SELECT ON SEQUENCES TO core;
+1. Bis zur Umstellung läuft die heutige App-Version unverändert auf dem alten Setup. Die neue Version und die Baseline werden vorher nicht auf AWS ausgerollt; weil Merges automatisch nach staging deployen, wird erst zur Umstellung gemergt oder das Deployment bis dahin gesperrt.
+2. Das Infra-Team stellt je Umgebung eine leere Datenbank mit den drei Rollen bereit und bestätigt das.
+3. Die alte App (Core und Pipeline) wird gestoppt. `internal-sensor-config` wird neu angelegt (leer), und die Consumer-Offsets der Pipeline auf `internal-normalized` werden auf `latest` gesetzt.
+4. Das neue Migration-Image führt Flyway gegen die leere Datenbank aus.
+5. Scheitert die Baseline, startet wieder die alte App auf dem alten Setup; Core veröffentlicht die Konfigurationen über den bestehenden Republish-Endpunkt (`SensorController`) neu. Der nächste Versuch läuft auf einer frisch geleerten Datenbank, ohne Reparatur vor Ort.
+6. Erst nach erfolgreicher Baseline starten die neuen Versionen von Core und Pipeline; damit ist die Umstellung abgeschlossen. Messwerte, die eintreffen, bevor Sensoren neu angelegt sind, werden mit `sensor_parameter_id = NULL` gespeichert; der Backfill ordnet sie zu, sobald ein Parameter mit demselben DAS-Key existiert.
 
-UPDATE sensor_reading r
-SET sensor_parameter_id = NULL
-WHERE r.sensor_parameter_id IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM sensor_parameter p WHERE p.id = r.sensor_parameter_id);
+## Hinweis Infrastruktur
 
-ALTER TABLE sensor_reading
-    ADD CONSTRAINT sensor_reading_sensor_parameter_fk
-    FOREIGN KEY (sensor_parameter_id) REFERENCES sensor_parameter(id)
-    ON DELETE SET NULL;
+Änderungen an Infrastruktur und AWS sind Sache des Infra-Teams und nicht Teil dieses Plans. Die App erwartet je Umgebung: eine leere PostgreSQL-18-Datenbank mit TimescaleDB; die Rollen `monteis_ts` (Owner, Flyway), `core` und `pipeline`, keine davon Mitglied von `pg_read_all_data` oder `pg_write_all_data`; dieselben Default Privileges von `monteis_ts` an `core` wie in `docker/dataset-init/init.sql`; die neuen Variablennamen aus A3; ein Migration-Image mit nur einer Location (A7.2). Dass RDS entfällt und die Keycloak-Datenbank in denselben Postgres-Cluster zieht, entscheidet und plant das Infra-Team.
 
--- 5. RLS-Policies + sensor_reading-Grants: identisch zu Baseline-Abschnitt 2 + 3
---    (REVOKE INSERT/UPDATE/DELETE ON sensor_reading FROM core korrigiert Schritt 4)
+## Abnahme
 
-COMMIT;
-```
+- [ ] Ein frisches lokales Setup aus leerer Datenbank funktioniert reproduzierbar mit `docker/compose.yml` und `docker/dataset-init/init.sql`.
+- [ ] Core und Pipeline laufen gegen dieselbe Datenbank (`core/src/main/resources/application-dev.properties`, `pipeline/src/main/resources/application-dev.properties`).
+- [ ] Codegen (`core/pom.xml`, `pipeline/pom.xml`), alle Tests T1–T6 und CI (`.github/workflows/pr-gate.yml`) sind grün.
+- [ ] In `lg-monteis` gibt es ausserhalb von `db/archive/` und dieser Datei keinen Bezug mehr auf FDW, `TS_*`, `META_*`, `FDW_*` oder die Rollen `fdw_user`, `ts_flyway`, `core_flyway`, `core_app`, `pipeline_app`.
+- [ ] Der Performance-Vergleich (T7) ist in `documentation/architecture/src/09_architecture_decisions.adoc` dokumentiert.
+- [ ] Die arc42-Dokumentation unter `documentation/architecture/` ist aktualisiert (A7.5).
 
-Der FK wird nach dem Meta-Restore bei pausierter Pipeline über den gesamten Bestand geprüft. Laufzeit und Locks auf einer repräsentativen Kopie testen; der Index `(sensor_parameter_id, timestamp DESC)` muss vorhanden sein. Pipeline erst mit der in A3/A4 geprüften FK-sicheren Cache-/Retry-Behandlung wieder starten.
+## Risiken
 
-`fdw_user` wird **nicht** per `DROP ROLE` entfernt — CNPG würde die Rolle wieder anlegen (`ensure: present`); Abbau über das Infra-Repo (Phase B1).
+- **GRANT-Drift:** Default Privileges gelten pro Ersteller-Rolle; ein vergessener `REVOKE` gibt `core` still Schreibrecht. Gegenmittel: T2 als Regressionstest.
+- **Direkter Chunk-Zugriff:** Grants gehen auf die Chunks über, RLS nicht. T2 prüft es; bei Bedarf schliesst die Baseline die Lücke (siehe Rollen und Rechte).
+- **Veraltete Cache-IDs und Löschrennen:** ohne A5 scheitern Schreibvorgänge trotz `ON DELETE SET NULL`. Gegenmittel: Tombstone, Eviction und NULL-Retry (A5), getestet in T4.
+- **Unsichtbare Messwerte nach dem Löschen:** sie bleiben erhalten, aber `core` sieht sie nicht mehr; legt jemand unter demselben DAS-Key wieder einen Parameter an, erhält dieser sie per Backfill. Das ist gewollt und steht in der ADR.
+- **Löschkosten:** `ON DELETE SET NULL` aktualisiert unter Umständen viele Messwerte über mehrere Chunks. Den Index `(sensor_parameter_id, timestamp DESC)` behalten und die Laufzeit in T3 beobachten.
+- **Unvollständige Baseline:** eine beim Zusammenfassen vergessene Policy, Funktion oder ein vergessener Index fällt erst spät auf. Gegenmittel: Objektvergleich in A1.1 und T1–T6 auf frischer Baseline.
+- **Keine Workload-Isolation mehr:** Ingest und Lesen teilen sich die Ressourcen einer Datenbank; unter hoher Datenrate beobachten.
+- **Leere lokale Datenbank:** ohne Seeds fehlen lokal Demodaten; Tests bringen ihre Daten selbst mit (A6.3).
 
-Danach Flyway-History neu aufsetzen:
-
-```bash
-flyway -locations=filesystem:db/schema baseline -baselineVersion=1 -baselineDescription="merged baseline"
-```
-
-- [ ] **Äquivalenz-Check (Pflicht)**: Schema einer frischen Baseline-Installation vs. Schema nach Cutover-Skript vergleichen (`pg_dump --schema-only --exclude-table=flyway_schema_history` beider DBs + `diff`, oder `migra`). Muss leer sein (bis auf Timescale-Chunk-Interna).
-- [ ] Cutover zuerst auf der ersten AWS-Umgebung (z.B. dev) durchspielen, danach auf den weiteren.
-
-## Phase B3 — AWS-Cutover durchführen
-
-1. Rollen `monteis_ts`, `core`, `pipeline` existieren bereits (CNPG). `core_flyway`/`core_app` existieren nur auf RDS und werden nicht übernommen (`pg_dump` überträgt keine Rollen).
-2. Core stoppen.
-3. `pg_dump -Fc --exclude-table=flyway_schema_history` der Meta-DB (RDS).
-4. Restore-Liste filtern: `pg_restore -l dump > list`, daraus entfernen: `EXTENSION postgres_fdw` (+ `COMMENT`), `SERVER timescale_server`, `USER MAPPING`, `FOREIGN TABLE raw_sensor_reading`, `VIEW sensor_reading_secured` — `CREATE EXTENSION postgres_fdw` würde als `monteis_ts` mangels Superuser-Recht scheitern.
-5. `pg_restore --no-owner --no-acl --role=monteis_ts -L list` in `monteis_ts` (alle Meta-Objekte gehören danach `monteis_ts`). `--no-acl`, weil die Grants im Dump auf `core_app`/`core_flyway` lauten, die es hier nicht gibt; Grants für `core` vergibt B2.
-6. Pipeline pausieren → Cutover-Skript B2 (Orphan-Bereinigung, validierter FK, RLS/Grants) + Infra-Änderung `inRoles` (B1) ausrollen → FK-sichere Pipeline-Version starten und Ingest prüfen.
-7. `flyway baseline -baselineVersion=1`.
-8. Äquivalenz-Check (B2) gegen frische Baseline.
-9. Core-Datasource von RDS auf die TS-DB umstellen, Core starten. Pipeline-Datasource bleibt unverändert (zeigt bereits auf die TS-Instanz).
-
-## Phase B4 — AWS-Abnahme und Cleanup
-
-- [ ] Anwendung und Ingest prüfen; technische Tabellenrechte mit den AWS-DB-Usern sowie fachliche RLS mit unterschiedlichen Keycloak-Gruppenkontexten über `core` getrennt testen.
-- [ ] Effektive Rollenmitgliedschaften und direkten Chunk-Zugriff nach CNPG-Reconciliation prüfen.
-- [ ] Erst nach erfolgreicher Abnahme alte RDS-Meta-DB und nicht mehr benötigte Secrets/Verweise entfernen; Keycloak und dessen RDS-Zugriff erhalten.
-- [ ] Vor Entfernen gemeinsamer IAM-Rollen alle Verbraucher prüfen; insbesondere Fulcrum-Token-Berechtigungen der `core-sm-reader`-Rolle erhalten.
-- [ ] Betriebsdokumentation und Monitoring aktualisieren; weitere AWS-Umgebungen erst nach erfolgreichem Durchlauf auf AWS-dev umstellen.
-
-## Grösste Risiken
-
-- **GRANT-Drift im Ein-Schema-Modell**: Default-Privileges gelten pro Ersteller-Rolle; ein vergessener `REVOKE` gibt `core` still Schreibrecht → Permissions-IT (Phase A4) als Regressionstest.
-- **FK + veraltete Cache-IDs** → spätere Schreibvorgänge mit gelöschter ID scheitern trotz SET NULL; Pipeline-Validierung und race-sicherer Retry sind Voraussetzung (A3/A4).
-- **NULL-Zuordnungen nach Parameterlöschung** → Messwerte bleiben erhalten, sind für Core aber unsichtbar; Monitoring (A4). AWS-Orphans vor FK-Anlage auf NULL setzen (B2).
-- **Löschkosten durch SET NULL** → potenziell viele Messwerte über mehrere Chunks aktualisiert; Index beibehalten, Laufzeit/Locks und Compression-Verträglichkeit testen.
-- **Baseline weicht vom AWS-Bestand ab** (vergessene Policy/Grant/Funktion beim Squash) → frische Setups und AWS divergieren still → Äquivalenz-Check (Phase B2) als Pflicht-Gate, idealerweise als CI-Job wiederholbar.
-- **Bestehende TS-History blockiert `flyway baseline`** → Meta-History vom Dump ausschliessen (Phase B3), TS-History im Cutover-Skript droppen (B2).
-- **Restore scheitert an FDW-Objekten** (`CREATE EXTENSION` braucht Superuser) → Restore-Liste filtern (Phase B3, Schritt 4).
-- **Schreibzugriffe während Meta-Dump/Restore** → Core gestoppt; Pipeline nur während B2 pausiert.
-- **Workload-Isolation entfällt**: Ingest- und Lese-Last teilen sich Instanz-Ressourcen; unter hoher Datenrate beobachten.
-- **Meta-DB verliert RDS-Features** (Multi-AZ, Performance Insights, Enhanced Monitoring, Auto-Minor-Upgrade) → CNPG bietet Backup/PITR via Barman; HA erst mit `instances > 1` (staging/prod-Overlays prüfen), Monitoring separat.
-- **`pg_read_all_data`/`pg_write_all_data` in AWS** → zu breite technische Tabellenrechte, insbesondere Pipeline-Schreibrecht auf Meta. Diese Rollen umgehen RLS nicht automatisch; möglichen Chunk-Zugriff ohne fachliche Zeilenfilterung separat prüfen. Nach Cutover DB-Rechte und Keycloak-gruppenbasierte RLS getrennt auf AWS testen.
-
-## Geschätzter Umfang
-
-1 Baseline-Skript + 1 Cutover-Skript, ~10 Config-/Infra-Dateien, ~6 Testdateien, jOOQ-Umbau in 3–4 Repositories.
