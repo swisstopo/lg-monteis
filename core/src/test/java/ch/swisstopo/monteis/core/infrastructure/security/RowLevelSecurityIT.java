@@ -212,13 +212,10 @@ class RowLevelSecurityIT {
 
   @Test
   @Transactional
-  void system_context_may_not_update_an_experiment() {
-    // background jobs run without a filter chain, so RLS is the only guard against their writes
+  void system_context_may_update_an_experiment() {
+    // system context = api:admin token, RLS no longer guards background job writes (MON-196 R4)
     SystemSecurityContext.runAsSystem(
-        () ->
-            assertThrows(
-                PermissionDeniedDataAccessException.class,
-                () -> renameExperiment(EXPERIMENT_ALPHA, "Mont Terri Alpha renamed")));
+        () -> assertEquals(1, renameExperiment(EXPERIMENT_ALPHA, "Mont Terri Alpha renamed")));
   }
 
   @Test

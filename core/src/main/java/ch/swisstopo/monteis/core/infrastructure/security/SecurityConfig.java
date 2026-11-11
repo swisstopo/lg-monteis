@@ -72,12 +72,11 @@ public class SecurityConfig {
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         // browser sends no credential automatically (no cookie) => no csrf risk (ADR-011 P4)
         .csrf(AbstractHttpConfigurer::disable)
-        .exceptionHandling(
-            exceptions ->
-                exceptions.accessDeniedHandler(new MonteisAccessDeniedHandler(objectMapper)))
         .oauth2ResourceServer(
             oauth2 ->
-                oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));
+                oauth2
+                    .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
+                    .accessDeniedHandler(new MonteisAccessDeniedHandler(objectMapper)));
 
     return http.build();
   }
