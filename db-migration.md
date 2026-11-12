@@ -39,7 +39,7 @@ Referenz (im Workspace, nicht wiederholt): welche Dateien, Rollen und Variablen 
 
 ## Zielbild
 
-- Eine PostgreSQL-18-Datenbank mit TimescaleDB, ein Schema `public`. Lokal und in Tests das Image `timescale/timescaledb:latest-pg18`.
+- Eine PostgreSQL-18-Datenbank `monteis` mit TimescaleDB, Owner `monteis_ts`, ein einziges Schema `public`. Der Name gilt in jeder Umgebung (lokal, Testcontainers, CI, AWS). Weil `public` seit PostgreSQL 15 der Rolle `pg_database_owner` gehört, ist damit auch `monteis_ts` Owner von `public`. Lokal und in Tests das Image `timescale/timescaledb:latest-pg18`.
 - Keine FDW-Objekte: weder Extension `postgres_fdw` noch Server `timescale_server`, User Mapping oder Foreign Table `raw_sensor_reading`.
 - Kein View `sensor_reading_secured`.
 - `sensor_reading` ist eine lokale Hypertable mit nativer RLS (`ENABLE ROW LEVEL SECURITY`, zwei Policies, siehe SQL unten).
@@ -138,7 +138,7 @@ Die DB-Rollen sind technische Benutzer, keine fachlichen Identitäten. Welche Ex
 
 ## Phasen
 
-Jede Aufgabe ist ein Ticket. Pfade relativ zu `lg-monteis/`; `core/.../` steht für `core/src/main/java/ch/swisstopo/monteis/core/`, `pipeline/.../` für `pipeline/src/main/java/ch/swisstopo/monteis/pipeline/`. Neue Variablennamen: `DB_NAME`, `DB_FLYWAY_USER/PWD` (Rolle `monteis_ts`), `CORE_DB_USER/PWD` (`core`), `PIPELINE_DB_USER/PWD` (`pipeline`), `CORE_DB_JDBC_URL` (prod).
+Jede Aufgabe ist ein Ticket. Pfade relativ zu `lg-monteis/`; `core/.../` steht für `core/src/main/java/ch/swisstopo/monteis/core/`, `pipeline/.../` für `pipeline/src/main/java/ch/swisstopo/monteis/pipeline/`. Neue Variablennamen: `DB_NAME` (Wert `monteis`), `DB_FLYWAY_USER/PWD` (Rolle `monteis_ts`), `CORE_DB_USER/PWD` (`core`), `PIPELINE_DB_USER/PWD` (`pipeline`), `CORE_DB_JDBC_URL` (prod).
 
 ### A1 — Baseline
 
@@ -147,7 +147,7 @@ Jede Aufgabe ist ein Ticket. Pfade relativ zu `lg-monteis/`; `core/.../` steht f
 
 ### A2 — Lokales Setup
 
-- [ ] **A2.1** `docker/dataset-init/init.sql` (ersetzt `docker/dataset-meta/init_meta.sql` und `docker/dataset-tsdb/init_tsdb.sql`) — `CREATE EXTENSION timescaledb`; Rollen `monteis_ts`, `core`, `pipeline` (lokale Dev-Passwörter wie heute); `CREATE` auf `public` für `monteis_ts`, `USAGE` für `core` und `pipeline`; Default Privileges von `monteis_ts` an `core`: `SELECT, INSERT, UPDATE, DELETE` auf Tabellen, `USAGE, SELECT` auf Sequenzen; nichts davon für `pipeline`; keine FDW-Grants, kein Server, kein User Mapping. *Fertig:* beide alten Init-Ordner sind gelöscht; `\ddp` zeigt keine Default Privileges für `pipeline`.
+- [ ] **A2.1** `docker/dataset-init/init.sql` (ersetzt `docker/dataset-meta/init_meta.sql` und `docker/dataset-tsdb/init_tsdb.sql`) — `CREATE EXTENSION timescaledb`; Rollen `monteis_ts`, `core`, `pipeline` (lokale Dev-Passwörter wie heute); die vom Image über `POSTGRES_DB=monteis` angelegte Datenbank geht mit `ALTER DATABASE monteis OWNER TO monteis_ts` an `monteis_ts` und damit auch `public`; `USAGE` für `core` und `pipeline`; Default Privileges von `monteis_ts` an `core`: `SELECT, INSERT, UPDATE, DELETE` auf Tabellen, `USAGE, SELECT` auf Sequenzen; nichts davon für `pipeline`; keine FDW-Grants, kein Server, kein User Mapping. *Fertig:* beide alten Init-Ordner sind gelöscht; `\l monteis` und `\dn` zeigen `monteis_ts` als Owner der Datenbank und von `public`, `\dn` kein weiteres Schema ausser denen von TimescaleDB; `\ddp` zeigt keine Default Privileges für `pipeline`.
 - [ ] **A2.2** `docker/compose.yml` — die Meta-Tabellen ziehen in die TimescaleDB: `ts_db` und `flyway-timescale` bleiben mit `profiles: [ core, pipeline ]`, `metadata_db` und `flyway-metadata` werden entfernt. `ts_db` initialisiert mit `docker/dataset-init` statt `docker/dataset-tsdb`, lauscht auf Port 5432 (heute 5433, A3 setzt das voraus) und nimmt `DB_NAME`; `flyway-timescale` mountet `db/schema` und `db/seed` statt `db/timescale/*`, läuft mit `DB_FLYWAY_USER/PWD`, ohne `-placeholders.fdw_read_user`, und nimmt die Locations aus `FLYWAY_LOCATIONS` (Standard: beide); ein eigenes Flyway-Schema für die Pipeline gibt es nicht. *Fertig:* `docker compose --profile core --profile pipeline up` startet auf leerem Volume genau eine Datenbank und einen Flyway-Lauf, mit Seed-Daten; mit `FLYWAY_LOCATIONS` nur auf `db/schema` ohne.
 - [ ] **A2.3** `docker/Makefile` — alle Ziele behalten ihre Namen (`core`, `pipeline-empty`, `pipeline-seeded`, `all-empty`, `all-seeded`, `down`, `logs`); nur `TS_FLYWAY_LOCATIONS` wird zu `FLYWAY_LOCATIONS`. *Fertig:* kein `TS_`/`META_`/`FDW_` mehr im Makefile; `make all-seeded` startet die eine Datenbank mit Seed-Daten, `make all-empty` ohne; `make pipeline-seeded`, `make pipeline-empty` und `make core` starten jeweils dieselbe eine Datenbank.
 - [ ] **A2.4** `docker/.env.example.local` — auf die neuen Variablennamen umstellen; `TS_*`, `META_*`, `FDW_*`, `CORE_APP_META_DB_*`, `PIPELINE_APP_TS_DB_*` entfernen. *Fertig:* die Datei enthält keines dieser Präfixe mehr.
@@ -220,7 +220,7 @@ Koordinierte Umstellung je Umgebung, zuerst dev, danach die weiteren. Nichts aus
 
 ## Hinweis Infrastruktur
 
-Änderungen an Infrastruktur und AWS sind Sache des Infra-Teams und nicht Teil dieses Plans. Die App erwartet je Umgebung: eine leere PostgreSQL-18-Datenbank mit TimescaleDB; die Rollen `monteis_ts` (Owner, Flyway), `core` und `pipeline`, keine davon Mitglied von `pg_read_all_data` oder `pg_write_all_data`; dieselben Default Privileges von `monteis_ts` an `core` wie in `docker/dataset-init/init.sql`, also `SELECT, INSERT, UPDATE, DELETE` auf Tabellen und `USAGE, SELECT` auf Sequenzen, und keine für `pipeline`; die neuen Variablennamen aus A3; ein Migration-Image mit nur einer Location (A7.2). Dass RDS entfällt und die Keycloak-Datenbank in denselben Postgres-Cluster zieht, entscheidet und plant das Infra-Team.
+Änderungen an Infrastruktur und AWS sind Sache des Infra-Teams und nicht Teil dieses Plans. Die App erwartet je Umgebung: eine leere PostgreSQL-18-Datenbank `monteis` mit TimescaleDB, Owner `monteis_ts`, mit nur dem Schema `public`; die Rollen `monteis_ts` (Owner, Flyway), `core` und `pipeline`, keine davon Mitglied von `pg_read_all_data` oder `pg_write_all_data`; dieselben Default Privileges von `monteis_ts` an `core` wie in `docker/dataset-init/init.sql`, also `SELECT, INSERT, UPDATE, DELETE` auf Tabellen und `USAGE, SELECT` auf Sequenzen, und keine für `pipeline`; die neuen Variablennamen aus A3; ein Migration-Image mit nur einer Location (A7.2). Dass RDS entfällt und die Keycloak-Datenbank in denselben Postgres-Cluster zieht, entscheidet und plant das Infra-Team.
 
 ## Abnahme
 
