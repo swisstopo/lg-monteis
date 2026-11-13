@@ -31,7 +31,9 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
+import ch.swisstopo.monteis.core.modules.sensor.service.SensorFulcrumRefreshService;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.FulcrumRefreshRequestDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParameterDto;
@@ -51,7 +53,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -89,6 +93,7 @@ class SensorControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @MockitoBean private SensorService service;
+  @MockitoBean private SensorFulcrumRefreshService fulcrumRefreshService;
 
   @MockitoBean private SensorWebMapper mapper;
   @MockitoBean private PagedRequestParser pagedRequestParser;
@@ -144,6 +149,7 @@ class SensorControllerTest {
             "Test 1",
             "SENS-01",
             Das.SOL_EXPERTS,
+            null,
             null,
             null,
             new CoordinatesDto(0.0, 0.0, 0.0),
@@ -327,6 +333,7 @@ class SensorControllerTest {
             "SENS-02",
             "Formula",
             Das.SOL_EXPERTS,
+            null,
             null,
             null,
             new CoordinatesDto(0.0, 0.0, 0.0),
@@ -591,6 +598,74 @@ class SensorControllerTest {
     then(service).should().republishAllActiveParameterConfigs();
   }
 
+  // denied levels: SecurityConfigAuthorizationTest
+  @ParameterizedTest
+  @EnumSource(
+      value = PrivilegeLevel.class,
+      names = {"EXPERIMENT_PI", "GLOBAL_EDITOR", "MONTEIS_ADMIN"})
+  void should_let_experiment_writers_refresh_sensors_from_fulcrum(PrivilegeLevel level)
+      throws Exception {
+    // when / then
+    mockMvc
+        .perform(
+            post("/api/sensors/fulcrum-refresh")
+                .with(csrf())
+                .with(authentication(level.authentication()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sensorIds\":[\"%s\",\"%s\"]}".formatted(SENSOR_ID, OTHER_SENSOR_ID)))
+        .andExpect(status().isNoContent());
+
+    then(fulcrumRefreshService).should().refreshSelected(Set.of(SENSOR_ID, OTHER_SENSOR_ID));
+  }
+
+  @Test
+  void should_refresh_every_visible_sensor_when_no_sensor_ids_are_given() throws Exception {
+    // when / then
+    mockMvc
+        .perform(
+            post("/api/sensors/fulcrum-refresh")
+                .with(asAdmin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+        .andExpect(status().isNoContent());
+
+    then(fulcrumRefreshService).should().refreshAllVisible();
+  }
+
+  @Test
+  void should_reject_an_empty_list_of_sensor_ids() throws Exception {
+    expectRejectedFulcrumRefresh("{\"sensorIds\":[]}", "validation.size");
+  }
+
+  @Test
+  void should_reject_more_than_1000_sensor_ids() throws Exception {
+    List<UUID> sensorIds =
+        Stream.generate(UUID::randomUUID)
+            .limit(FulcrumRefreshRequestDto.MAX_SENSOR_IDS + 1L)
+            .toList();
+    expectRejectedFulcrumRefresh(
+        objectMapper.writeValueAsString(Map.of("sensorIds", sensorIds)), "validation.size");
+  }
+
+  @Test
+  void should_reject_a_null_sensor_id() throws Exception {
+    expectRejectedFulcrumRefresh(
+        "{\"sensorIds\":[\"%s\",null]}".formatted(SENSOR_ID), "validation.required");
+  }
+
+  private void expectRejectedFulcrumRefresh(String body, String messageKey) throws Exception {
+    mockMvc
+        .perform(
+            post("/api/sensors/fulcrum-refresh")
+                .with(asAdmin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isUnprocessableContent())
+        .andExpect(jsonPath("$[0].messageKey").value(messageKey));
+
+    then(fulcrumRefreshService).shouldHaveNoInteractions();
+  }
+
   private static RequestPostProcessor asAdmin() {
     RequestPostProcessor admin = authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication());
     return request -> admin.postProcessRequest(csrf().postProcessRequest(request));
@@ -647,6 +722,7 @@ class SensorControllerTest {
         name,
         "SENS-01",
         Das.SOL_EXPERTS,
+        null,
         null,
         null,
         new CoordinatesDto(0.0, 0.0, 0.0),

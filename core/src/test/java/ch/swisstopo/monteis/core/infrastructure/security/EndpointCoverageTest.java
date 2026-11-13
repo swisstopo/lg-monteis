@@ -22,6 +22,7 @@ import ch.swisstopo.monteis.core.modules.overview.service.OverviewService;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorDocumentService;
+import ch.swisstopo.monteis.core.modules.sensor.service.SensorFulcrumRefreshService;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
 import ch.swisstopo.monteis.core.modules.sensor.web.SensorDocumentWebMapper;
 import ch.swisstopo.monteis.core.modules.sensor.web.SensorWebMapper;
@@ -83,6 +84,7 @@ class EndpointCoverageTest {
           "POST /api/sensors/{id}/documents",
           "GET /api/sensors/{id}/documents/{documentId}/content",
           "DELETE /api/sensors/{id}/documents/{documentId}",
+          "POST /api/sensors/fulcrum-refresh",
           "GET /api/measurements",
           "GET /api/measurements/charts/data",
           "GET /api/measurements/sensors/{id}",
@@ -104,6 +106,7 @@ class EndpointCoverageTest {
   @MockitoBean private FulcrumDocumentSyncRunner fulcrumDocumentSyncRunner;
   @MockitoBean private FulcrumDocumentWebMapper fulcrumDocumentWebMapper;
   @MockitoBean private SensorService sensorService;
+  @MockitoBean private SensorFulcrumRefreshService sensorFulcrumRefreshService;
   @MockitoBean private SensorWebMapper sensorWebMapper;
   @MockitoBean private SensorCsvExportQueryRepository sensorCsvExportQueryRepository;
   @MockitoBean private SensorParameterRowQueryRepository sensorParameterRowQueryRepository;

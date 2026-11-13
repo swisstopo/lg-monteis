@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -8,18 +9,24 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
+import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumService;
 import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
 import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
+import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,17 +34,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SensorServiceTest {
 
-  private static final UUID FULCRUM_RECORD_ID =
-      UUID.fromString("29d8aee7-d9c6-4459-ac9d-bbd6e10f6518");
+  private static final UUID FULCRUM_ID = UUID.fromString("29d8aee7-d9c6-4459-ac9d-bbd6e10f6518");
+  private static final Coordinates STORED_COORDINATES = new Coordinates(1.0, 2.0, 3.0);
 
   @Mock private SensorRepository repository;
   @Mock private SensorConfigPublisher configPublisher;
   @Mock private FulcrumService fulcrumService;
+  @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-02T10:00:00Z"), ZoneOffset.UTC);
 
   @InjectMocks private SensorService service;
 
@@ -145,8 +154,9 @@ class SensorServiceTest {
     // given
     Sensor inputSensor = mock(Sensor.class);
 
-    given(inputSensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
-    given(fulcrumService.getSensorById(FULCRUM_RECORD_ID)).willReturn(Optional.empty());
+    given(inputSensor.hasFulcrumId()).willReturn(true);
+    given(inputSensor.getFulcrumId()).willReturn(FULCRUM_ID);
+    given(fulcrumService.findSensorByFulcrumId(FULCRUM_ID)).willReturn(Optional.empty());
 
     // when
     ObjectBusinessValidationException exception =
@@ -171,7 +181,7 @@ class SensorServiceTest {
     Sensor actualSensor = service.createSensor(inputSensor);
 
     // then
-    then(fulcrumService).should(never()).getSensorById(any());
+    then(fulcrumService).should(never()).findSensorByFulcrumId(any());
     then(inputSensor).should(never()).setCoordinates(any());
     then(repository).should().create(inputSensor);
     assertEquals(expectedSensor, actualSensor);
@@ -189,7 +199,7 @@ class SensorServiceTest {
     Sensor actualSensor = service.updateSensor(inputSensor);
 
     // then
-    then(fulcrumService).should(never()).getSensorById(any());
+    then(fulcrumService).should(never()).findSensorByFulcrumId(any());
     then(inputSensor).should(never()).setCoordinates(any());
     then(repository).should().update(inputSensor);
     assertEquals(expectedSensor, actualSensor);
@@ -200,8 +210,9 @@ class SensorServiceTest {
     // given
     Sensor inputSensor = mock(Sensor.class);
 
-    given(inputSensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
-    given(fulcrumService.getSensorById(FULCRUM_RECORD_ID)).willReturn(Optional.empty());
+    given(inputSensor.hasFulcrumId()).willReturn(true);
+    given(inputSensor.getFulcrumId()).willReturn(FULCRUM_ID);
+    given(fulcrumService.findSensorByFulcrumId(FULCRUM_ID)).willReturn(Optional.empty());
 
     // when
     ObjectBusinessValidationException exception =
@@ -228,7 +239,7 @@ class SensorServiceTest {
     // then
     assertEquals("sensor.fulcrum.coordinatesMissing", exception.getMessageKey());
     assertEquals("z", exception.getParams().get("missing"));
-    assertEquals(FULCRUM_RECORD_ID.toString(), exception.getParams().get("fulcrumId"));
+    assertEquals(FULCRUM_ID.toString(), exception.getParams().get("fulcrumId"));
     then(inputSensor).should(never()).setCoordinates(any());
     then(repository).should(never()).create(any());
   }
@@ -250,6 +261,49 @@ class SensorServiceTest {
     assertEquals("x, y", exception.getParams().get("missing"));
     then(inputSensor).should(never()).setCoordinates(any());
     then(repository).should(never()).update(any());
+  }
+
+  @Test
+  void should_set_the_last_fulcrum_refresh_when_a_sensor_with_a_fulcrum_id_is_created() {
+    // given
+    Sensor sensor = sensor(FULCRUM_ID, null);
+    givenFulcrumHolds(2579000.0, 1247000.0, 500.0);
+    given(repository.create(sensor)).willReturn(sensor);
+
+    // when
+    service.createSensor(sensor);
+
+    // then
+    assertEquals(OffsetDateTime.now(clock), sensor.getLastFulcrumRefreshAt());
+    assertEquals(new Coordinates(2579000.0, 1247000.0, 500.0), sensor.getCoordinates());
+  }
+
+  @Test
+  void should_set_the_last_fulcrum_refresh_when_a_sensor_with_a_fulcrum_id_is_updated() {
+    // given
+    Sensor sensor = sensor(FULCRUM_ID, OffsetDateTime.parse("2026-01-01T00:00:00Z"));
+    givenFulcrumHolds(2579000.0, 1247000.0, 500.0);
+    given(repository.update(sensor)).willReturn(sensor);
+
+    // when
+    service.updateSensor(sensor);
+
+    // then
+    assertEquals(OffsetDateTime.now(clock), sensor.getLastFulcrumRefreshAt());
+  }
+
+  @Test
+  void should_clear_the_last_fulcrum_refresh_when_the_fulcrum_id_is_removed() {
+    // given
+    Sensor sensor = sensor(null, OffsetDateTime.parse("2026-01-01T00:00:00Z"));
+    given(repository.update(sensor)).willReturn(sensor);
+
+    // when
+    service.updateSensor(sensor);
+
+    // then
+    assertNull(sensor.getLastFulcrumRefreshAt());
+    assertEquals(STORED_COORDINATES, sensor.getCoordinates());
   }
 
   @Test
@@ -320,12 +374,32 @@ class SensorServiceTest {
    * write to go through has to hand the record a complete position.
    */
   private void givenTheSensorExistsInFulcrum(Sensor sensor, Double x, Double y, Double z) {
-    FulcrumSensor fulcrumSensor = mock(FulcrumSensor.class);
-    given(fulcrumSensor.xPointWithOffset()).willReturn(x);
-    given(fulcrumSensor.yPointWithOffset()).willReturn(y);
-    given(fulcrumSensor.zPointWithOffset()).willReturn(z);
+    given(sensor.hasFulcrumId()).willReturn(true);
+    given(sensor.getFulcrumId()).willReturn(FULCRUM_ID);
+    givenFulcrumHolds(x, y, z);
+  }
 
-    given(sensor.getFulcrumId()).willReturn(FULCRUM_RECORD_ID);
-    given(fulcrumService.getSensorById(FULCRUM_RECORD_ID)).willReturn(Optional.of(fulcrumSensor));
+  private void givenFulcrumHolds(Double x, Double y, Double z) {
+    FulcrumSensor fulcrumSensor =
+        new FulcrumSensor(FULCRUM_ID, "BSW04_PP_1", List.of("Sensor"), x, y, z);
+    given(fulcrumService.findSensorByFulcrumId(FULCRUM_ID)).willReturn(Optional.of(fulcrumSensor));
+  }
+
+  private static Sensor sensor(UUID fulcrumId, OffsetDateTime lastFulcrumRefreshAt) {
+    Sensor sensor =
+        new Sensor(
+            UUID.randomUUID(),
+            "BSW04_PP_1",
+            null,
+            Das.SOL_EXPERTS,
+            fulcrumId,
+            null,
+            STORED_COORDINATES,
+            true,
+            null,
+            1,
+            List.of());
+    sensor.setLastFulcrumRefreshAt(lastFulcrumRefreshAt);
+    return sensor;
   }
 }

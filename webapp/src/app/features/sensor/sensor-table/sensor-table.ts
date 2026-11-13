@@ -1,7 +1,9 @@
-import { Component, effect, inject, signal, untracked } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { PermissionsService } from '@core/auth/permissions.service';
 import { SensorParameterRowResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import SensorEdit from '@features/sensor/sensor-edit/sensor-edit';
@@ -18,11 +20,14 @@ import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
 import { createColumns } from './columns';
 
+const MAX_NAMED_SENSORS = 10;
+
 @Component({
   selector: 'app-sensor-table',
   imports: [Table, TableHeader, TranslatePipe, MatIcon, MatButton, MatProgressSpinner, InlineError],
   templateUrl: './sensor-table.html',
   styleUrl: './sensor-table.scss',
+  providers: [DatePipe],
 })
 export default class SensorTable {
   private readonly formDialog = inject(FormDialogService);
@@ -30,14 +35,20 @@ export default class SensorTable {
   private readonly translateService = inject(TranslateService);
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
+  protected readonly permissions = inject(PermissionsService);
 
   readonly searchTerm = signal<string>('');
 
   protected wrappedCols = createColumns();
-  protected selectedSensorId = signal<string | undefined>(undefined);
+  protected selectedSensorRows = signal<SensorParameterRowResponseDto[]>([]);
+  protected selectedSensorId = computed(() => {
+    const rows = this.selectedSensorRows();
+    return rows.length === 1 ? rows[0].sensorId : undefined;
+  });
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
   protected downloading = signal(false);
+  protected refreshing = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
 
   protected datasource = createPagedDatasource(
@@ -65,7 +76,9 @@ export default class SensorTable {
   }
 
   onSelectionChanged(rows: SensorParameterRowResponseDto[]): void {
-    this.selectedSensorId.set(rows[0]?.sensorId);
+    // one row per parameter, a sensor counts once however many of its rows are selected
+    const bySensorId = new Map(rows.map((row) => [row.sensorId, row]));
+    this.selectedSensorRows.set([...bySensorId.values()]);
   }
 
   onCreate(): void {
@@ -101,6 +114,48 @@ export default class SensorTable {
     } finally {
       this.downloading.set(false);
     }
+  }
+
+  async onRefresh(): Promise<void> {
+    const rows = this.selectedSensorRows();
+    const withoutFulcrumId = rows.filter((row) => !row.fulcrumId);
+    if (withoutFulcrumId.length > 0) {
+      this.toastWithoutFulcrumId(withoutFulcrumId);
+    }
+    const sensorIds = rows.filter((row) => row.fulcrumId).map((row) => row.sensorId!);
+    // empty list = refresh of all visible sensors, not of this selection
+    if (rows.length > 0 && sensorIds.length === 0) {
+      return;
+    }
+    this.refreshing.set(true);
+    try {
+      await this.sensorService.refreshFromFulcrum(sensorIds);
+      this.toastService.success(this.translateService.translate('sensor.fulcrumRefresh.success')());
+    } catch {
+      // the global error toast already reports it
+    } finally {
+      this.refreshing.set(false);
+    }
+  }
+
+  private toastWithoutFulcrumId(rows: SensorParameterRowResponseDto[]): void {
+    this.toastService.warning(
+      this.translateService.translate('sensor.fulcrumRefresh.withoutFulcrumId', {
+        sensors: this.listCapped(rows.map((row) => row.name ?? row.sensorId!)),
+      })(),
+    );
+  }
+
+  private listCapped(sensors: string[]): string {
+    const listed = sensors.slice(0, MAX_NAMED_SENSORS);
+    const notListedCount = sensors.length - listed.length;
+    if (notListedCount === 0) {
+      return listed.join(', ');
+    }
+    return this.translateService.translate('sensor.fulcrumRefresh.andMore', {
+      sensors: listed.join(', '),
+      count: notListedCount,
+    })();
   }
 
   onSearch(term: string): void {

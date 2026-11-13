@@ -127,6 +127,8 @@ Das Spring Boot Backend fungiert hierbei als API-Gateway. Wenn externe Daten ben
 5. Die Core API mappt/formatiert die Daten in das interne MONTEIS-Format und liefert sie an das Frontend aus.
 6. Der Nutzer sieht die absoluten Live-Daten aus Fulcrum, ohne dass diese physisch in der PostgreSQL von MONTEIS gespeichert werden mussten.
 
+Die Koordinaten eines Sensors mit Fulcrum ID sind die Ausnahme: MONTEIS liest sie beim Speichern und bei einem Fulcrum Refresh (MON-173) aus Fulcrum und speichert sie zusammen mit dem Zeitpunkt des letzten Lesens. Gespiegelt wird nichts, Fulcrum wird nur auf Anfrage gelesen.
+
 [plantuml, seq-fulcrum-fetch, format="svg"]
 ....
 include::../images/fulcrum-sequence.puml[]

@@ -13,7 +13,9 @@ import ch.swisstopo.monteis.core.infrastructure.validation.Update;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.sensor.query.SensorParameterRowQueryRepository;
+import ch.swisstopo.monteis.core.modules.sensor.service.SensorFulcrumRefreshService;
 import ch.swisstopo.monteis.core.modules.sensor.service.SensorService;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.FulcrumRefreshRequestDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
@@ -24,11 +26,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -41,6 +45,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @RequestMapping(ApiPaths.SENSORS)
 public class SensorController {
   private final SensorService service;
+  private final SensorFulcrumRefreshService fulcrumRefreshService;
   private final SensorWebMapper mapper;
   private final Clock clock;
   private final PagedRequestParser pagedRequestParser;
@@ -49,12 +54,14 @@ public class SensorController {
 
   public SensorController(
       SensorService service,
+      SensorFulcrumRefreshService fulcrumRefreshService,
       SensorWebMapper mapper,
       Clock clock,
       PagedRequestParser pagedRequestParser,
       SensorCsvExportQueryRepository csvExportQueryRepository,
       SensorParameterRowQueryRepository parameterRowQueryRepository) {
     this.service = service;
+    this.fulcrumRefreshService = fulcrumRefreshService;
     this.mapper = mapper;
     this.clock = clock;
     this.pagedRequestParser = pagedRequestParser;
@@ -114,6 +121,24 @@ public class SensorController {
     LocalDate today = LocalDate.now(clock);
     return ResponseEntity.status(HttpStatus.OK)
         .body(mapper.toDto(updated, service.canWriteAnExperimentOf(id), today));
+  }
+
+  @Operation(
+      summary = "Refresh sensors from Fulcrum",
+      description =
+          "Takes the current coordinates from Fulcrum over into the given sensors, or into every"
+              + " sensor the caller can see when no sensorIds are given. Sensors the caller can't"
+              + " see or without a Fulcrum ID are left out, sensors whose Fulcrum record is missing"
+              + " or incomplete are left as they were; none of them is reported. Nothing is"
+              + " written when Fulcrum can't be read, a sensor saved meanwhile fails the refresh.")
+  @ApiResponse(responseCode = "204", description = "Sensors refreshed")
+  @PostMapping(path = ApiPaths.FULCRUM_REFRESH_SEGMENT, consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<Void> refreshFromFulcrum(@Valid @RequestBody FulcrumRefreshRequestDto dto) {
+    dto.selectedSensorIds()
+        .ifPresentOrElse(
+            sensorIds -> fulcrumRefreshService.refreshSelected(Set.copyOf(sensorIds)),
+            fulcrumRefreshService::refreshAllVisible);
+    return ResponseEntity.noContent().build();
   }
 
   @Operation(

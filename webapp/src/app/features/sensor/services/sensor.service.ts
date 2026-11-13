@@ -67,6 +67,17 @@ export class SensorService {
     }
   }
 
+  async refreshFromFulcrum(sensorIds: string[]): Promise<void> {
+    // backend rejects an empty list, absent ids mean all visible sensors
+    const request = sensorIds.length > 0 ? { sensorIds } : {};
+    try {
+      await firstValueFrom(this.api.refreshFromFulcrum(request), { defaultValue: undefined });
+    } finally {
+      // a failed refresh keeps the sensors refreshed before the failure
+      this.saveCount.update((count) => count + 1);
+    }
+  }
+
   getSensors(params: IGetRowsParams) {
     const { startRow, endRow, sortModel, filterModel } = toPagedRequestParams(params);
     return firstValueFrom(this.api.getSensors(startRow, endRow, sortModel, filterModel));

@@ -1,5 +1,7 @@
 package ch.swisstopo.monteis.core.modules.sensor.service;
 
+import static ch.swisstopo.monteis.core.modules.sensor.service.FulcrumCoordinatesMapper.coordinatesOf;
+
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSensor;
@@ -12,7 +14,8 @@ import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
-import java.util.ArrayList;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,19 +27,22 @@ public class SensorService {
   private final SensorRepository repository;
   private final SensorConfigPublisher configPublisher;
   private final FulcrumService fulcrumService;
+  private final Clock clock;
 
   public SensorService(
       SensorRepository repository,
       SensorConfigPublisher configPublisher,
-      FulcrumService fulcrumService) {
+      FulcrumService fulcrumService,
+      Clock clock) {
     this.repository = repository;
     this.configPublisher = configPublisher;
     this.fulcrumService = fulcrumService;
+    this.clock = clock;
   }
 
   @AuditChanges
   public Sensor createSensor(Sensor sensor) {
-    applyFulcrumCoordinates(sensor);
+    takeCoordinatesFromFulcrum(sensor);
 
     Sensor created = repository.create(sensor);
     for (SensorParameter parameter : created.getParameters()) {
@@ -49,7 +55,7 @@ public class SensorService {
   public Sensor updateSensor(Sensor sensor) {
     Sensor before = repository.findById(sensor.getId()).orElse(null);
 
-    applyFulcrumCoordinates(sensor);
+    takeCoordinatesFromFulcrum(sensor);
     Sensor updated = repository.update(sensor);
 
     Map<UUID, SensorParameter> parametersBefore =
@@ -67,41 +73,40 @@ public class SensorService {
     return updated;
   }
 
-  private void applyFulcrumCoordinates(Sensor sensor) {
-    if (sensor.getFulcrumId() == null) {
+  private void takeCoordinatesFromFulcrum(Sensor sensor) {
+    if (!sensor.hasFulcrumId()) {
+      sensor.setLastFulcrumRefreshAt(null);
       return;
     }
+    sensor.setCoordinates(findCoordinatesInFulcrumOrFail(sensor.getFulcrumId()));
+    sensor.setLastFulcrumRefreshAt(OffsetDateTime.now(clock));
+  }
 
-    FulcrumSensor fulcrumSensor =
-        fulcrumService
-            .getSensorById(sensor.getFulcrumId())
-            .orElseThrow(
-                () -> new ObjectBusinessValidationException("fulcrum.sensor.not-found", Map.of()));
+  private Coordinates findCoordinatesInFulcrumOrFail(UUID fulcrumId) {
+    FulcrumSensor fulcrumSensor = findInFulcrumOrFail(fulcrumId);
+    return coordinatesOf(fulcrumSensor)
+        .orElseThrow(() -> coordinatesMissing(fulcrumId, fulcrumSensor));
+  }
 
-    List<String> missing = new ArrayList<>();
-    if (fulcrumSensor.xPointWithOffset() == null) {
-      missing.add("x");
-    }
-    if (fulcrumSensor.yPointWithOffset() == null) {
-      missing.add("y");
-    }
-    if (fulcrumSensor.zPointWithOffset() == null) {
-      missing.add("z");
-    }
+  private FulcrumSensor findInFulcrumOrFail(UUID fulcrumId) {
+    return fulcrumService
+        .findSensorByFulcrumId(fulcrumId)
+        .orElseThrow(
+            () -> new ObjectBusinessValidationException("fulcrum.sensor.not-found", Map.of()));
+  }
 
-    if (!missing.isEmpty()) {
-      throw new ObjectBusinessValidationException(
-          "sensor.fulcrum.coordinatesMissing",
-          Map.of(
-              "fulcrumId", sensor.getFulcrumId().toString(),
-              "missing", String.join(", ", missing)));
-    }
+  private static ObjectBusinessValidationException coordinatesMissing(
+      UUID fulcrumId, FulcrumSensor fulcrumSensor) {
+    return new ObjectBusinessValidationException(
+        "sensor.fulcrum.coordinatesMissing",
+        Map.of(
+            "fulcrumId", fulcrumId.toString(),
+            "missing", String.join(", ", fulcrumSensor.missingCoordinateAxes())));
+  }
 
-    sensor.setCoordinates(
-        new Coordinates(
-            fulcrumSensor.xPointWithOffset(),
-            fulcrumSensor.yPointWithOffset(),
-            fulcrumSensor.zPointWithOffset()));
+  @AuditChanges
+  public Sensor saveRefreshedCoordinates(Sensor sensor) {
+    return repository.updateRefreshedCoordinates(sensor);
   }
 
   public Sensor getSensor(UUID id) {
