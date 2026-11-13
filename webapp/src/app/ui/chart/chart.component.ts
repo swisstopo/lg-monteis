@@ -98,6 +98,7 @@ registerChartJs();
 export class ChartComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+  private readonly titleRef = viewChild.required<ElementRef<HTMLElement>>('chartTitle');
   readonly title = input.required<string>();
   readonly type = input<ChartType>('scatter');
   readonly datasets = input<ChartDataset[]>([]);
@@ -217,11 +218,71 @@ export class ChartComponent {
     if (!this.instance) {
       return;
     }
-    const image = this.instance.toBase64Image('image/png');
     const link = document.createElement('a');
-    link.href = image;
+    link.href = this.composeExportImage();
     link.download = `${this.title()}.png`;
     link.click();
+  }
+
+  /**
+   * Chart.js only knows its own canvas, so the dialog title (rendered as HTML) would be missing
+   * from `toBase64Image()`. We paint the title onto an offscreen canvas, styled like the dialog
+   * heading, and draw the chart below it. The chart canvas is transparent, so an opaque surface
+   * background is filled in to keep the export readable outside the app.
+   */
+  private composeExportImage(): string {
+    const chartCanvas = this.canvasRef().nativeElement;
+    const titleEl = this.titleRef().nativeElement;
+    const titleStyle = getComputedStyle(titleEl);
+    const ratio =
+      chartCanvas.clientWidth > 0 ? chartCanvas.width / chartCanvas.clientWidth : devicePixelRatio;
+
+    const fontSize = (Number.parseFloat(titleStyle.fontSize) || 20) * ratio;
+    const lineHeight = fontSize * 1.3;
+    const padding = 16 * ratio;
+    const font = `${titleStyle.fontWeight} ${fontSize}px ${titleStyle.fontFamily}`;
+
+    const output = document.createElement('canvas');
+    const ctx = output.getContext('2d');
+    if (!ctx) {
+      return this.instance!.toBase64Image('image/png');
+    }
+    ctx.font = font;
+    const lines = this.wrapText(ctx, this.title(), chartCanvas.width - 2 * padding);
+    const headerHeight = Math.ceil(lines.length * lineHeight + 2 * padding);
+
+    output.width = chartCanvas.width;
+    output.height = headerHeight + chartCanvas.height;
+
+    // Resizing the canvas resets the context state, so styles are applied afterwards.
+    ctx.fillStyle = resolveThemePalette(chartCanvas).backgroundColor ?? '#fff';
+    ctx.fillRect(0, 0, output.width, output.height);
+
+    ctx.font = font;
+    ctx.fillStyle = titleStyle.color;
+    ctx.textBaseline = 'top';
+    lines.forEach((line, i) =>
+      ctx.fillText(line, padding, padding + i * lineHeight + (lineHeight - fontSize) / 2),
+    );
+
+    ctx.drawImage(chartCanvas, 0, headerHeight);
+    return output.toDataURL('image/png');
+  }
+
+  private wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+    const lines: string[] = [];
+    let current = '';
+    for (const word of text.split(/\s+/).filter(Boolean)) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (current && ctx.measureText(candidate).width > maxWidth) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
+    }
+    lines.push(current);
+    return lines;
   }
 
   private zoomRange(factor: number): void {
