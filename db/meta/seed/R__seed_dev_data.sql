@@ -83,31 +83,65 @@ VALUES
 -- id, the same way every other seeded entity in this file is referenced.
 INSERT INTO sensor_parameter (
     id, sensor_id, name, das_parameter_alias, type_id, unit, formula_id,
-    upper_alarm_limit, lower_alarm_limit, active, comment, version
+    lower_range_limit, upper_range_limit,
+    timeout, frequency_trigger,
+    notification_active, upper_alarm_limit, lower_alarm_limit,
+    closely_monitored, upper_special_alarm_limit, lower_special_alarm_limit,
+    active, comment, version
 )
 -- das_parameter_alias is the DAS-side field name for the measurement itself (e.g. "temperature"),
 -- not a repeat of the sensor's own das_sensor_alias - a real DAS device reports one or more named
 -- measurements, and the alias here identifies which one, independent of the device's own name.
 VALUES
-    -- Param for TEMP-1
-    ('00000000-0000-7000-8000-000000000401', '00000000-0000-7000-8000-000000000201', 'Temperature Param', 'temperature', '00000000-0000-7000-8000-000000000101', 'KELVIN',
-     '00000000-0000-7000-8000-000000000001', 100.0, -50.0, true, 'Primary temperature reading', 1),
+    -- Param for TEMP-1: every monitoring setting filled in
+    ('00000000-0000-7000-8000-000000000401', '00000000-0000-7000-8000-000000000201',
+     'Temperature Param', 'temperature', '00000000-0000-7000-8000-000000000101', 'KELVIN',
+     '00000000-0000-7000-8000-000000000001',
+     -100.0, 200.0,
+     INTERVAL '4 hours', 10,
+     true, 100.0, -50.0,
+     true, 110.0, -60.0,
+     true, 'Primary temperature reading', 1),
 
-    -- Param for PRESS-1&2
-    ('00000000-0000-7000-8000-000000000402', '00000000-0000-7000-8000-000000000202', 'Pressure Param', 'pressure', '00000000-0000-7000-8000-000000000102', 'KILOGRAM',
-     '00000000-0000-7000-8000-000000000002', 5000.0, 0.0, true, 'Primary pressure reading', 1),
+    -- Param for PRESS-1&2: range limits and notifications, no close monitoring
+    ('00000000-0000-7000-8000-000000000402', '00000000-0000-7000-8000-000000000202',
+     'Pressure Param', 'pressure', '00000000-0000-7000-8000-000000000102', 'KILOGRAM',
+     '00000000-0000-7000-8000-000000000002',
+     0.0, 6000.0,
+     INTERVAL '1 day', NULL,
+     true, 5000.0, 0.0,
+     false, NULL, NULL,
+     true, 'Primary pressure reading', 1),
 
-    -- Param for DISP-2
-    ('00000000-0000-7000-8000-000000000403', '00000000-0000-7000-8000-000000000203', 'Displacement Param', 'displacement', '00000000-0000-7000-8000-000000000103', 'METER',
-     '00000000-0000-7000-8000-000000000003', 50.0, -50.0, true, 'Primary displacement reading', 1),
+    -- Param for DISP-2: no monitoring settings
+    ('00000000-0000-7000-8000-000000000403', '00000000-0000-7000-8000-000000000203',
+     'Displacement Param', 'displacement', '00000000-0000-7000-8000-000000000103', 'METER',
+     '00000000-0000-7000-8000-000000000003',
+     NULL, NULL,
+     NULL, NULL,
+     false, 50.0, -50.0,
+     false, NULL, NULL,
+     true, 'Primary displacement reading', 1),
 
-    -- Param for FLOW-2
-    ('00000000-0000-7000-8000-000000000404', '00000000-0000-7000-8000-000000000204', 'Flow Param', 'flow', '00000000-0000-7000-8000-000000000104', 'SECONDS',
-     '00000000-0000-7000-8000-000000000004', 1500.0, 0.0, true, 'Primary flow reading', 1),
+    -- Param for FLOW-2: no monitoring settings
+    ('00000000-0000-7000-8000-000000000404', '00000000-0000-7000-8000-000000000204',
+     'Flow Param', 'flow', '00000000-0000-7000-8000-000000000104', 'SECONDS',
+     '00000000-0000-7000-8000-000000000004',
+     NULL, NULL,
+     NULL, NULL,
+     false, 1500.0, 0.0,
+     false, NULL, NULL,
+     true, 'Primary flow reading', 1),
 
-    -- Param for ADMIN
-    ('00000000-0000-7000-8000-000000000405', '00000000-0000-7000-8000-000000000205', 'Admin Flow Param', 'flow', '00000000-0000-7000-8000-000000000103', 'METER',
-     '00000000-0000-7000-8000-000000000004', 1500.0, 0.0, true, 'Admin flow parameter', 1);
+    -- Param for ADMIN: no monitoring settings
+    ('00000000-0000-7000-8000-000000000405', '00000000-0000-7000-8000-000000000205',
+     'Admin Flow Param', 'flow', '00000000-0000-7000-8000-000000000103', 'METER',
+     '00000000-0000-7000-8000-000000000004',
+     NULL, NULL,
+     NULL, NULL,
+     false, 1500.0, 0.0,
+     false, NULL, NULL,
+     true, 'Admin flow parameter', 1);
 
 
 -- 6. Link Sensors to secondary Experiments (Many-to-Many)
