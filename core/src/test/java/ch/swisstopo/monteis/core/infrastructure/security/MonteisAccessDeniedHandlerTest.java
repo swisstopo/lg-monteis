@@ -53,7 +53,7 @@ class MonteisAccessDeniedHandlerTest {
   void should_log_method_path_and_sub_at_debug_without_token_claims_or_ids() throws IOException {
     // given: an ExperimentPI whose principal carries experiment ids and a username
     var authentication = PrivilegeLevel.EXPERIMENT_PI.authentication();
-    MonteisPrincipal principal = (MonteisPrincipal) authentication.getPrincipal();
+    MonteisPrincipal principal = authentication.getPrincipal();
     SecurityContextHolder.getContext().setAuthentication(authentication);
     String path = "/api/experiments/" + PrivilegeLevel.OTHER_EXPERIMENT;
 

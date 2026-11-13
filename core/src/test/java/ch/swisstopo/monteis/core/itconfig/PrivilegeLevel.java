@@ -1,18 +1,22 @@
 package ch.swisstopo.monteis.core.itconfig;
 
-import ch.swisstopo.monteis.core.infrastructure.security.Grant;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
+import ch.swisstopo.monteis.core.infrastructure.security.Permissions;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
- * The five MON-196 privilege levels, defined once for every test: their Keycloak client roles (as
+ * The four MON-196 privilege levels, defined once for every test: their Keycloak client roles (as
  * the realm groups grant them), the {@code api:*} authorities those map to, and the experiment ids
  * a token of that level carries.
  *
@@ -21,49 +25,37 @@ import org.springframework.security.oauth2.jwt.Jwt;
  * is assigned to nobody.
  */
 public enum PrivilegeLevel {
-  BASISROLLE(List.of(), List.of(), false, false),
+  BASISROLLE(List.of(), List.of(), List.of(), List.of()),
   EXPERIMENT_USER(
-      List.of("monteis-client:experiment:read", "monteis-client:documents:read"),
-      List.of(Grant.EXPERIMENT_READ, Grant.DOCUMENTS_READ),
-      true,
-      false),
+      List.of("monteis-client:experiment:read"),
+      List.of(Permissions.EXPERIMENT_READ),
+      List.of(SeedData.EXPERIMENT_ALPHA, SeedData.EXPERIMENT_GAMMA),
+      List.of()),
   EXPERIMENT_PI(
-      List.of(
-          "monteis-client:experiment:read",
-          "monteis-client:experiment:write",
-          "monteis-client:documents:read"),
-      List.of(Grant.EXPERIMENT_READ, Grant.EXPERIMENT_WRITE, Grant.DOCUMENTS_READ),
-      true,
-      true),
-  GLOBAL_EDITOR(
-      List.of("monteis-client:experiment:write:all"),
-      List.of(Grant.EXPERIMENT_WRITE_ALL),
-      false,
-      false),
-  MONTEIS_ADMIN(
-      List.of("monteis-client:admin", "monteis-client:documents:read"),
-      List.of(Grant.ADMIN, Grant.DOCUMENTS_READ),
-      false,
-      false);
+      List.of("monteis-client:experiment:read", "monteis-client:experiment:write"),
+      List.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE),
+      List.of(SeedData.EXPERIMENT_GAMMA),
+      List.of(SeedData.EXPERIMENT_ALPHA)),
+  MONTEIS_ADMIN(List.of("monteis-client:admin"), List.of(Permissions.ADMIN), List.of(), List.of());
 
   public static final UUID ASSIGNED_EXPERIMENT = SeedData.EXPERIMENT_ALPHA;
   public static final UUID OTHER_EXPERIMENT = SeedData.EXPERIMENT_GAMMA;
   public static final UUID UNASSIGNED_EXPERIMENT = SeedData.EXPERIMENT_BETA;
 
   private final List<String> roles;
-  private final List<Grant> authorities;
-  private final boolean carriesReadIds;
-  private final boolean carriesWriteIds;
+  private final List<String> authorities;
+  private final List<UUID> readExperimentIds;
+  private final List<UUID> writeExperimentIds;
 
   PrivilegeLevel(
       List<String> roles,
-      List<Grant> authorities,
-      boolean carriesReadIds,
-      boolean carriesWriteIds) {
+      List<String> authorities,
+      List<UUID> readExperimentIds,
+      List<UUID> writeExperimentIds) {
     this.roles = roles;
     this.authorities = authorities;
-    this.carriesReadIds = carriesReadIds;
-    this.carriesWriteIds = carriesWriteIds;
+    this.readExperimentIds = readExperimentIds;
+    this.writeExperimentIds = writeExperimentIds;
   }
 
   /** The {@code monteis_access.roles} a token of this level carries. */
@@ -72,23 +64,27 @@ public enum PrivilegeLevel {
   }
 
   public List<GrantedAuthority> grantedAuthorities() {
-    return List.copyOf(authorities);
+    return authorities.stream().<GrantedAuthority>map(SimpleGrantedAuthority::new).toList();
   }
 
   public List<UUID> readExperimentIds() {
-    return carriesReadIds ? List.of(ASSIGNED_EXPERIMENT, OTHER_EXPERIMENT) : List.of();
+    return readExperimentIds;
   }
 
   public List<UUID> writeExperimentIds() {
-    return carriesWriteIds ? List.of(ASSIGNED_EXPERIMENT) : List.of();
+    return writeExperimentIds;
+  }
+
+  public Set<UUID> readableExperimentIds() {
+    return Stream.concat(readExperimentIds.stream(), writeExperimentIds.stream())
+        .collect(Collectors.toUnmodifiableSet());
   }
 
   /** The authentication {@code MonteisJwtAuthenticationConverter} produces for this level. */
   public MonteisAuthenticationToken authentication() {
-    MonteisPrincipal principal =
-        new MonteisPrincipal(
-            UUID.randomUUID(), name().toLowerCase(), readExperimentIds(), writeExperimentIds());
-    return new MonteisAuthenticationToken(null, principal, grantedAuthorities());
+    MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), name().toLowerCase());
+    return new MonteisAuthenticationToken(
+        null, principal, grantedAuthorities(), readExperimentIds(), writeExperimentIds());
   }
 
   /** A decoded access token of this level, as the resource server hands it to the converter. */

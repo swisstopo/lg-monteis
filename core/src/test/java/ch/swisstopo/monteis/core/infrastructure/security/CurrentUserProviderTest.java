@@ -25,10 +25,11 @@ class CurrentUserProviderTest {
   void should_return_subject_and_username_of_the_monteis_principal() {
     // given
     UUID subject = UUID.randomUUID();
-    MonteisPrincipal principal = new MonteisPrincipal(subject, "alice", List.of(), List.of());
+    MonteisPrincipal principal = new MonteisPrincipal(subject, "alice");
 
     SecurityContextHolder.getContext()
-        .setAuthentication(new MonteisAuthenticationToken(null, principal, List.of()));
+        .setAuthentication(
+            new MonteisAuthenticationToken(null, principal, List.of(), List.of(), List.of()));
 
     // when / then
     assertAll(

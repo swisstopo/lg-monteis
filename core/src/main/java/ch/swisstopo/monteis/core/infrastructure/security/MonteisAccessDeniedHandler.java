@@ -38,14 +38,12 @@ class MonteisAccessDeniedHandler implements AccessDeniedHandler {
       HttpServletResponse response,
       AccessDeniedException accessDeniedException)
       throws IOException {
-    if (log.isDebugEnabled()) {
-      log.atError()
-          .setMessage("Access denied: {} {} for sub {}")
-          .addArgument(request.getMethod())
-          .addArgument(request.getRequestURI())
-          .addArgument(callerSubject())
-          .log();
-    }
+    log.atDebug()
+        .setMessage("Access denied: {} {} for sub {}")
+        .addArgument(request::getMethod)
+        .addArgument(request::getRequestURI)
+        .addArgument(MonteisAccessDeniedHandler::callerSubject)
+        .log();
 
     response.setStatus(HttpStatus.FORBIDDEN.value());
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);

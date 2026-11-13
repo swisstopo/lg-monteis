@@ -34,7 +34,7 @@
                 "description": ["Grants read + write access to experiment 1 (Alpha)."]
               },
               "clientRoles": {
-                "monteis-spa": ["monteis-client:experiment:read", "monteis-client:experiment:write"]
+                "monteis-spa": ["monteis-client:experiment:write"]
               }
             }
           ]
@@ -60,7 +60,7 @@
                 "description": ["Grants read + write access to experiment 2 (Beta)."]
               },
               "clientRoles": {
-                "monteis-spa": ["monteis-client:experiment:read", "monteis-client:experiment:write"]
+                "monteis-spa": ["monteis-client:experiment:write"]
               }
             }
           ]
@@ -86,7 +86,7 @@
                 "description": ["Grants read + write access to experiment 3 (Gamma)."]
               },
               "clientRoles": {
-                "monteis-spa": ["monteis-client:experiment:read", "monteis-client:experiment:write"]
+                "monteis-spa": ["monteis-client:experiment:write"]
               }
             }
           ]

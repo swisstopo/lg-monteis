@@ -5,6 +5,7 @@ import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.OTHER_EXPERIMENT
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
@@ -417,7 +418,7 @@ class ExperimentControllerTest {
     Experiment mockDomain = mock(Experiment.class);
 
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
-    given(experimentService.updateExperiment(mockDomain)).willReturn(mockDomain);
+    given(experimentService.updateExperiment(eq(mockDomain), isNull())).willReturn(mockDomain);
     given(mapper.toDto(eq(mockDomain), eq(VisibleOwners.NONE), any(LocalDate.class)))
         .willReturn(expectedResponseDto);
 
@@ -437,7 +438,7 @@ class ExperimentControllerTest {
 
     // Verify interaction sequence
     then(mapper).should().toDomain(any(WriteExperimentDto.class));
-    then(experimentService).should().updateExperiment(mockDomain);
+    then(experimentService).should().updateExperiment(eq(mockDomain), isNull());
     then(mapper).should().toDto(eq(mockDomain), eq(VisibleOwners.NONE), any(LocalDate.class));
   }
 
@@ -509,58 +510,23 @@ class ExperimentControllerTest {
   }
 
   @Test
-  void should_forbid_a_read_only_user_to_update_without_touching_the_service() throws Exception {
-    // given: ExperimentUser may read EXPERIMENT_ID but not edit it
-    WriteExperimentDto requestDto = updateDto(EXPERIMENT_ID);
-
-    // when / then
-    mockMvc
-        .perform(
-            put("/api/experiments/{id}", EXPERIMENT_ID)
-                .with(csrf())
-                .with(authentication(PrivilegeLevel.EXPERIMENT_USER.authentication()))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestDto)))
-        .andExpect(status().isForbidden())
-        .andExpect(content().json(ACCESS_DENIED_BODY, JsonCompareMode.STRICT));
-
-    // the filter chain denied before any UPDATE could be issued (NFR2.1)
-    then(experimentService).shouldHaveNoInteractions();
-    then(mapper).shouldHaveNoInteractions();
-  }
-
-  @Test
-  void should_forbid_a_pi_to_update_an_experiment_it_may_only_read() throws Exception {
-    mockMvc
-        .perform(
-            put("/api/experiments/{id}", OTHER_EXPERIMENT_ID)
-                .with(csrf())
-                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(updateDto(OTHER_EXPERIMENT_ID))))
-        .andExpect(status().isForbidden());
-
-    then(experimentService).shouldHaveNoInteractions();
-  }
-
-  @Test
-  void should_let_a_global_editor_update_any_experiment() throws Exception {
+  void should_let_an_admin_update_any_experiment() throws Exception {
     // given
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
-    given(experimentService.updateExperiment(mockDomain)).willReturn(mockDomain);
+    given(experimentService.updateExperiment(eq(mockDomain), isNull())).willReturn(mockDomain);
 
     // when / then
     mockMvc
         .perform(
             put("/api/experiments/{id}", OTHER_EXPERIMENT_ID)
                 .with(csrf())
-                .with(authentication(PrivilegeLevel.GLOBAL_EDITOR.authentication()))
+                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateDto(OTHER_EXPERIMENT_ID))))
         .andExpect(status().isOk());
 
-    then(experimentService).should().updateExperiment(mockDomain);
+    then(experimentService).should().updateExperiment(eq(mockDomain), isNull());
   }
 
   @Test
@@ -583,8 +549,7 @@ class ExperimentControllerTest {
         List.of(
             PrivilegeLevel.BASISROLLE,
             PrivilegeLevel.EXPERIMENT_USER,
-            PrivilegeLevel.EXPERIMENT_PI,
-            PrivilegeLevel.GLOBAL_EDITOR)) {
+            PrivilegeLevel.EXPERIMENT_PI)) {
       mockMvc
           .perform(
               post("/api/experiments")
@@ -604,7 +569,7 @@ class ExperimentControllerTest {
     // given: the filter chain allowed it, but the RLS WITH CHECK rejected the row (42501)
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
-    given(experimentService.updateExperiment(mockDomain))
+    given(experimentService.updateExperiment(eq(mockDomain), isNull()))
         .willThrow(new PermissionDeniedDataAccessException("42501", null));
 
     // when / then: the same body as a filter-chain denial (NFR2.4)
@@ -624,7 +589,7 @@ class ExperimentControllerTest {
     // given
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
-    given(experimentService.updateExperiment(mockDomain))
+    given(experimentService.updateExperiment(eq(mockDomain), isNull()))
         .willThrow(new ObjectNotFoundException(Experiment.class));
 
     // when / then: no longer 422 object.deleted (BR4.11)
@@ -645,8 +610,7 @@ class ExperimentControllerTest {
     UUID ownerId = UUID.randomUUID();
     Experiment mockDomain = mock(Experiment.class);
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mockDomain);
-    given(experimentService.updateExperimentAndOwners(mockDomain, Set.of(ownerId)))
-        .willReturn(mockDomain);
+    given(experimentService.updateExperiment(mockDomain, List.of(ownerId))).willReturn(mockDomain);
 
     // when / then
     mockMvc
@@ -658,7 +622,7 @@ class ExperimentControllerTest {
                 .content(objectMapper.writeValueAsString(updateDto(EXPERIMENT_ID, ownerId))))
         .andExpect(status().isOk());
 
-    then(experimentService).should().updateExperimentAndOwners(mockDomain, Set.of(ownerId));
+    then(experimentService).should().updateExperiment(mockDomain, List.of(ownerId));
     then(experimentService).shouldHaveNoMoreInteractions();
   }
 
@@ -685,7 +649,7 @@ class ExperimentControllerTest {
     // given
     UUID ownerId = UUID.randomUUID();
     given(mapper.toDomain(any(WriteExperimentDto.class))).willReturn(mock(Experiment.class));
-    given(experimentService.updateExperimentAndOwners(any(), any()))
+    given(experimentService.updateExperiment(any(), any()))
         .willThrow(
             new FieldBusinessValidationException(
                 ExperimentOwnerService.OWNER_IDS_FIELD,

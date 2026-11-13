@@ -1,6 +1,10 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import java.util.Collection;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -15,14 +19,19 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
 
   private final @Nullable Jwt jwt;
   private final transient MonteisPrincipal principal;
+  private final ExperimentAccess experimentAccess;
 
   public MonteisAuthenticationToken(
       @Nullable Jwt jwt,
       MonteisPrincipal principal,
-      @Nullable Collection<? extends GrantedAuthority> authorities) {
+      @Nullable Collection<? extends GrantedAuthority> authorities,
+      Collection<UUID> readExperimentIds,
+      Collection<UUID> writeExperimentIds) {
     super(authorities);
     this.jwt = jwt;
     this.principal = principal;
+    this.experimentAccess =
+        ExperimentAccess.of(permissionsOf(getAuthorities()), readExperimentIds, writeExperimentIds);
     super.setAuthenticated(true);
   }
 
@@ -32,8 +41,19 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
   }
 
   @Override
-  public Object getPrincipal() {
+  public MonteisPrincipal getPrincipal() {
     return principal;
+  }
+
+  public ExperimentAccess experimentAccess() {
+    return experimentAccess;
+  }
+
+  private static Set<String> permissionsOf(Collection<GrantedAuthority> authorities) {
+    return authorities.stream()
+        .map(GrantedAuthority::getAuthority)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toUnmodifiableSet());
   }
 
   @Override
@@ -41,7 +61,10 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
     if (this == obj) {
       return true;
     }
-    return obj != null && getClass() == obj.getClass() && super.equals(obj);
+    return obj instanceof MonteisAuthenticationToken other
+        && getClass() == other.getClass()
+        && super.equals(other)
+        && experimentAccess.equals(other.experimentAccess);
   }
 
   @Override
