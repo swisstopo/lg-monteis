@@ -211,6 +211,16 @@ class PagedRequestParserTest {
   }
 
   @Test
+  void should_cap_export_request_at_the_given_max_rows() {
+    // when
+    PagedRequest parsed = parser.parseForExport(new RawExportRequest(null, null), 1000);
+
+    // then
+    assertEquals(0, parsed.startRow());
+    assertEquals(1000, parsed.limit());
+  }
+
+  @Test
   void should_default_export_request_to_empty_sort_and_filter_when_blank() {
     RawExportRequest raw = new RawExportRequest(null, null);
 
