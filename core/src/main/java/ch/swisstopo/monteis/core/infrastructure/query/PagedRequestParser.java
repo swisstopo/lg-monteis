@@ -49,8 +49,13 @@ public class PagedRequestParser {
    * client-driven startRow/endRow, so it always starts at 0.
    */
   public PagedRequest parseForExport(RawExportRequest raw) {
+    return parseForExport(raw, csvExportMaxRows);
+  }
+
+  /** Same as {@link #parseForExport(RawExportRequest)}, capped at {@code maxRows} instead. */
+  public PagedRequest parseForExport(RawExportRequest raw, int maxRows) {
     return new PagedRequest(
-        0, csvExportMaxRows, parseSortModel(raw.sortModel()), parseFilterModel(raw.filterModel()));
+        0, maxRows, parseSortModel(raw.sortModel()), parseFilterModel(raw.filterModel()));
   }
 
   private List<SortModelItem> parseSortModel(String sortModel) {
