@@ -375,6 +375,9 @@
     "error": "Failed to connect to the backend server.",
     "plot": "Plot",
     "reload": "Reload",
+    "download": "Download",
+    "downloadFailed": "Failed to download measurements as CSV.",
+    "downloadTooManyRows": "The table holds more than {{max}} entries. Narrow it down with filters to download it.",
     "form": {
       "startDate": {
         "label": "Start Date",

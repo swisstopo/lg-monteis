@@ -5,6 +5,7 @@ import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidatio
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
+import ch.swisstopo.monteis.core.infrastructure.exception.TooManyExportRowsException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumAuthenticationException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumDisabledException;
 import ch.swisstopo.monteis.core.infrastructure.fulcrum.FulcrumSyncAlreadyRunningException;
@@ -274,6 +275,17 @@ public class GlobalErrorControllerAdvice extends ResponseEntityExceptionHandler 
         ctx.errorId(),
         e.getMessage());
     ErrorDto payload = ErrorDto.global("error.paging.invalid", Map.of(ERROR_ID, ctx.errorId()));
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(payload);
+  }
+
+  @ExceptionHandler(TooManyExportRowsException.class)
+  @ApiResponse(
+      responseCode = "400",
+      description = "CSV export matches more rows than the configured maximum.",
+      content = @Content(schema = @Schema(implementation = ErrorDto.class)))
+  public ResponseEntity<ErrorDto> handleTooManyExportRows(TooManyExportRowsException e) {
+    ErrorDto payload =
+        ErrorDto.global(TooManyExportRowsException.MESSAGE_KEY, Map.of("max", e.getMaxRows()));
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(payload);
   }
 
