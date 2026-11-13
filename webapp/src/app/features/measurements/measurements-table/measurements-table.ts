@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
   computed,
@@ -25,7 +26,7 @@ import {
   MatTimepickerToggle,
 } from '@angular/material/timepicker';
 import { APP_ISO_TIMESTAMP_FORMAT } from '@core/date/date.provider';
-import { MeasurementResponseDto } from '@core/generated';
+import { ErrorDto, MeasurementResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { MeasurementsService } from '@features/measurements/services/measurements.service';
@@ -40,9 +41,6 @@ import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
 import { subDays } from 'date-fns';
 import { createColumns } from './columns';
-
-/** The most rows a CSV download may hold, a larger filtered table has to be narrowed first. */
-export const MAX_DOWNLOAD_ROWS = 1000;
 
 interface DateTimeModel {
   date: Date | null;
@@ -178,24 +176,25 @@ export default class MeasurementsTable {
     const api = this.gridApi();
     if (!api) return;
 
-    if ((this.totalCount() ?? 0) > MAX_DOWNLOAD_ROWS) {
-      this.toastService.warning(
-        this.translateService.translate('measurements-table.downloadTooManyRows', {
-          max: MAX_DOWNLOAD_ROWS,
-        })(),
-      );
-      return;
-    }
-
     this.downloading.set(true);
     try {
       const { sortModel, filterModel } = toGridFilterSortParams(api);
       const blob = await this.measurementsService.getMeasurementsCsv(sortModel, filterModel);
       this.fileDownloadService.download(blob, 'measurements.csv');
-    } catch {
-      this.toastService.error(
-        this.translateService.translate('measurements-table.downloadFailed')(),
-      );
+    } catch (error) {
+      const errorDto = await blobErrorDto(error);
+      if (errorDto?.messageKey === 'export.tooManyRows') {
+        this.toastService.warning(
+          this.translateService.translate(
+            'measurements-table.downloadTooManyRows',
+            errorDto.params,
+          )(),
+        );
+      } else {
+        this.toastService.error(
+          this.translateService.translate('measurements-table.downloadFailed')(),
+        );
+      }
     } finally {
       this.downloading.set(false);
     }
@@ -284,5 +283,15 @@ export default class MeasurementsTable {
   /** Preserves first-occurrence order. */
   private distinct<T>(values: readonly T[]): T[] {
     return [...new Set(values)];
+  }
+}
+
+/** The CSV is requested as a blob, so a failed request's ErrorDto arrives as a blob too. */
+async function blobErrorDto(error: unknown): Promise<ErrorDto | undefined> {
+  if (!(error instanceof HttpErrorResponse) || !(error.error instanceof Blob)) return undefined;
+  try {
+    return JSON.parse(await error.error.text()) as ErrorDto;
+  } catch {
+    return undefined;
   }
 }

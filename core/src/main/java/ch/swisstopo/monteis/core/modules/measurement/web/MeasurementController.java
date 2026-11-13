@@ -37,6 +37,9 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @RequestMapping("/api/measurements")
 public class MeasurementController {
 
+  /** A larger measurements export is refused, the user narrows the table down first. */
+  private static final int CSV_MAX_ROWS = 1000;
+
   private final MeasurementService measurementService;
   private final PagedRequestParser pagedRequestParser;
   private final Clock clock;
@@ -100,8 +103,8 @@ public class MeasurementController {
       summary = "Download measurements as CSV",
       description =
           "Streams all measurement rows (one per sensor parameter, with its latest reading)"
-              + " matching the optional sorting/filtering as a CSV file, capped at a"
-              + " server-configured maximum row count.")
+              + " matching the optional sorting/filtering as a CSV file. Refused with"
+              + " export.tooManyRows when more rows match than the server-configured maximum.")
   @ApiResponse(
       responseCode = "200",
       description = "Successfully streamed measurements as CSV",
@@ -112,7 +115,8 @@ public class MeasurementController {
       @RequestParam(required = false) String sortModel,
       @RequestParam(required = false) String filterModel) {
     PagedRequest exportRequest =
-        pagedRequestParser.parseForExport(new RawExportRequest(sortModel, filterModel));
+        pagedRequestParser.parseForExport(
+            new RawExportRequest(sortModel, filterModel), CSV_MAX_ROWS);
     return CsvDownload.attachment(
         "measurements.csv", writer -> csvExportQueryRepository.streamCsv(exportRequest, writer));
   }

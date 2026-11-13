@@ -1,8 +1,10 @@
 package ch.swisstopo.monteis.core.modules.measurement.jooq;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.TooManyExportRowsException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.TextFilterModel;
 import ch.swisstopo.monteis.core.itconfig.IT;
@@ -26,9 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 class JooqMeasurementCsvExportQueryRepositoryIT {
 
   private static final String HEADER =
-      "experimentName,dasKey,sensorName,sensorParameterName,sensorType,newestMeasurement,"
-          + "measureValue,unit,alarmLimits.lower,alarmLimits.upper,active,coordinates.x,"
-          + "coordinates.y,coordinates.z,comment";
+      "Experiment,DAS Key,Sensor Name,Parameter,Sensor Type,Newest Measurement,Value,"
+          + "Measurement Status,Unit,Alarm Limit From,Alarm Limit To,Active,X (Local),Y (Local),"
+          + "Z (Local),Comment";
 
   private static final List<UUID> EXPERIMENT_1_ONLY =
       List.of(UUID.fromString("00000000-0000-7000-8000-000000000301"));
@@ -55,8 +57,7 @@ class JooqMeasurementCsvExportQueryRepositoryIT {
               row);
           assertTrue(
               row.endsWith(
-                  ",KELVIN,-50.0,100.0,true,100.0,200.0,300.0,"
-                      + "Air temperature sensor near ventilation intake"),
+                  ",K,-50,100,Yes,100,200,300," + "Air temperature sensor near ventilation intake"),
               row);
         });
   }
@@ -77,14 +78,17 @@ class JooqMeasurementCsvExportQueryRepositoryIT {
 
   @Test
   @Transactional
-  void should_cap_rows_at_the_requests_limit() {
+  void should_refuse_an_export_matching_more_rows_than_the_limit() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
-          // when
-          String csv = streamToString(new PagedRequest(0, 2, List.of(), Map.of()));
+          // given
+          PagedRequest request = new PagedRequest(0, 2, List.of(), Map.of());
+          StringWriter writer = new StringWriter();
 
-          // then
-          assertEquals(3, csv.split("\r\n").length, "Header plus the two capped rows");
+          // when / then
+          assertThrows(
+              TooManyExportRowsException.class, () -> exportRepository.streamCsv(request, writer));
+          assertEquals("", writer.toString());
         });
   }
 

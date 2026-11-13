@@ -20,6 +20,7 @@ import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
+import ch.swisstopo.monteis.core.infrastructure.exception.TooManyExportRowsException;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
@@ -540,8 +541,8 @@ class MeasurementControllerTest {
   @Test
   void should_route_get_measurements_csv_and_stream_csv_content() throws Exception {
     // given
-    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
-    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    PagedRequest exportRequest = new PagedRequest(0, 1000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any(), eq(1000))).willReturn(exportRequest);
     willAnswer(
             invocation -> {
               Writer writer = invocation.getArgument(1);
@@ -568,7 +569,7 @@ class MeasurementControllerTest {
             content()
                 .string("experimentName,dasKey\r\nMont Terri Alpha,SOL_EXPERTS__TEMP-1__t\r\n"));
 
-    then(pagedRequestParser).should().parseForExport(any());
+    then(pagedRequestParser).should().parseForExport(any(), eq(1000));
     then(csvExportQueryRepository).should().streamCsv(eq(exportRequest), any());
   }
 
@@ -576,8 +577,8 @@ class MeasurementControllerTest {
   void should_return_bad_request_when_measurements_csv_export_query_rejects_the_filter()
       throws Exception {
     // given
-    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
-    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    PagedRequest exportRequest = new PagedRequest(0, 1000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any(), eq(1000))).willReturn(exportRequest);
     willThrow(new InvalidPagedRequestException("Unknown sortable/filterable column: bogus"))
         .given(csvExportQueryRepository)
         .streamCsv(eq(exportRequest), any());
@@ -593,5 +594,28 @@ class MeasurementControllerTest {
         .perform(asyncDispatch(csv))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.messageKey").value("error.paging.invalid"));
+  }
+
+  @Test
+  void should_return_bad_request_when_the_measurements_csv_export_matches_too_many_rows()
+      throws Exception {
+    // given
+    PagedRequest exportRequest = new PagedRequest(0, 1000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any(), eq(1000))).willReturn(exportRequest);
+    willThrow(new TooManyExportRowsException(1000))
+        .given(csvExportQueryRepository)
+        .streamCsv(eq(exportRequest), any());
+
+    // when / then
+    MvcResult csv =
+        mockMvc
+            .perform(get("/api/measurements/csv").with(jwt()))
+            .andExpect(request().asyncStarted())
+            .andReturn();
+    mockMvc
+        .perform(asyncDispatch(csv))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.messageKey").value("export.tooManyRows"))
+        .andExpect(jsonPath("$.params.max").value(1000));
   }
 }
