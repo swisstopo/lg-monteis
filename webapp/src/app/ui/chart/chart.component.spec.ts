@@ -214,105 +214,57 @@ describe('Chart', () => {
       expect(component.dragZoomEnabled()).toBe(false);
     });
 
-    /**
-     * jsdom has no 2D canvas context, so the export canvas gets a stub context whose
-     * `measureText` returns 10px per character.
-     */
-    function stubExportCanvas() {
-      const realCreateElement = document.createElement.bind(document);
-      const ctx = {
-        font: '',
-        fillStyle: '',
-        textBaseline: '',
-        measureText: vi.fn((text: string) => ({ width: text.length * 10 })),
-        fillRect: vi.fn(),
-        fillText: vi.fn(),
-        drawImage: vi.fn(),
-      };
-      const link = { href: '', download: '', click: vi.fn() };
-      let output: HTMLCanvasElement | undefined;
-      const createElementSpy = vi
-        .spyOn(document, 'createElement')
-        .mockImplementation((tag: string) => {
-          if (tag === 'a') return link as unknown as HTMLAnchorElement;
-          output = realCreateElement('canvas') as HTMLCanvasElement;
-          vi.spyOn(output, 'getContext').mockReturnValue(
-            ctx as unknown as CanvasRenderingContext2D,
-          );
-          vi.spyOn(output, 'toDataURL').mockReturnValue('data:image/png;base64,composed');
-          return output;
-        });
-      return { ctx, link, output: () => output!, restore: () => createElementSpy.mockRestore() };
-    }
-
-    it('should download a PNG composed of the title header and the chart', () => {
-      const chartCanvas: HTMLCanvasElement = fixture.nativeElement.querySelector('canvas');
-      chartCanvas.width = 600;
-      chartCanvas.height = 300;
-      const stub = stubExportCanvas();
-
-      try {
-        component.downloadChart();
-
-        expect(stub.ctx.fillText).toHaveBeenCalledWith(
-          'TestChart',
-          expect.any(Number),
-          expect.any(Number),
-        );
-        const headerHeight = stub.ctx.drawImage.mock.calls[0][2] as number;
-        expect(headerHeight).toBeGreaterThan(0);
-        expect(stub.ctx.drawImage).toHaveBeenCalledWith(chartCanvas, 0, headerHeight);
-        expect(stub.ctx.fillRect).toHaveBeenCalled();
-        expect(stub.output().width).toBe(600);
-        expect(stub.output().height).toBe(300 + headerHeight);
-        expect(stub.link.href).toBe('data:image/png;base64,composed');
-        expect(stub.link.download).toBe('TestChart.png');
-        expect(stub.link.click).toHaveBeenCalled();
-      } finally {
-        stub.restore();
-      }
-    });
-
-    it('should wrap a title that is wider than the chart onto several lines', () => {
-      const chartCanvas: HTMLCanvasElement = fixture.nativeElement.querySelector('canvas');
-      chartCanvas.width = 300;
-      const longTitle = Array.from({ length: 20 }, (_, i) => `word${i}`).join(' ');
-      fixture.componentRef.setInput('title', longTitle);
-      fixture.detectChanges();
-      const stub = stubExportCanvas();
-
-      try {
-        component.downloadChart();
-
-        const lines = stub.ctx.fillText.mock.calls.map((call) => call[0] as string);
-        expect(lines.length).toBeGreaterThan(1);
-        expect(lines.join(' ')).toBe(longTitle);
-      } finally {
-        stub.restore();
-      }
-    });
-
-    it('should fall back to the plain chart image when no 2D context is available', () => {
+    it('should download the chart with the Chart.js title shown only for the export', () => {
       const instance = (component as any).instance;
-      const realCreateElement = document.createElement.bind(document);
       const link = { href: '', download: '', click: vi.fn() };
       const createElementSpy = vi
         .spyOn(document, 'createElement')
-        .mockImplementation((tag: string) => {
-          if (tag === 'a') return link as unknown as HTMLAnchorElement;
-          const canvas = realCreateElement('canvas') as HTMLCanvasElement;
-          vi.spyOn(canvas, 'getContext').mockReturnValue(null);
-          return canvas;
-        });
+        .mockReturnValue(link as unknown as HTMLAnchorElement);
+      let titleDuringExport: any;
+      let exportingDuringExport: boolean | undefined;
+      instance.toBase64Image.mockImplementation(() => {
+        titleDuringExport = { ...instance.config.options.plugins.title };
+        exportingDuringExport = (component as any).exporting;
+        return 'data:image/png;base64,mock';
+      });
 
       try {
         component.downloadChart();
 
         expect(instance.toBase64Image).toHaveBeenCalledWith('image/png');
+        expect(titleDuringExport).toEqual(
+          expect.objectContaining({ display: true, text: 'TestChart' }),
+        );
+        expect(exportingDuringExport).toBe(true);
+        expect(instance.config.options.plugins.title).toEqual({ display: false });
+        expect((component as any).exporting).toBe(false);
+        expect(instance.update).toHaveBeenCalledWith('none');
         expect(link.href).toBe('data:image/png;base64,mock');
+        expect(link.download).toBe('TestChart.png');
+        expect(link.click).toHaveBeenCalled();
       } finally {
         createElementSpy.mockRestore();
       }
+    });
+
+    it('should paint the theme background only while exporting', () => {
+      const plugin = (component as any).exportBackgroundPlugin;
+      const ctx = {
+        save: vi.fn(),
+        restore: vi.fn(),
+        fillRect: vi.fn(),
+        fillStyle: '',
+        globalCompositeOperation: '',
+      };
+      const chart = { ctx, width: 600, height: 300 };
+
+      plugin.beforeDraw(chart);
+      expect(ctx.fillRect).not.toHaveBeenCalled();
+
+      (component as any).exporting = true;
+      plugin.beforeDraw(chart);
+      expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 600, 300);
+      expect(ctx.globalCompositeOperation).toBe('destination-over');
     });
 
     it('should not download anything when the chart has not been created', () => {

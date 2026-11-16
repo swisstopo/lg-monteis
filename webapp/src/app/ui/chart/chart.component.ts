@@ -22,7 +22,7 @@ import {
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ActiveElement, ChartConfiguration, ChartEvent, Chart as ChartJs } from 'chart.js';
+import { ActiveElement, ChartConfiguration, ChartEvent, Chart as ChartJs, Plugin } from 'chart.js';
 import { buildChartConfig } from './chart-config.builder';
 import { registerChartJs } from './chart-registry';
 import { resolveThemePalette } from './chart-theme.util';
@@ -98,7 +98,6 @@ registerChartJs();
 export class ChartComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
-  private readonly titleRef = viewChild.required<ElementRef<HTMLElement>>('chartTitle');
   readonly title = input.required<string>();
   readonly type = input<ChartType>('scatter');
   readonly datasets = input<ChartDataset[]>([]);
@@ -109,6 +108,7 @@ export class ChartComponent {
   readonly rangeSelected = output<ChartRangeEvent>();
 
   private instance?: ChartJs;
+  private exporting = false;
   private lastHoverKey?: string;
   private hoverRafId?: number;
   private readonly palette = signal<ChartThemePalette>({});
@@ -214,76 +214,56 @@ export class ChartComponent {
     this.dragZoomEnabled.update((enabled) => !enabled);
   }
 
+  /**
+   * The dialog title is HTML, so it is not part of the chart canvas. For the export, the Chart.js
+   * title plugin is switched on for one synchronous redraw, captured with `toBase64Image()`, and
+   * switched off again before the browser paints. The canvas is transparent, so the export also
+   * gets the theme's surface colour as background (see `exportBackgroundPlugin`).
+   */
   public downloadChart(): void {
     if (!this.instance) {
       return;
     }
+    const plugins = ((this.instance.config as ChartConfiguration).options!.plugins ??= {});
+    const previousTitle = plugins.title;
+    plugins.title = {
+      display: true,
+      text: this.title(),
+      color: this.palette().textColor,
+      font: { size: 18, weight: 'bold' },
+    };
+    this.exporting = true;
+    this.instance.update('none');
+    const image = this.instance.toBase64Image('image/png');
+    plugins.title = previousTitle;
+    this.exporting = false;
+    this.instance.update('none');
+
     const link = document.createElement('a');
-    link.href = this.composeExportImage();
+    link.href = image;
     link.download = `${this.title()}.png`;
     link.click();
   }
 
   /**
-   * Chart.js only knows its own canvas, so the dialog title (rendered as HTML) would be missing
-   * from `toBase64Image()`. We paint the title onto an offscreen canvas, styled like the dialog
-   * heading, and draw the chart below it. The chart canvas is transparent, so an opaque surface
-   * background is filled in to keep the export readable outside the app.
+   * Chart.js has no background option; this is the inline plugin its docs recommend
+   * (https://www.chartjs.org/docs/latest/configuration/canvas-background.html), active only
+   * while exporting.
    */
-  private composeExportImage(): string {
-    const chartCanvas = this.canvasRef().nativeElement;
-    const titleEl = this.titleRef().nativeElement;
-    const titleStyle = getComputedStyle(titleEl);
-    const ratio =
-      chartCanvas.clientWidth > 0 ? chartCanvas.width / chartCanvas.clientWidth : devicePixelRatio;
-
-    const fontSize = (Number.parseFloat(titleStyle.fontSize) || 20) * ratio;
-    const lineHeight = fontSize * 1.3;
-    const padding = 16 * ratio;
-    const font = `${titleStyle.fontWeight} ${fontSize}px ${titleStyle.fontFamily}`;
-
-    const output = document.createElement('canvas');
-    const ctx = output.getContext('2d');
-    if (!ctx) {
-      return this.instance!.toBase64Image('image/png');
-    }
-    ctx.font = font;
-    const lines = this.wrapText(ctx, this.title(), chartCanvas.width - 2 * padding);
-    const headerHeight = Math.ceil(lines.length * lineHeight + 2 * padding);
-
-    output.width = chartCanvas.width;
-    output.height = headerHeight + chartCanvas.height;
-
-    // Resizing the canvas resets the context state, so styles are applied afterwards.
-    ctx.fillStyle = resolveThemePalette(chartCanvas).backgroundColor ?? '#fff';
-    ctx.fillRect(0, 0, output.width, output.height);
-
-    ctx.font = font;
-    ctx.fillStyle = titleStyle.color;
-    ctx.textBaseline = 'top';
-    lines.forEach((line, i) =>
-      ctx.fillText(line, padding, padding + i * lineHeight + (lineHeight - fontSize) / 2),
-    );
-
-    ctx.drawImage(chartCanvas, 0, headerHeight);
-    return output.toDataURL('image/png');
-  }
-
-  private wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-    const lines: string[] = [];
-    let current = '';
-    for (const word of text.split(/\s+/).filter(Boolean)) {
-      const candidate = current ? `${current} ${word}` : word;
-      if (current && ctx.measureText(candidate).width > maxWidth) {
-        lines.push(current);
-        current = word;
-      } else {
-        current = candidate;
+  private readonly exportBackgroundPlugin: Plugin = {
+    id: 'exportBackground',
+    beforeDraw: (chart) => {
+      if (!this.exporting) {
+        return;
       }
-    }
-    lines.push(current);
-    return lines;
-  }
+      const { ctx } = chart;
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.fillStyle = this.palette().backgroundColor ?? '#fff';
+      ctx.fillRect(0, 0, chart.width, chart.height);
+      ctx.restore();
+    },
+  };
 
   private zoomRange(factor: number): void {
     if (!this.instance || !this.initialDateRange) {
@@ -341,6 +321,7 @@ export class ChartComponent {
     const plugins = config.options?.plugins ?? {};
     return {
       ...config,
+      plugins: [...(config.plugins ?? []), this.exportBackgroundPlugin],
       options: {
         ...config.options,
         onClick: (event, elements) => this.emitPointEvent(event, elements, this.pointClick),
