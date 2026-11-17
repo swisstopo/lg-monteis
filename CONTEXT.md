@@ -33,6 +33,28 @@ _Avoid_: Sync, import, Aktualisieren (alone)
 When MONTEIS last read a Sensor's coordinates from Fulcrum, whether or not they changed; a Sensor without a Fulcrum ID has none.
 _Avoid_: Last sync, updated at
 
+## Alarming
+
+**Sensor range**:
+The plausibility limits of a sensor parameter, given by the sensor's manufacturer and set by a Monteis-Admin; values outside it are marked in colour.
+_Avoid_: Range (alone), Alarm limits
+
+**Alarm limits**:
+The limits of a sensor parameter whose violation raises an alarm.
+_Avoid_: Sensor range, Special alarm limits
+
+**Notification active**:
+A sensor parameter whose alarms go to the Recipients of every Experiment it belongs to; a Monteis-Admin or a PI of the sensor's main Experiment switches it on or off.
+_Avoid_: Under alarm, monitored, Alarm gesetzt
+
+**Closely monitored**:
+A sensor parameter with its own special alarm limits, set only by a Monteis-Admin, whose alarms go to a recipient list of Monteis-Admins instead of the Experiments' Recipients.
+_Avoid_: Spezialalarm, special alarm (alone), Notification active
+
+**Recipient**:
+A user with access to an Experiment who gets the alarms of its Notification active sensor parameters; until a PI or Monteis-Admin first saves the list, the Experiment's PIs are its Recipients.
+_Avoid_: Empfänger, subscriber
+
 ## Documents from Fulcrum
 
 **Fulcrum Document**:
