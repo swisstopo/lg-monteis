@@ -33,7 +33,7 @@ public class NotificationParameterController {
   @GetMapping(
       path = ApiPaths.EXPERIMENT_NOTIFICATION_PARAMETERS,
       produces = MediaType.APPLICATION_JSON_VALUE)
-  public List<NotificationParameterResponseDto> findNotificationParameters(
+  public List<NotificationParameterResponseDto> findNotificationParametersOf(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
     return service.findNotificationParametersOf(id);
   }
