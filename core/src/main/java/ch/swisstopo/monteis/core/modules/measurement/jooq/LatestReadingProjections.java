@@ -12,9 +12,8 @@ import org.jooq.impl.DSL;
 
 public final class LatestReadingProjections {
 
-  // Correlated per sensor_parameter, joined once by a query and reused by its projection and its
-  // sort/filter map so "dasKey" resolves against the exact same lateral alias either way. Reads the
-  // secured view, so row-level security applies.
+  // correlated per sensor_parameter: join once per query, so DAS_KEY and a sort/filter on "dasKey"
+  // hit the same lateral alias; reads the secured view => row-level security applies
   public static final Table<?> LATEST_READINGS =
       lateral(
               select(
