@@ -5,13 +5,13 @@ import {
   MeasurementResponseDto,
   SensorParameterResponseDto,
 } from '@core/generated';
+import { measurementStateClass } from '@features/measurements/models/measurement-state';
 import { getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { TranslateService } from '@ngx-translate/core';
 import { MultiSelectFilter } from '@ui/filters/multi-select-filter/multi-select-filter';
 import { TableColumn } from '@ui/table/table.types';
 import { firstValueFrom } from 'rxjs';
 import { TrendCellRenderer } from './trend-cell-renderer';
-import MeasurementStatusEnum = MeasurementResponseDto.MeasurementStatusEnum;
 
 export function createColumns(datePipe: DatePipe): TableColumn<MeasurementResponseDto>[] {
   const translateService = inject(TranslateService);
@@ -23,12 +23,6 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       { displayName: translateService.translate('sensor.active.column.yes')(), value: 'true' },
       { displayName: translateService.translate('sensor.active.column.no')(), value: 'false' },
     ]);
-
-  const MEASUREMENT_STATE_CLASS: Record<MeasurementStatusEnum, string> = {
-    [MeasurementStatusEnum.Correct]: '',
-    [MeasurementStatusEnum.TooLow]: 'measurement-state-alarm',
-    [MeasurementStatusEnum.TooHigh]: 'measurement-state-alarm',
-  };
 
   return [
     {
@@ -85,10 +79,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
       sortable: true,
       filter: 'agNumberColumnFilter',
       valueFormatter: (params) => (params.value != null ? Number(params.value).toFixed(2) : '-'),
-      cellClass: (params) =>
-        params.data?.measurementStatus
-          ? MEASUREMENT_STATE_CLASS[params.data.measurementStatus]
-          : '',
+      cellClass: (params) => measurementStateClass(params.data?.measurementStatus),
     },
     {
       field: 'unit',
