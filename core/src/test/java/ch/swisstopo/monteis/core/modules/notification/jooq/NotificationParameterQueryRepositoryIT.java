@@ -94,6 +94,7 @@ class NotificationParameterQueryRepositoryIT {
   }
 
   @Test
+  @Transactional
   void should_carry_the_newest_reading_and_its_measurement_state() {
     // given
     var newest =
