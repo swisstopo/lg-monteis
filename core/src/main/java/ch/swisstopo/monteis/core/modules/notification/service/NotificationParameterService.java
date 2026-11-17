@@ -12,17 +12,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationParameterService {
 
   private final ExperimentRepository experimentRepository;
-  private final NotificationParameterQuery query;
+  private final NotificationParameterQuery notificationParameterQuery;
 
   public NotificationParameterService(
-      ExperimentRepository experimentRepository, NotificationParameterQuery query) {
+      ExperimentRepository experimentRepository,
+      NotificationParameterQuery notificationParameterQuery) {
     this.experimentRepository = experimentRepository;
-    this.query = query;
+    this.notificationParameterQuery = notificationParameterQuery;
   }
 
   @Transactional(readOnly = true)
   public List<NotificationParameterResponseDto> findNotificationParametersOf(UUID experimentId) {
     experimentRepository.requireVisible(experimentId);
-    return query.findNotificationParametersOf(experimentId);
+    return notificationParameterQuery.findNotificationParametersOf(experimentId);
   }
 }
