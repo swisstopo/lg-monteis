@@ -2,6 +2,8 @@ package ch.swisstopo.monteis.core.modules.measurement.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
+import static ch.swisstopo.monteis.core.modules.measurement.jooq.LatestReadingProjections.DAS_KEY;
+import static ch.swisstopo.monteis.core.modules.measurement.jooq.LatestReadingProjections.LATEST_READINGS;
 import static org.jooq.Records.mapping;
 import static org.jooq.impl.DSL.*;
 
@@ -26,7 +28,6 @@ import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Record;
 import org.jooq.Result;
-import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,38 +38,6 @@ public class MeasurementQueryRepository implements MeasurementQuery {
 
   private final DSLContext dsl;
   private final Clock clock;
-
-  // Correlated per sensor_parameter, joined once below and reused by both the projection and the
-  // sort/filter map so "dasKey" resolves against the exact same lateral alias either way. Also
-  // backs findSensorDetail. Reads the secured view, so row-level security applies.
-  static final Table<?> LATEST_READINGS =
-      lateral(
-              select(
-                      SENSOR_READING_SECURED.TIMESTAMP,
-                      SENSOR_READING_SECURED.NORM_VALUE,
-                      SENSOR_READING_SECURED.RAW_VALUE,
-                      SENSOR_READING_SECURED.DAS_KEY,
-                      SENSOR_READING_SECURED.STATUS)
-                  .from(SENSOR_READING_SECURED)
-                  .where(SENSOR_READING_SECURED.SENSOR_PARAMETER_ID.eq(SENSOR_PARAMETER.ID))
-                  .orderBy(SENSOR_READING_SECURED.TIMESTAMP.desc())
-                  .limit(1))
-          .as("latest_readings");
-
-  // Prefers the das_key actually stored on the latest reading - readings keep the key that was
-  // valid when they were ingested even if the sensor/parameter alias is later remapped (see
-  // db/meta/schema/V14) - falling back to composing it from current metadata (mirrors
-  // ch.swisstopo.monteis.contracts.DasKey.compose) for a parameter with no readings yet.
-  private static final Field<String> DAS_KEY =
-      DSL.coalesce(
-              LATEST_READINGS.field(SENSOR_READING_SECURED.DAS_KEY),
-              DSL.concat(
-                  SENSORS.DAS,
-                  DSL.inline("__"),
-                  SENSORS.DAS_SENSOR_ALIAS,
-                  DSL.inline("__"),
-                  SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
-          .as("das_key");
 
   private static final Map<String, Field<?>> MEASUREMENT_COLUMNS_BY_COL_ID =
       Map.ofEntries(
@@ -254,7 +223,8 @@ public class MeasurementQueryRepository implements MeasurementQuery {
         request.filterModel() != null
             && (request.filterModel().containsKey("measureValue")
                 || request.filterModel().containsKey("newestMeasurement")
-                // dasKey now resolves against latest_readings too (see DAS_KEY above)
+                // dasKey now resolves against latest_readings too (see
+                // LatestReadingProjections.DAS_KEY)
                 || request.filterModel().containsKey("dasKey"));
 
     int totalCount =
@@ -268,7 +238,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
 
   // The per-row correlated "trend" subquery used to re-run this range scan once per page row
   // across the FDW link into TimescaleDB (N round trips). Since trend is display-only - it never
-  // participates in sort/filter/pagination, unlike latest_readings above - it can be split out
+  // participates in sort/filter/pagination, unlike latest_readings - it can be split out
   // into a single batched range scan for exactly this page's parameter ids instead.
   private Map<UUID, List<ChartPointDto>> fetchTrends(List<MeasurementRow> rows) {
     if (rows.isEmpty()) {
