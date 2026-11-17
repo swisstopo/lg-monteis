@@ -106,6 +106,14 @@ class SecurityConfigAuthorizationTest {
             HttpMethod.GET,
             "/api/experiments/" + ASSIGNED_EXPERIMENT + "/owner-candidates",
             adminOnly),
+        Arguments.of(
+            HttpMethod.GET,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/notification-parameters",
+            assignedExperiment),
+        Arguments.of(
+            HttpMethod.GET,
+            "/api/experiments/" + OTHER_EXPERIMENT + "/notification-parameters",
+            allExperiments),
         Arguments.of(HttpMethod.GET, "/api/sensors", everyone),
         Arguments.of(HttpMethod.GET, sensor, everyone),
         Arguments.of(HttpMethod.POST, "/api/sensors", adminOnly),
@@ -275,6 +283,7 @@ class SecurityConfigAuthorizationTest {
     @GetMapping({
       "/api/experiments/{id}",
       "/api/experiments/{id}/documents",
+      "/api/experiments/{id}/notification-parameters",
       "/api/organisations/{id}",
       "/api/sensors/{id}/documents",
       "/api/sensors/{id}"
