@@ -1,16 +1,11 @@
 import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
 import { NotifyingParameterResponseDto } from '@core/generated';
+import { measurementStateClass } from '@features/measurements/models/measurement-state';
 import { getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { TranslateService } from '@ngx-translate/core';
 import { TableColumn } from '@ui/table/table.types';
 import { SensorParameterCellRenderer } from './sensor-parameter-cell-renderer';
-import MeasurementStatusEnum = NotifyingParameterResponseDto.MeasurementStatusEnum;
-
-const ALARM_STATES: readonly MeasurementStatusEnum[] = [
-  MeasurementStatusEnum.TooLow,
-  MeasurementStatusEnum.TooHigh,
-];
 
 export function sensorParameterLabel(parameter: NotifyingParameterResponseDto): string {
   return parameter.sensorParameterName
@@ -38,6 +33,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParamete
       cellRenderer: SensorParameterCellRenderer,
       sortable: true,
       sort: 'asc',
+      comparator: (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' }),
       filter: false,
       flex: 2,
     },
@@ -46,10 +42,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParamete
       headerName: translateService.translate('notification.parameters.column.lastMeasurement')(),
       valueGetter: (params) => params.data?.newestMeasurement,
       valueFormatter: (params) => (params.data ? formatLastMeasurement(params.data) : '-'),
-      cellClass: (params) =>
-        params.data?.measurementStatus && ALARM_STATES.includes(params.data.measurementStatus)
-          ? 'measurement-state-alarm'
-          : '',
+      cellClass: (params) => measurementStateClass(params.data?.measurementStatus),
       sortable: true,
       filter: false,
       flex: 2,
