@@ -1,17 +1,37 @@
 import { EnvironmentInjector, runInInjectionContext } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { ActivatedRouteSnapshot, convertToParamMap, RouterStateSnapshot } from '@angular/router';
+import { CurrentUserDto } from '@core/generated';
 import { firstValueFrom, isObservable, Observable, of } from 'rxjs';
 import { describe, expect, it } from 'vitest';
-import { ADMIN, AuthorizationCheck, authorizationGuard } from './authorization.guard';
+import {
+  ADMIN,
+  AuthorizationCheck,
+  authorizationGuard,
+  WRITE_EXPERIMENT,
+} from './authorization.guard';
 import { PermissionsService } from './permissions.service';
 
-function runGuard(check: AuthorizationCheck, isAdmin = false): Promise<boolean> {
+const READER: CurrentUserDto = {
+  isAdmin: false,
+  canWriteAllExperiments: false,
+  writeExperimentIds: [],
+  canAccessDocuments: false,
+};
+
+function runGuard(
+  check: AuthorizationCheck,
+  user: Partial<CurrentUserDto> = {},
+  params: Record<string, string> = {},
+): Promise<boolean> {
   TestBed.configureTestingModule({
-    providers: [{ provide: PermissionsService, useValue: { currentUser$: of({ isAdmin }) } }],
+    providers: [
+      { provide: PermissionsService, useValue: { currentUser$: of({ ...READER, ...user }) } },
+    ],
   });
+  const route = { paramMap: convertToParamMap(params) } as ActivatedRouteSnapshot;
   const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
-    authorizationGuard(check)({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
+    authorizationGuard(check)(route, {} as RouterStateSnapshot),
   );
   return isObservable(result)
     ? firstValueFrom(result as Observable<boolean>)
@@ -31,10 +51,46 @@ describe('authorizationGuard', () => {
   });
 
   it('lets an admin through ADMIN', async () => {
-    await expect(runGuard(ADMIN, true)).resolves.toBe(true);
+    await expect(runGuard(ADMIN, { isAdmin: true })).resolves.toBe(true);
   });
 
   it('blocks a non-admin at ADMIN', async () => {
-    await expect(runGuard(ADMIN, false)).resolves.toBe(false);
+    await expect(runGuard(ADMIN, { isAdmin: false })).resolves.toBe(false);
+  });
+
+  it('passes the route to the check', async () => {
+    let received: ActivatedRouteSnapshot | undefined;
+    const check: AuthorizationCheck = (_permissions, route) => {
+      received = route;
+      return true;
+    };
+
+    await runGuard(check, {}, { experimentId: 'x' });
+
+    expect(received?.paramMap.get('experimentId')).toBe('x');
+  });
+
+  it('lets a PI of the experiment in the route through WRITE_EXPERIMENT', async () => {
+    const pi = { writeExperimentIds: ['x'] };
+
+    await expect(runGuard(WRITE_EXPERIMENT, pi, { experimentId: 'x' })).resolves.toBe(true);
+  });
+
+  it('lets a user who can write every experiment through WRITE_EXPERIMENT', async () => {
+    const globalEditor = { canWriteAllExperiments: true };
+
+    await expect(runGuard(WRITE_EXPERIMENT, globalEditor, { experimentId: 'x' })).resolves.toBe(
+      true,
+    );
+  });
+
+  it('blocks a PI of another experiment at WRITE_EXPERIMENT', async () => {
+    const piOfY = { writeExperimentIds: ['y'] };
+
+    await expect(runGuard(WRITE_EXPERIMENT, piOfY, { experimentId: 'x' })).resolves.toBe(false);
+  });
+
+  it('blocks a reader at WRITE_EXPERIMENT', async () => {
+    await expect(runGuard(WRITE_EXPERIMENT, {}, { experimentId: 'x' })).resolves.toBe(false);
   });
 });
