@@ -1,5 +1,14 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, inject, input, resource } from '@angular/core';
+import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  resource,
+} from '@angular/core';
 import {
   ExperimentControllerService,
   NotifyingParameterControllerService,
@@ -41,7 +50,15 @@ export default class NotificationPage {
       firstValueFrom(this.notifyingParameterApi.findNotifyingParametersOf(experimentId)),
   });
 
-  // the parameter request already toasts an unknown id, a second toast would only repeat it
+  // unknown id => interceptor toast is enough, inline error would repeat it
+  protected readonly loadFailed = computed(() => {
+    const error = this.parameters.error();
+    return (
+      !!error && !(error instanceof HttpErrorResponse && error.status === HttpStatusCode.NotFound)
+    );
+  });
+
+  // parameter request already toasts unknown id, 2nd toast would repeat it
   private readonly experiment = resource({
     params: () => this.experimentId(),
     loader: ({ params: experimentId }) =>
@@ -55,7 +72,7 @@ export default class NotificationPage {
   constructor(view: WorkbenchView) {
     effect(() => {
       const name = this.experiment.hasValue() ? (this.experiment.value().name ?? '') : '';
-      view.title = this.translateService.translate('tab.notification', { name })();
+      view.title = this.translateService.translate('tab.notification', { name })().trim();
     });
   }
 
