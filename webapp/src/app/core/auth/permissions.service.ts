@@ -11,10 +11,7 @@ const NO_PERMISSIONS: CurrentUserDto = {
   canAccessDocuments: false,
 };
 
-/**
- * Mirrors the backend Capabilities. `canWriteAllExperiments` already covers admins, so the admin
- * rule lives in the backend only.
- */
+// mirrors backend Capabilities: canWriteAllExperiments covers admins => admin rule only in backend
 export function canWrite(currentUser: CurrentUserDto, experimentId: string): boolean {
   return (
     currentUser.canWriteAllExperiments || currentUser.writeExperimentIds.includes(experimentId)

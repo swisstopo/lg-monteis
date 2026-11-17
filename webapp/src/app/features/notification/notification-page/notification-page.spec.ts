@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   ExperimentControllerService,
@@ -9,12 +10,12 @@ import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import translationsEN from '@public/i18n/en.json';
 import { WorkbenchView } from '@scion/workbench';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
-import { of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import NotificationPage from './notification-page';
 import MeasurementStatusEnum = NotifyingParameterResponseDto.MeasurementStatusEnum;
 
-// main.ts registers these for the app, the test bed never runs it
+// registered in main.ts, test bed never runs it
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 function parameter(
@@ -46,8 +47,18 @@ describe('NotificationPage', () => {
     view = { title: undefined };
   });
 
-  async function render(...parameters: NotifyingParameterResponseDto[]): Promise<PageView> {
-    notifyingParameterApi.findNotifyingParametersOf.mockReturnValue(of(parameters));
+  function render(...parameters: NotifyingParameterResponseDto[]): Promise<PageView> {
+    return renderAnswering(of(parameters));
+  }
+
+  function unknownExperiment(): Observable<never> {
+    return throwError(() => new HttpErrorResponse({ status: 404 }));
+  }
+
+  async function renderAnswering(
+    response: Observable<NotifyingParameterResponseDto[]>,
+  ): Promise<PageView> {
+    notifyingParameterApi.findNotifyingParametersOf.mockReturnValue(response);
     TestBed.configureTestingModule({
       imports: [NotificationPage],
       providers: [
@@ -76,6 +87,30 @@ describe('NotificationPage', () => {
     await render(parameter());
 
     await vi.waitFor(() => expect(view.title).toBe('Notifications Gas Path'));
+  });
+
+  it('titles the tab without a name until the experiment is known', async () => {
+    experimentApi.getExperiment.mockReturnValue(unknownExperiment());
+
+    await render(parameter());
+
+    await vi.waitFor(() => expect(view.title).toBe('Notifications'));
+  });
+
+  it('leaves an unknown experiment to the error toast, without an inline error', async () => {
+    experimentApi.getExperiment.mockReturnValue(unknownExperiment());
+
+    const page = await renderAnswering(unknownExperiment());
+
+    await vi.waitFor(() => expect(view.title).toBe('Notifications'));
+    expect(page.hasInlineError()).toBe(false);
+    expect(page.hasTable()).toBe(false);
+  });
+
+  it('shows an inline error when the parameters cannot be loaded', async () => {
+    const page = await renderAnswering(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    await vi.waitFor(() => expect(page.hasInlineError()).toBe(true));
   });
 
   it('names a row by sensor and parameter, or by the DAS key without a parameter name', async () => {
@@ -110,6 +145,17 @@ describe('NotificationPage', () => {
       'Extensometer – Y',
       'Tiltmeter – X',
     ]);
+  });
+
+  it('sorts by sensor parameter regardless of case', async () => {
+    const page = await render(
+      parameter({ sensorParameterId: 'p1', sensorName: 'beta', sensorParameterName: 'X' }),
+      parameter({ sensorParameterId: 'p2', sensorName: 'Gamma', sensorParameterName: 'X' }),
+      parameter({ sensorParameterId: 'p3', sensorName: 'Alpha', sensorParameterName: 'X' }),
+    );
+
+    await page.rowsShown(3);
+    expect(page.column('sensorParameter')).toEqual(['Alpha – X', 'beta – X', 'Gamma – X']);
   });
 
   it('sorts by last measurement when its header is clicked', async () => {
@@ -220,7 +266,7 @@ class PageView {
   async rowsShown(count: number): Promise<void> {
     await vi.waitFor(() => {
       expect(this.rows()).toHaveLength(count);
-      // angular cell renderers fill their cells a tick after ag-grid adds the rows
+      // angular cell renderers fill cells a tick after ag-grid adds rows
       expect(this.column('sensorParameter')).not.toContain('');
     });
   }
@@ -251,6 +297,10 @@ class PageView {
 
   text(): string {
     return this.element.textContent ?? '';
+  }
+
+  hasInlineError(): boolean {
+    return this.element.querySelector('app-inline-error') !== null;
   }
 
   hasTable(): boolean {

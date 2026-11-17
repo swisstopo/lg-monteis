@@ -585,7 +585,7 @@
   },
   "notification": {
     "parameters": {
-      "title": "Sensor parameters",
+      "title": "Notifying parameters",
       "column": {
         "sensorParameter": "Sensor parameter",
         "lastMeasurement": "Last measurement",
@@ -593,7 +593,7 @@
       },
       "inactive": "inactive",
       "empty": "No sensor parameter is Notification active yet",
-      "error": "Failed to load the sensor parameters."
+      "error": "Failed to load the notifying parameters."
     }
   }
 }
