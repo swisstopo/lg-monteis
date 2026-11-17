@@ -466,7 +466,8 @@
     "organisation": "Organisations",
     "measurements-table": "Measurements",
     "measurements-visualization": "Measurements 3D View",
-    "fulcrumDocument": "Fulcrum Documents"
+    "fulcrumDocument": "Fulcrum Documents",
+    "notification": "Notifications {{name}}"
   },
   "tableHeader": {
     "search": "Search"
@@ -575,6 +576,19 @@
     "statusUnknown": "The sync status could not be loaded.",
     "error": {
       "start": "The sync with Fulcrum could not be started."
+    }
+  },
+  "notification": {
+    "parameters": {
+      "title": "Sensor parameters",
+      "column": {
+        "sensorParameter": "Sensor parameter",
+        "lastMeasurement": "Last measurement",
+        "details": "Details"
+      },
+      "inactive": "inactive",
+      "empty": "No sensor parameter is Notification active yet",
+      "error": "Failed to load the sensor parameters."
     }
   }
 }

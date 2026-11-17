@@ -1,0 +1,18 @@
+<div class="notification-panel">
+  <h2>{{ 'notification.parameters.title' | translate }}</h2>
+  @if (parameters.error()) {
+    <app-inline-error [message]="'notification.parameters.error' | translate"></app-inline-error>
+  } @else if (parameters.hasValue() && parameters.value().length === 0) {
+    <p class="empty-state" data-testid="empty-state">
+      {{ 'notification.parameters.empty' | translate }}
+    </p>
+  } @else {
+    <app-table
+      [columns]="columns"
+      [rows]="parameters.value()"
+      [gridOptions]="gridOptions"
+      [getRowId]="getRowId"
+    >
+    </app-table>
+  }
+</div>

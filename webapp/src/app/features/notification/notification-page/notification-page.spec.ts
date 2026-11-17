@@ -1,0 +1,270 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  ExperimentControllerService,
+  NotifyingParameterControllerService,
+  NotifyingParameterResponseDto,
+  WriteSensorParameterDto,
+} from '@core/generated';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
+import translationsEN from '@public/i18n/en.json';
+import { WorkbenchView } from '@scion/workbench';
+import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
+import { of } from 'rxjs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import NotificationPage from './notification-page';
+import MeasurementStatusEnum = NotifyingParameterResponseDto.MeasurementStatusEnum;
+
+// main.ts registers these for the app, the test bed never runs it
+ModuleRegistry.registerModules([AllCommunityModule]);
+
+function parameter(
+  overrides: Partial<NotifyingParameterResponseDto> = {},
+): NotifyingParameterResponseDto {
+  return {
+    sensorParameterId: 'p1',
+    sensorName: 'Piezometer',
+    sensorParameterName: 'Pressure',
+    dasKey: 'DAS-1',
+    unit: WriteSensorParameterDto.UnitEnum.Meter,
+    newestMeasurement: '2026-11-17T09:30:00Z',
+    measureValue: 12.5,
+    sensorActive: true,
+    sensorParameterActive: true,
+    measurementStatus: MeasurementStatusEnum.Correct,
+    ...overrides,
+  };
+}
+
+describe('NotificationPage', () => {
+  let notifyingParameterApi: { findNotifyingParametersOf: ReturnType<typeof vi.fn> };
+  let experimentApi: { getExperiment: ReturnType<typeof vi.fn> };
+  let view: { title: string | undefined };
+
+  beforeEach(() => {
+    notifyingParameterApi = { findNotifyingParametersOf: vi.fn(() => of([parameter()])) };
+    experimentApi = { getExperiment: vi.fn(() => of({ id: 'x', name: 'Gas Path' })) };
+    view = { title: undefined };
+  });
+
+  async function render(...parameters: NotifyingParameterResponseDto[]): Promise<PageView> {
+    notifyingParameterApi.findNotifyingParametersOf.mockReturnValue(of(parameters));
+    TestBed.configureTestingModule({
+      imports: [NotificationPage],
+      providers: [
+        provideTranslateService(),
+        { provide: WorkbenchView, useValue: view },
+        { provide: NotifyingParameterControllerService, useValue: notifyingParameterApi },
+        { provide: ExperimentControllerService, useValue: experimentApi },
+      ],
+    });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', translationsEN);
+    translate.use('en');
+    const fixture = TestBed.createComponent(NotificationPage);
+    fixture.componentRef.setInput('experimentId', 'x');
+    await fixture.whenStable();
+    return new PageView(fixture);
+  }
+
+  it('loads the notifying parameters of the experiment in the route', async () => {
+    await render(parameter());
+
+    expect(notifyingParameterApi.findNotifyingParametersOf).toHaveBeenCalledWith('x');
+  });
+
+  it('titles the tab with the experiment name', async () => {
+    await render(parameter());
+
+    await vi.waitFor(() => expect(view.title).toBe('Notifications Gas Path'));
+  });
+
+  it('names a row by sensor and parameter, or by the DAS key without a parameter name', async () => {
+    const page = await render(
+      parameter({
+        sensorParameterId: 'p1',
+        sensorName: 'Piezometer',
+        sensorParameterName: 'Pressure',
+      }),
+      parameter({
+        sensorParameterId: 'p2',
+        sensorName: 'Piezometer',
+        sensorParameterName: undefined,
+        dasKey: 'DAS-7',
+      }),
+    );
+
+    await page.rowsShown(2);
+    expect(page.column('sensorParameter')).toEqual(['DAS-7', 'Piezometer – Pressure']);
+  });
+
+  it('sorts by sensor parameter ascending by default', async () => {
+    const page = await render(
+      parameter({ sensorParameterId: 'p1', sensorName: 'Tiltmeter', sensorParameterName: 'X' }),
+      parameter({ sensorParameterId: 'p2', sensorName: 'Extensometer', sensorParameterName: 'Y' }),
+      parameter({ sensorParameterId: 'p3', sensorName: 'Extensometer', sensorParameterName: 'A' }),
+    );
+
+    await page.rowsShown(3);
+    expect(page.column('sensorParameter')).toEqual([
+      'Extensometer – A',
+      'Extensometer – Y',
+      'Tiltmeter – X',
+    ]);
+  });
+
+  it('sorts by last measurement when its header is clicked', async () => {
+    const page = await render(
+      parameter({
+        sensorParameterId: 'p1',
+        sensorName: 'A',
+        newestMeasurement: '2026-11-17T09:00:00Z',
+        measureValue: 3,
+      }),
+      parameter({
+        sensorParameterId: 'p2',
+        sensorName: 'B',
+        newestMeasurement: '2026-11-15T09:00:00Z',
+        measureValue: 1,
+      }),
+      parameter({
+        sensorParameterId: 'p3',
+        sensorName: 'C',
+        newestMeasurement: '2026-11-16T09:00:00Z',
+        measureValue: 2,
+      }),
+    );
+    await page.rowsShown(3);
+
+    await page.sortBy('lastMeasurement');
+
+    expect(page.column('sensorParameter')).toEqual([
+      'B – Pressure',
+      'C – Pressure',
+      'A – Pressure',
+    ]);
+  });
+
+  it('shows the last measurement with timestamp, value and unit', async () => {
+    const page = await render(
+      parameter({ newestMeasurement: '2026-11-17T09:30:00Z', measureValue: 12.5 }),
+    );
+
+    await page.rowsShown(1);
+    expect(page.column('lastMeasurement')[0]).toMatch(/2026.* 12\.50 m$/);
+  });
+
+  it('shows - for a sensor parameter without a reading', async () => {
+    const page = await render(
+      parameter({
+        newestMeasurement: undefined,
+        measureValue: undefined,
+        measurementStatus: undefined,
+      }),
+    );
+
+    await page.rowsShown(1);
+    expect(page.column('lastMeasurement')).toEqual(['-']);
+  });
+
+  it('marks a last measurement outside the sensor range as alarm', async () => {
+    const page = await render(
+      parameter({
+        sensorParameterId: 'low',
+        sensorName: 'A',
+        measurementStatus: MeasurementStatusEnum.TooLow,
+      }),
+      parameter({
+        sensorParameterId: 'ok',
+        sensorName: 'B',
+        measurementStatus: MeasurementStatusEnum.Correct,
+      }),
+      parameter({
+        sensorParameterId: 'high',
+        sensorName: 'C',
+        measurementStatus: MeasurementStatusEnum.TooHigh,
+      }),
+    );
+
+    await page.rowsShown(3);
+    expect(page.alarms()).toEqual([true, false, true]);
+  });
+
+  it('tags a row inactive when its sensor or its parameter is inactive', async () => {
+    const page = await render(
+      parameter({ sensorParameterId: 'p1', sensorName: 'A', sensorActive: false }),
+      parameter({ sensorParameterId: 'p2', sensorName: 'B', sensorParameterActive: false }),
+      parameter({ sensorParameterId: 'p3', sensorName: 'C' }),
+    );
+
+    await page.rowsShown(3);
+    expect(page.inactiveTags()).toEqual([true, true, false]);
+  });
+
+  it('shows the empty state instead of the table without notifying parameters', async () => {
+    const page = await render();
+
+    await vi.waitFor(() =>
+      expect(page.text()).toContain('No sensor parameter is Notification active yet'),
+    );
+    expect(page.hasTable()).toBe(false);
+  });
+});
+
+class PageView {
+  private readonly element: HTMLElement;
+
+  constructor(private readonly fixture: ComponentFixture<NotificationPage>) {
+    this.element = fixture.nativeElement as HTMLElement;
+  }
+
+  async rowsShown(count: number): Promise<void> {
+    await vi.waitFor(() => {
+      expect(this.rows()).toHaveLength(count);
+      // angular cell renderers fill their cells a tick after ag-grid adds the rows
+      expect(this.column('sensorParameter')).not.toContain('');
+    });
+  }
+
+  column(colId: string): string[] {
+    return this.rows().map((row) => this.cell(row, colId).textContent?.trim() ?? '');
+  }
+
+  alarms(): boolean[] {
+    return this.rows().map((row) =>
+      this.cell(row, 'lastMeasurement').classList.contains('measurement-state-alarm'),
+    );
+  }
+
+  inactiveTags(): boolean[] {
+    return this.rows().map(
+      (row) => this.cell(row, 'sensorParameter').querySelector('[data-testid="inactive"]') !== null,
+    );
+  }
+
+  async sortBy(colId: string): Promise<void> {
+    const before = this.column('sensorParameter');
+    this.element
+      .querySelector<HTMLElement>(`.ag-header-cell[col-id="${colId}"] .ag-header-cell-label`)!
+      .click();
+    await vi.waitFor(() => expect(this.column('sensorParameter')).not.toEqual(before));
+  }
+
+  text(): string {
+    return this.element.textContent ?? '';
+  }
+
+  hasTable(): boolean {
+    return this.element.querySelector('app-table') !== null;
+  }
+
+  // ag-grid appends rendered rows in any order, row-index is their display position
+  private rows(): HTMLElement[] {
+    return [...this.element.querySelectorAll<HTMLElement>('.ag-row[row-index]')].sort(
+      (a, b) => Number(a.getAttribute('row-index')) - Number(b.getAttribute('row-index')),
+    );
+  }
+
+  private cell(row: HTMLElement, colId: string): HTMLElement {
+    return row.querySelector<HTMLElement>(`[col-id="${colId}"]`)!;
+  }
+}
