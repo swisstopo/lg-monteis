@@ -14,8 +14,8 @@ import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundExceptio
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
-import ch.swisstopo.monteis.core.modules.notification.service.NotificationParameterService;
-import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.NotificationParameterResponseDto;
+import ch.swisstopo.monteis.core.modules.notification.service.NotifyingParameterService;
+import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.NotifyingParameterResponseDto;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -27,14 +27,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@ControllerTest(NotificationParameterController.class)
-class NotificationParameterControllerTest {
+@ControllerTest(NotifyingParameterController.class)
+class NotifyingParameterControllerTest {
 
-  private static final String NOTIFICATION_PARAMETERS =
-      "/api/experiments/{id}/notification-parameters";
+  private static final String NOTIFYING_PARAMETERS = "/api/experiments/{id}/notifying-parameters";
 
-  private static final NotificationParameterResponseDto TEMPERATURE =
-      new NotificationParameterResponseDto(
+  private static final NotifyingParameterResponseDto TEMPERATURE =
+      new NotifyingParameterResponseDto(
           UUID.fromString("00000000-0000-7000-8000-000000000401"),
           "monteis-001",
           "Temperature Param",
@@ -46,8 +45,8 @@ class NotificationParameterControllerTest {
           false,
           MeasurementStatus.TOO_LOW);
 
-  private static final NotificationParameterResponseDto WITHOUT_READING =
-      new NotificationParameterResponseDto(
+  private static final NotifyingParameterResponseDto WITHOUT_READING =
+      new NotifyingParameterResponseDto(
           UUID.fromString("00000000-0000-7000-8000-000000000402"),
           "monteis-002",
           "Pressure Param",
@@ -61,22 +60,22 @@ class NotificationParameterControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @MockitoBean private NotificationParameterService service;
+  @MockitoBean private NotifyingParameterService service;
 
   @ParameterizedTest
   @EnumSource(
       value = PrivilegeLevel.class,
       names = {"MONTEIS_ADMIN", "GLOBAL_EDITOR", "EXPERIMENT_PI"})
-  void should_list_the_notification_parameters_for_a_writer_of_the_experiment(PrivilegeLevel level)
+  void should_list_the_notifying_parameters_for_a_writer_of_the_experiment(PrivilegeLevel level)
       throws Exception {
     // given
-    given(service.findNotificationParametersOf(ASSIGNED_EXPERIMENT))
+    given(service.findNotifyingParametersOf(ASSIGNED_EXPERIMENT))
         .willReturn(List.of(TEMPERATURE, WITHOUT_READING));
 
     // when / then
     mockMvc
         .perform(
-            get(NOTIFICATION_PARAMETERS, ASSIGNED_EXPERIMENT)
+            get(NOTIFYING_PARAMETERS, ASSIGNED_EXPERIMENT)
                 .with(authentication(level.authentication())))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2))
@@ -104,7 +103,7 @@ class NotificationParameterControllerTest {
     // when / then
     mockMvc
         .perform(
-            get(NOTIFICATION_PARAMETERS, ASSIGNED_EXPERIMENT)
+            get(NOTIFYING_PARAMETERS, ASSIGNED_EXPERIMENT)
                 .with(authentication(level.authentication())))
         .andExpect(status().isForbidden());
 
@@ -116,7 +115,7 @@ class NotificationParameterControllerTest {
     // when / then
     mockMvc
         .perform(
-            get(NOTIFICATION_PARAMETERS, OTHER_EXPERIMENT)
+            get(NOTIFYING_PARAMETERS, OTHER_EXPERIMENT)
                 .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
         .andExpect(status().isForbidden());
 
@@ -127,13 +126,13 @@ class NotificationParameterControllerTest {
   void should_answer_404_for_an_unknown_experiment() throws Exception {
     // given
     UUID unknown = UUID.randomUUID();
-    given(service.findNotificationParametersOf(unknown))
+    given(service.findNotifyingParametersOf(unknown))
         .willThrow(new ObjectNotFoundException(Experiment.class));
 
     // when / then
     mockMvc
         .perform(
-            get(NOTIFICATION_PARAMETERS, unknown)
+            get(NOTIFYING_PARAMETERS, unknown)
                 .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication())))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.messageKey").value("object.not-found"));

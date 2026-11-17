@@ -19,8 +19,7 @@ public final class ApiPaths {
   public static final String EXPERIMENT_DOCUMENTS = EXPERIMENT + "/documents";
   public static final String EXPERIMENT_DOCUMENT = EXPERIMENT_DOCUMENTS + "/{documentId}";
   public static final String EXPERIMENT_OWNER_CANDIDATES = EXPERIMENT + "/owner-candidates";
-  public static final String EXPERIMENT_NOTIFICATION_PARAMETERS =
-      EXPERIMENT + "/notification-parameters";
+  public static final String EXPERIMENT_NOTIFYING_PARAMETERS = EXPERIMENT + "/notifying-parameters";
 
   public static final String ALL_EXPERIMENT_OWNERS = EXPERIMENTS + "/owners";
 

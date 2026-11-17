@@ -11,8 +11,8 @@ import static org.jooq.impl.DSL.trueCondition;
 
 import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.core.jooq.generated.enums.Unit;
-import ch.swisstopo.monteis.core.modules.notification.query.NotificationParameterQuery;
-import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.NotificationParameterResponseDto;
+import ch.swisstopo.monteis.core.modules.notification.query.NotifyingParameterQuery;
+import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.NotifyingParameterResponseDto;
 import java.util.List;
 import java.util.UUID;
 import org.jooq.Condition;
@@ -22,16 +22,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @Transactional(readOnly = true)
-public class NotificationParameterQueryRepository implements NotificationParameterQuery {
+public class NotifyingParameterQueryRepository implements NotifyingParameterQuery {
 
   private final DSLContext dsl;
 
-  public NotificationParameterQueryRepository(DSLContext dsl) {
+  public NotifyingParameterQueryRepository(DSLContext dsl) {
     this.dsl = dsl;
   }
 
   @Override
-  public List<NotificationParameterResponseDto> findNotificationParametersOf(UUID experimentId) {
+  public List<NotifyingParameterResponseDto> findNotifyingParametersOf(UUID experimentId) {
     return dsl.select(
             SENSOR_PARAMETER.ID,
             SENSORS.NAME,
@@ -53,13 +53,13 @@ public class NotificationParameterQueryRepository implements NotificationParamet
         .leftJoin(LATEST_READINGS)
         .on(trueCondition())
         .where(EXPERIMENT_SENSOR.EXPERIMENT_ID.eq(experimentId))
-        .and(underAlarm(experimentId))
+        .and(notifying())
         .orderBy(SENSORS.NAME.asc(), SENSOR_PARAMETER.NAME.asc())
-        .fetch(mapping(NotificationParameterResponseDto::new));
+        .fetch(mapping(NotifyingParameterResponseDto::new));
   }
 
   // only seam to MON-235's Notification active flag: true until the flag is readable
-  private static Condition underAlarm(UUID experimentId) {
+  private static Condition notifying() {
     return trueCondition();
   }
 }
