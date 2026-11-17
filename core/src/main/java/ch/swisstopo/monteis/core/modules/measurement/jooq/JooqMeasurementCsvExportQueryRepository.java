@@ -2,8 +2,8 @@ package ch.swisstopo.monteis.core.modules.measurement.jooq;
 
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.*;
 import static ch.swisstopo.monteis.core.jooq.generated.tables.SensorReadingSecured.SENSOR_READING_SECURED;
-import static ch.swisstopo.monteis.core.modules.measurement.jooq.MeasurementQueryRepository.DAS_KEY;
-import static ch.swisstopo.monteis.core.modules.measurement.jooq.MeasurementQueryRepository.LATEST_READINGS;
+import static ch.swisstopo.monteis.core.modules.measurement.jooq.LatestReadingProjections.DAS_KEY;
+import static ch.swisstopo.monteis.core.modules.measurement.jooq.LatestReadingProjections.LATEST_READINGS;
 
 import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.core.infrastructure.csv.CsvWriter;

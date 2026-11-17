@@ -66,7 +66,7 @@ final class SensorDetailProjection {
   }
 
   private static SensorParameterReadingResponseDto toLatestReading(Record r) {
-    var latest = MeasurementQueryRepository.LATEST_READINGS;
+    var latest = LatestReadingProjections.LATEST_READINGS;
     OffsetDateTime timestamp =
         r.get(latest.field(SENSOR_READING_SECURED.TIMESTAMP), OffsetDateTime.class);
     if (timestamp == null) {
