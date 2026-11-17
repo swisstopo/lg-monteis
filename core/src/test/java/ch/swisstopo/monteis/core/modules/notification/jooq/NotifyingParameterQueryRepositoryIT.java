@@ -12,7 +12,7 @@ import ch.swisstopo.monteis.contracts.MeasurementStatus;
 import ch.swisstopo.monteis.core.itconfig.IT;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.itconfig.SeedData;
-import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.NotificationParameterResponseDto;
+import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.NotifyingParameterResponseDto;
 import java.util.List;
 import java.util.UUID;
 import org.jooq.DSLContext;
@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 // seed: Alpha = TEMP-1 (401), PRESS-1&2 (402), 10 bulk sensors without readings (bulk-sensor-1 with
 // 2 parameters); Beta = PRESS-1&2 (402), DISP-2 (403), FLOW-2 (404)
 @IT
-class NotificationParameterQueryRepositoryIT {
+class NotifyingParameterQueryRepositoryIT {
 
   private static final UUID TEMP_1_PARAM = UUID.fromString("00000000-0000-7000-8000-000000000401");
   private static final UUID PRESS_PARAM = UUID.fromString("00000000-0000-7000-8000-000000000402");
@@ -31,18 +31,18 @@ class NotificationParameterQueryRepositoryIT {
   private static final UUID FLOW_2_PARAM = UUID.fromString("00000000-0000-7000-8000-000000000404");
   private static final UUID PRESS_SENSOR = UUID.fromString("00000000-0000-7000-8000-000000000202");
 
-  @Autowired private NotificationParameterQueryRepository repository;
+  @Autowired private NotifyingParameterQueryRepository repository;
   @Autowired private DSLContext dsl;
 
   @Test
   void should_list_every_parameter_of_the_experiment_while_the_flag_is_not_readable() {
     // when
-    List<NotificationParameterResponseDto> parameters =
-        callAsAdmin(() -> repository.findNotificationParametersOf(SeedData.EXPERIMENT_BETA));
+    List<NotifyingParameterResponseDto> parameters =
+        callAsAdmin(() -> repository.findNotifyingParametersOf(SeedData.EXPERIMENT_BETA));
 
     // then
     assertThat(parameters)
-        .extracting(NotificationParameterResponseDto::sensorParameterId)
+        .extracting(NotifyingParameterResponseDto::sensorParameterId)
         .containsExactly(PRESS_PARAM, DISP_2_PARAM, FLOW_2_PARAM);
   }
 
@@ -50,10 +50,9 @@ class NotificationParameterQueryRepositoryIT {
   void should_list_a_shared_sensor_on_every_experiment_it_is_linked_to() {
     // when
     List<UUID> alpha =
-        callAsAdmin(
-            () -> idsOf(repository.findNotificationParametersOf(SeedData.EXPERIMENT_ALPHA)));
+        callAsAdmin(() -> idsOf(repository.findNotifyingParametersOf(SeedData.EXPERIMENT_ALPHA)));
     List<UUID> beta =
-        callAsAdmin(() -> idsOf(repository.findNotificationParametersOf(SeedData.EXPERIMENT_BETA)));
+        callAsAdmin(() -> idsOf(repository.findNotifyingParametersOf(SeedData.EXPERIMENT_BETA)));
 
     // then
     assertThat(alpha).contains(PRESS_PARAM, TEMP_1_PARAM).doesNotContain(DISP_2_PARAM);
@@ -63,15 +62,15 @@ class NotificationParameterQueryRepositoryIT {
   @Test
   void should_order_by_sensor_name_then_parameter_name() {
     // when
-    List<NotificationParameterResponseDto> parameters =
-        callAsAdmin(() -> repository.findNotificationParametersOf(SeedData.EXPERIMENT_ALPHA));
+    List<NotifyingParameterResponseDto> parameters =
+        callAsAdmin(() -> repository.findNotifyingParametersOf(SeedData.EXPERIMENT_ALPHA));
 
     // then
     assertThat(parameters).hasSize(13);
     assertThat(parameters.subList(0, 2))
         .extracting(
-            NotificationParameterResponseDto::sensorName,
-            NotificationParameterResponseDto::sensorParameterName)
+            NotifyingParameterResponseDto::sensorName,
+            NotifyingParameterResponseDto::sensorParameterName)
         .containsExactly(
             tuple("bulk-sensor-1", "Bulk Param"), tuple("bulk-sensor-1", "Bulk Param 2"));
     assertThat(parameters.getLast().sensorName()).isEqualTo("monteis-002");
@@ -80,8 +79,8 @@ class NotificationParameterQueryRepositoryIT {
   @Test
   void should_list_a_parameter_without_a_reading_with_an_empty_last_measurement() {
     // when
-    NotificationParameterResponseDto bulk =
-        callAsAdmin(() -> repository.findNotificationParametersOf(SeedData.EXPERIMENT_ALPHA))
+    NotifyingParameterResponseDto bulk =
+        callAsAdmin(() -> repository.findNotifyingParametersOf(SeedData.EXPERIMENT_ALPHA))
             .getFirst();
 
     // then
@@ -111,7 +110,7 @@ class NotificationParameterQueryRepositoryIT {
                     .fetchSingle());
 
     // when
-    NotificationParameterResponseDto temperature =
+    NotifyingParameterResponseDto temperature =
         callAsAdmin(() -> findIn(SeedData.EXPERIMENT_ALPHA, TEMP_1_PARAM));
 
     // then
@@ -142,9 +141,9 @@ class NotificationParameterQueryRepositoryIT {
         });
 
     // when
-    NotificationParameterResponseDto temperature =
+    NotifyingParameterResponseDto temperature =
         callAsAdmin(() -> findIn(SeedData.EXPERIMENT_ALPHA, TEMP_1_PARAM));
-    NotificationParameterResponseDto pressure =
+    NotifyingParameterResponseDto pressure =
         callAsAdmin(() -> findIn(SeedData.EXPERIMENT_ALPHA, PRESS_PARAM));
 
     // then
@@ -157,23 +156,23 @@ class NotificationParameterQueryRepositoryIT {
   @Test
   void should_list_the_parameters_for_a_pi_of_the_experiment() {
     // when
-    List<NotificationParameterResponseDto> parameters =
+    List<NotifyingParameterResponseDto> parameters =
         callAs(
             PrivilegeLevel.EXPERIMENT_PI.authentication(),
-            () -> repository.findNotificationParametersOf(PrivilegeLevel.ASSIGNED_EXPERIMENT));
+            () -> repository.findNotifyingParametersOf(PrivilegeLevel.ASSIGNED_EXPERIMENT));
 
     // then
     assertThat(parameters).hasSize(13);
   }
 
-  private NotificationParameterResponseDto findIn(UUID experimentId, UUID sensorParameterId) {
-    return repository.findNotificationParametersOf(experimentId).stream()
+  private NotifyingParameterResponseDto findIn(UUID experimentId, UUID sensorParameterId) {
+    return repository.findNotifyingParametersOf(experimentId).stream()
         .filter(parameter -> parameter.sensorParameterId().equals(sensorParameterId))
         .findFirst()
         .orElseThrow();
   }
 
-  private static List<UUID> idsOf(List<NotificationParameterResponseDto> parameters) {
-    return parameters.stream().map(NotificationParameterResponseDto::sensorParameterId).toList();
+  private static List<UUID> idsOf(List<NotifyingParameterResponseDto> parameters) {
+    return parameters.stream().map(NotifyingParameterResponseDto::sensorParameterId).toList();
   }
 }

@@ -56,7 +56,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
                     .access(experimentWrite)
                     // a read, but the notification setup is for writers only (MON-245)
-                    .requestMatchers(HttpMethod.GET, ApiPaths.EXPERIMENT_NOTIFICATION_PARAMETERS)
+                    .requestMatchers(HttpMethod.GET, ApiPaths.EXPERIMENT_NOTIFYING_PARAMETERS)
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
                     .access(experimentWrite)

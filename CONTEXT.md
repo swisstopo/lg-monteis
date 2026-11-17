@@ -47,6 +47,10 @@ _Avoid_: Sensor range, Special alarm limits
 A sensor parameter whose alarms go to the Recipients of every Experiment it belongs to; a Monteis-Admin or a PI of the sensor's main Experiment switches it on or off.
 _Avoid_: Under alarm, monitored, Alarm gesetzt
 
+**Notifying parameter**:
+A Notification active sensor parameter seen from one Experiment it belongs to: when its alarm limits are crossed, it notifies that Experiment's Recipients.
+_Avoid_: Notification parameter, alarmed parameter, alarming parameter
+
 **Closely monitored**:
 A sensor parameter with its own special alarm limits, set only by a Monteis-Admin, whose alarms go to a recipient list of Monteis-Admins instead of the Experiments' Recipients.
 _Avoid_: Spezialalarm, special alarm (alone), Notification active

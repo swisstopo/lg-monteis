@@ -9,8 +9,8 @@ import static org.mockito.BDDMockito.willThrow;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
-import ch.swisstopo.monteis.core.modules.notification.query.NotificationParameterQuery;
-import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.NotificationParameterResponseDto;
+import ch.swisstopo.monteis.core.modules.notification.query.NotifyingParameterQuery;
+import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.NotifyingParameterResponseDto;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -20,11 +20,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class NotificationParameterServiceTest {
+class NotifyingParameterServiceTest {
 
   private static final UUID EXPERIMENT_ID = UUID.randomUUID();
-  private static final NotificationParameterResponseDto TEMPERATURE =
-      new NotificationParameterResponseDto(
+  private static final NotifyingParameterResponseDto TEMPERATURE =
+      new NotifyingParameterResponseDto(
           UUID.randomUUID(),
           "monteis-001",
           "Temperature Param",
@@ -37,18 +37,18 @@ class NotificationParameterServiceTest {
           null);
 
   @Mock private ExperimentRepository experimentRepository;
-  @Mock private NotificationParameterQuery query;
+  @Mock private NotifyingParameterQuery query;
 
-  @InjectMocks private NotificationParameterService service;
+  @InjectMocks private NotifyingParameterService service;
 
   @Test
-  void should_list_the_notification_parameters_of_a_visible_experiment() {
+  void should_list_the_notifying_parameters_of_a_visible_experiment() {
     // given
-    given(query.findNotificationParametersOf(EXPERIMENT_ID)).willReturn(List.of(TEMPERATURE));
+    given(query.findNotifyingParametersOf(EXPERIMENT_ID)).willReturn(List.of(TEMPERATURE));
 
     // when
-    List<NotificationParameterResponseDto> parameters =
-        service.findNotificationParametersOf(EXPERIMENT_ID);
+    List<NotifyingParameterResponseDto> parameters =
+        service.findNotifyingParametersOf(EXPERIMENT_ID);
 
     // then
     assertThat(parameters).containsExactly(TEMPERATURE);
@@ -62,7 +62,7 @@ class NotificationParameterServiceTest {
         .requireVisible(EXPERIMENT_ID);
 
     // when / then
-    assertThatThrownBy(() -> service.findNotificationParametersOf(EXPERIMENT_ID))
+    assertThatThrownBy(() -> service.findNotifyingParametersOf(EXPERIMENT_ID))
         .isInstanceOf(ObjectNotFoundException.class);
     then(query).shouldHaveNoInteractions();
   }
