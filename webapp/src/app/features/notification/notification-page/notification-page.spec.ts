@@ -8,7 +8,7 @@ import {
 } from '@core/generated';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import translationsEN from '@public/i18n/en.json';
-import { WorkbenchView } from '@scion/workbench';
+import { WorkbenchRouter, WorkbenchView } from '@scion/workbench';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import { Observable, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -40,11 +40,13 @@ describe('NotificationPage', () => {
   let notifyingParameterApi: { findNotifyingParametersOf: ReturnType<typeof vi.fn> };
   let experimentApi: { getExperiment: ReturnType<typeof vi.fn> };
   let view: { title: string | undefined };
+  let workbenchRouter: { navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     notifyingParameterApi = { findNotifyingParametersOf: vi.fn(() => of([parameter()])) };
     experimentApi = { getExperiment: vi.fn(() => of({ id: 'x', name: 'Gas Path' })) };
     view = { title: undefined };
+    workbenchRouter = { navigate: vi.fn(() => Promise.resolve(true)) };
   });
 
   function render(...parameters: NotifyingParameterResponseDto[]): Promise<PageView> {
@@ -64,6 +66,7 @@ describe('NotificationPage', () => {
       providers: [
         provideTranslateService(),
         { provide: WorkbenchView, useValue: view },
+        { provide: WorkbenchRouter, useValue: workbenchRouter },
         { provide: NotifyingParameterControllerService, useValue: notifyingParameterApi },
         { provide: ExperimentControllerService, useValue: experimentApi },
       ],
@@ -253,6 +256,21 @@ describe('NotificationPage', () => {
     expect(page.inactiveTags()).toEqual([true, true, false]);
   });
 
+  it('opens the measurements of a sensor parameter in a new measurement table tab', async () => {
+    const page = await render(
+      parameter({ sensorParameterId: 'p1', sensorName: 'A' }),
+      parameter({ sensorParameterId: 'p2', sensorName: 'B' }),
+    );
+    await page.rowsShown(2);
+
+    page.openDetails(1);
+
+    expect(workbenchRouter.navigate).toHaveBeenCalledWith(
+      ['/measurements-table', { sensorParameterId: 'p2' }],
+      { target: 'blank' },
+    );
+  });
+
   it('shows the empty state instead of the table without notifying parameters', async () => {
     const page = await render();
 
@@ -292,6 +310,10 @@ class PageView {
     return this.rows().map(
       (row) => this.cell(row, 'sensorParameter').querySelector('[data-testid="inactive"]') !== null,
     );
+  }
+
+  openDetails(rowIndex: number): void {
+    this.cell(this.rows()[rowIndex], 'details').querySelector<HTMLElement>('button')!.click();
   }
 
   async sortBy(colId: string): Promise<void> {

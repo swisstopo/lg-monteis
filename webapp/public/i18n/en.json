@@ -389,6 +389,8 @@
     "plot": "Plot",
     "reload": "Reload",
     "download": "Download",
+    "filteredTo": "Filtered to {{name}}",
+    "clearFilter": "Clear filter",
     "form": {
       "startDate": {
         "label": "Start Date",
@@ -592,6 +594,7 @@
         "details": "Details"
       },
       "inactive": "inactive",
+      "openDetails": "Open details",
       "empty": "No sensor parameter is Notification active yet",
       "error": "Failed to load the notifying parameters."
     }

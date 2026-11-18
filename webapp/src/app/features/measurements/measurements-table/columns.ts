@@ -26,6 +26,15 @@ export function createColumns(datePipe: DatePipe): TableColumn<MeasurementRespon
 
   return [
     {
+      // hidden filter target: ag-grid drops filters on colIds without a column
+      field: 'sensorParameterId',
+      hide: true,
+      lockVisible: true,
+      suppressColumnsToolPanel: true,
+      cellDataType: 'text',
+      filter: 'agTextColumnFilter',
+    },
+    {
       field: 'experimentName',
       headerName: translateService.translate('measurements-table.column.experimentName')(),
       sortable: true,
