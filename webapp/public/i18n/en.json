@@ -384,8 +384,6 @@
     "error": "Failed to connect to the backend server.",
     "plot": "Plot",
     "reload": "Reload",
-    "filteredTo": "Filtered to {{name}}",
-    "clearFilter": "Clear filter",
     "form": {
       "startDate": {
         "label": "Start Date",
