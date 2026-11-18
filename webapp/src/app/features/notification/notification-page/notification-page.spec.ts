@@ -132,6 +132,13 @@ describe('NotificationPage', () => {
     expect(page.column('sensorParameter')).toEqual(['DAS-7', 'Piezometer – Pressure']);
   });
 
+  it('shows only the column titles in the header, without a filter row', async () => {
+    const page = await render(parameter());
+
+    await page.rowsShown(1);
+    expect(page.hasFilterRow()).toBe(false);
+  });
+
   it('sorts by sensor parameter ascending by default', async () => {
     const page = await render(
       parameter({ sensorParameterId: 'p1', sensorName: 'Tiltmeter', sensorParameterName: 'X' }),
@@ -297,6 +304,10 @@ class PageView {
 
   text(): string {
     return this.element.textContent ?? '';
+  }
+
+  hasFilterRow(): boolean {
+    return this.element.querySelector('.ag-header-row-filter') !== null;
   }
 
   hasInlineError(): boolean {

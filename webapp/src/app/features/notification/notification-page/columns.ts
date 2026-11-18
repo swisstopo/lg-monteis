@@ -35,6 +35,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParamete
       sort: 'asc',
       comparator: (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' }),
       filter: false,
+      floatingFilter: false,
       flex: 2,
     },
     {
@@ -45,6 +46,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParamete
       cellClass: (params) => measurementStateClass(params.data?.measurementStatus),
       sortable: true,
       filter: false,
+      floatingFilter: false,
       flex: 2,
     },
     {
@@ -52,6 +54,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParamete
       headerName: translateService.translate('notification.parameters.column.details')(),
       sortable: false,
       filter: false,
+      floatingFilter: false,
       flex: 1,
     },
   ];
