@@ -137,6 +137,7 @@ flowchart LR
 - Wo wird Interval definiert? SoC ?
 - Wie erfahrt AlertService von Timeouts?
 - State halten von Anzahl Alerts pro Parameter bzgl. Fequency? oder jedesmal neu berechnen? Thema View vs. Tables
+- AlertingService als Modul oder eigenes Deployable
 
 Textfassung: Alle Tabellen liegen nach MON-250 in einer Datenbank `monteis`, Schema `public`; die Gruppen sind nur logisch getrennt, nach dem, wer schreibt.
 
