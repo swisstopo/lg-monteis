@@ -91,7 +91,8 @@ flowchart LR
    K[Kafka-Streams] --> P
    P -- SensorBoundBreachedEvent --> T[["Topic sensor-alerts"]]
    T --> A[Alerting-Service]
-   N[Notification-Job, Intervall] -- periodische Prüfung, offene Ereignisse --> A
+   A -- Alarmereignisse mit Empfänger-IDs --> TA[["Topic alert-events"]]
+   TA --> N[Notification-Job, Intervall]
 
    subgraph DBM["Datenbank monteis, Schema public"]
       subgraph MW["Messwerte"]
@@ -120,12 +121,11 @@ flowchart LR
    A -. Zählabfrage .-> SR
    A -. Timeout .-> V
    A -. liest .-> SP
-   A -. überwacht? .-> CFG
+   A -. überwacht?, Empfänger .-> CFG
    A -- schreibt --> AS
    A -- schreibt --> AE
-   N -. Empfänger .-> CFG
    N -- schreibt --> NT
-   N --> KC[Keycloak: Kontaktdaten]
+   N -- Empfänger-IDs auflösen --> KC[Keycloak: E-Mail, Mobilnummer]
    N --> M[E-Mail]
    N -.-> S[SMS, Phase 2]
 ```
@@ -134,8 +134,8 @@ Textfassung: Alle Tabellen liegen nach MON-250 in einer Datenbank `monteis`, Sch
 
 - **Messwerte:** `sensor_reading` schreibt nur die Pipeline (Ingest und Reprocessing). Der View `sensor_parameter_reading_state` (E11) liest `sensor_reading` und `sensor_parameter` und liefert den letzten Messwert und `timed_out`.
 - **Konfiguration:** `sensor_parameter` (Grenzwerte, Frequency, `reading_timeout`) sowie Notification active, Closely monitored und Empfänger schreibt nur die `core`-API (Admin oder PI über das Frontend). Die Pipeline erhält die Grenzwerte nicht aus der Datenbank, sondern über das Topic `internal-sensor-config`.
-- **Modul `alerting`:** `alert_state`, `timeout_state` und `alert_event` schreibt nur der Alerting-Service. Er wird durch `sensor-alerts` angestossen, liest `sensor_reading`, den View und die Konfiguration.
-- **Modul `notification`:** `notification_log` und `notification_completed` schreibt nur der Notification-Job. Offene Alarmereignisse liest er über die Lese-Schnittstelle des Alerting-Service, nicht direkt aus `alert_event`; Kontaktdaten holt er aus Keycloak.
+- **Modul `alerting`:** `alert_state`, `timeout_state` und `alert_event` schreibt nur der Alerting-Service. Er wird durch `sensor-alerts` angestossen, liest `sensor_reading`, den View und die Konfiguration. Er bestimmt auch die Empfänger jedes Alarmereignisses (Keycloak-User-IDs, inklusive Prüfung der Leserechte) und schreibt sie mit dem Ereignis auf das Topic `alert-events`.
+- **Modul `notification`:** `notification_log` und `notification_completed` schreibt nur der Notification-Job. Die Alarmereignisse samt Empfänger-IDs liest er aus dem Topic `alert-events`, das der Alerting-Service schreibt. Er liest keine Konfiguration; er löst nur die Empfänger-IDs über Keycloak in E-Mail-Adressen bzw. Mobilnummern auf und versendet.
 - **Verbindungen zwischen den Gruppen:** Fremdschlüssel von `alerting` auf `sensor_parameter` und von `notification` auf `alert_event`, jeweils `ON DELETE CASCADE`. Durchgezogene Pfeile schreiben, gestrichelte lesen.
 
 ## Vorentscheide (Als ADR zu bestätigen)
