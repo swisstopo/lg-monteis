@@ -1,5 +1,8 @@
 <div class="metrics-panel">
-  <app-table-header (searchAction)="onSearch($event)">
+  <app-table-header
+    [canWriteConditional]="permissions.hasAnyExperimentWriteAccess()"
+    (searchAction)="onSearch($event)"
+  >
     <button read-action matButton="text" [disabled]="downloading()" (click)="onDownload()">
       @if (downloading()) {
         <mat-spinner diameter="16"></mat-spinner>
@@ -7,6 +10,24 @@
         <mat-icon fontIcon="download"></mat-icon>
       }
       {{ 'sensor.tableHeader.download' | translate }}
+    </button>
+
+    <button
+      conditional-write-action
+      matButton="text"
+      [disabled]="refreshing()"
+      (click)="onRefresh()"
+    >
+      @if (refreshing()) {
+        <mat-spinner diameter="16"></mat-spinner>
+      } @else {
+        <mat-icon fontIcon="sync"></mat-icon>
+      }
+      @if (selectedSensorRows().length > 0) {
+        {{ 'sensor.tableHeader.refreshSelected' | translate }}
+      } @else {
+        {{ 'sensor.tableHeader.refreshAll' | translate }}
+      }
     </button>
 
     <button write-action matButton="tonal" (click)="onCreate()">
@@ -35,7 +56,7 @@
     <app-table
       class="custom-grid"
       [checkboxes]="true"
-      [multiple]="false"
+      [multiple]="true"
       [columns]="wrappedCols"
       [rowModelType]="'infinite'"
       [datasource]="datasource"

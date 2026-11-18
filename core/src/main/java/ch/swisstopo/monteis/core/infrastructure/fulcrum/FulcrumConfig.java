@@ -22,6 +22,7 @@ public class FulcrumConfig {
 
   public static final String GROUP = "fulcrum";
   public static final String API_TOKEN_HEADER = "X-ApiToken";
+  private static final String USER_AGENT = "monteis-core";
 
   // runs after Boot's group configurer, replaces its request factory to apply our timeouts
   @Bean
@@ -42,7 +43,8 @@ public class FulcrumConfig {
       builder
           .baseUrl(properties.baseUrl())
           .defaultHeader(API_TOKEN_HEADER, properties.apiToken())
-          .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+          .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+          .defaultHeader(HttpHeaders.USER_AGENT, USER_AGENT);
       if (!properties.enabled()) {
         builder.requestInterceptor(FulcrumConfig::refuseCall);
       }

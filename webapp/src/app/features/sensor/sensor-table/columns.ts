@@ -1,4 +1,6 @@
+import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
+import { APP_DATE_TIME_FORMAT } from '@core/date/date.provider';
 import {
   ExperimentControllerService,
   SensorParameterResponseDto,
@@ -12,6 +14,7 @@ import { firstValueFrom } from 'rxjs';
 
 export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
   const translateService = inject(TranslateService);
+  const datePipe = inject(DatePipe);
   const experimentApi = inject(ExperimentControllerService);
   const dasMetadata = getDasMetadata();
   const unitMetadata = getUnitMetadata();
@@ -57,6 +60,13 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
       headerName: translateService.translate('sensor.fulcrumId.label')(),
       sortable: true,
       filter: 'agTextColumnFilter',
+    },
+    {
+      field: 'lastFulcrumRefreshAt',
+      headerName: translateService.translate('sensor.lastFulcrumRefresh.label')(),
+      sortable: true,
+      filter: false,
+      valueFormatter: (params) => datePipe.transform(params.value, APP_DATE_TIME_FORMAT) ?? '',
     },
     {
       field: 'mainExperiment.name',

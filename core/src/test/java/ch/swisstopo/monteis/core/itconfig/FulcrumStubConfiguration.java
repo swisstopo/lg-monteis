@@ -9,11 +9,12 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,8 +24,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistrar;
-import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.web.util.UriUtils;
+import tools.jackson.databind.json.JsonMapper;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class FulcrumStubConfiguration {
@@ -47,11 +47,18 @@ public class FulcrumStubConfiguration {
   private static final String ATTACHMENTS_PATH = "/v2/attachments/";
   private static final String FILES_PATH = "/files/";
   private static final String LITERATURE_TABLE = "\"Mont Terri Literature\"";
-  private static final String STATEMENT_PARAMETER = "q";
+  private static final String STATEMENT_FIELD = "q";
+  private static final JsonMapper JSON = JsonMapper.builder().build();
 
   /** Matches the {@code _record_id = '<uuid>'} filter FulcrumService builds into its SQL. */
   private static final Pattern RECORD_ID_FILTER =
       Pattern.compile("_record_id\\s*=\\s*'([0-9a-fA-F-]{36})'");
+
+  /** Matches the {@code _record_id IN ('<uuid>', ...)} filter of the refresh lookup. */
+  private static final Pattern RECORD_ID_LIST_FILTER =
+      Pattern.compile("_record_id\\s+IN\\s*\\(([^)]*)\\)");
+
+  private static final Pattern QUOTED_UUID = Pattern.compile("'([0-9a-fA-F-]{36})'");
 
   private static final int ANY_FREE_PORT = 0;
   private static final int DEFAULT_BACKLOG = 0;
@@ -88,7 +95,19 @@ public class FulcrumStubConfiguration {
 
   private static void handleQuery(HttpExchange exchange, FulcrumStub stub) throws IOException {
     try (exchange) {
-      String body = queryResponseFor(exchange.getRequestURI(), stub);
+      stub.whileQueried().run();
+      switch (stub.queryFailure()) {
+        case NONE -> {}
+        // closed without status line => client sees an i/o error, like an unreachable host
+        case UNREACHABLE -> {
+          return;
+        }
+        case TOKEN_REJECTED -> {
+          exchange.sendResponseHeaders(HttpStatus.UNAUTHORIZED.value(), -1);
+          return;
+        }
+      }
+      String body = queryResponseFor(statementOf(exchange), stub);
       log.warn(body);
       sendJson(exchange, body);
     } catch (Exception ex) {
@@ -96,15 +115,39 @@ public class FulcrumStubConfiguration {
     }
   }
 
-  private static String queryResponseFor(URI requestUri, FulcrumStub stub) {
-    String rawQuery = Objects.requireNonNullElse(requestUri.getRawQuery(), "");
-    if (UriUtils.decode(rawQuery, StandardCharsets.UTF_8).contains(LITERATURE_TABLE)) {
+  private static String statementOf(HttpExchange exchange) throws IOException {
+    return JSON.readTree(exchange.getRequestBody()).path(STATEMENT_FIELD).asString();
+  }
+
+  private static String queryResponseFor(String statement, FulcrumStub stub) {
+    if (statement.contains(LITERATURE_TABLE)) {
       return literatureResponse(stub.documents());
     }
-    UUID recordId = recordIdOf(requestUri);
-    return recordId == null || UNKNOWN_RECORD_ID.equals(recordId)
-        ? emptyResponse()
-        : sensorResponse(recordId);
+    Matcher recordIdList = RECORD_ID_LIST_FILTER.matcher(statement);
+    if (recordIdList.find()) {
+      return sensorTableResponse(sensorsAmong(stub.sensors(), recordIdsIn(recordIdList.group(1))));
+    }
+    Matcher recordId = RECORD_ID_FILTER.matcher(statement);
+    if (!recordId.find()) {
+      // filter FulcrumService writes and patterns above drifted apart, would surface as not-found
+      log.warn(
+          "No record id filter found in Fulcrum statement, answering with no rows: {}", statement);
+      return emptyResponse();
+    }
+    UUID id = UUID.fromString(recordId.group(1));
+    return UNKNOWN_RECORD_ID.equals(id) ? emptyResponse() : sensorResponse(id);
+  }
+
+  private static Set<UUID> recordIdsIn(String quotedIds) {
+    return QUOTED_UUID
+        .matcher(quotedIds)
+        .results()
+        .map(match -> UUID.fromString(match.group(1)))
+        .collect(Collectors.toSet());
+  }
+
+  private static List<StubSensor> sensorsAmong(List<StubSensor> sensors, Set<UUID> recordIds) {
+    return sensors.stream().filter(sensor -> recordIds.contains(sensor.fulcrumId())).toList();
   }
 
   private static void handleAttachment(HttpExchange exchange, FulcrumStub stub) throws IOException {
@@ -150,29 +193,6 @@ public class FulcrumStubConfiguration {
     return path.substring(path.lastIndexOf('/') + 1);
   }
 
-  static UUID recordIdOf(URI requestUri) {
-    String statement =
-        UriComponentsBuilder.fromUri(requestUri)
-            .build()
-            .getQueryParams()
-            .getFirst(STATEMENT_PARAMETER);
-    if (statement == null) {
-      return null;
-    }
-
-    Matcher matcher = RECORD_ID_FILTER.matcher(UriUtils.decode(statement, StandardCharsets.UTF_8));
-    if (!matcher.find()) {
-      // Only the unfiltered getSensors() statement legitimately lands here. Anything else means
-      // the filter FulcrumService writes and the pattern above have drifted apart, which would
-      // otherwise surface as a puzzling "fulcrum.sensor.not-found" in the browser.
-      log.warn(
-          "No record id filter found in Fulcrum statement, answering with no rows: {}", statement);
-      return null;
-    }
-
-    return UUID.fromString(matcher.group(1));
-  }
-
   private static String emptyResponse() {
     return "{\"rows\": []}";
   }
@@ -196,6 +216,26 @@ public class FulcrumStubConfiguration {
     }
     """
         .formatted(recordId, STUB_X, STUB_Y, STUB_Z);
+  }
+
+  private static String sensorTableResponse(List<StubSensor> sensors) {
+    return "{\"rows\": [%s]}"
+        .formatted(
+            String.join(",", sensors.stream().map(FulcrumStubConfiguration::rowOf).toList()));
+  }
+
+  private static String rowOf(StubSensor sensor) {
+    return """
+    {
+      "_record_id": "%s",
+      "_title": "STUB SENSOR",
+      "system_or_component_category_and_type": ["Sensor", "Point", "T"],
+      "fx_point_with_offset": %s,
+      "fy_point_with_offset": %s,
+      "fz_point_with_offset": %s
+    }
+    """
+        .formatted(sensor.fulcrumId(), sensor.x(), sensor.y(), sensor.z());
   }
 
   private static String literatureResponse(List<StubDocument> documents) {
@@ -323,6 +363,16 @@ public class FulcrumStubConfiguration {
     }
   }
 
+  // null axis => json null, like Fulcrum leaves an unmeasured coordinate
+  public record StubSensor(
+      UUID fulcrumId, @Nullable Double x, @Nullable Double y, @Nullable Double z) {}
+
+  public enum QueryFailure {
+    NONE,
+    UNREACHABLE,
+    TOKEN_REJECTED
+  }
+
   public record StubFile(UUID attachmentId, String name, byte @Nullable [] content) {
 
     public static StubFile of(String name, byte[] content) {
@@ -349,6 +399,9 @@ public class FulcrumStubConfiguration {
 
     private final HttpServer server;
     private volatile List<StubDocument> documents = e2eDocuments();
+    private volatile List<StubSensor> sensors = List.of();
+    private volatile QueryFailure queryFailure = QueryFailure.NONE;
+    private volatile Runnable whileQueried = () -> {};
 
     FulcrumStub(HttpServer server) {
       this.server = server;
@@ -368,6 +421,38 @@ public class FulcrumStubConfiguration {
 
     List<StubDocument> documents() {
       return documents;
+    }
+
+    // rows the refresh lookup can find by id, the single-id lookup keeps its synthetic sensor
+    public void serveSensors(StubSensor... sensors) {
+      this.sensors = List.of(sensors);
+    }
+
+    public void failQueriesWith(QueryFailure queryFailure) {
+      this.queryFailure = queryFailure;
+    }
+
+    // runs on the stub's thread before it answers, to change data while a caller waits for Fulcrum
+    public void whileQueried(Runnable action) {
+      this.whileQueried = action;
+    }
+
+    public void resetQueries() {
+      sensors = List.of();
+      queryFailure = QueryFailure.NONE;
+      whileQueried = () -> {};
+    }
+
+    List<StubSensor> sensors() {
+      return sensors;
+    }
+
+    QueryFailure queryFailure() {
+      return queryFailure;
+    }
+
+    Runnable whileQueried() {
+      return whileQueried;
     }
 
     Optional<StubFile> fileOf(String attachmentId) {

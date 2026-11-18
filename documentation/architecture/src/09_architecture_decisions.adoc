@@ -114,6 +114,8 @@ Configuration as Code: Richtlinien sind versioniert und auditierbar direkt im Re
 
 Ein ausgeblendetes oder fehlendes Experiment ergibt 404 `object.not-found`, eine Ablehnung in der Filterchain oder per RLS 403 `access.denied`, beide als `ErrorDto` mit `target: GLOBAL`.
 
+Ausnahme Fulcrum refresh (MON-173): `POST /api/sensors/fulcrum-refresh` ist ein Sensor-Schreibzugriff, erfordert in der Filterchain aber nur `canWriteExperiments` (PI mit Schreibrecht, globaler Editor, Admin) statt `canManageSensors`. Die Regel steht deshalb vor der Admin-only-Regel für Sensoren. Pro Sensor gibt es keine Schreibprüfung, das einzige Limit ist RLS beim Lesen, das heisst ein PI darf auch die Sensoren von Experimenten aktualisieren, die er nur lesen kann. Das ist so gewollt: übernommen werden nur die Koordinaten aus Fulcrum, der Aufrufer kann keine eigenen Werte einschleusen. Eine Write-Policy auf `sensors` gibt es dafür bewusst nicht.
+
 | Begründung
 | Ein Fehler in einer Schicht legt keine Daten offen, und die Datenbank schützt auch Zugriffe ausserhalb von HTTP. Eine zentrale Policy ist die einzige Stelle, an der Regeln geändert und getestet werden, sodass Filterchain, `/api/me` und Sitzungskontext nicht mehr auseinanderlaufen können. Die Filterchain lehnt unberechtigte Schreibzugriffe ab, bevor die Datenbank überhaupt angefragt wird.
 

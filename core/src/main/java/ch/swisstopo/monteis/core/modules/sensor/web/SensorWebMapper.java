@@ -37,6 +37,7 @@ public interface SensorWebMapper {
   // it no longer matches WriteSensorDto's "das" record component by name.
   @Mapping(target = "DAS", source = "das")
   @Mapping(target = "mainExperiment", ignore = true)
+  @Mapping(target = "lastFulcrumRefreshAt", ignore = true)
   Sensor toDomain(WriteSensorDto dto);
 
   @AfterMapping

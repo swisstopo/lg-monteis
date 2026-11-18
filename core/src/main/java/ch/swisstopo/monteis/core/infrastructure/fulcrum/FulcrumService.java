@@ -1,9 +1,14 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
+import ch.swisstopo.monteis.contracts.fulcrum.QueryRequest;
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -24,21 +29,14 @@ import tools.jackson.databind.ObjectMapper;
  * means.
  *
  * <p>The SELECT statements below are therefore request payload, not a query this application runs:
- * they travel as the {@code q} parameter of an HTTP GET and are executed by Fulcrum against its own
+ * they travel as the {@code q} field of an HTTP POST body and are executed by Fulcrum against its own
  * storage. Nothing here touches a Monteis database or a JDBC connection.
  */
 @Service
 public class FulcrumService {
 
   private static final Logger log = LoggerFactory.getLogger(FulcrumService.class);
-  private static final String JSON_FORMAT = "json";
-
-  private static final boolean WITH_HEADERS = true;
-  private static final boolean WITHOUT_COLUMN_METADATA = false;
-  private static final boolean ROWS_AS_OBJECTS = false;
   private static final int FIRST_PAGE = 1;
-
-  private static final String USER_AGENT = "monteis-core";
 
   private static final TypeReference<FulcrumQueryResponse<FulcrumSensor>> SENSOR_ROWS =
       new TypeReference<>() {};
@@ -86,25 +84,50 @@ public class FulcrumService {
     this.objectMapper = objectMapper;
   }
 
-  public Optional<FulcrumSensor> getSensorById(UUID fulcrumRecordId) {
-    String statement =
-        "SELECT %s FROM \"%s\" WHERE _record_id = '%s';"
-            .formatted(SENSOR_COLUMNS, properties.sensorTable(), fulcrumRecordId);
-
-    List<FulcrumSensor> rows = query(statement, SENSOR_ROWS);
-    if (rows.size() > 1) {
-      log.warn(
-          "Fulcrum returned {} records for record id {}, using the first one",
-          rows.size(),
-          fulcrumRecordId);
-    }
-
-    return rows.stream().findFirst();
+  public Optional<FulcrumSensor> findSensorByFulcrumId(UUID fulcrumId) {
+    List<FulcrumSensor> rows =
+        query(
+            "SELECT %s FROM \"%s\" WHERE _record_id = '%s';"
+                .formatted(SENSOR_COLUMNS, properties.sensorTable(), fulcrumId),
+            SENSOR_ROWS);
+    return Optional.ofNullable(firstPerFulcrumId(rows).get(fulcrumId));
   }
 
-  public List<FulcrumSensor> getSensors() {
-    return query(
-        "SELECT %s FROM \"%s\";".formatted(SENSOR_COLUMNS, properties.sensorTable()), SENSOR_ROWS);
+  public Map<UUID, FulcrumSensor> findSensorsByFulcrumId(Set<UUID> fulcrumIds) {
+    if (fulcrumIds.isEmpty()) {
+      return Map.of();
+    }
+    return firstPerFulcrumId(
+        query(
+            "SELECT %s FROM \"%s\" WHERE _record_id IN (%s);"
+                .formatted(SENSOR_COLUMNS, properties.sensorTable(), quotedListOf(fulcrumIds)),
+            SENSOR_ROWS));
+  }
+
+  // UUID = hex and dashes only, safe to inline
+  private static String quotedListOf(Set<UUID> fulcrumIds) {
+    return fulcrumIds.stream().map("'%s'"::formatted).collect(Collectors.joining(", "));
+  }
+
+  // one Fulcrum ID per record expected, more = data error in Fulcrum
+  private static Map<UUID, FulcrumSensor> firstPerFulcrumId(List<FulcrumSensor> rows) {
+    Map<UUID, List<FulcrumSensor>> rowsByFulcrumId =
+        rows.stream()
+            .collect(
+                Collectors.groupingBy(
+                    FulcrumSensor::fulcrumId, LinkedHashMap::new, Collectors.toList()));
+    rowsByFulcrumId.forEach(FulcrumService::warnAboutDuplicates);
+    return rowsByFulcrumId.entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getFirst()));
+  }
+
+  private static void warnAboutDuplicates(UUID fulcrumId, List<FulcrumSensor> rows) {
+    if (rows.size() > 1) {
+      log.warn(
+          "Fulcrum holds {} sensor records with Fulcrum ID {}, the first one counts",
+          rows.size(),
+          fulcrumId);
+    }
   }
 
   // rows without file useless in overview (PO). malformed rows skipped, one must not block rest
@@ -163,22 +186,15 @@ public class FulcrumService {
     return rows;
   }
 
+  // POST, not GET: Fulcrum caps the url at ~12-16 KB (~300 ids), a refresh sends up to 1000 ids
   private Object queryApi(String statement) {
     try {
       return fulcrumApi
-          .queryGet(
-              statement,
-              JSON_FORMAT,
-              WITH_HEADERS,
-              WITHOUT_COLUMN_METADATA,
-              ROWS_AS_OBJECTS,
-              null, // table_name applies to the postgres format only
-              null, // sorting is expressed in the statement itself
-              null,
+          .queryPost(
               FIRST_PAGE,
               properties.perPage(),
               MediaType.APPLICATION_JSON_VALUE,
-              USER_AGENT)
+              new QueryRequest(statement).format(QueryRequest.FormatEnum.JSON))
           .getBody();
     } catch (RestClientResponseException e) {
       throw FulcrumAuthenticationException.translateRejectedToken(e);

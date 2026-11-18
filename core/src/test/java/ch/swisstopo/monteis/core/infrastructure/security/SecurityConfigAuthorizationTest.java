@@ -116,6 +116,8 @@ class SecurityConfigAuthorizationTest {
         // write grant only, the delete policy decides per sensor
         Arguments.of(
             HttpMethod.DELETE, sensor + "/documents/" + UUID.randomUUID(), assignedExperiment),
+        // write grant only, although the sensor rule below it is admin-only
+        Arguments.of(HttpMethod.POST, "/api/sensors/fulcrum-refresh", assignedExperiment),
         Arguments.of(HttpMethod.GET, "/api/organisations", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/all", everyone),
         Arguments.of(HttpMethod.GET, "/api/organisations/csv", everyone),
@@ -299,7 +301,13 @@ class SecurityConfigAuthorizationTest {
       return "ok";
     }
 
-    @PostMapping({"/api/experiments", "/api/organisations", "/api/sensors", "/api/other"})
+    @PostMapping({
+      "/api/experiments",
+      "/api/organisations",
+      "/api/sensors",
+      "/api/sensors/fulcrum-refresh",
+      "/api/other"
+    })
     public String create() {
       return "ok";
     }

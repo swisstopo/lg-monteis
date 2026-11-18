@@ -6,6 +6,7 @@ import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -77,8 +78,10 @@ public final class SecurityContextTestSupport {
       Supplier<T> action) {
     MonteisPrincipal principal =
         new MonteisPrincipal(UUID.randomUUID(), USERNAME, readExperimentIds, writeExperimentIds);
-    var authentication = new MonteisAuthenticationToken(null, principal, authorities);
+    return callAs(new MonteisAuthenticationToken(null, principal, authorities), action);
+  }
 
+  public static <T> T callAs(Authentication authentication, Supplier<T> action) {
     SecurityContext previous = SecurityContextHolder.getContext();
     try {
       SecurityContext context = SecurityContextHolder.createEmptyContext();

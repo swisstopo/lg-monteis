@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -16,25 +17,27 @@ import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
 import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
 import ch.swisstopo.monteis.core.itconfig.LogCapture;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.RequestMatcher;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
-import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.web.util.UriUtils;
 import tools.jackson.databind.json.JsonMapper;
 
 class FulcrumServiceTest {
@@ -50,8 +53,10 @@ class FulcrumServiceTest {
   private static final String LITERATURE_TABLE = "Mont Terri Literature";
   private static final boolean ENABLED = true;
   private static final boolean DISABLED = false;
-  private static final UUID SENSOR_RECORD_ID =
+  private static final UUID SENSOR_FULCRUM_ID =
       UUID.fromString("29d8aee7-d9c6-4459-ac9d-bbd6e10f6518");
+  private static final UUID SYSTEM_FULCRUM_ID =
+      UUID.fromString("bef456b1-72da-4f5c-853f-1de1116c2c45");
 
   private static final String SENSOR_ROW =
       """
@@ -149,39 +154,36 @@ class FulcrumServiceTest {
   }
 
   @Test
-  void getSensorById_queries_the_query_api_with_the_record_id_filter() {
+  void findSensorByFulcrumId_posts_the_statement_with_the_fulcrum_id_filter_to_the_query_api() {
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
-        .andExpect(method(HttpMethod.GET))
+        .andExpect(method(HttpMethod.POST))
         .andExpect(header(FulcrumConfig.API_TOKEN_HEADER, "test-token"))
         .andExpect(
             sqlQuery(
                 "SELECT %s FROM \"%s\" WHERE _record_id = '%s';"
-                    .formatted(COLUMNS, TABLE, SENSOR_RECORD_ID)))
-        .andExpect(queryParam("format", "json"))
+                    .formatted(COLUMNS, TABLE, SENSOR_FULCRUM_ID)))
+        .andExpect(jsonPath("$.format").value("json"))
         .andExpect(header("User-Agent", "monteis-core"))
-        .andExpect(queryParam("headers", "true"))
-        .andExpect(queryParam("metadata", "false"))
-        .andExpect(queryParam("arrays", "false"))
         .andExpect(queryParam("page", "1"))
         .andExpect(queryParam("per_page", "20000"))
         .andRespond(withSuccess(rows(SENSOR_ROW), MediaType.APPLICATION_JSON));
 
-    Optional<FulcrumSensor> sensor = service.getSensorById(SENSOR_RECORD_ID);
+    Optional<FulcrumSensor> sensor = service.findSensorByFulcrumId(SENSOR_FULCRUM_ID);
 
     assertThat(sensor).isPresent();
     server.verify();
   }
 
   @Test
-  void getSensorById_maps_the_row_onto_the_cleaned_up_record() {
+  void findSensorByFulcrumId_maps_the_row_onto_the_cleaned_up_record() {
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
         .andRespond(withSuccess(rows(SENSOR_ROW), MediaType.APPLICATION_JSON));
 
-    FulcrumSensor sensor = service.getSensorById(SENSOR_RECORD_ID).orElseThrow();
+    FulcrumSensor sensor = service.findSensorByFulcrumId(SENSOR_FULCRUM_ID).orElseThrow();
 
-    assertThat(sensor.recordId()).isEqualTo(SENSOR_RECORD_ID);
+    assertThat(sensor.fulcrumId()).isEqualTo(SENSOR_FULCRUM_ID);
     assertThat(sensor.title()).isEqualTo("CL_BCL-05_T");
     assertThat(sensor.categoryAndType()).containsExactly("Sensor", "Point", "T");
     assertThat(sensor.isSensor()).isTrue();
@@ -191,30 +193,30 @@ class FulcrumServiceTest {
   }
 
   @Test
-  void getSensorById_ignores_columns_the_statement_did_not_ask_for() {
+  void findSensorByFulcrumId_ignores_columns_the_statement_did_not_ask_for() {
     // Fulcrum answers with whatever its app defines, and an operator can widen the table at any
     // time: a column the record does not map must be dropped rather than fail deserialization.
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
         .andRespond(withSuccess(rows(SENSOR_ROW_WITH_EXTRA_COLUMNS), MediaType.APPLICATION_JSON));
 
-    FulcrumSensor sensor = service.getSensorById(SENSOR_RECORD_ID).orElseThrow();
+    FulcrumSensor sensor = service.findSensorByFulcrumId(SENSOR_FULCRUM_ID).orElseThrow();
 
-    assertThat(sensor.recordId()).isEqualTo(SENSOR_RECORD_ID);
+    assertThat(sensor.fulcrumId()).isEqualTo(SENSOR_FULCRUM_ID);
     assertThat(sensor.xPointWithOffset()).isEqualTo(2579333.768);
   }
 
   @Test
-  void getSensorById_returns_empty_when_fulcrum_holds_no_such_record() {
+  void findSensorByFulcrumId_returns_empty_when_fulcrum_holds_no_such_record() {
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
         .andRespond(withSuccess(rows(), MediaType.APPLICATION_JSON));
 
-    assertThat(service.getSensorById(UUID.randomUUID())).isEmpty();
+    assertThat(service.findSensorByFulcrumId(UUID.randomUUID())).isEmpty();
   }
 
   @Test
-  void getSensorById_surfaces_a_rejected_query_with_the_response_body_attached() {
+  void findSensorByFulcrumId_surfaces_a_rejected_query_with_the_response_body_attached() {
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
         .andRespond(
@@ -224,7 +226,7 @@ class FulcrumServiceTest {
 
     // The client deliberately does not translate errors: it lets RestClient's exception through
     // with the body intact, so GlobalErrorControllerAdvice can decode the documented envelope.
-    assertThatThrownBy(() -> service.getSensorById(SENSOR_RECORD_ID))
+    assertThatThrownBy(() -> service.findSensorByFulcrumId(SENSOR_FULCRUM_ID))
         .isInstanceOf(RestClientResponseException.class)
         .satisfies(
             thrown -> {
@@ -237,22 +239,22 @@ class FulcrumServiceTest {
   }
 
   @Test
-  void getSensorById_fails_without_calling_fulcrum_when_fulcrum_is_switched_off() {
+  void findSensorByFulcrumId_fails_without_calling_fulcrum_when_fulcrum_is_switched_off() {
     givenFulcrumIs(DISABLED);
 
-    assertThatThrownBy(() -> service.getSensorById(SENSOR_RECORD_ID))
+    assertThatThrownBy(() -> service.findSensorByFulcrumId(SENSOR_FULCRUM_ID))
         .isInstanceOf(FulcrumDisabledException.class);
 
     server.verify();
   }
 
   @Test
-  void getSensorById_translates_a_rejected_token_into_an_authentication_failure() {
+  void findSensorByFulcrumId_translates_a_rejected_token_into_an_authentication_failure() {
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
         .andRespond(withUnauthorizedRequest());
 
-    assertThatThrownBy(() -> service.getSensorById(SENSOR_RECORD_ID))
+    assertThatThrownBy(() -> service.findSensorByFulcrumId(SENSOR_FULCRUM_ID))
         .isInstanceOf(FulcrumAuthenticationException.class)
         .hasMessageContaining("401")
         .hasCauseInstanceOf(RestClientResponseException.class);
@@ -261,12 +263,12 @@ class FulcrumServiceTest {
   }
 
   @Test
-  void getSensors_translates_a_forbidden_token_into_an_authentication_failure() {
+  void findSensorsByFulcrumId_translates_a_forbidden_token_into_an_authentication_failure() {
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
         .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
-    assertThatThrownBy(() -> service.getSensors())
+    assertThatThrownBy(() -> service.findSensorsByFulcrumId(Set.of(SENSOR_FULCRUM_ID)))
         .isInstanceOf(FulcrumAuthenticationException.class)
         .hasMessageContaining("403");
 
@@ -274,18 +276,94 @@ class FulcrumServiceTest {
   }
 
   @Test
-  void getSensors_queries_the_whole_table_and_keeps_non_sensor_rows() {
+  void findSensorsByFulcrumId_posts_the_statement_with_the_fulcrum_id_list() {
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
-        .andExpect(sqlQuery("SELECT %s FROM \"%s\";".formatted(COLUMNS, TABLE)))
+        .andExpect(method(HttpMethod.POST))
+        .andExpect(
+            sqlQuery(
+                "SELECT %s FROM \"%s\" WHERE _record_id IN ('%s');"
+                    .formatted(COLUMNS, TABLE, SENSOR_FULCRUM_ID)))
+        .andRespond(withSuccess(rows(SENSOR_ROW), MediaType.APPLICATION_JSON));
+
+    Map<UUID, FulcrumSensor> sensors = service.findSensorsByFulcrumId(Set.of(SENSOR_FULCRUM_ID));
+
+    assertThat(sensors).containsOnlyKeys(SENSOR_FULCRUM_ID);
+    server.verify();
+  }
+
+  @Test
+  void findSensorsByFulcrumId_sends_a_thousand_ids_in_one_request() {
+    Set<UUID> fulcrumIds =
+        Stream.generate(UUID::randomUUID).limit(1000).collect(Collectors.toSet());
+    server
+        .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
+        .andExpect(
+            request ->
+                assertThat(((MockClientHttpRequest) request).getBodyAsString())
+                    .contains(fulcrumIds.stream().map(UUID::toString).toList()))
+        .andRespond(withSuccess(rows(), MediaType.APPLICATION_JSON));
+
+    assertThat(service.findSensorsByFulcrumId(fulcrumIds)).isEmpty();
+    server.verify();
+  }
+
+  @Test
+  void findSensorsByFulcrumId_does_not_call_fulcrum_without_ids() {
+    assertThat(service.findSensorsByFulcrumId(Set.of())).isEmpty();
+
+    server.verify();
+  }
+
+  @Test
+  void findSensorsByFulcrumId_keeps_non_sensor_rows() {
+    server
+        .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
         .andRespond(withSuccess(rows(SENSOR_ROW, SYSTEM_ROW), MediaType.APPLICATION_JSON));
 
-    List<FulcrumSensor> rows = service.getSensors();
+    Map<UUID, FulcrumSensor> sensors =
+        service.findSensorsByFulcrumId(Set.of(SENSOR_FULCRUM_ID, SYSTEM_FULCRUM_ID));
 
-    assertThat(rows).hasSize(2);
-    assertThat(rows).filteredOn(FulcrumSensor::isSensor).hasSize(1);
-    assertThat(rows.get(1).title()).isEqualTo("CL_BCL-05_MMMS");
+    assertThat(sensors).containsOnlyKeys(SENSOR_FULCRUM_ID, SYSTEM_FULCRUM_ID);
+    assertThat(sensors.get(SENSOR_FULCRUM_ID).title()).isEqualTo("CL_BCL-05_T");
+    assertThat(sensors.get(SYSTEM_FULCRUM_ID).isSensor()).isFalse();
     server.verify();
+  }
+
+  @Test
+  void findSensorsByFulcrumId_keeps_the_first_of_two_records_with_one_fulcrum_id_and_warns() {
+    String sameFulcrumIdOtherTitle = SENSOR_ROW.replace("CL_BCL-05_T", "CL_BCL-05_T_COPY");
+    server
+        .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
+        .andRespond(
+            withSuccess(
+                rows(SENSOR_ROW, sameFulcrumIdOtherTitle, SYSTEM_ROW), MediaType.APPLICATION_JSON));
+
+    try (LogCapture logs = LogCapture.of(FulcrumService.class, Level.WARN)) {
+      Map<UUID, FulcrumSensor> sensors =
+          service.findSensorsByFulcrumId(Set.of(SENSOR_FULCRUM_ID, SYSTEM_FULCRUM_ID));
+
+      assertThat(sensors).containsOnlyKeys(SENSOR_FULCRUM_ID, SYSTEM_FULCRUM_ID);
+      assertThat(sensors.get(SENSOR_FULCRUM_ID).title()).isEqualTo("CL_BCL-05_T");
+      assertThat(logs.messages())
+          .singleElement()
+          .asString()
+          .contains(SENSOR_FULCRUM_ID.toString(), "first one counts");
+    }
+  }
+
+  @Test
+  void findSensorsByFulcrumId_fails_when_fulcrum_fills_the_whole_page() {
+    // a missing row would be reported as "not in Fulcrum"
+    givenFulcrumIs(ENABLED, 2);
+    server
+        .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
+        .andRespond(withSuccess(rows(SENSOR_ROW, SYSTEM_ROW), MediaType.APPLICATION_JSON));
+
+    assertThatThrownBy(
+            () -> service.findSensorsByFulcrumId(Set.of(SENSOR_FULCRUM_ID, SYSTEM_FULCRUM_ID)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("monteis.fulcrum.per-page");
   }
 
   @Test
@@ -381,12 +459,7 @@ class FulcrumServiceTest {
   }
 
   private static RequestMatcher sqlQuery(String expectedSql) {
-    return request -> {
-      String rawSql =
-          UriComponentsBuilder.fromUri(request.getURI()).build().getQueryParams().getFirst("q");
-      assertThat(rawSql).isNotNull();
-      assertThat(UriUtils.decode(rawSql, StandardCharsets.UTF_8)).isEqualTo(expectedSql);
-    };
+    return jsonPath("$.q").value(expectedSql);
   }
 
   private static String rows(String... rows) {

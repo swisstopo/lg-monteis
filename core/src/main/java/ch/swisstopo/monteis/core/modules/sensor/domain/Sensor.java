@@ -4,9 +4,11 @@ import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.infrastructure.javers.Auditable;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.javers.core.metamodel.annotation.DiffIgnore;
 import org.javers.core.metamodel.annotation.Id;
 import org.javers.core.metamodel.annotation.TypeName;
 
@@ -20,6 +22,8 @@ public class Sensor implements Auditable {
   private String dasSensorAlias;
   private Das das;
   private UUID fulcrumId;
+  // set on every read from Fulcrum, an unchanged refresh must not show up in the audit log
+  @DiffIgnore private OffsetDateTime lastFulcrumRefreshAt;
   private Experiment mainExperiment;
   private Coordinates coordinates;
   private Boolean active;
@@ -118,6 +122,18 @@ public class Sensor implements Auditable {
 
   public void setFulcrumId(UUID fulcrumId) {
     this.fulcrumId = fulcrumId;
+  }
+
+  public boolean hasFulcrumId() {
+    return fulcrumId != null;
+  }
+
+  public OffsetDateTime getLastFulcrumRefreshAt() {
+    return lastFulcrumRefreshAt;
+  }
+
+  public void setLastFulcrumRefreshAt(OffsetDateTime lastFulcrumRefreshAt) {
+    this.lastFulcrumRefreshAt = lastFulcrumRefreshAt;
   }
 
   public Experiment getMainExperiment() {
