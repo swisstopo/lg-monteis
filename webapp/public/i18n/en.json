@@ -389,8 +389,6 @@
     "plot": "Plot",
     "reload": "Reload",
     "download": "Download",
-    "filteredTo": "Filtered to {{name}}",
-    "clearFilter": "Clear filter",
     "form": {
       "startDate": {
         "label": "Start Date",
