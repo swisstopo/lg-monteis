@@ -17,6 +17,9 @@ _Avoid_: Document (alone)
 
 ## Sensors
 
+**DAS key**:
+The key a sensor parameter's readings arrive under from the DAS; unique per sensor parameter, so it can identify one in a link or filter. A sensor parameter has none only before its first reading, even though the queries build it from nullable aliases (`LatestReadingProjections.DAS_KEY`).
+
 **Sensor document**:
 A file a Monteis-Admin or a PI of one of the Sensor's Experiments uploaded to a specific Sensor; everyone who can see the Sensor can see it, and the same people who can upload it can delete it for good.
 _Avoid_: Document (alone), Attachment, Experiment document
