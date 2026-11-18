@@ -2,16 +2,12 @@ import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
 import { NotifyingParameterResponseDto } from '@core/generated';
 import { measurementStateClass } from '@features/measurements/models/measurement-state';
+import { sensorParameterLabel } from '@features/measurements/models/sensor-parameter-label';
 import { getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { TranslateService } from '@ngx-translate/core';
 import { TableColumn } from '@ui/table/table.types';
+import { OpenDetailsCellRenderer } from './open-details-cell-renderer';
 import { SensorParameterCellRenderer } from './sensor-parameter-cell-renderer';
-
-export function sensorParameterLabel(parameter: NotifyingParameterResponseDto): string {
-  return parameter.sensorParameterName
-    ? `${parameter.sensorName} – ${parameter.sensorParameterName}`
-    : (parameter.dasKey ?? '');
-}
 
 export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParameterResponseDto>[] {
   const translateService = inject(TranslateService);
@@ -52,6 +48,7 @@ export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParamete
     {
       colId: 'details',
       headerName: translateService.translate('notification.parameters.column.details')(),
+      cellRenderer: OpenDetailsCellRenderer,
       sortable: false,
       filter: false,
       floatingFilter: false,
