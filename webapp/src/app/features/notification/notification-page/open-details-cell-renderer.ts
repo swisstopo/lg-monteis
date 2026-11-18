@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { NotifyingParameterResponseDto } from '@core/generated';
+import { measurementsTableLink } from '@features/measurements/measurements-table-link';
 import { TranslatePipe } from '@ngx-translate/core';
 import { WorkbenchRouter } from '@scion/workbench';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
@@ -18,7 +19,6 @@ import { ICellRendererParams } from 'ag-grid-community';
 })
 export class OpenDetailsCellRenderer implements ICellRendererAngularComp {
   private readonly workbenchRouter = inject(WorkbenchRouter);
-  // no DAS key = no reading yet, nothing to show
   protected readonly dasKey = signal<string | undefined>(undefined);
 
   agInit(params: ICellRendererParams<NotifyingParameterResponseDto>): void {
@@ -32,7 +32,7 @@ export class OpenDetailsCellRenderer implements ICellRendererAngularComp {
 
   // blank, not auto: auto would re-filter every open measurement table tab
   protected openDetails(): void {
-    void this.workbenchRouter.navigate(['/measurements-table', { dasKey: this.dasKey() }], {
+    void this.workbenchRouter.navigate(measurementsTableLink(this.dasKey()), {
       target: 'blank',
     });
   }
