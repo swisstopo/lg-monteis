@@ -266,7 +266,14 @@ describe('NotificationPage', () => {
     page.openDetails(1);
 
     expect(workbenchRouter.navigate).toHaveBeenCalledWith(
-      ['/measurements-table', { dasKey: 'DAS-2' }],
+      [
+        '/measurements-table',
+        {
+          filter: JSON.stringify({
+            dasKey: { filterType: 'text', type: 'equals', filter: 'DAS-2' },
+          }),
+        },
+      ],
       { target: 'blank' },
     );
   });
