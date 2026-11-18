@@ -55,29 +55,33 @@ Ticket: TBD (`MON-248`). Abhängigkeit: MON-250 (DB-Fusion).
      - verarbeitet nur Verletzungen der Alarm limits und Closely monitored limits von Notification active bzw. Closely monitored Sensor-Parametern (R3, R16); Verletzungen der Sensor range ignoriert er;
      - führt in eigenen Tabellen pro Sensor-Parameter und Range einen kleinen Zustand: Zeitpunkt der letzten gezählten Verletzung, Anzahl Verletzungen in Folge, Alarm ausgelöst ja/nein (E6);
      - prüft bei jeder Verletzung, ob seit der letzten gezählten Verletzung Messwerte mit Status `correct` für diesen Range gespeichert wurden (Zählabfrage über den bestehenden Index `sensor_reading (sensor_parameter_id, timestamp DESC)`): keine dazwischen, dann läuft die Folge weiter (+1); mindestens einer, dann beginnt sie neu bei 1, und waren es mindestens so viele wie der Frequency-Wert, ist ein ausgelöster Alarm zurückgesetzt (R11);
-     - löst den Alarm aus, sobald die Folge den Frequency-Wert erreicht (ohne Frequency: beim ersten Verstoss, R11, R15), und schreibt ein Alarmereignis;
+     - löst den Alarm aus, sobald die Folge den Frequency-Wert erreicht (ohne Frequency: beim ersten Verstoss, R11, R15), und schreibt ein Alarmereignis mit Empfängern (siehe unten);
      - ignoriert Verletzungen, die nicht neuer sind als die zuletzt gezählte (E7); das macht ihn zugleich robust gegen doppelt zugestellte Ereignisse;
      - berechnet nach „Reprocessing abgeschlossen“ den Zustand dieses Sensor-Parameters aus den neu gespeicherten Status neu: Er liest die jüngsten Messwerte rückwärts über den bestehenden Index, bestimmt die aktuelle Folge und löst aus oder setzt zurück (F4). Ältere, inzwischen abgeschlossene Folgen lösen keinen Alarm aus (F8);
-     - schreibt Zustand und Alarmereignis in einer Transaktion und bestätigt den Kafka-Offset erst danach.
-   - **Periodische Prüfung** (aufgerufen vom Notification-Job zu Beginn jedes Laufs):
+     - schreibt Zustand und Alarmereignis in einer Transaktion (Outbox) und bestätigt den Kafka-Offset erst danach.
+   - **Periodische Prüfung** (eigener geplanter Lauf mit ShedLock, im Versandintervall R1, einige Minuten vor dem Versand des Notification-Job):
      - setzt ausgelöste Alarme zurück, wenn seither mindestens Frequency Messwerte in Folge im Range lagen (R11); ohne neue Verletzung bemerkt die Auswertung eine Rücksetzung sonst nicht;
      - erkennt neue Timeouts der Notification active Sensor-Parameter über den View aus E11 und schreibt dafür ein Alarmereignis (siehe Punkt 4);
-     - schreibt für jeden noch ausgelösten Alarm eines Closely monitored Sensor-Parameters ein Wiederholungsereignis (R19).
-   - Er kennt weder Empfänger noch Kanäle und versendet nichts.
-3. **Notification-Job (Feature-Modul `notification` in `core`, Intervall aus R1, ShedLock gegen Doppelläufe mehrerer Instanzen, E12): entscheidet, wer wie benachrichtigt wird.**
-   - ruft zu Beginn die periodische Prüfung des Alerting-Service auf, damit Rücksetzungen, Timeouts und Wiederholungen im selben Lauf versandt werden;
-   - liest die noch nicht versandten Alarmereignisse über die Lese-Schnittstelle des Alerting-Service;
-   - bestimmt die Empfänger: für normale Alarme und Timeouts die Empfänger des Experiments (R10, R17), für Closely monitored die eigene Empfängerliste (R18); prüft die Leserechte jedes Empfängers;
-   - gruppiert pro Empfänger, Experiment und Sensor-Parameter, liest die Kontaktdaten über einen Service-Account aus Keycloak (E3) und versendet per E-Mail (R22; SMS in Phase 2 über dieselbe Kanal-Schnittstelle, E5);
-   - schreibt das Versandprotokoll in seine eigenen Tabellen (nur Keycloak-User-IDs) und markiert ein Ereignis erst als erledigt, wenn alle Empfänger versorgt sind;
+     - schreibt für jeden noch ausgelösten Alarm eines Closely monitored Sensor-Parameters einmal pro Versandintervall ein Wiederholungsereignis (R19).
+   - **Empfänger auflösen:** bestimmt beim Schreiben jedes Alarmereignisses die Empfänger als Keycloak-User-IDs: für normale Alarme und Timeouts die Empfänger des Hauptexperiments (R10, R17), für Closely monitored die eigene Empfängerliste (R18). Empfänger ohne Leserecht auf das Experiment lässt er weg. Die Empfänger stehen damit beim Auslösen fest.
+   - **Veröffentlichen:** ein Outbox-Relay sendet jedes neue Alarmereignis samt Empfänger-IDs auf das Topic `alert-events` (Schlüssel `sensor_parameter_id`) und markiert es danach als veröffentlicht (E13).
+   - Er kennt weder Kontaktdaten noch Kanäle und versendet nichts.
+3. **Notification-Job (Feature-Modul `notification` in `core`, E12): entscheidet, wie benachrichtigt wird.**
+   - **Empfang:** ein Kafka-Consumer auf `alert-events` legt jedes Alarmereignis samt Empfänger-IDs in der eigenen Tabelle `notification_pending` ab und bestätigt danach den Offset; doppelt zugestellte Ereignisse fallen über den Primärschlüssel weg;
+   - **Versand** (geplanter Lauf im Versandintervall R1, ShedLock gegen Doppelläufe mehrerer Instanzen):
+     - liest die offenen Einträge aus `notification_pending`;
+     - liest keine Konfiguration und keine Empfänger aus der Datenbank, sondern verwendet die Empfänger-IDs aus dem Ereignis;
+     - löst die IDs über einen Service-Account in Keycloak in E-Mail-Adressen bzw. Mobilnummern auf (E3);
+     - gruppiert pro Empfänger, Experiment und Sensor-Parameter und versendet per E-Mail (R22; SMS in Phase 2 über dieselbe Kanal-Schnittstelle, E5);
+     - schreibt das Versandprotokoll (nur Keycloak-User-IDs) und markiert einen Eintrag erst als erledigt, wenn alle Empfänger einen endgültigen Status haben;
    - verschickt keine Entwarnung (R13).
 4. **Timeout (R16, R23):**
    - **Aktueller Zustand:** Der View `sensor_parameter_reading_state` (E11) liefert pro Sensor-Parameter den Zeitpunkt des letzten Messwerts und `timed_out` (`now() − letzter Messwert > reading_timeout`). `core` liest ihn für die Anzeige im Frontend, der Alerting-Service für die periodische Prüfung.
-   - **Benachrichtigung:** Für Notification active Sensor-Parameter erzeugt der Alerting-Service bei einem neuen Timeout einmal ein Alarmereignis, der Notification-Job versendet es. Der Alerting-Service merkt sich, für welchen letzten Messwert der Timeout gemeldet ist. Trifft danach ein neuer Messwert ein (`last_reading_at` ist neuer), ist der Timeout beendet; ein späterer Timeout wird wieder gemeldet. Eine Entwarnung gibt es nicht (R13).
+   - **Benachrichtigung:** Für Notification active Sensor-Parameter erzeugt der Alerting-Service in seiner periodischen Prüfung bei einem neuen Timeout einmal ein Alarmereignis mit den Empfängern des Experiments, der Notification-Job versendet es. Der Alerting-Service merkt sich, für welchen letzten Messwert der Timeout gemeldet ist. Trifft danach ein neuer Messwert ein (`last_reading_at` ist neuer), ist der Timeout beendet; ein späterer Timeout wird wieder gemeldet. Eine Entwarnung gibt es nicht (R13).
    - **Lücken in der Historie:** Abstand zum vorherigen Messwert grösser als das Timeout. Das Frontend berechnet es selbst aus den geladenen Messreihen, und nur wenn diese nicht heruntergerechnet sind, also beim Hineinzoomen (F6). In heruntergerechneten Ansichten werden keine Lücken markiert; `core` liefert dafür nichts zusätzlich.
    - Eine echte virtuelle Spalte ist dafür nicht möglich; siehe E11.
 5. **Konfiguration am Sensor-Parameter:** zwei neue Grenzwertpaare (Alarm limits, Closely monitored limits), Frequency und Timeout als neue Spalten, im Frontend gepflegt; Migration `V2__…` nach MON-250.
-6. **Notification active, Closely monitored und Empfänger** (gepflegt über die API von `core`; der Alerting-Service liest, welche Sensor-Parameter Notification active bzw. Closely monitored sind, der Notification-Job liest die Empfänger):
+6. **Notification active, Closely monitored und Empfänger** (gepflegt über die API von `core`; gelesen nur vom Alerting-Service, der daraus die Überwachung und die Empfänger bestimmt):
    - pro Hauptexperiment: Notification active Sensor-Parameter und Empfänger aus den Experiment-Usern; schreiben dürfen Monteis-Admin und PI (R10, R17);
    - pro Sensor-Parameter: Closely monitored mit eigener Empfängerliste; schreiben darf nur ein Monteis-Admin (R18);
    - die Schreibregeln sind in `Capabilities` und in den RLS-Funktionen gleich und durch Integrationstests abgesichert.
@@ -105,10 +109,10 @@ flowchart LR
       end
       subgraph AL["Modul alerting"]
          AS[("alert_state, timeout_state")]
-         AE[("alert_event")]
+         AE[("alert_event, alert_event_recipient<br/>Outbox")]
       end
       subgraph NO["Modul notification"]
-         NT[("notification_log, notification_completed")]
+         NT[("notification_pending, notification_log")]
       end
    end
 
@@ -130,19 +134,23 @@ flowchart LR
    N -.-> S[SMS, Phase 2]
 ```
 
+- Wo wird Interval definiert? SoC ?
+- Wie erfahrt AlertService von Timeouts?
+- State halten von Anzahl Alerts pro Parameter bzgl. Fequency? oder jedesmal neu berechnen? Thema View vs. Tables
+
 Textfassung: Alle Tabellen liegen nach MON-250 in einer Datenbank `monteis`, Schema `public`; die Gruppen sind nur logisch getrennt, nach dem, wer schreibt.
 
 - **Messwerte:** `sensor_reading` schreibt nur die Pipeline (Ingest und Reprocessing). Der View `sensor_parameter_reading_state` (E11) liest `sensor_reading` und `sensor_parameter` und liefert den letzten Messwert und `timed_out`.
 - **Konfiguration:** `sensor_parameter` (Grenzwerte, Frequency, `reading_timeout`) sowie Notification active, Closely monitored und Empfänger schreibt nur die `core`-API (Admin oder PI über das Frontend). Die Pipeline erhält die Grenzwerte nicht aus der Datenbank, sondern über das Topic `internal-sensor-config`.
-- **Modul `alerting`:** `alert_state`, `timeout_state` und `alert_event` schreibt nur der Alerting-Service. Er wird durch `sensor-alerts` angestossen, liest `sensor_reading`, den View und die Konfiguration. Er bestimmt auch die Empfänger jedes Alarmereignisses (Keycloak-User-IDs, inklusive Prüfung der Leserechte) und schreibt sie mit dem Ereignis auf das Topic `alert-events`.
-- **Modul `notification`:** `notification_log` und `notification_completed` schreibt nur der Notification-Job. Die Alarmereignisse samt Empfänger-IDs liest er aus dem Topic `alert-events`, das der Alerting-Service schreibt. Er liest keine Konfiguration; er löst nur die Empfänger-IDs über Keycloak in E-Mail-Adressen bzw. Mobilnummern auf und versendet.
-- **Verbindungen zwischen den Gruppen:** Fremdschlüssel von `alerting` auf `sensor_parameter` und von `notification` auf `alert_event`, jeweils `ON DELETE CASCADE`. Durchgezogene Pfeile schreiben, gestrichelte lesen.
+- **Modul `alerting`:** `alert_state`, `timeout_state` und `alert_event` schreibt nur der Alerting-Service. Er wird durch `sensor-alerts` angestossen, liest `sensor_reading`, den View und die Konfiguration. Er bestimmt auch die Empfänger jedes Alarmereignisses (Keycloak-User-IDs, inklusive Prüfung der Leserechte) und veröffentlicht das Ereignis samt Empfängern über die Outbox auf das Topic `alert-events`.
+- **Modul `notification`:** `notification_pending` und `notification_log` schreibt nur der Notification-Job. Die Alarmereignisse samt Empfänger-IDs liest er aus dem Topic `alert-events`, das der Alerting-Service schreibt. Er liest keine Konfiguration; er löst nur die Empfänger-IDs über Keycloak in E-Mail-Adressen bzw. Mobilnummern auf und versendet.
+- **Verbindungen zwischen den Gruppen:** Fremdschlüssel nur von `alerting` auf `sensor_parameter` (`ON DELETE CASCADE`). `notification` hat keine Fremdschlüssel auf andere Gruppen; es arbeitet nur mit der Kopie der Ereignisse aus `alert-events`. Durchgezogene Pfeile schreiben, gestrichelte lesen.
 
 ## Vorentscheide (Als ADR zu bestätigen)
 
 ### E1 Aufteilung: Pipeline setzt Status, Alerting-Service wertet aus, Notification-Job versendet
 
-- **Entscheid (R24):** Die Pipeline stuft jeden Messwert zustandslos gegen drei Ranges ein, wie heute für die Sensor range. Folgen, Auslösen, Rücksetzen und Timeouts übernimmt der Alerting-Service (Feature-Modul `alerting` in `core`), angestossen durch das bestehende Topic `sensor-alerts`. Empfänger, Kanäle und Versand übernimmt der Notification-Job (Feature-Modul `notification` in `core`), E12.
+- **Entscheid (R24):** Die Pipeline stuft jeden Messwert zustandslos gegen drei Ranges ein, wie heute für die Sensor range. Folgen, Auslösen, Rücksetzen und Timeouts übernimmt der Alerting-Service (Feature-Modul `alerting` in `core`), angestossen durch das bestehende Topic `sensor-alerts`. Er bestimmt auch die Empfänger und übergibt jedes Alarmereignis über das Topic `alert-events`. Kontaktdaten, Kanäle und Versand übernimmt der Notification-Job (Feature-Modul `notification` in `core`), E12, E13.
 - **Begründung:**
   - Drei Vergleiche statt einem pro Messwert kosten Pipeline und Reprocessing praktisch nichts.
   - Der Zustand (Folgen) liegt ausserhalb der Pipeline. Das Reprocessing muss keinen Zustand nachführen.
@@ -164,7 +172,7 @@ Textfassung: Alle Tabellen liegen nach MON-250 in einer Datenbank `monteis`, Sch
 
 ### E6 Tabellen von Alerting-Service und Notification-Job
 
-Beide Module speichern in eigenen Tabellen, die nur sie selbst beschreiben. Der Alerting-Service hält fest, was ein Alarm ist; der Notification-Job, wem er ihn wie geschickt hat. `core` und das Frontend lesen diese Tabellen in der ersten Phase nicht.
+Beide Module speichern in eigenen Tabellen, die nur sie selbst beschreiben. Der Alerting-Service hält fest, was ein Alarm ist und wer ihn bekommt; der Notification-Job, wem er ihn wie geschickt hat. Verbunden sind die beiden nur über das Topic `alert-events` (E13), nicht über Fremdschlüssel. `core` und das Frontend lesen diese Tabellen in der ersten Phase nicht.
 
 ```sql
 -- Alerting-Service (Modul alerting) -----------------------------------------
@@ -178,6 +186,7 @@ CREATE TABLE alert_state (
     last_counted_violation_at  timestamptz,          -- Messzeitpunkt der zuletzt gezählten Verletzung (E7)
     consecutive_violations     integer     NOT NULL DEFAULT 0,
     triggered_at               timestamptz,          -- NULL = nicht ausgelöst
+    last_event_at              timestamptz,          -- letztes Ereignis, für die Wiederholung (R19)
     version                    integer     NOT NULL DEFAULT 0,
     PRIMARY KEY (sensor_parameter_id, kind)
 );
@@ -189,7 +198,7 @@ CREATE TABLE timeout_state (
     detected_at              timestamptz NOT NULL
 );
 
--- Alarmereignisse: was zu melden ist (Schnittstelle zum Notification-Job)
+-- Alarmereignisse (Outbox für das Topic alert-events)
 CREATE TABLE alert_event (
     id                  uuid        PRIMARY KEY DEFAULT uuidv7(),
     sensor_parameter_id uuid        NOT NULL REFERENCES sensor_parameter (id) ON DELETE CASCADE,
@@ -197,24 +206,37 @@ CREATE TABLE alert_event (
     measured_at         timestamptz,                 -- auslösender Messwert bzw. letzter Messwert beim Timeout
     value               double precision,            -- auslösender Wert, NULL beim Timeout
     repetition          boolean     NOT NULL DEFAULT false,  -- Wiederholung Closely monitored (R19)
-    created_at          timestamptz NOT NULL DEFAULT now()
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    published_at        timestamptz                  -- NULL = noch nicht auf alert-events veröffentlicht
+);
+CREATE INDEX alert_event_unpublished_idx ON alert_event (created_at) WHERE published_at IS NULL;
+
+-- Empfänger je Alarmereignis, beim Auslösen bestimmt
+CREATE TABLE alert_event_recipient (
+    alert_event_id    uuid NOT NULL REFERENCES alert_event (id) ON DELETE CASCADE,
+    recipient_user_id uuid NOT NULL,                 -- Keycloak-User-ID, keine Kontaktdaten
+    experiment_id     uuid,                          -- Hauptexperiment; NULL bei Closely monitored ohne Experiment
+    PRIMARY KEY (alert_event_id, recipient_user_id)
 );
 
 -- Notification-Job (Modul notification) -------------------------------------
 
--- Erledigte Alarmereignisse; offene = alert_event ohne Zeile hier
-CREATE TABLE notification_completed (
-    alert_event_id uuid        PRIMARY KEY REFERENCES alert_event (id) ON DELETE CASCADE,
-    completed_at   timestamptz NOT NULL DEFAULT now()
+-- Empfangene Alarmereignisse aus alert-events (eigene Kopie, kein Fremdschlüssel auf alerting)
+CREATE TABLE notification_pending (
+    alert_event_id      uuid        PRIMARY KEY,     -- id aus dem Ereignis; macht den Empfang idempotent
+    payload             jsonb       NOT NULL,        -- Ereignis inkl. Empfänger-IDs, wie auf dem Topic
+    received_at         timestamptz NOT NULL DEFAULT now(),
+    completed_at        timestamptz                  -- NULL = noch nicht vollständig versandt
 );
+CREATE INDEX notification_pending_open_idx ON notification_pending (received_at) WHERE completed_at IS NULL;
 
 -- Versandprotokoll: nur Keycloak-User-IDs, keine Kontaktdaten
 CREATE TABLE notification_log (
     id                uuid        PRIMARY KEY DEFAULT uuidv7(),
-    alert_event_id    uuid        NOT NULL REFERENCES alert_event (id) ON DELETE CASCADE,
+    alert_event_id    uuid        NOT NULL REFERENCES notification_pending (alert_event_id) ON DELETE CASCADE,
     recipient_user_id uuid        NOT NULL,
     channel           text        NOT NULL,          -- 'email', ab Phase 2 'sms'
-    status            text        NOT NULL,          -- 'sent' | 'failed' | 'no_address' | 'no_access'
+    status            text        NOT NULL,          -- 'sent' | 'failed' | 'no_address'
     attempted_at      timestamptz NOT NULL DEFAULT now(),
     error             text,
     UNIQUE (alert_event_id, recipient_user_id, channel)
@@ -227,18 +249,21 @@ So entstehen die Regeln aus den Anforderungen:
 |--------------------------------------------------|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Normaler Alarm nur einmal (R9)                   | Alerting-Service | Ein `alert_event` entsteht nur beim Übergang von `triggered_at IS NULL` auf einen Wert. Solange der Alarm ausgelöst bleibt, entsteht kein weiteres Ereignis.                                                                                                                   |
 | Rücksetzen (R11)                                 | Alerting-Service | `triggered_at` und `consecutive_violations` werden zurückgesetzt, bei der nächsten Verletzung oder in der periodischen Prüfung. Ein späteres Auslösen erzeugt wieder ein Ereignis.                                                                                             |
-| Closely monitored wiederholen (R19)              | Alerting-Service | Die periodische Prüfung erzeugt für jeden noch ausgelösten `alert_state` mit `kind = 'closely_monitored_limits'` ein Ereignis mit `repetition = true`, sofern das letzte noch nicht erledigt ist.                                                                              |
+| Closely monitored wiederholen (R19)              | Alerting-Service | Die periodische Prüfung erzeugt für jeden noch ausgelösten `alert_state` mit `kind = 'closely_monitored_limits'` ein Ereignis mit `repetition = true`, wenn `last_event_at` mindestens ein Versandintervall zurückliegt.                                                       |
 | Timeout einmal, neuer Messwert beendet ihn (R16) | Alerting-Service | Ist `timed_out` im View wahr und unterscheidet sich `last_reading_at` von `timeout_state.notified_last_reading_at` (`IS DISTINCT FROM`), oder fehlt die Zeile, entsteht ein Ereignis und die Zeile wird geschrieben. Ist `timed_out` nicht mehr wahr, wird die Zeile gelöscht. |
-| Empfänger und Kanal                              | Notification-Job | Normale Alarme und Timeouts an die Empfänger des Experiments, Closely monitored an die eigene Empfängerliste; Kanal E-Mail (R22).                                                                                                                                              |
+| Empfänger                                        | Alerting-Service | Beim Schreiben des Ereignisses: normale Alarme und Timeouts an die Empfänger des Hauptexperiments, Closely monitored an die eigene Empfängerliste; nur Empfänger mit Leserecht auf das Experiment (`alert_event_recipient`).                                                   |
+| Kein Ereignis geht verloren                      | Alerting-Service | Zustand, Ereignis und Empfänger in einer Transaktion; das Outbox-Relay veröffentlicht alles mit `published_at IS NULL` und setzt `published_at` erst nach der Bestätigung durch Kafka.                                                                                         |
+| Kein doppelter Empfang                           | Notification-Job | `notification_pending.alert_event_id` ist Primärschlüssel; ein erneut zugestelltes Ereignis wird ignoriert.                                                                                                                                                                    |
 | Kein doppelter Versand                           | Notification-Job | `UNIQUE (alert_event_id, recipient_user_id, channel)`; ein Lauf versendet nur, was für diese Kombination noch nicht `sent` ist.                                                                                                                                                |
-| Gescheiterter Versand geht nicht verloren        | Notification-Job | `failed` wird im nächsten Lauf erneut versucht; `notification_completed` wird erst geschrieben, wenn jeder Empfänger `sent`, `no_address` oder `no_access` hat (F2).                                                                                                           |
-| Gelöschter Sensor-Parameter                      | beide            | `ON DELETE CASCADE` räumt Zustand, Ereignisse und Protokoll mit ab.                                                                                                                                                                                                            |
+| Gescheiterter Versand geht nicht verloren        | Notification-Job | `failed` wird im nächsten Lauf erneut versucht; `completed_at` wird erst gesetzt, wenn jeder Empfänger `sent` oder `no_address` hat (F2).                                                                                                                                      |
+| Gelöschter Sensor-Parameter                      | Alerting-Service | `ON DELETE CASCADE` räumt Zustand und Ereignisse ab. Bereits übergebene Einträge in `notification_pending` bleiben und werden noch versandt.                                                                                                                                   |
 
 Caveats:
 
-- Die Tabellen haben keine RLS. Jedes Modul schreibt nur seine eigenen Tabellen; der Notification-Job liest `alert_event` nur über die Lese-Schnittstelle des Alerting-Service. ArchUnit stellt das sicher.
-- `alert_event` und `notification_log` wachsen unbegrenzt; eine Aufbewahrungsfrist ist festzulegen.
+- Die Tabellen haben keine RLS. Jedes Modul schreibt nur seine eigenen Tabellen; der Notification-Job greift auf keine Tabelle von `alerting` zu. ArchUnit stellt das sicher.
+- `alert_event`, `notification_pending` und `notification_log` wachsen unbegrenzt; eine Aufbewahrungsfrist ist festzulegen.
 - Optimistic Locking über `version` auf `alert_state`, weil die Auswertung (Kafka) und die periodische Prüfung dieselbe Zeile ändern können.
+- `failed` wird ohne Obergrenze wiederholt; eine maximale Anzahl Versuche mit endgültigem Status ist noch festzulegen.
 
 ### E7 Folge bei zeitnaher Auswertung: Reihenfolge und verspätete Werte
 
@@ -314,22 +339,32 @@ Caveats:
 - Die Default Privileges aus MON-250 geben `core` CRUD auch auf neue Views, deshalb `REVOKE ALL` und nur `SELECT`.
 - `alarm_status` und `closely_monitored_status` gibt es erst mit E2.
 
-Wie gespeichert wird, dass für einen Zustand schon ein Alarm erzeugt und versandt wurde: in eigenen Tabellen von Alerting-Service und Notification-Job; siehe Abschnitt E6. Wo beide laufen: siehe Abschnitt E12.
+Wie gespeichert wird, dass für einen Zustand schon ein Alarm erzeugt und versandt wurde: in eigenen Tabellen von Alerting-Service und Notification-Job, verbunden über das Topic `alert-events`; siehe Abschnitte E6 und E13. Wo beide laufen: siehe Abschnitt E12.
 
 ### E12 Alerting-Service und Notification-Job als Feature-Module in `core`
 
 - **Entscheid:** Alerting-Service und Notification-Job sind logisch getrennte Services, laufen aber als Feature-Module `alerting` und `notification` im Deployable `core`.
-  - **Alerting-Service** (`alerting`): eigene Kafka-Consumer-Group auf `sensor-alerts`, Zustand und Alarmereignisse (E6), periodische Prüfung für Rücksetzung, Timeouts und Wiederholungen. Bietet dem Notification-Job eine Lese-Schnittstelle für offene Alarmereignisse und den Aufruf der periodischen Prüfung.
-  - **Notification-Job** (`notification`): geplanter Lauf im Versandintervall mit ShedLock, Empfänger, Keycloak-Kontaktdaten, Kanal-Schnittstelle (E5) und Versandprotokoll (E6).
-  - Die Abhängigkeit geht nur in eine Richtung: `notification` kennt `alerting`, nicht umgekehrt. So lässt sich der Versand später auch durch andere Quellen (z. B. Pipeline-Überwachung, R20) anstossen.
+  - **Alerting-Service** (`alerting`): eigene Kafka-Consumer-Group auf `sensor-alerts`, Zustand, Alarmereignisse und Empfänger (E6), eigener geplanter Lauf für Rücksetzung, Timeouts und Wiederholungen, Outbox-Relay auf `alert-events` (E13).
+  - **Notification-Job** (`notification`): eigene Kafka-Consumer-Group auf `alert-events`, geplanter Versandlauf im Versandintervall mit ShedLock, Keycloak-Kontaktdaten, Kanal-Schnittstelle (E5) und Versandprotokoll (E6).
+  - Die Module kennen sich im Code nicht. Ihre einzige Schnittstelle ist das Topic `alert-events` mit dem Ereignisschema in `contracts`. So lässt sich der Versand später auch durch andere Quellen (z. B. Pipeline-Überwachung, R20) anstossen, und jedes Modul kann einzeln herausgelöst werden.
 - **Begründung:**
   - Die Last ist klein: Die Auswertung arbeitet nur bei Verletzungen, der Versand zweimal täglich (R1). Ob das so bleibt, zeigt das Mengengerüst (F1).
-  - `core` hat schon alles, was beide brauchen: Datenbankzugang mit jOOQ, die Konfigurationstabellen (Notification active, Closely monitored, Empfänger), ShedLock, die Keycloak-Anbindung und einen Kafka-Client.
-  - Der RLS-Kontext existiert schon: `RlsConnectionProvider` setzt `app.read_all_experiments` pro Transaktion. Beide Module setzen ihn in ihren eigenen Transaktionen auf `true` und schreiben nichts ausser ihren eigenen Tabellen (E4).
+  - `core` hat schon alles, was beide brauchen: Datenbankzugang mit jOOQ, die Konfigurationstabellen (Notification active, Closely monitored, Empfänger), ShedLock, die Keycloak-Anbindung und einen Kafka-Client (bisher nur Producer, ein Consumer kommt dazu).
+  - Der RLS-Kontext existiert schon: `RlsConnectionProvider` setzt `app.read_all_experiments` pro Transaktion. Der Alerting-Service setzt ihn in seinen eigenen Transaktionen auf `true` (E4). Der Notification-Job braucht ihn nicht, weil er nur seine eigenen Tabellen ohne RLS liest.
   - Kein zusätzliches Image, kein Release-Workflow, keine Manifeste, keine weiteren Secrets und keine weitere DB-Rolle.
-- **Grenzen innerhalb von `core`:** ArchUnit stellt sicher, dass andere Module nicht auf `alerting` und `notification` und deren Tabellen zugreifen, dass `notification` nur die Lese-Schnittstelle von `alerting` nutzt, und dass beide die Konfiguration nur über deren `query`-Schicht lesen. Ein späteres Herauslösen, einzeln oder gemeinsam, bleibt dadurch möglich.
+- **Grenzen innerhalb von `core`:** ArchUnit stellt sicher, dass andere Module nicht auf `alerting` und `notification` und deren Tabellen zugreifen, dass die beiden Module einander nicht referenzieren, und dass `alerting` die Konfiguration nur über deren `query`-Schicht liest.
 - **Verworfen für die erste Phase, eigenes Deployable:** Last und Ausfälle sind von der API getrennt, und der Service lässt sich unabhängig skalieren. Dafür braucht er ein Maven-Modul, ein Image, einen Release-Workflow mit Trivy, Manifeste in `lg-monteis-k8s`/`lg-monteis-gitops`, eine eigene DB-Rolle mit Policy und eigene Secrets. Das lohnt sich, wenn das Mengengerüst (F1) zeigt, dass die Auswertung die API spürbar belastet.
-- **Folge für den Betrieb:** Ein Ausfall von `core` stoppt auch Auswertung und Versand. Die Ereignisse bleiben in `sensor-alerts` liegen und werden nach dem Neustart verarbeitet (Rückstau, siehe Risiken).
+- **Folge für den Betrieb:** Ein Ausfall von `core` stoppt auch Auswertung und Versand. Die Ereignisse bleiben in `sensor-alerts`, in der Outbox und in `alert-events` liegen und werden nach dem Neustart verarbeitet (Rückstau, siehe Risiken).
+
+### E13 Übergabe vom Alerting-Service an den Notification-Job über `alert-events`
+
+- **Entscheid:** Der Alerting-Service veröffentlicht jedes Alarmereignis samt Empfänger-IDs auf das Topic `alert-events`; der Notification-Job konsumiert es und legt es in `notification_pending` ab.
+- **Ereignisschema** (`AlertEvent` in `contracts`): `alertEventId`, `sensorParameterId`, `kind` (`alarm_limits`, `closely_monitored_limits`, `timeout`), `measuredAt`, `value`, `repetition`, `recipients` (Liste aus `userId` und `experimentId`). Keine Kontaktdaten, nur Keycloak-User-IDs. Schlüssel ist die `sensorParameterId`.
+- **Zuverlässigkeit:** Transactional Outbox im Alerting-Service (`alert_event.published_at`), weil Datenbank-Commit und Kafka-Send keine gemeinsame Transaktion haben. Das Relay sendet mindestens einmal; der Notification-Job entdoppelt über `alert_event_id`.
+- **Warum zusätzlich `notification_pending`:** Der Consumer erhält Ereignisse sofort, versandt wird aber nur im Versandintervall (R1). Die Tabelle hält sie bis zum Versand und macht Wiederholversuche möglich, ohne das Topic erneut zu lesen.
+- **Verworfen:**
+  - Direkter Aufruf zwischen den Modulen mit Lese-Schnittstelle (vorheriger Stand): koppelt die Module im Code und verhindert ein einzelnes Herauslösen.
+  - Notification-Job liest das Topic nur zum Versandzeitpunkt: Offsets und Wiederholversuche wären an das Intervall gebunden, ein gescheiterter Versand müsste das Topic erneut lesen.
 
 ## ADR-Kandidaten
 
@@ -337,15 +372,16 @@ Wie gespeichert wird, dass für einen Zustand schon ein Alarm erzeugt und versan
 |-----|-------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | E2  | Status pro Messwert speichern (R24, R5)                                             | drei Spalten `status`, `alarm_status`, `closely_monitored_status` (entschieden) vs. eine Spalte mit kombiniertem Enum                                                                                                                                                       | –                                                                                                                                                                                                                                                                                                                   |
 | E3  | Kontaktdaten ohne Benutzer-Token (Notification-Job)                                 | Service-Account (Client Credentials, nur `view-users`) vs. bestehender Admin-Zugang                                                                                                                                                                                         | Erweitert die Entscheidung „Kontaktdaten nur mit dem Token des Aufrufers“; Rechte des Service-Accounts minimal halten, Secret aus der Umgebung                                                                                                                                                                      |
-| E4  | Zugriff von Alerting-Service und Notification-Job trotz RLS                         | gesetzter Systemkontext `app.read_all_experiments` in den eigenen Transaktionen (entschieden mit E12, bestehender `RlsConnectionProvider`) vs. eigene DB-Rolle mit eigener Policy (nur bei eigenem Deployable sinnvoll)                                                     | Beide sehen alle Experimente, der Alerting-Service auch über den View mit `security_invoker` (E11); jeder schreibt nur seine eigenen Tabellen; die Leserechte der Empfänger prüft der Notification-Job selbst                                                                                                       |
+| E4  | Zugriff des Alerting-Service trotz RLS                                              | gesetzter Systemkontext `app.read_all_experiments` in den eigenen Transaktionen (entschieden mit E12, bestehender `RlsConnectionProvider`) vs. eigene DB-Rolle mit eigener Policy (nur bei eigenem Deployable sinnvoll)                                                     | Der Alerting-Service sieht alle Experimente, auch über den View mit `security_invoker` (E11), und prüft die Leserechte der Empfänger selbst; der Notification-Job braucht keinen Systemkontext                                                                                                                      |
 | E5  | Kanal-Abstraktion und Provider                                                      | SES vs. SMTP-Relay (E-Mail); SNS vs. externer Provider (SMS, Phase 2)                                                                                                                                                                                                       | Abstimmung mit `lg-monteis-infra`; keine Kontaktdaten im Versandprotokoll                                                                                                                                                                                                                                           |
-| E6  | Tabellen von Alerting-Service und Notification-Job (R9, R11, R16, R19)              | `alerting`: `alert_state`, `timeout_state`, `alert_event`; `notification`: `notification_completed`, `notification_log` (Empfehlung, siehe Abschnitt E6) vs. eine gemeinsame Ereignistabelle mit Versandmarke                                                               | Jedes Modul schreibt nur seine eigenen Tabellen; keine Kontaktdaten gespeichert                                                                                                                                                                                                                                     |
+| E6  | Tabellen von Alerting-Service und Notification-Job (R9, R11, R16, R19)              | `alerting`: `alert_state`, `timeout_state`, `alert_event` (Outbox), `alert_event_recipient`; `notification`: `notification_pending`, `notification_log` (Empfehlung, siehe Abschnitt E6) vs. gemeinsame Tabellen mit Fremdschlüsseln zwischen den Modulen                   | Jedes Modul schreibt nur seine eigenen Tabellen; keine Kontaktdaten gespeichert, nur Keycloak-User-IDs                                                                                                                                                                                                              |
 | E7  | Folgen zählen (R11, R15)                                                            | (a) Auswertung pro Verletzungsereignis mit Zählabfrage auf den gespeicherten Status (entschieden); (b) Ereignis pro Messwert, Folge im Speicher; (c) periodischer Job über alle Messwerte                                                                                   | Reihenfolge: nicht neuere Verletzungen ignorieren (siehe E7 oben)                                                                                                                                                                                                                                                   |
 | E8  | Lebenszeichen der Pipelines (R20, R21)                                              | ausserhalb der ersten Phase                                                                                                                                                                                                                                                 | –                                                                                                                                                                                                                                                                                                                   |
 | E9  | Konfigurationsmodell Notification active, Closely monitored und Empfänger (R16–R19) | eine gemeinsame Tabelle mit Geltungsbereich (Experiment oder Sensor-Parameter) vs. getrennte Tabellen für normale Alarme (pro Experiment) und Closely monitored (pro Sensor-Parameter, eigene Empfängerliste)                                                               | zwei Schreibregeln (Monteis-Admin/PI vs. nur Monteis-Admin) müssen in `Capabilities` und RLS getrennt abgebildet werden                                                                                                                                                                                             |
 | E10 | Kanal von der Pipeline zur Auswertung (R24)                                         | (a) bestehendes Topic `sensor-alerts` mit erweitertem `SensorBoundBreachedEvent` (Range-Art, `sensor_parameter_id`, Messzeitpunkt; Empfehlung); (b) neues Topic; (c) Auswertung liest neue Zeilen aus `sensor_reading`                                                      | `AlertPublisher` sendet asynchron und verwirft bei Fehlern; das bleibt so (F3). Schlüssel heute `dasKey`, nötig ist eine Partitionierung pro Sensor-Parameter                                                                                                                                                       |
 | E11 | Timeout berechnen (R16, R23)                                                        | (a) View `sensor_parameter_reading_state` mit `security_invoker` (Empfehlung, siehe Abschnitt E11); (b) DB-Funktion `last_reading_at(sensor_parameter)`; (c) Abfrage im Repository mit `LATERAL … ORDER BY timestamp DESC LIMIT 1`; (d) echte generierte (virtuelle) Spalte | (d) ist nicht möglich: generierte Spalten in PostgreSQL 18, auch virtuelle, dürfen nur Werte derselben Zeile und nur unveränderliche Funktionen verwenden. Der View lässt sich mit jOOQ wie eine Tabelle verwenden; RLS greift über `security_invoker`, darum braucht der Alerting-Service den Systemkontext aus E4 |
-| E12 | Ort von Alerting-Service und Notification-Job                                       | Feature-Module `alerting` und `notification` in `core` (entschieden, siehe Abschnitt E12) vs. eigene Deployables                                                                                                                                                            | Bestehender RLS-Kontext (E4); den Keycloak-Service-Account (E3) nutzt nur der Notification-Job; ArchUnit trennt die Module voneinander und vom Rest von `core`                                                                                                                                                      |
+| E12 | Ort von Alerting-Service und Notification-Job                                       | Feature-Module `alerting` und `notification` in `core` (entschieden, siehe Abschnitt E12) vs. eigene Deployables                                                                                                                                                            | Systemkontext nur für den Alerting-Service (E4); den Keycloak-Service-Account (E3) nutzt nur der Notification-Job; ArchUnit trennt die Module voneinander und vom Rest von `core`                                                                                                                                   |
+| E13 | Übergabe Alerting-Service → Notification-Job                                        | Topic `alert-events` mit Outbox und `notification_pending` (entschieden, siehe Abschnitt E13) vs. direkter Aufruf mit Lese-Schnittstelle vs. Lesen des Topics nur zum Versandzeitpunkt                                                                                      | Ereignis enthält nur Keycloak-User-IDs, keine Kontaktdaten                                                                                                                                                                                                                                                          |
 
 ## Offene Fragen
 
@@ -362,23 +398,24 @@ Wie gespeichert wird, dass für einen Zustand schon ein Alarm erzeugt und versan
 
 ## Abhängigkeiten und Reihenfolge
 
-- **MON-250 zuerst:** Neue Tabellen (Konfiguration und Empfänger für `core`; Zustand und Alarmereignisse für den Alerting-Service, Versandprotokoll für den Notification-Job, E6), die neuen Spalten an `sensor_parameter` und `sensor_reading` und der View aus E11 kommen als `V2__…` auf `db/schema/V1__baseline.sql`, nicht in die Baseline selbst.
-- **Alerting-Service und Notification-Job in `core` (E12):** neue Feature-Module `alerting` und `notification` mit eigenen ArchUnit-Regeln; bei einem späteren Herauslösen kämen Maven-Modul, Image, Release-Workflow und Manifeste dazu.
+- **MON-250 zuerst:** Neue Tabellen (Konfiguration und Empfänger für `core`; Zustand, Alarmereignisse und Empfänger für den Alerting-Service, `notification_pending` und Versandprotokoll für den Notification-Job, E6), die neuen Spalten an `sensor_parameter` und `sensor_reading` und der View aus E11 kommen als `V2__…` auf `db/schema/V1__baseline.sql`, nicht in die Baseline selbst.
+- **Alerting-Service und Notification-Job in `core` (E12):** neue Feature-Module `alerting` und `notification` mit eigenen ArchUnit-Regeln, Kafka-Consumer-Konfiguration in `core` (bisher nur Producer), Ereignisschema `AlertEvent` in `contracts` (E13); bei einem späteren Herauslösen kämen Maven-Modul, Image, Release-Workflow und Manifeste dazu.
 - **Glossar:** Sensor range, Alarm limits und Closely monitored limits sind in `CONTEXT.md`, bevor Code und Migrationen sie verwenden. Der heutige Spaltenname `alarm_limit` wird dabei fachlich korrigiert.
 - **Frontend:** Die Grenzwert-Erfassung, die Verwaltung von Notification active, Closely monitored und Empfänger und die farbliche Kennzeichnung von Range-Verletzungen und Timeouts (Backlog) brauchen die erweiterte API aus `core`; der REST-Client wird aus der OpenAPI generiert.
 - **Pipeline und `contracts`:** `SensorParameterConfig` erhält die zwei neuen Grenzwertpaare; der `BoundsValidator` setzt drei Status; das `SensorBoundBreachedEvent` erhält Range-Art, `sensor_parameter_id` und Messzeitpunkt. `core` muss die neuen Grenzwerte in die Sensor-Konfiguration auf Kafka schreiben, damit Pipeline und Reprocessing sie kennen.
-- **Infrastruktur:** `sensor-alerts` muss in allen Umgebungen existieren (Partitionen nach erwarteter Last, F1); Mailversand (und später SMS) sowie das Secret des Keycloak-Service-Accounts stellt das Infra-Team in `lg-monteis-infra` bereit.
+- **Infrastruktur:** `sensor-alerts` und das neue Topic `alert-events` müssen in allen Umgebungen existieren (Partitionen nach erwarteter Last, F1); Mailversand (und später SMS) sowie das Secret des Keycloak-Service-Accounts stellt das Infra-Team in `lg-monteis-infra` bereit.
 
 ## Risiken
 
 - **Alarm bleibt unbemerkt bestehen:** Weil ein Alarm nur einmal rausgeht (R9) und es keine Erinnerung oder Entwarnung gibt (R13), sieht niemand per Mail, ob ein Sensor-Parameter seit Wochen ausserhalb des Ranges ist. Das ist so gewollt; der aktuelle Zustand muss dann im Frontend sichtbar sein.
 - **Flackern an der Grenze:** Bei Sensor-Parametern ohne Frequency-Wert löst jeder Verstoss aus und jeder Wert im Range setzt zurück (R11, R15). Ein Wert, der um eine Grenze pendelt, kann dann bei jedem Versand neu melden. Ein Frequency-Wert dämpft das in beide Richtungen.
-- **Verlorene Alarme:** Fällt ein Lauf des Notification-Job aus, muss der nächste das ganze Zeitfenster seit dem letzten erfolgreichen Lauf abdecken; das Versandprotokoll muss das sicherstellen.
+- **Verlorene Alarme:** Fällt ein Versandlauf des Notification-Job aus, versendet der nächste alles, was in `notification_pending` noch offen ist. Fällt das Outbox-Relay aus, bleiben Ereignisse in `alert_event` mit `published_at IS NULL` liegen; das braucht eine Überwachung.
 - **Breiter Keycloak-Zugriff:** Ein Service-Account mit Leserecht auf alle Benutzer ist ein neues Angriffsziel; Rechte minimal halten und begründen (E3).
-- **Rechte driften:** Die Schreibregel für Empfänger (Monteis-Admin oder PI) und die Leseprüfung beim Versand müssen in Java und SQL gleich bleiben; Integrationstests sichern das ab.
+- **Rechte driften:** Die Schreibregel für Empfänger (Monteis-Admin oder PI) und die Leseprüfung des Alerting-Service beim Bestimmen der Empfänger müssen in Java und SQL gleich bleiben; Integrationstests sichern das ab.
+- **Empfänger stehen beim Auslösen fest:** Der Alerting-Service bestimmt die Empfänger beim Schreiben des Ereignisses. Wer bis zum Versand entfernt wird oder sein Leserecht verliert, bekommt die Meldung trotzdem; wer neu dazukommt, bekommt sie nicht. Bei einem Versandintervall von bis zu zwölf Stunden ist das vertretbar.
 - **Kosten und Lärm durch Wiederholung:** Wiederholte Alarme von Closely monitored Sensor-Parametern (R19) über SMS (Phase 2) erzeugen laufende Kosten und stumpfen Empfänger ab, wenn kein Ende der Wiederholung definiert ist.
 - **Verlorene Ereignisse auf `sensor-alerts` (akzeptiert, F3):** Die Pipeline sendet asynchron und verwirft ein Ereignis bei einem Sendefehler. Die Auswertung zählt diese Verletzung dann nicht; eine Folge kann zu kurz erscheinen und ein Alarm ausbleiben oder sich bis zur nächsten Verletzung verzögern. Sendefehler sollten deshalb als Metrik überwacht werden.
-- **Rückstau der Auswertung:** Fällt der Alerting-Service aus, wächst der Consumer-Lag auf `sensor-alerts`; Pipeline und Reprocessing laufen weiter (gewollt nach R24). Der Lag braucht eine eigene Überwachung, sonst gehen Alarme unbemerkt verspätet raus.
+- **Rückstau der Auswertung:** Fällt der Alerting-Service aus, wächst der Consumer-Lag auf `sensor-alerts` (fällt der Notification-Job aus, auf `alert-events`); Pipeline und Reprocessing laufen weiter (gewollt nach R24). Der Lag braucht eine eigene Überwachung, sonst gehen Alarme unbemerkt verspätet raus.
 - **Hypertable wächst:** Zwei zusätzliche Status-Spalten pro Messwert und ein Reprocessing über drei Status erhöhen Speicher und Laufzeit des Reprocessing leicht (E2, F1).
 - **Alerting-Service und Notification-Job teilen sich `core`:** Ein Ausfall oder Rückstau der Module betrifft dieselbe Instanz wie die API, und umgekehrt stoppt ein Ausfall von `core` die Alarmierung. Das Mengengerüst (F1) entscheidet, ob eigene Deployables nötig werden (E12).
 
