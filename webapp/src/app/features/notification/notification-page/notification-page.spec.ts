@@ -256,19 +256,28 @@ describe('NotificationPage', () => {
     expect(page.inactiveTags()).toEqual([true, true, false]);
   });
 
-  it('opens the measurements of a sensor parameter in a new measurement table tab', async () => {
+  it('opens the measurements of a DAS key in a new measurement table tab', async () => {
     const page = await render(
-      parameter({ sensorParameterId: 'p1', sensorName: 'A' }),
-      parameter({ sensorParameterId: 'p2', sensorName: 'B' }),
+      parameter({ sensorParameterId: 'p1', sensorName: 'A', dasKey: 'DAS-1' }),
+      parameter({ sensorParameterId: 'p2', sensorName: 'B', dasKey: 'DAS-2' }),
     );
     await page.rowsShown(2);
 
     page.openDetails(1);
 
     expect(workbenchRouter.navigate).toHaveBeenCalledWith(
-      ['/measurements-table', { sensorParameterId: 'p2' }],
+      ['/measurements-table', { dasKey: 'DAS-2' }],
       { target: 'blank' },
     );
+  });
+
+  it('disables open details for a sensor parameter without a DAS key', async () => {
+    const page = await render(
+      parameter({ sensorParameterId: 'p1', sensorParameterName: 'Pressure', dasKey: undefined }),
+    );
+    await page.rowsShown(1);
+
+    expect(page.openDetailsDisabled(0)).toBe(true);
   });
 
   it('shows the empty state instead of the table without notifying parameters', async () => {
@@ -314,6 +323,10 @@ class PageView {
 
   openDetails(rowIndex: number): void {
     this.cell(this.rows()[rowIndex], 'details').querySelector<HTMLElement>('button')!.click();
+  }
+
+  openDetailsDisabled(rowIndex: number): boolean {
+    return this.cell(this.rows()[rowIndex], 'details').querySelector('button')!.disabled;
   }
 
   async sortBy(colId: string): Promise<void> {

@@ -10,7 +10,7 @@ import { ICellRendererParams } from 'ag-grid-community';
   selector: 'app-open-details-cell-renderer',
   imports: [MatButton, TranslatePipe],
   template: `
-    <button matButton="text" (click)="openDetails()">
+    <button matButton="text" [disabled]="!dasKey()" (click)="openDetails()">
       {{ 'notification.parameters.openDetails' | translate }}
     </button>
   `,
@@ -18,22 +18,22 @@ import { ICellRendererParams } from 'ag-grid-community';
 })
 export class OpenDetailsCellRenderer implements ICellRendererAngularComp {
   private readonly workbenchRouter = inject(WorkbenchRouter);
-  private readonly sensorParameterId = signal<string | undefined>(undefined);
+  // no DAS key = no reading yet, nothing to show
+  protected readonly dasKey = signal<string | undefined>(undefined);
 
   agInit(params: ICellRendererParams<NotifyingParameterResponseDto>): void {
     this.refresh(params);
   }
 
   refresh(params: ICellRendererParams<NotifyingParameterResponseDto>): boolean {
-    this.sensorParameterId.set(params.data?.sensorParameterId);
+    this.dasKey.set(params.data?.dasKey);
     return true;
   }
 
   // blank, not auto: auto would re-filter every open measurement table tab
   protected openDetails(): void {
-    void this.workbenchRouter.navigate(
-      ['/measurements-table', { sensorParameterId: this.sensorParameterId() }],
-      { target: 'blank' },
-    );
+    void this.workbenchRouter.navigate(['/measurements-table', { dasKey: this.dasKey() }], {
+      target: 'blank',
+    });
   }
 }
