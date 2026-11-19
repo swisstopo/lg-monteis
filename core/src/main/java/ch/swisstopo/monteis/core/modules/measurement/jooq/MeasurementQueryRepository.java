@@ -26,6 +26,7 @@ import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Record;
 import org.jooq.Result;
+import org.jooq.SortField;
 import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
@@ -103,6 +104,14 @@ public class MeasurementQueryRepository implements MeasurementQuery {
           Map.entry("alarmLimits.upper", SENSOR_PARAMETER.UPPER_ALARM_LIMIT),
           Map.entry("active", SENSORS.ACTIVE),
           Map.entry("comment", SENSORS.COMMENT));
+
+  // the default sort (sensor id) and most column sorts tie across the parameters of one sensor,
+  // the parameter id orders those the same way on every query, so pages neither skip nor repeat
+  static List<SortField<?>> withStableTiebreaker(Collection<SortField<?>> sortFields) {
+    List<SortField<?>> withTiebreaker = new ArrayList<>(sortFields);
+    withTiebreaker.add(SENSOR_PARAMETER.ID.asc());
+    return withTiebreaker;
+  }
 
   public MeasurementQueryRepository(DSLContext dsl, Clock clock) {
     this.dsl = dsl;
@@ -200,9 +209,6 @@ public class MeasurementQueryRepository implements MeasurementQuery {
         PagedRequestJooqTranslator.translate(
             request, MEASUREMENT_COLUMNS_BY_COL_ID, SENSOR_PARAMETER.SENSOR_ID.asc());
 
-    var baseTable = BASE_TABLE;
-    var fullTable = JOINED_FROM;
-
     List<MeasurementRow> rows =
         dsl.select(
                 SENSOR_PARAMETER.ID,
@@ -222,9 +228,9 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                 SENSOR_PARAMETER.UPPER_ALARM_LIMIT,
                 SENSORS.ACTIVE,
                 SENSORS.COMMENT)
-            .from(fullTable)
+            .from(JOINED_FROM)
             .where(criteria.condition())
-            .orderBy(criteria.sortFields())
+            .orderBy(withStableTiebreaker(criteria.sortFields()))
             .limit(request.limit())
             .offset(request.offset())
             .fetch(mapping(MeasurementRow::new));
@@ -263,7 +269,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
     int totalCount =
         dsl.fetchCount(
             dsl.select(SENSORS.ID)
-                .from(needsReadings ? fullTable : baseTable)
+                .from(needsReadings ? JOINED_FROM : BASE_TABLE)
                 .where(criteria.condition()));
 
     return new PagedResult<>(data, totalCount);
