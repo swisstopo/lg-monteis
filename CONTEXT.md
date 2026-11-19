@@ -63,7 +63,8 @@ A user with access to an Experiment who gets the alarms of its Notification acti
 _Avoid_: Empfänger, subscriber
 
 **Recipient candidate**:
-An enabled member of an Experiment's read or read + write group who can be picked as its Recipient; Monteis-Admins and global editors are none, their access comes through a role.
+A user who can be picked as a Recipient of an Experiment: an enabled member of its read or read + write group. Access through a role alone (Monteis-Admin, global editor) doesn't make someone a candidate.
+_Avoid_: member (alone), Empfänger-Kandidat
 
 ## Documents from Fulcrum
 

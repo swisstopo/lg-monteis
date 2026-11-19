@@ -32,13 +32,13 @@ public class RecipientService {
     ExperimentMembers members = userDirectory.findMembersOf(experimentId);
     return recipientRepository
         .findSavedRecipientIdsOf(experimentId)
-        .map(savedIds -> new Recipients(members.among(savedIds), true))
-        .orElseGet(() -> new Recipients(members.pis(), false));
+        .map(savedIds -> Recipients.savedAmong(members, savedIds))
+        .orElseGet(() -> Recipients.pisUntilSaved(members));
   }
 
   public List<DirectoryUser> findRecipientCandidatesOf(UUID experimentId) {
     experimentRepository.requireVisible(experimentId);
-    return userDirectory.findMembersOf(experimentId).all();
+    return userDirectory.findMembersOf(experimentId).recipientCandidates();
   }
 
   public Recipients replaceRecipientsOf(UUID experimentId, Set<UUID> userIds) {
@@ -46,6 +46,6 @@ public class RecipientService {
     // asked before the write: keycloak down => 503 with nothing stored
     ExperimentMembers members = userDirectory.findMembersOf(experimentId);
     recipientRepository.replaceRecipientsOf(experimentId, userIds);
-    return new Recipients(members.among(userIds), true);
+    return Recipients.savedAmong(members, userIds);
   }
 }
