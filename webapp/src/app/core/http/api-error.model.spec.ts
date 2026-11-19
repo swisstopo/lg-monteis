@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ErrorDto } from '@core/generated';
 import { describe, expect, it } from 'vitest';
-import { AppErrorResponse, toErrorDtos } from './api-error.model';
+import { AppErrorResponse, toErrorDtos, toErrorDtosFromBlob } from './api-error.model';
 
 function httpError(status: number, error?: unknown): HttpErrorResponse {
   return new HttpErrorResponse({ status, error });
@@ -21,6 +21,24 @@ describe('toErrorDtos', () => {
   it('returns an empty array for a null/string body', () => {
     expect(toErrorDtos(httpError(500, null))).toEqual([]);
     expect(toErrorDtos(httpError(502, '<html>Bad Gateway</html>'))).toEqual([]);
+  });
+});
+
+describe('toErrorDtosFromBlob', () => {
+  it('parses the ErrorDto out of a blob body', async () => {
+    const dto: ErrorDto = { messageKey: 'export.tooManyRows', params: { max: 5 } };
+    const blob = new Blob([JSON.stringify(dto)]);
+    expect(await toErrorDtosFromBlob(httpError(400, blob))).toEqual([dto]);
+  });
+
+  it('returns an empty array for a blob that is not JSON', async () => {
+    expect(await toErrorDtosFromBlob(httpError(502, new Blob(['<html>'])))).toEqual([]);
+  });
+
+  it('falls back to toErrorDtos for a body that is no blob', async () => {
+    const dto: ErrorDto = { messageKey: 'a' };
+    expect(await toErrorDtosFromBlob(httpError(400, dto))).toEqual([dto]);
+    expect(await toErrorDtosFromBlob(new Error('boom'))).toEqual([]);
   });
 });
 

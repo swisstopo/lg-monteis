@@ -83,10 +83,10 @@
     <button
       matButton="text"
       class="download-button"
-      [disabled]="downloading()"
-      (click)="onDownload()"
+      [disabled]="csvDownload.downloading()"
+      (click)="csvDownload.download()"
     >
-      @if (downloading()) {
+      @if (csvDownload.downloading()) {
         <mat-spinner diameter="16"></mat-spinner>
       } @else {
         <mat-icon fontIcon="download"></mat-icon>
@@ -96,7 +96,9 @@
   </div>
 
   @if (loadError()) {
-    <app-inline-error [message]="'measurements-table.error' | translate"></app-inline-error>
+    <app-inline-error
+      [message]="'measurements-table.error.connection' | translate"
+    ></app-inline-error>
   } @else {
     <app-table
       class="custom-grid"

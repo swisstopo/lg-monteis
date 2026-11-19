@@ -11,11 +11,10 @@ import { SensorService } from '@features/sensor/services/sensor.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { FormDialogService } from '@ui/dialog/form-dialog.service';
-import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
+import { createCsvDownload } from '@ui/table/csv-download';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
-import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
 import { createColumns } from './columns';
@@ -33,7 +32,6 @@ export default class SensorTable {
   private readonly formDialog = inject(FormDialogService);
   protected sensorService = inject(SensorService);
   private readonly translateService = inject(TranslateService);
-  private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   protected readonly permissions = inject(PermissionsService);
 
@@ -47,9 +45,14 @@ export default class SensorTable {
   });
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
-  protected downloading = signal(false);
   protected refreshing = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
+  protected readonly csvDownload = createCsvDownload({
+    gridApi: this.gridApi,
+    fetchCsv: (sortModel, filterModel) => this.sensorService.getSensorsCsv(sortModel, filterModel),
+    fileName: 'sensors.csv',
+    failedMessageKey: 'sensor.error.downloadFailed',
+  });
 
   protected datasource = createPagedDatasource(
     (params) => this.sensorService.getSensors(params),
@@ -97,22 +100,6 @@ export default class SensorTable {
     const sensorId = this.selectedSensorId();
     if (sensorId !== undefined) {
       this.formDialog.open(SensorEdit, { sensorId, viewOnly });
-    }
-  }
-
-  async onDownload(): Promise<void> {
-    const api = this.gridApi();
-    if (!api) return;
-
-    this.downloading.set(true);
-    try {
-      const { sortModel, filterModel } = toGridFilterSortParams(api);
-      const blob = await this.sensorService.getSensorsCsv(sortModel, filterModel);
-      this.fileDownloadService.download(blob, 'sensors.csv');
-    } catch {
-      this.toastService.error(this.translateService.translate('sensor.error.downloadFailed')());
-    } finally {
-      this.downloading.set(false);
     }
   }
 
