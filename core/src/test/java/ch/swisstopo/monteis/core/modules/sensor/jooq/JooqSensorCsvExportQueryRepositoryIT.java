@@ -33,10 +33,10 @@ import org.springframework.transaction.annotation.Transactional;
 class JooqSensorCsvExportQueryRepositoryIT {
 
   private static final String HEADER =
-      "dasSensorAlias,name,das,fulcrumId,mainExperiment.name,coordinates.x,coordinates.y,"
-          + "coordinates.z,active,comment,parameter.name,parameter.dasParameterAlias,"
-          + "parameter.type.name,parameter.unit,parameter.formula.expression,"
-          + "parameter.alarmLimits.lower,parameter.alarmLimits.upper,parameter.active,"
+      "dasSensorAlias;name;das;fulcrumId;mainExperiment.name;coordinates.x;coordinates.y;"
+          + "coordinates.z;active;comment;parameter.name;parameter.dasParameterAlias;"
+          + "parameter.type.name;parameter.unit;parameter.formula.expression;"
+          + "parameter.alarmLimits.lower;parameter.alarmLimits.upper;parameter.active;"
           + "parameter.comment";
 
   @Autowired private JooqSensorRepository sensorRepository;
@@ -70,7 +70,7 @@ class JooqSensorCsvExportQueryRepositoryIT {
               lines
                   .get(1)
                   .startsWith(
-                      "CSV-01,UniqueCsvExportName,SOL_EXPERTS,,,0.0,0.0,0.0,true,,UniqueCsvExportName,"));
+                      "CSV-01;UniqueCsvExportName;SOL_EXPERTS;;;0.0;0.0;0.0;true;;UniqueCsvExportName;"));
         });
   }
 
@@ -101,8 +101,8 @@ class JooqSensorCsvExportQueryRepositoryIT {
           // then: header plus one row per parameter, same sensor identity on both
           List<String> lines = List.of(csv.split("\r\n"));
           assertEquals(3, lines.size(), "Header plus one row per parameter");
-          assertTrue(lines.get(1).startsWith("CSV-MULTI-01,UniqueCsvMultiName,"));
-          assertTrue(lines.get(2).startsWith("CSV-MULTI-01,UniqueCsvMultiName,"));
+          assertTrue(lines.get(1).startsWith("CSV-MULTI-01;UniqueCsvMultiName;"));
+          assertTrue(lines.get(2).startsWith("CSV-MULTI-01;UniqueCsvMultiName;"));
           assertTrue(
               List.of(lines.get(1), lines.get(2)).stream()
                   .anyMatch(line -> line.contains("Param One")));
@@ -138,7 +138,7 @@ class JooqSensorCsvExportQueryRepositoryIT {
           assertEquals(2, lines.size(), "Header plus exactly one row");
           assertEquals(
               String.join(
-                  ",",
+                  ";",
                   "CSV-NONE-01",
                   "UniqueCsvNoneName",
                   "SOL_EXPERTS",
@@ -196,7 +196,7 @@ class JooqSensorCsvExportQueryRepositoryIT {
           // then
           List<String> lines = List.of(csv.split("\r\n"));
           assertEquals(2, lines.size(), "Header plus exactly one matching row");
-          assertTrue(lines.get(1).startsWith("CSV-PARAM-FILTER-01,"));
+          assertTrue(lines.get(1).startsWith("CSV-PARAM-FILTER-01;"));
         });
   }
 
@@ -223,9 +223,9 @@ class JooqSensorCsvExportQueryRepositoryIT {
           List<String> lines = List.of(csv.split("\r\n"));
           assertEquals(3, lines.size(), "Header plus our two sensors");
           assertTrue(
-              lines.get(1).startsWith("SORT-CSV-Z,"),
+              lines.get(1).startsWith("SORT-CSV-Z;"),
               "ZZZ_CSV_SORT should sort before AAA_CSV_SORT in DESC order");
-          assertTrue(lines.get(2).startsWith("SORT-CSV-A,"));
+          assertTrue(lines.get(2).startsWith("SORT-CSV-A;"));
         });
   }
 
@@ -278,7 +278,7 @@ class JooqSensorCsvExportQueryRepositoryIT {
           // then
           assertTrue(
               csv.contains("\"Loud, \"\"noisy\"\" comment\""),
-              "Comment with a comma and quotes must be RFC4180-escaped: " + csv);
+              "Comment with quotes must be RFC4180-escaped: " + csv);
         });
   }
 
