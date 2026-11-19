@@ -139,12 +139,18 @@ public class ExperimentController {
       description =
           "Retrieves an unpaged list of all experiments visible to the current user, sorted"
               + " alphabetically by name. Intended for lightweight lookups (e.g. an autocomplete"
-              + " when picking a sensor's main experiment).")
+              + " when picking a sensor's main experiment). With access=WRITE only the experiments"
+              + " the current user may write (e.g. the Monitoring menu).")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved experiments")
   @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<List<ExperimentResponseDto>> getAllExperiments() {
+  public ResponseEntity<List<ExperimentResponseDto>> getAllExperiments(
+      @RequestParam(defaultValue = "READ") ExperimentAccess access) {
     LocalDate today = LocalDate.now(clock);
-    List<Experiment> experiments = experimentService.findAllExperiments();
+    List<Experiment> experiments =
+        switch (access) {
+          case READ -> experimentService.findAllExperiments();
+          case WRITE -> experimentService.findAllWritableExperiments();
+        };
     return ResponseEntity.ok(
         mapper.toDtos(experiments, ownerService.findOwnersByExperiment(experiments), today));
   }

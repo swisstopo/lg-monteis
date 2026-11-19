@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIMENT;
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.OTHER_EXPERIMENT;
+import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -10,6 +11,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -326,6 +328,76 @@ class ExperimentControllerTest {
 
     then(experimentService).should().findAllExperiments();
     then(mapper).should().toDtos(eq(List.of(experiment1)), eq(owners), any(LocalDate.class));
+  }
+
+  @Test
+  void should_list_only_the_writable_experiments_with_access_write() throws Exception {
+    given(experimentService.findAllWritableExperiments()).willReturn(List.of(experiment()));
+    givenMappedById();
+
+    mockMvc
+        .perform(get("/api/experiments/all").param("access", "WRITE").with(jwt()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[*].id").value(contains(EXPERIMENT_ID.toString())));
+
+    then(experimentService).should(never()).findAllExperiments();
+  }
+
+  @Test
+  void should_list_every_visible_experiment_without_an_access_param() throws Exception {
+    given(experimentService.findAllExperiments()).willReturn(List.of(experiment()));
+    givenMappedById();
+
+    mockMvc
+        .perform(get("/api/experiments/all").with(jwt()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[*].id").value(contains(EXPERIMENT_ID.toString())));
+
+    then(experimentService).should(never()).findAllWritableExperiments();
+  }
+
+  @Test
+  void should_reject_an_unknown_access_value() throws Exception {
+    mockMvc
+        .perform(get("/api/experiments/all").param("access", "DELETE").with(jwt()))
+        .andExpect(status().isBadRequest());
+
+    then(experimentService).shouldHaveNoInteractions();
+  }
+
+  private static Experiment experiment() {
+    return new Experiment(
+        EXPERIMENT_ID,
+        "EXP-01",
+        new Period(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.DECEMBER, 31)),
+        null,
+        1,
+        0,
+        Set.of());
+  }
+
+  private void givenMappedById() {
+    given(ownerService.findOwnersByExperiment(any())).willReturn(Map.of());
+    given(mapper.toDtos(any(), any(), any(LocalDate.class)))
+        .willAnswer(
+            invocation ->
+                invocation.<List<Experiment>>getArgument(0).stream()
+                    .map(ExperimentControllerTest::responseDtoOf)
+                    .toList());
+  }
+
+  private static ExperimentResponseDto responseDtoOf(Experiment experiment) {
+    return new ExperimentResponseDto(
+        experiment.getId(),
+        experiment.getName(),
+        null,
+        new PeriodDto(experiment.getPeriod().start(), experiment.getPeriod().end()),
+        Status.HISTORIC,
+        1,
+        0,
+        List.of(),
+        OwnersStatus.SHOWN,
+        List.of());
   }
 
   @Test

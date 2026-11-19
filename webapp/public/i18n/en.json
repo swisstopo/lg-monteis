@@ -438,7 +438,10 @@
     "admin": "Admin",
     "organisation": "Organisations",
     "fulcrumDocument": "Fulcrum Documents",
-    "knowledge": "Knowledge"
+    "knowledge": "Knowledge",
+    "monitoring": "Monitoring",
+    "notifications": "Notifications",
+    "notificationsOf": "Notifications – {{name}}"
   },
   "chart": {
     "error": {
