@@ -9,6 +9,8 @@ import ch.swisstopo.monteis.core.modules.notification.domain.Recipients;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -45,7 +47,17 @@ public class RecipientService {
     experimentRepository.requireVisible(experimentId);
     // asked before the write: keycloak down => 503 with nothing stored
     ExperimentMembers members = userDirectory.findMembersOf(experimentId);
-    recipientRepository.replaceRecipientsOf(experimentId, userIds);
+    // lost access => hidden from the list, kept so they count again once access is back
+    Set<UUID> hiddenIds =
+        recipientRepository
+            .findSavedRecipientIdsOf(experimentId)
+            .map(members::nonMembersAmong)
+            .orElse(Set.of());
+    recipientRepository.replaceRecipientsOf(experimentId, union(userIds, hiddenIds));
     return Recipients.savedAmong(members, userIds);
+  }
+
+  private static Set<UUID> union(Set<UUID> first, Set<UUID> second) {
+    return Stream.concat(first.stream(), second.stream()).collect(Collectors.toUnmodifiableSet());
   }
 }

@@ -196,6 +196,23 @@ class RecipientServiceTest {
   }
 
   @Test
+  void should_keep_a_saved_recipient_who_lost_access_when_the_list_is_replaced() {
+    // given
+    givenExperimentMembers(List.of(PI_ANNA, PI_BEN), List.of(PI_ANNA, PI_BEN));
+    given(recipientRepository.findSavedRecipientIdsOf(EXPERIMENT_ID))
+        .willReturn(Optional.of(Set.of(PI_ANNA.id(), LEFT_DORA)));
+
+    // when
+    Recipients recipients = service.replaceRecipientsOf(EXPERIMENT_ID, Set.of(PI_BEN.id()));
+
+    // then
+    then(recipientRepository)
+        .should()
+        .replaceRecipientsOf(EXPERIMENT_ID, Set.of(PI_BEN.id(), LEFT_DORA));
+    assertThat(recipients).isEqualTo(new Recipients(List.of(PI_BEN), true));
+  }
+
+  @Test
   void should_store_nothing_when_keycloak_is_unavailable() {
     // given
     given(userDirectory.findMembersOf(EXPERIMENT_ID))
