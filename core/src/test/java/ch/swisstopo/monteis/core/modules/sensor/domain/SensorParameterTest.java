@@ -3,8 +3,10 @@ package ch.swisstopo.monteis.core.modules.sensor.domain;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import org.junit.jupiter.api.Test;
 
 class SensorParameterTest {
@@ -80,6 +82,28 @@ class SensorParameterTest {
   }
 
   @Test
+  void should_trigger_publish_when_notification_switched() {
+    // given
+    SensorParameter before = sensorParameterWith("x * 2", 0.0, 100.0);
+    SensorParameter after = sensorParameterWith("x * 2", 0.0, 100.0);
+    after.setNotificationActive(true);
+
+    // when / then
+    assertTrue(after.changeTriggersPublish(before));
+  }
+
+  @Test
+  void should_trigger_publish_when_special_alarm_limits_changed() {
+    // given
+    SensorParameter before = sensorParameterWith("x * 2", 0.0, 100.0);
+    SensorParameter after = sensorParameterWith("x * 2", 0.0, 100.0);
+    after.setSpecialAlarmLimits(new AlarmLimits(10.0, 90.0));
+
+    // when / then
+    assertTrue(after.changeTriggersPublish(before));
+  }
+
+  @Test
   void should_not_trigger_publish_when_alarm_limits_and_formula_are_unchanged() {
     // given
     Formula formula = new Formula("x * 2");
@@ -103,6 +127,58 @@ class SensorParameterTest {
     assertFalse(after.changeTriggersPublish(before));
   }
 
+  @Test
+  void should_reject_closely_monitored_parameter_without_special_alarm_limits() {
+    ObjectBusinessValidationException exception =
+        assertThrows(
+            ObjectBusinessValidationException.class,
+            () ->
+                new SensorParameter(
+                    "Test Sensor Parameter",
+                    "PARAM-01",
+                    new SensorType(null, "Other", null),
+                    Unit.METER,
+                    new Formula("x"),
+                    new AlarmLimits(0.0, 100.0),
+                    new RangeLimits(-1000.0, 1000.0),
+                    null,
+                    true,
+                    null,
+                    true));
+
+    assertEquals("sensor.specialAlarmLimits.required", exception.getMessageKey());
+  }
+
+  @Test
+  void should_keep_special_alarm_limits_while_not_closely_monitored() {
+    SensorParameter parameter =
+        new SensorParameter(
+            "Test Sensor Parameter",
+            "PARAM-01",
+            new SensorType(null, "Other", null),
+            Unit.METER,
+            new Formula("x"),
+            new AlarmLimits(0.0, 100.0),
+            new RangeLimits(-1000.0, 1000.0),
+            null,
+            false,
+            new AlarmLimits(-10.0, 110.0),
+            true);
+
+    assertFalse(parameter.getCloselyMonitored());
+    assertEquals(new AlarmLimits(-10.0, 110.0), parameter.getSpecialAlarmLimits());
+  }
+
+  @Test
+  void should_default_monitoring_flags_to_false() {
+    // when
+    SensorParameter parameter = newSensorParameterWithAlias("PARAM-01");
+
+    // then
+    assertFalse(parameter.getNotificationActive());
+    assertFalse(parameter.getCloselyMonitored());
+  }
+
   private SensorParameter sensorParameterWith(
       String formulaExpression, Double lower, Double upper) {
     return sensorParameterWith(new Formula(formulaExpression), new AlarmLimits(lower, upper));
@@ -116,8 +192,11 @@ class SensorParameterTest {
         Unit.METER,
         formula,
         alarmLimits,
-        true,
-        null);
+        new RangeLimits(-1000.0, 1000.0),
+        null,
+        null,
+        null,
+        true);
   }
 
   private SensorParameter newSensorParameterWithAlias(String dasParameterAlias) {
@@ -128,7 +207,10 @@ class SensorParameterTest {
         Unit.METER,
         new Formula("x * 2"),
         new AlarmLimits(0.0, 100.0),
-        true,
-        null);
+        new RangeLimits(-1000.0, 1000.0),
+        null,
+        null,
+        null,
+        true);
   }
 }

@@ -4,13 +4,16 @@ import ch.swisstopo.monteis.core.jooq.generated.tables.records.FormulasRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorParameterRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorTypesRecord;
 import ch.swisstopo.monteis.core.jooq.generated.tables.records.SensorsRecord;
+import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.RangeLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
 
 @Mapper(componentModel = "spring")
 public interface SensorJooqMapper {
@@ -47,10 +50,16 @@ public interface SensorJooqMapper {
   @Mapping(target = "name", source = "paramRecord.name")
   @Mapping(target = "unit", source = "paramRecord.unit")
   @Mapping(target = "active", source = "paramRecord.active")
-  @Mapping(target = "comment", source = "paramRecord.comment")
   @Mapping(target = "version", source = "paramRecord.version")
   @Mapping(target = "alarmLimits.lower", source = "paramRecord.lowerAlarmLimit")
   @Mapping(target = "alarmLimits.upper", source = "paramRecord.upperAlarmLimit")
+  @Mapping(target = "rangeLimits", source = "paramRecord", qualifiedByName = "rangeLimits")
+  @Mapping(target = "notificationActive", source = "paramRecord.notificationActive")
+  @Mapping(target = "closelyMonitored", source = "paramRecord.closelyMonitored")
+  @Mapping(
+      target = "specialAlarmLimits",
+      source = "paramRecord",
+      qualifiedByName = "specialAlarmLimits")
   @Mapping(target = "formula", source = "formulaRecord")
   @Mapping(target = "type", source = "typeRecord")
   SensorParameter toParameterDomain(
@@ -58,10 +67,29 @@ public interface SensorJooqMapper {
       FormulasRecord formulaRecord,
       SensorTypesRecord typeRecord);
 
+  // Optional limits: a nested "x.lower" mapping would build a record from two null columns.
+  @Named("rangeLimits")
+  default RangeLimits toRangeLimits(SensorParameterRecord r) {
+    return r.getLowerRangeLimit() == null
+        ? null
+        : new RangeLimits(r.getLowerRangeLimit(), r.getUpperRangeLimit());
+  }
+
+  @Named("specialAlarmLimits")
+  default AlarmLimits toSpecialAlarmLimits(SensorParameterRecord r) {
+    return r.getLowerSpecialAlarmLimit() == null
+        ? null
+        : new AlarmLimits(r.getLowerSpecialAlarmLimit(), r.getUpperSpecialAlarmLimit());
+  }
+
   // --- Embedded Sensor Parameter Mappings ---
 
   @Mapping(target = "lowerAlarmLimit", source = "alarmLimits.lower")
   @Mapping(target = "upperAlarmLimit", source = "alarmLimits.upper")
+  @Mapping(target = "lowerRangeLimit", source = "rangeLimits.lower")
+  @Mapping(target = "upperRangeLimit", source = "rangeLimits.upper")
+  @Mapping(target = "lowerSpecialAlarmLimit", source = "specialAlarmLimits.lower")
+  @Mapping(target = "upperSpecialAlarmLimit", source = "specialAlarmLimits.upper")
   @Mapping(target = "formulaId", source = "formula.id")
   @Mapping(target = "typeId", source = "type.id")
   @Mapping(target = "sensorId", ignore = true)
@@ -74,6 +102,10 @@ public interface SensorJooqMapper {
   // fetched record's real, still-correct foreign keys with null.
   @Mapping(target = "lowerAlarmLimit", source = "alarmLimits.lower")
   @Mapping(target = "upperAlarmLimit", source = "alarmLimits.upper")
+  @Mapping(target = "lowerRangeLimit", source = "rangeLimits.lower")
+  @Mapping(target = "upperRangeLimit", source = "rangeLimits.upper")
+  @Mapping(target = "lowerSpecialAlarmLimit", source = "specialAlarmLimits.lower")
+  @Mapping(target = "upperSpecialAlarmLimit", source = "specialAlarmLimits.upper")
   @Mapping(target = "formulaId", ignore = true)
   @Mapping(target = "typeId", ignore = true)
   @Mapping(target = "sensorId", ignore = true)

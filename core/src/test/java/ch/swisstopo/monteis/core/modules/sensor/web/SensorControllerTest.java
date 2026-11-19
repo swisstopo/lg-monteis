@@ -40,6 +40,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParam
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.RangeLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
@@ -297,9 +298,12 @@ class SensorControllerTest {
             Unit.METER,
             new WriteSensorTypeDto("Other"),
             new AlarmLimitsDto(0.0, 100.0),
+            new RangeLimitsDto(-1000.0, 1000.0),
+            null,
+            null,
+            null,
             true,
             new WriteFormulaDto("x * 2"),
-            null,
             null);
     WriteSensorDto requestDto =
         new WriteSensorDto(
@@ -324,8 +328,11 @@ class SensorControllerTest {
             Unit.METER,
             new FormulaResponseDto(FORMULA_ID, "x * 2", 1),
             new AlarmLimitsDto(0.0, 100.0),
-            true,
+            new RangeLimitsDto(-1000.0, 1000.0),
             null,
+            null,
+            null,
+            true,
             null);
     SensorResponseDto expectedResponseDto =
         new SensorResponseDto(
@@ -679,8 +686,11 @@ class SensorControllerTest {
         Unit.METER,
         new WriteSensorTypeDto("Other"),
         new AlarmLimitsDto(0.0, 100.0),
-        true,
+        new RangeLimitsDto(-1000.0, 1000.0),
         null,
+        null,
+        null,
+        true,
         null,
         version);
   }
@@ -710,8 +720,11 @@ class SensorControllerTest {
         Unit.METER,
         null,
         new AlarmLimitsDto(0.0, 100.0),
-        true,
+        new RangeLimitsDto(-1000.0, 1000.0),
         null,
+        null,
+        null,
+        true,
         version);
   }
 

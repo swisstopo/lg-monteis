@@ -1,6 +1,8 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
+import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.javers.core.metamodel.annotation.Id;
@@ -15,8 +17,12 @@ public class SensorParameter {
   private Unit unit;
   private Formula formula;
   private AlarmLimits alarmLimits;
+  private RangeLimits rangeLimits;
+  private Boolean notificationActive;
+  private Boolean closelyMonitored;
+  // Required while closelyMonitored is set.
+  private AlarmLimits specialAlarmLimits;
   private Boolean active;
-  private String comment;
   private Integer version;
 
   /**
@@ -32,8 +38,11 @@ public class SensorParameter {
       Unit unit,
       Formula formula,
       AlarmLimits alarmLimits,
-      Boolean active,
-      String comment) {
+      RangeLimits rangeLimits,
+      Boolean notificationActive,
+      Boolean closelyMonitored,
+      AlarmLimits specialAlarmLimits,
+      Boolean active) {
     this.name = name;
     // Most DAS devices only ever report a single measurement, conventionally named "value"
     this.dasParameterAlias =
@@ -44,8 +53,12 @@ public class SensorParameter {
     this.unit = unit;
     this.formula = formula;
     this.alarmLimits = alarmLimits;
+    this.rangeLimits = rangeLimits;
+    this.notificationActive = Boolean.TRUE.equals(notificationActive);
+    this.closelyMonitored = Boolean.TRUE.equals(closelyMonitored);
+    this.specialAlarmLimits = specialAlarmLimits;
+    requireSpecialAlarmLimitsWhenCloselyMonitored();
     this.active = active;
-    this.comment = comment;
   }
 
   @SuppressWarnings("java:S107")
@@ -57,8 +70,11 @@ public class SensorParameter {
       Unit unit,
       Formula formula,
       AlarmLimits alarmLimits,
+      RangeLimits rangeLimits,
+      Boolean notificationActive,
+      Boolean closelyMonitored,
+      AlarmLimits specialAlarmLimits,
       Boolean active,
-      String comment,
       Integer version) {
     this.id = id;
     this.name = name;
@@ -67,8 +83,12 @@ public class SensorParameter {
     this.unit = unit;
     this.formula = formula;
     this.alarmLimits = alarmLimits;
+    this.rangeLimits = rangeLimits;
+    this.notificationActive = Boolean.TRUE.equals(notificationActive);
+    this.closelyMonitored = Boolean.TRUE.equals(closelyMonitored);
+    this.specialAlarmLimits = specialAlarmLimits;
+    requireSpecialAlarmLimitsWhenCloselyMonitored();
     this.active = active;
-    this.comment = comment;
     this.version = version;
   }
 
@@ -128,20 +148,46 @@ public class SensorParameter {
     this.alarmLimits = alarmLimits;
   }
 
+  public RangeLimits getRangeLimits() {
+    return rangeLimits;
+  }
+
+  public void setRangeLimits(RangeLimits rangeLimits) {
+    this.rangeLimits = rangeLimits;
+  }
+
+  public Boolean getNotificationActive() {
+    return notificationActive;
+  }
+
+  // Omitted means off.
+  public void setNotificationActive(Boolean notificationActive) {
+    this.notificationActive = Boolean.TRUE.equals(notificationActive);
+  }
+
+  public Boolean getCloselyMonitored() {
+    return closelyMonitored;
+  }
+
+  // Omitted means off.
+  public void setCloselyMonitored(Boolean closelyMonitored) {
+    this.closelyMonitored = Boolean.TRUE.equals(closelyMonitored);
+  }
+
+  public AlarmLimits getSpecialAlarmLimits() {
+    return specialAlarmLimits;
+  }
+
+  public void setSpecialAlarmLimits(AlarmLimits specialAlarmLimits) {
+    this.specialAlarmLimits = specialAlarmLimits;
+  }
+
   public Boolean getActive() {
     return active;
   }
 
   public void setActive(Boolean active) {
     this.active = active;
-  }
-
-  public String getComment() {
-    return comment;
-  }
-
-  public void setComment(String comment) {
-    this.comment = comment;
   }
 
   public Integer getVersion() {
@@ -152,9 +198,18 @@ public class SensorParameter {
     this.version = version;
   }
 
+  private void requireSpecialAlarmLimitsWhenCloselyMonitored() {
+    if (closelyMonitored && specialAlarmLimits == null) {
+      throw new ObjectBusinessValidationException("sensor.specialAlarmLimits.required", Map.of());
+    }
+  }
+
   public boolean changeTriggersPublish(SensorParameter old) {
     return old == null
         || !Objects.equals(old.getFormula().getExpression(), this.formula.getExpression())
-        || !Objects.equals(old.getAlarmLimits(), this.alarmLimits);
+        || !Objects.equals(old.getAlarmLimits(), this.alarmLimits)
+        || !Objects.equals(old.getNotificationActive(), this.notificationActive)
+        || !Objects.equals(old.getCloselyMonitored(), this.closelyMonitored)
+        || !Objects.equals(old.getSpecialAlarmLimits(), this.specialAlarmLimits);
   }
 }

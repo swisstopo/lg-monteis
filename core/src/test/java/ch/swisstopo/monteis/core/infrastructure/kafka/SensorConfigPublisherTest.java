@@ -11,6 +11,7 @@ import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.RangeLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
@@ -54,8 +55,11 @@ class SensorConfigPublisherTest {
         Unit.METER,
         formula,
         new AlarmLimits(0.0, 100.0),
-        active,
+        new RangeLimits(-1000.0, 1000.0),
         null,
+        null,
+        null,
+        active,
         3);
   }
 
@@ -85,6 +89,45 @@ class SensorConfigPublisherTest {
     assertThat(sentConfig.getUpperBound()).isEqualTo(100.0);
     assertThat(sentConfig.getLowerBound()).isEqualTo(0.0);
     assertThat(sentConfig.getVersion()).isEqualTo(3);
+  }
+
+  @Test
+  void should_publish_monitoring_settings() {
+    // given
+    SensorConfigPublisher publisher = new SensorConfigPublisher(kafkaTemplate, "topic");
+    SensorParameter parameter = parameter(UUID.randomUUID(), true, "temperature");
+    parameter.setNotificationActive(true);
+    parameter.setCloselyMonitored(true);
+    parameter.setSpecialAlarmLimits(new AlarmLimits(10.0, 90.0));
+
+    // when
+    publisher.publish(sensor(), parameter);
+
+    // then
+    then(kafkaTemplate).should().send(eq("topic"), any(), configCaptor.capture());
+    SensorParameterConfig sentConfig = configCaptor.getValue();
+    assertThat(sentConfig.getNotificationActive()).isTrue();
+    assertThat(sentConfig.getCloselyMonitored()).isTrue();
+    assertThat(sentConfig.getUpperSpecialAlarmLimit()).isEqualTo(90.0);
+    assertThat(sentConfig.getLowerSpecialAlarmLimit()).isEqualTo(10.0);
+  }
+
+  @Test
+  void should_publish_switched_off_notifications_and_no_special_alarm_limits() {
+    // given
+    SensorConfigPublisher publisher = new SensorConfigPublisher(kafkaTemplate, "topic");
+    SensorParameter parameter = parameter(UUID.randomUUID(), true, "temperature");
+
+    // when
+    publisher.publish(sensor(), parameter);
+
+    // then
+    then(kafkaTemplate).should().send(eq("topic"), any(), configCaptor.capture());
+    SensorParameterConfig sentConfig = configCaptor.getValue();
+    assertThat(sentConfig.getNotificationActive()).isFalse();
+    assertThat(sentConfig.getCloselyMonitored()).isFalse();
+    assertThat(sentConfig.getUpperSpecialAlarmLimit()).isNull();
+    assertThat(sentConfig.getLowerSpecialAlarmLimit()).isNull();
   }
 
   @Test

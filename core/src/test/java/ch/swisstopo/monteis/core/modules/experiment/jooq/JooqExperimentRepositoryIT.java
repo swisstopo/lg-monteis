@@ -900,8 +900,11 @@ class JooqExperimentRepositoryIT {
             Unit.METER,
             formula,
             new AlarmLimits(0.0, 100.0),
-            true,
+            new RangeLimits(-1000.0, 1000.0),
             null,
+            null,
+            null,
+            true,
             null);
 
     Sensor sensor = new Sensor(name, dasKey, Das.SOL_EXPERTS, null, null, coordinates, true, null);

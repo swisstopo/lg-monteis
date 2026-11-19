@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.infrastructure.kafka;
 import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.contracts.DasKey;
 import ch.swisstopo.monteis.contracts.SensorParameterConfig;
+import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,7 +49,16 @@ public class SensorConfigPublisher {
             .formula(parameter.getFormula().getExpression())
             .upperBound(parameter.getAlarmLimits().upper())
             .lowerBound(parameter.getAlarmLimits().lower())
+            .notificationActive(parameter.getNotificationActive())
+            .closelyMonitored(parameter.getCloselyMonitored())
             .version(parameter.getVersion());
+
+    AlarmLimits specialAlarmLimits = parameter.getSpecialAlarmLimits();
+    if (specialAlarmLimits != null) {
+      config
+          .upperSpecialAlarmLimit(specialAlarmLimits.upper())
+          .lowerSpecialAlarmLimit(specialAlarmLimits.lower());
+    }
 
     kafkaTemplate.send(sensorConfigTopic, dasKey, config);
   }
