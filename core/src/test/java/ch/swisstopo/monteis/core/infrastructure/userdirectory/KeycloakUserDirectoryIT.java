@@ -53,14 +53,14 @@ class KeycloakUserDirectoryIT {
   }
 
   @Test
-  void should_find_the_experiment_users_and_the_pis_of_an_experiment() {
+  void should_find_the_members_and_the_pis_of_an_experiment() {
     // given
     signedInAs(ADMIN_USER, "admin-user");
 
     // when
-    ExperimentUsers alpha = directory.findExperimentUsersOf(SeedData.EXPERIMENT_ALPHA);
-    ExperimentUsers beta = directory.findExperimentUsersOf(SeedData.EXPERIMENT_BETA);
-    ExperimentUsers gamma = directory.findExperimentUsersOf(SeedData.EXPERIMENT_GAMMA);
+    ExperimentMembers alpha = directory.findMembersOf(SeedData.EXPERIMENT_ALPHA);
+    ExperimentMembers beta = directory.findMembersOf(SeedData.EXPERIMENT_BETA);
+    ExperimentMembers gamma = directory.findMembersOf(SeedData.EXPERIMENT_GAMMA);
 
     // then
     assertThat(idsOf(alpha.all())).containsExactly(ALICE);
@@ -71,12 +71,12 @@ class KeycloakUserDirectoryIT {
   }
 
   @Test
-  void should_let_a_pi_find_the_experiment_users_with_their_contact_details() {
+  void should_let_a_pi_find_the_members_with_their_contact_details() {
     // given
     signedInAs(ALICE, "alice");
 
     // when
-    ExperimentUsers alpha = directory.findExperimentUsersOf(SeedData.EXPERIMENT_ALPHA);
+    ExperimentMembers alpha = directory.findMembersOf(SeedData.EXPERIMENT_ALPHA);
 
     // then
     assertThat(alpha.all())
@@ -91,19 +91,19 @@ class KeycloakUserDirectoryIT {
     // when / then
     assertThrows(
         UserDirectoryDeniedException.class,
-        () -> directory.findExperimentUsersOf(SeedData.EXPERIMENT_ALPHA));
+        () -> directory.findMembersOf(SeedData.EXPERIMENT_ALPHA));
   }
 
   @Test
-  void should_find_no_experiment_users_of_an_experiment_without_groups() {
+  void should_find_no_members_of_an_experiment_without_groups() {
     // given
     signedInAs(ADMIN_USER, "admin-user");
 
     // when
-    ExperimentUsers users = directory.findExperimentUsersOf(UUID.randomUUID());
+    ExperimentMembers users = directory.findMembersOf(UUID.randomUUID());
 
     // then
-    assertThat(users).isEqualTo(new ExperimentUsers(List.of(), List.of()));
+    assertThat(users).isEqualTo(new ExperimentMembers(List.of(), List.of()));
   }
 
   // seed users' passwords = their usernames (patch.local.json)

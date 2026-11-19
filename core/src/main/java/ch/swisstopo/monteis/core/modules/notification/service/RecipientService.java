@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.modules.notification.service;
 
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.ExperimentUsers;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.ExperimentMembers;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.notification.domain.RecipientRepository;
@@ -26,10 +26,10 @@ public class RecipientService {
 
   public Recipients findRecipientsOf(UUID experimentId) {
     experimentRepository.requireVisible(experimentId);
-    ExperimentUsers experimentUsers = userDirectory.findExperimentUsersOf(experimentId);
+    ExperimentMembers members = userDirectory.findMembersOf(experimentId);
     return recipientRepository
         .findSavedRecipientIdsOf(experimentId)
-        .map(savedIds -> new Recipients(experimentUsers.among(savedIds), true))
-        .orElseGet(() -> new Recipients(experimentUsers.pis(), false));
+        .map(savedIds -> new Recipients(members.among(savedIds), true))
+        .orElseGet(() -> new Recipients(members.pis(), false));
   }
 }

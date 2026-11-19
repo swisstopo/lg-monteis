@@ -4,9 +4,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-public record ExperimentUsers(List<DirectoryUser> all, List<DirectoryUser> pis) {
+public record ExperimentMembers(List<DirectoryUser> all, List<DirectoryUser> pis) {
 
-  public ExperimentUsers {
+  public ExperimentMembers {
     all = List.copyOf(all);
     pis = List.copyOf(pis);
   }
