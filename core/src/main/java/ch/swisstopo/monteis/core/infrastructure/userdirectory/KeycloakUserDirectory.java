@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Component;
 @Component
 class KeycloakUserDirectory implements UserDirectory {
 
+  static final String READ_EXPERIMENT_IDS = "read_experiment_ids";
   static final String WRITE_EXPERIMENT_IDS = "write_experiment_ids";
 
   private static final Logger log = LoggerFactory.getLogger(KeycloakUserDirectory.class);
@@ -33,6 +35,7 @@ class KeycloakUserDirectory implements UserDirectory {
   private final KeycloakClient keycloak;
   private final CurrentUserProvider currentUser;
   private final Cache<CacheKey, Pis> cache;
+  private final Cache<CacheKey, ExperimentMembers> membersCache;
 
   KeycloakUserDirectory(
       KeycloakClient keycloak,
@@ -40,11 +43,15 @@ class KeycloakUserDirectory implements UserDirectory {
       UserDirectoryProperties properties) {
     this.keycloak = keycloak;
     this.currentUser = currentUser;
-    this.cache =
-        Caffeine.newBuilder()
-            .expireAfterWrite(properties.cacheTtl())
-            .maximumSize(properties.cacheMaxSize())
-            .build();
+    this.cache = newCache(properties);
+    this.membersCache = newCache(properties);
+  }
+
+  private static <V> Cache<CacheKey, V> newCache(UserDirectoryProperties properties) {
+    return Caffeine.newBuilder()
+        .expireAfterWrite(properties.cacheTtl())
+        .maximumSize(properties.cacheMaxSize())
+        .build();
   }
 
   @Override
@@ -126,6 +133,42 @@ class KeycloakUserDirectory implements UserDirectory {
         .flatMap(group -> keycloak.groupMembers(group.id()).stream())
         .filter(KeycloakUser::enabled)
         .map(DirectoryUser::from)
+        .distinct()
+        .sorted(DirectoryUser.BY_NAME)
+        .toList();
+  }
+
+  @Override
+  public ExperimentMembers findMembersOf(UUID experimentId) {
+    CacheKey key =
+        keyForRequestingUser(experimentId)
+            .orElseThrow(
+                () ->
+                    new UserDirectoryUnavailableException(
+                        "no requesting user to ask Keycloak with"));
+    // a failed lookup throws out of the loader, so caffeine caches only answers
+    return membersCache.get(key, k -> fetchMembersFromKeycloak(k.experimentId()));
+  }
+
+  private ExperimentMembers fetchMembersFromKeycloak(UUID experimentId) {
+    try {
+      List<DirectoryUser> pis = enabledMembersOf(findWriteGroupsOf(experimentId));
+      List<DirectoryUser> readers = enabledMembersOf(findReadGroupsOf(experimentId));
+      return new ExperimentMembers(pis, sortedUnion(pis, readers));
+    } catch (KeycloakAccessDeniedException e) {
+      throw new UserDirectoryDeniedException(e.getMessage());
+    } catch (KeycloakUnavailableException e) {
+      throw new UserDirectoryUnavailableException(e.getMessage());
+    }
+  }
+
+  private List<KeycloakGroup> findReadGroupsOf(UUID experimentId) {
+    return keycloak.findGroupsByAttribute(READ_EXPERIMENT_IDS, experimentId.toString());
+  }
+
+  private static List<DirectoryUser> sortedUnion(
+      List<DirectoryUser> first, List<DirectoryUser> second) {
+    return Stream.concat(first.stream(), second.stream())
         .distinct()
         .sorted(DirectoryUser.BY_NAME)
         .toList();
