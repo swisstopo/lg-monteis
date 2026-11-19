@@ -35,6 +35,7 @@ export interface ChartRangeEvent {
 
 export interface ChartThemePalette {
   textColor?: string;
+  backgroundColor?: string;
   gridColor?: string;
   seriesColors?: string[];
   dragBorderColor?: string;

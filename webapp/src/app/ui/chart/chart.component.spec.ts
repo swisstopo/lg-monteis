@@ -214,22 +214,65 @@ describe('Chart', () => {
       expect(component.dragZoomEnabled()).toBe(false);
     });
 
-    it('should download the chart as a PNG when downloadChart() is invoked', () => {
+    it('should download the chart with the Chart.js title shown only for the export', () => {
       const instance = (component as any).instance;
-      const createElementSpy = vi.spyOn(document, 'createElement');
-      const clickSpy = vi.fn();
-      createElementSpy.mockReturnValue({
-        href: '',
-        download: '',
-        click: clickSpy,
-      } as unknown as HTMLAnchorElement);
+      const link = { href: '', download: '', click: vi.fn() };
+      const createElementSpy = vi
+        .spyOn(document, 'createElement')
+        .mockReturnValue(link as unknown as HTMLAnchorElement);
+      let titleDuringExport: any;
+      let exportingDuringExport: boolean | undefined;
+      instance.toBase64Image.mockImplementation(() => {
+        titleDuringExport = { ...instance.config.options.plugins.title };
+        exportingDuringExport = (component as any).exporting;
+        return 'data:image/png;base64,mock';
+      });
 
       try {
         component.downloadChart();
 
         expect(instance.toBase64Image).toHaveBeenCalledWith('image/png');
-        expect(createElementSpy).toHaveBeenCalledWith('a');
-        expect(clickSpy).toHaveBeenCalled();
+        expect(titleDuringExport).toEqual(
+          expect.objectContaining({ display: true, text: 'TestChart' }),
+        );
+        expect(exportingDuringExport).toBe(true);
+        expect(instance.config.options.plugins.title).toEqual({ display: false });
+        expect((component as any).exporting).toBe(false);
+        expect(instance.update).toHaveBeenCalledWith('none');
+        expect(link.href).toBe('data:image/png;base64,mock');
+        expect(link.download).toBe('TestChart.png');
+        expect(link.click).toHaveBeenCalled();
+      } finally {
+        createElementSpy.mockRestore();
+      }
+    });
+
+    it('should paint the theme background only while exporting', () => {
+      const plugin = (component as any).exportBackgroundPlugin;
+      const ctx = {
+        save: vi.fn(),
+        restore: vi.fn(),
+        fillRect: vi.fn(),
+        fillStyle: '',
+        globalCompositeOperation: '',
+      };
+      const chart = { ctx, width: 600, height: 300 };
+
+      plugin.beforeDraw(chart);
+      expect(ctx.fillRect).not.toHaveBeenCalled();
+
+      (component as any).exporting = true;
+      plugin.beforeDraw(chart);
+      expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 600, 300);
+      expect(ctx.globalCompositeOperation).toBe('destination-over');
+    });
+
+    it('should not download anything when the chart has not been created', () => {
+      (component as any).instance = undefined;
+      const createElementSpy = vi.spyOn(document, 'createElement');
+      try {
+        component.downloadChart();
+        expect(createElementSpy).not.toHaveBeenCalled();
       } finally {
         createElementSpy.mockRestore();
       }

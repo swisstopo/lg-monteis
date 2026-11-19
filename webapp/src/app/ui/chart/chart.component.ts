@@ -22,7 +22,7 @@ import {
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ActiveElement, ChartConfiguration, ChartEvent, Chart as ChartJs } from 'chart.js';
+import { ActiveElement, ChartConfiguration, ChartEvent, Chart as ChartJs, Plugin } from 'chart.js';
 import { buildChartConfig } from './chart-config.builder';
 import { registerChartJs } from './chart-registry';
 import { resolveThemePalette } from './chart-theme.util';
@@ -108,6 +108,7 @@ export class ChartComponent {
   readonly rangeSelected = output<ChartRangeEvent>();
 
   private instance?: ChartJs;
+  private exporting = false;
   private lastHoverKey?: string;
   private hoverRafId?: number;
   private readonly palette = signal<ChartThemePalette>({});
@@ -213,16 +214,56 @@ export class ChartComponent {
     this.dragZoomEnabled.update((enabled) => !enabled);
   }
 
+  /**
+   * The dialog title is HTML, so it is not part of the chart canvas. For the export, the Chart.js
+   * title plugin is switched on for one synchronous redraw, captured with `toBase64Image()`, and
+   * switched off again before the browser paints. The canvas is transparent, so the export also
+   * gets the theme's surface colour as background (see `exportBackgroundPlugin`).
+   */
   public downloadChart(): void {
     if (!this.instance) {
       return;
     }
+    const plugins = ((this.instance.config as ChartConfiguration).options!.plugins ??= {});
+    const previousTitle = plugins.title;
+    plugins.title = {
+      display: true,
+      text: this.title(),
+      color: this.palette().textColor,
+      font: { size: 18, weight: 'bold' },
+    };
+    this.exporting = true;
+    this.instance.update('none');
     const image = this.instance.toBase64Image('image/png');
+    plugins.title = previousTitle;
+    this.exporting = false;
+    this.instance.update('none');
+
     const link = document.createElement('a');
     link.href = image;
     link.download = `${this.title()}.png`;
     link.click();
   }
+
+  /**
+   * Chart.js has no background option; this is the inline plugin its docs recommend
+   * (https://www.chartjs.org/docs/latest/configuration/canvas-background.html), active only
+   * while exporting.
+   */
+  private readonly exportBackgroundPlugin: Plugin = {
+    id: 'exportBackground',
+    beforeDraw: (chart) => {
+      if (!this.exporting) {
+        return;
+      }
+      const { ctx } = chart;
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.fillStyle = this.palette().backgroundColor ?? '#fff';
+      ctx.fillRect(0, 0, chart.width, chart.height);
+      ctx.restore();
+    },
+  };
 
   private zoomRange(factor: number): void {
     if (!this.instance || !this.initialDateRange) {
@@ -280,6 +321,7 @@ export class ChartComponent {
     const plugins = config.options?.plugins ?? {};
     return {
       ...config,
+      plugins: [...(config.plugins ?? []), this.exportBackgroundPlugin],
       options: {
         ...config.options,
         onClick: (event, elements) => this.emitPointEvent(event, elements, this.pointClick),

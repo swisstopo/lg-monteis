@@ -48,6 +48,7 @@ function resolveCssVariableColor(element: HTMLElement, variableName: string): st
 export function resolveThemePalette(element: HTMLElement): ChartThemePalette {
   return {
     textColor: resolveCssVariableColor(element, '--mat-sys-on-surface'),
+    backgroundColor: resolveCssVariableColor(element, '--mat-sys-surface'),
     gridColor: resolveCssVariableColor(element, '--mat-sys-surface-container-highest'),
     dragBackgroundColor: resolveCssVariableColor(element, '--mat-sys-surface-container-highest'),
     dragBorderColor: resolveCssVariableColor(element, '--mat-sys-on-surface'),
