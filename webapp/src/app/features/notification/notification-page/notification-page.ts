@@ -15,6 +15,7 @@ import {
   NotifyingParameterResponseDto,
 } from '@core/generated';
 import { skipGlobalErrorToast } from '@core/http/http-context';
+import { RecipientsSection } from '@features/notification/recipients-section/recipients-section';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { InlineError } from '@ui/inline-error/inline-error';
@@ -25,7 +26,7 @@ import { createColumns } from './columns';
 
 @Component({
   selector: 'app-notification-page',
-  imports: [Table, TranslatePipe, InlineError],
+  imports: [Table, TranslatePipe, InlineError, RecipientsSection],
   providers: [DatePipe],
   templateUrl: './notification-page.html',
   styleUrl: './notification-page.scss',

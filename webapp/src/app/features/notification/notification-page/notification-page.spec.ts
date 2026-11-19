@@ -4,6 +4,9 @@ import {
   ExperimentControllerService,
   NotifyingParameterControllerService,
   NotifyingParameterResponseDto,
+  RecipientControllerService,
+  RecipientDto,
+  RecipientsResponseDto,
   WriteSensorParameterDto,
 } from '@core/generated';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
@@ -36,15 +39,25 @@ function parameter(
   };
 }
 
+const PI_ANNA: RecipientDto = { id: 'anna', firstName: 'Anna', lastName: 'Arnold' };
+const PI_BEN: RecipientDto = { id: 'ben', firstName: 'Ben', lastName: 'Berger' };
+const READER_CARL: RecipientDto = { id: 'carl', firstName: 'Carl', lastName: 'Christen' };
+
+function recipients(saved: boolean, ...members: RecipientDto[]): RecipientsResponseDto {
+  return { saved, recipients: members };
+}
+
 describe('NotificationPage', () => {
   let notifyingParameterApi: { findNotifyingParametersOf: ReturnType<typeof vi.fn> };
   let experimentApi: { getExperiment: ReturnType<typeof vi.fn> };
+  let recipientApi: { findRecipientsOf: ReturnType<typeof vi.fn> };
   let view: { title: string | undefined };
   let workbenchRouter: { navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     notifyingParameterApi = { findNotifyingParametersOf: vi.fn(() => of([parameter()])) };
     experimentApi = { getExperiment: vi.fn(() => of({ id: 'x', name: 'Gas Path' })) };
+    recipientApi = { findRecipientsOf: vi.fn(() => of(recipients(false, PI_ANNA))) };
     view = { title: undefined };
     workbenchRouter = { navigate: vi.fn(() => Promise.resolve(true)) };
   });
@@ -69,6 +82,7 @@ describe('NotificationPage', () => {
         { provide: WorkbenchRouter, useValue: workbenchRouter },
         { provide: NotifyingParameterControllerService, useValue: notifyingParameterApi },
         { provide: ExperimentControllerService, useValue: experimentApi },
+        { provide: RecipientControllerService, useValue: recipientApi },
       ],
     });
     const translate = TestBed.inject(TranslateService);
@@ -295,6 +309,68 @@ describe('NotificationPage', () => {
     );
     expect(page.hasTable()).toBe(false);
   });
+
+  it('loads the recipients of the experiment in the route', async () => {
+    await render(parameter());
+
+    expect(recipientApi.findRecipientsOf).toHaveBeenCalledWith('x', 'body', false, {
+      context: expect.anything(),
+    });
+  });
+
+  it('shows the pis as recipient chips while the list was never saved', async () => {
+    recipientApi.findRecipientsOf.mockReturnValue(of(recipients(false, PI_ANNA, PI_BEN)));
+
+    const page = await render(parameter());
+
+    await vi.waitFor(() => expect(page.recipientChips()).toEqual(['Anna Arnold', 'Ben Berger']));
+  });
+
+  it('shows the saved recipients as chips', async () => {
+    recipientApi.findRecipientsOf.mockReturnValue(of(recipients(true, READER_CARL)));
+
+    const page = await render(parameter());
+
+    await vi.waitFor(() => expect(page.recipientChips()).toEqual(['Carl Christen']));
+  });
+
+  it('names a recipient without a name by the e-mail', async () => {
+    recipientApi.findRecipientsOf.mockReturnValue(
+      of(recipients(true, { id: 'dora', email: 'dora@example.com' })),
+    );
+
+    const page = await render(parameter());
+
+    await vi.waitFor(() => expect(page.recipientChips()).toEqual(['dora@example.com']));
+  });
+
+  it('shows the recipients below an empty parameter table', async () => {
+    recipientApi.findRecipientsOf.mockReturnValue(of(recipients(false, PI_ANNA)));
+
+    const page = await render();
+
+    await vi.waitFor(() => expect(page.recipientChips()).toEqual(['Anna Arnold']));
+    expect(page.text()).toContain('No sensor parameter is Notification active yet');
+  });
+
+  it('shows an inline error when the recipients cannot be loaded', async () => {
+    recipientApi.findRecipientsOf.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+
+    const page = await render(parameter());
+
+    await vi.waitFor(() => expect(page.hasRecipientsError()).toBe(true));
+  });
+
+  it('leaves an unknown experiment to the parameter toast, without a recipients error', async () => {
+    recipientApi.findRecipientsOf.mockReturnValue(unknownExperiment());
+
+    const page = await renderAnswering(unknownExperiment());
+
+    await vi.waitFor(() => expect(recipientApi.findRecipientsOf).toHaveBeenCalled());
+    expect(page.hasRecipientsError()).toBe(false);
+  });
 });
 
 class PageView {
@@ -354,6 +430,16 @@ class PageView {
 
   hasInlineError(): boolean {
     return this.element.querySelector('app-inline-error') !== null;
+  }
+
+  recipientChips(): string[] {
+    return [
+      ...this.element.querySelectorAll<HTMLElement>('[data-testid="recipients"] mat-chip'),
+    ].map((chip) => chip.textContent?.trim() ?? '');
+  }
+
+  hasRecipientsError(): boolean {
+    return this.element.querySelector('[data-testid="recipients"] app-inline-error') !== null;
   }
 
   hasTable(): boolean {
