@@ -592,8 +592,7 @@
       "error": "Failed to load the notifying parameters."
     },
     "recipients": {
-      "title": "Recipients",
-      "error": "Failed to load the recipients."
+      "title": "Recipients"
     }
   }
 }

@@ -1,22 +1,14 @@
-import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  resource,
-} from '@angular/core';
+import { HttpStatusCode } from '@angular/common/http';
+import { ChangeDetectionStrategy, Component, inject, input, resource } from '@angular/core';
 import { MatChipsModule } from '@angular/material/chips';
 import { RecipientControllerService, RecipientDto } from '@core/generated';
 import { skipGlobalErrorToast } from '@core/http/http-context';
 import { TranslatePipe } from '@ngx-translate/core';
-import { InlineError } from '@ui/inline-error/inline-error';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-recipients-section',
-  imports: [MatChipsModule, TranslatePipe, InlineError],
+  imports: [MatChipsModule, TranslatePipe],
   templateUrl: './recipients-section.html',
   styleUrl: './recipients-section.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,16 +24,9 @@ export class RecipientsSection {
     loader: ({ params: experimentId }) =>
       firstValueFrom(
         this.recipientApi.findRecipientsOf(experimentId, 'body', false, {
-          context: skipGlobalErrorToast(),
+          context: skipGlobalErrorToast(HttpStatusCode.NotFound),
         }),
       ),
-  });
-
-  protected readonly loadFailed = computed(() => {
-    const error = this.recipients.error();
-    return (
-      !!error && !(error instanceof HttpErrorResponse && error.status === HttpStatusCode.NotFound)
-    );
   });
 
   protected displayName(recipient: RecipientDto): string {
