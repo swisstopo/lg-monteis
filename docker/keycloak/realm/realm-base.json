@@ -227,11 +227,12 @@
         "policies": [
           {
             "name": "experiment-users",
-            "description": "Everyone who reads experiments in MONTEIS, per experiment or all of them.",
+            "description": "Everyone who reads experiments in MONTEIS, per experiment or all of them. Fetches the roles from the user, the token carries the monteis-spa roles only in monteis_access.roles.",
             "type": "role",
             "logic": "POSITIVE",
             "config": {
-              "roles": "[{\"id\":\"monteis-spa/monteis-client:experiment:read\",\"required\":false},{\"id\":\"monteis-spa/monteis-client:experiment:write:all\",\"required\":false}]"
+              "roles": "[{\"id\":\"monteis-spa/monteis-client:experiment:read\",\"required\":false},{\"id\":\"monteis-spa/monteis-client:experiment:write:all\",\"required\":false}]",
+              "fetchRoles": "true"
             }
           },
           {
