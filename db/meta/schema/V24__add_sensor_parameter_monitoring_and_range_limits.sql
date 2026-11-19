@@ -1,27 +1,19 @@
 ALTER TABLE sensor_parameter
-    -- Physical / plausibility sensor range limits
-    ADD COLUMN lower_range_limit          DOUBLE PRECISION,
-    ADD COLUMN upper_range_limit          DOUBLE PRECISION,
+    -- Measuring range of the sensor, from the manufacturer's config file
+    ADD COLUMN lower_range_limit         DOUBLE PRECISION,
+    ADD COLUMN upper_range_limit         DOUBLE PRECISION,
 
-    -- Timeout & trigger threshold
-    ADD COLUMN timeout                    INTERVAL,
-    ADD COLUMN frequency_trigger          INTEGER,
+    -- Switches notifications on the alarm limits on or off
+    ADD COLUMN notification_active       BOOLEAN NOT NULL DEFAULT false,
 
-    -- Standard alarm notification toggle
-    ADD COLUMN notification_active        BOOLEAN NOT NULL DEFAULT false,
+    -- Switches the separate "closely monitored" alarm limits on or off
+    ADD COLUMN closely_monitored         BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN lower_special_alarm_limit DOUBLE PRECISION,
+    ADD COLUMN upper_special_alarm_limit DOUBLE PRECISION,
 
-    -- Close monitoring & secondary alarm thresholds
-    ADD COLUMN closely_monitored          BOOLEAN NOT NULL DEFAULT false,
-    ADD COLUMN lower_special_alarm_limit  DOUBLE PRECISION,
-    ADD COLUMN upper_special_alarm_limit  DOUBLE PRECISION;
+    ADD CONSTRAINT chk_sensor_parameter_closely_monitored_needs_special_alarm_limits
+        CHECK (NOT closely_monitored
+            OR (lower_special_alarm_limit IS NOT NULL AND upper_special_alarm_limit IS NOT NULL));
 
--- Optional sanity constraints to ensure low <= high when both bounds are set
-ALTER TABLE sensor_parameter
-    ADD CONSTRAINT chk_sensor_parameter_range_limits
-        CHECK (lower_range_limit IS NULL OR upper_range_limit IS NULL OR lower_range_limit <= upper_range_limit),
-    ADD CONSTRAINT chk_sensor_parameter_alarm_limits
-        CHECK (lower_alarm_limit IS NULL OR upper_alarm_limit IS NULL OR lower_alarm_limit <= upper_alarm_limit),
-    ADD CONSTRAINT chk_sensor_parameter_special_alarm_limits
-        CHECK (lower_special_alarm_limit IS NULL OR upper_special_alarm_limit IS NULL OR lower_special_alarm_limit <= upper_special_alarm_limit),
-    ADD CONSTRAINT chk_sensor_parameter_frequency_trigger_positive
-        CHECK (frequency_trigger IS NULL OR frequency_trigger > 0);
+-- Existing parameters have always notified on their alarm limits: keep that for them.
+UPDATE sensor_parameter SET notification_active = true;
