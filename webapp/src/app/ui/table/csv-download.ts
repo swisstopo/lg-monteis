@@ -6,14 +6,12 @@ import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { GridApi } from 'ag-grid-community';
 import { toGridFilterSortParams } from './paged-request.mapper';
 
-// the backend refuses an export matching more rows than it allows (TooManyExportRowsException)
 const TOO_MANY_ROWS_MESSAGE_KEY = 'export.tooManyRows';
 
 export interface CsvDownloadOptions {
   gridApi: Signal<GridApi | undefined>;
   fetchCsv: (sortModel?: string, filterModel?: string) => Promise<Blob>;
   fileName: string;
-  /** Toasted when the download fails for any other reason than too many rows. */
   failedMessageKey: string;
 }
 

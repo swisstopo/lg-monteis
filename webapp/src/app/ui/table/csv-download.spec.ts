@@ -31,10 +31,10 @@ describe('createCsvDownload', () => {
     });
   });
 
-  function create(api: GridApi | undefined = gridApi): CsvDownload {
+  function create(gridReady = true): CsvDownload {
     return TestBed.runInInjectionContext(() =>
       createCsvDownload({
-        gridApi: signal(api),
+        gridApi: signal(gridReady ? gridApi : undefined),
         fetchCsv,
         fileName: 'things.csv',
         failedMessageKey: 'thing.error.downloadFailed',
@@ -54,7 +54,7 @@ describe('createCsvDownload', () => {
   });
 
   it('does nothing before the grid is ready', async () => {
-    await create(undefined).download();
+    await create(false).download();
 
     expect(fetchCsv).not.toHaveBeenCalled();
   });
