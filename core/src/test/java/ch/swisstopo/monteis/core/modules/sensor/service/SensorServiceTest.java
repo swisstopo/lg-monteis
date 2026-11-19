@@ -18,6 +18,7 @@ import ch.swisstopo.monteis.core.infrastructure.kafka.SensorConfigPublisher;
 import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.RangeLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorRepository;
@@ -61,6 +62,10 @@ class SensorServiceTest {
         Unit.METER,
         formula,
         new AlarmLimits(0.0, 100.0),
+        new RangeLimits(-1000.0, 1000.0),
+        null,
+        null,
+        null,
         true,
         null,
         1);
