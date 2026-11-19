@@ -62,6 +62,9 @@ _Avoid_: Spezialalarm, special alarm (alone), Notification active
 A user with access to an Experiment who gets the alarms of its Notification active sensor parameters; until a PI or Monteis-Admin first saves the list, the Experiment's PIs are its Recipients.
 _Avoid_: Empfänger, subscriber
 
+**Recipient candidate**:
+An enabled member of an Experiment's read or read + write group who can be picked as its Recipient; Monteis-Admins and global editors are none, their access comes through a role.
+
 ## Documents from Fulcrum
 
 **Fulcrum Document**:

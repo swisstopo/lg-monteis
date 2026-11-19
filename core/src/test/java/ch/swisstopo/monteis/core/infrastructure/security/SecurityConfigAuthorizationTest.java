@@ -120,6 +120,20 @@ class SecurityConfigAuthorizationTest {
             assignedExperiment),
         Arguments.of(
             HttpMethod.GET, "/api/experiments/" + OTHER_EXPERIMENT + "/recipients", allExperiments),
+        Arguments.of(
+            HttpMethod.PUT,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/recipients",
+            assignedExperiment),
+        Arguments.of(
+            HttpMethod.PUT, "/api/experiments/" + OTHER_EXPERIMENT + "/recipients", allExperiments),
+        Arguments.of(
+            HttpMethod.GET,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/recipient-candidates",
+            assignedExperiment),
+        Arguments.of(
+            HttpMethod.GET,
+            "/api/experiments/" + OTHER_EXPERIMENT + "/recipient-candidates",
+            allExperiments),
         Arguments.of(HttpMethod.GET, "/api/sensors", everyone),
         Arguments.of(HttpMethod.GET, sensor, everyone),
         Arguments.of(HttpMethod.POST, "/api/sensors", adminOnly),
@@ -289,6 +303,7 @@ class SecurityConfigAuthorizationTest {
       "/api/experiments/{id}/documents",
       "/api/experiments/{id}/notifying-parameters",
       "/api/experiments/{id}/recipients",
+      "/api/experiments/{id}/recipient-candidates",
       "/api/organisations/{id}",
       "/api/sensors/{id}/documents",
       "/api/sensors/{id}"
@@ -312,7 +327,12 @@ class SecurityConfigAuthorizationTest {
       return "ok";
     }
 
-    @PutMapping({"/api/experiments/{id}", "/api/organisations/{id}", "/api/sensors/{id}"})
+    @PutMapping({
+      "/api/experiments/{id}",
+      "/api/experiments/{id}/recipients",
+      "/api/organisations/{id}",
+      "/api/sensors/{id}"
+    })
     public String update(@PathVariable String id) {
       return "ok";
     }

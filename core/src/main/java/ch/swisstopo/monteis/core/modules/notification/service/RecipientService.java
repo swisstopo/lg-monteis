@@ -1,10 +1,13 @@
 package ch.swisstopo.monteis.core.modules.notification.service;
 
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.ExperimentMembers;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.notification.domain.RecipientRepository;
 import ch.swisstopo.monteis.core.modules.notification.domain.Recipients;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
@@ -31,5 +34,18 @@ public class RecipientService {
         .findSavedRecipientIdsOf(experimentId)
         .map(savedIds -> new Recipients(members.among(savedIds), true))
         .orElseGet(() -> new Recipients(members.pis(), false));
+  }
+
+  public List<DirectoryUser> findRecipientCandidatesOf(UUID experimentId) {
+    experimentRepository.requireVisible(experimentId);
+    return userDirectory.findMembersOf(experimentId).all();
+  }
+
+  public Recipients replaceRecipientsOf(UUID experimentId, Set<UUID> userIds) {
+    experimentRepository.requireVisible(experimentId);
+    // asked before the write: keycloak down => 503 with nothing stored
+    ExperimentMembers members = userDirectory.findMembersOf(experimentId);
+    recipientRepository.replaceRecipientsOf(experimentId, userIds);
+    return new Recipients(members.among(userIds), true);
   }
 }

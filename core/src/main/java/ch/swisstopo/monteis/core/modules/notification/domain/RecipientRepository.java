@@ -7,4 +7,6 @@ import java.util.UUID;
 public interface RecipientRepository {
 
   Optional<Set<UUID>> findSavedRecipientIdsOf(UUID experimentId);
+
+  void replaceRecipientsOf(UUID experimentId, Set<UUID> userIds);
 }

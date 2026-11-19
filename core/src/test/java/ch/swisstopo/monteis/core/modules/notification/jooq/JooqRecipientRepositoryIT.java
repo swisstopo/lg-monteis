@@ -72,6 +72,44 @@ class JooqRecipientRepositoryIT {
   }
 
   @Test
+  void should_replace_the_saved_list_as_a_whole() {
+    // given
+    runAsAdmin(() -> saveList(ALPHA, ANNA));
+
+    // when
+    runAsAdmin(() -> saveList(ALPHA, CARL));
+
+    // then
+    assertThat(callAsAdmin(() -> repository.findSavedRecipientIdsOf(ALPHA))).contains(Set.of(CARL));
+  }
+
+  @Test
+  void should_keep_the_list_saved_when_it_is_replaced_with_an_empty_one() {
+    // given
+    runAsAdmin(() -> saveList(ALPHA, ANNA, CARL));
+
+    // when
+    runAsAdmin(() -> saveList(ALPHA));
+
+    // then
+    assertThat(callAsAdmin(() -> repository.findSavedRecipientIdsOf(ALPHA))).contains(Set.of());
+  }
+
+  @Test
+  void should_block_a_reader_from_replacing_a_saved_list_and_keep_it() {
+    // given
+    runAsAdmin(() -> saveList(ALPHA, ANNA));
+
+    // when
+    runAsUser(
+        List.of(ALPHA),
+        () -> assertThrows(PermissionDeniedDataAccessException.class, () -> saveList(ALPHA, CARL)));
+
+    // then
+    assertThat(callAsAdmin(() -> repository.findSavedRecipientIdsOf(ALPHA))).contains(Set.of(ANNA));
+  }
+
+  @Test
   void should_hide_the_list_from_a_user_without_access_to_the_experiment() {
     // given
     runAsAdmin(() -> saveList(ALPHA, ANNA));
@@ -144,16 +182,7 @@ class JooqRecipientRepositoryIT {
     assertThat(callAsAdmin(() -> repository.findSavedRecipientIdsOf(ALPHA))).contains(Set.of(ANNA));
   }
 
-  // stands in for the replace of ticket 06 until it exists
   private void saveList(UUID experimentId, UUID... userIds) {
-    dsl.insertInto(EXPERIMENT_RECIPIENT_LIST)
-        .set(EXPERIMENT_RECIPIENT_LIST.EXPERIMENT_ID, experimentId)
-        .execute();
-    for (UUID userId : userIds) {
-      dsl.insertInto(EXPERIMENT_RECIPIENT)
-          .set(EXPERIMENT_RECIPIENT.EXPERIMENT_ID, experimentId)
-          .set(EXPERIMENT_RECIPIENT.USER_ID, userId)
-          .execute();
-    }
+    repository.replaceRecipientsOf(experimentId, Set.of(userIds));
   }
 }

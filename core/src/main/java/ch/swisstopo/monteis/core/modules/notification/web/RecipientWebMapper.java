@@ -4,6 +4,7 @@ import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserDto;
 import ch.swisstopo.monteis.core.modules.notification.domain.Recipients;
 import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.RecipientsResponseDto;
+import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -14,4 +15,6 @@ public interface RecipientWebMapper {
   RecipientsResponseDto toDto(Recipients recipients);
 
   DirectoryUserDto toDto(DirectoryUser user);
+
+  List<DirectoryUserDto> toDtos(List<DirectoryUser> users);
 }

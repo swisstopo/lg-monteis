@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,5 +38,32 @@ public class JooqRecipientRepository implements RecipientRepository {
   private boolean isListSaved(UUID experimentId) {
     return dsl.fetchExists(
         EXPERIMENT_RECIPIENT_LIST, EXPERIMENT_RECIPIENT_LIST.EXPERIMENT_ID.eq(experimentId));
+  }
+
+  @Override
+  @Transactional
+  public void replaceRecipientsOf(UUID experimentId, Set<UUID> userIds) {
+    markListSaved(experimentId);
+    dsl.deleteFrom(EXPERIMENT_RECIPIENT)
+        .where(EXPERIMENT_RECIPIENT.EXPERIMENT_ID.eq(experimentId))
+        .and(EXPERIMENT_RECIPIENT.USER_ID.notIn(userIds))
+        .execute();
+    if (!userIds.isEmpty()) {
+      dsl.insertInto(
+              EXPERIMENT_RECIPIENT,
+              EXPERIMENT_RECIPIENT.EXPERIMENT_ID,
+              EXPERIMENT_RECIPIENT.USER_ID)
+          .valuesOfRows(userIds.stream().map(userId -> DSL.row(experimentId, userId)).toList())
+          .onConflictDoNothing()
+          .execute();
+    }
+  }
+
+  // insert first: its RLS check raises for a reader, the delete policy only filters silently
+  private void markListSaved(UUID experimentId) {
+    dsl.insertInto(EXPERIMENT_RECIPIENT_LIST)
+        .set(EXPERIMENT_RECIPIENT_LIST.EXPERIMENT_ID, experimentId)
+        .onConflictDoNothing()
+        .execute();
   }
 }
