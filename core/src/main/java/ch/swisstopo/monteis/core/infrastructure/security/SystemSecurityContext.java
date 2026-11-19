@@ -1,5 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.EXPERIMENT_READ_ALL;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.EXPERIMENT_WRITE_ALL;
+
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -23,7 +26,8 @@ public final class SystemSecurityContext {
           null,
           new MonteisPrincipal(SYSTEM_SUBJECT, "SYSTEM"),
           List.of(
-              new SimpleGrantedAuthority(MonteisJwtAuthenticationConverter.EXPERIMENT_WRITE_ALL)),
+              new SimpleGrantedAuthority(EXPERIMENT_READ_ALL),
+              new SimpleGrantedAuthority(EXPERIMENT_WRITE_ALL)),
           Set.of(),
           Set.of());
 
