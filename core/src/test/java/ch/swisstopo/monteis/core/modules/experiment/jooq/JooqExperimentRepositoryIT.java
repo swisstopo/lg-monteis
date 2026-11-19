@@ -215,6 +215,59 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
+  void should_find_every_experiment_as_writable_for_an_admin_and_a_global_editor() {
+    List<UUID> ids = createZebraAndAlphaAsAdmin();
+
+    SecurityContextTestSupport.runAsAdmin(
+        () -> assertTrue(idsOf(repository.findAllWritable()).containsAll(ids)));
+    SecurityContextTestSupport.runAsGlobalEditor(
+        () -> assertTrue(idsOf(repository.findAllWritable()).containsAll(ids)));
+  }
+
+  @Test
+  @Transactional
+  void should_find_only_the_experiments_a_pi_may_write_sorted_by_name() {
+    List<UUID> ids = createZebraAndAlphaAsAdmin();
+    UUID zebra = ids.get(0);
+    UUID alpha = ids.get(1);
+
+    SecurityContextTestSupport.runAsUser(
+        ids, ids, () -> assertEquals(List.of(alpha, zebra), idsOf(repository.findAllWritable())));
+    SecurityContextTestSupport.runAsUser(
+        ids,
+        List.of(zebra),
+        () -> assertEquals(List.of(zebra), idsOf(repository.findAllWritable())));
+  }
+
+  @Test
+  @Transactional
+  void should_find_no_writable_experiment_for_a_reader() {
+    List<UUID> ids = createZebraAndAlphaAsAdmin();
+
+    SecurityContextTestSupport.runAsUser(
+        ids, () -> assertEquals(List.of(), repository.findAllWritable()));
+  }
+
+  private List<UUID> createZebraAndAlphaAsAdmin() {
+    return SecurityContextTestSupport.callAsAdmin(
+        () ->
+            Stream.of("Zebra Writable", "Alpha Writable")
+                .map(
+                    name ->
+                        createExperimentWithDsl(
+                            name,
+                            null,
+                            LocalDate.of(2024, Month.JANUARY, 1),
+                            LocalDate.of(2024, Month.DECEMBER, 31)))
+                .toList());
+  }
+
+  private static List<UUID> idsOf(List<Experiment> experiments) {
+    return experiments.stream().map(Experiment::getId).toList();
+  }
+
+  @Test
+  @Transactional
   void should_create_experiment() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {

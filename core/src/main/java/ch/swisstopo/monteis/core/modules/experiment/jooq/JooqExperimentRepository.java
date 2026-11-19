@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
+import static ch.swisstopo.monteis.core.jooq.generated.Routines.canWriteExperiment;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_OWNER;
@@ -154,6 +155,16 @@ public class JooqExperimentRepository implements ExperimentRepository {
   public List<Experiment> findAll() {
     return selectExperiments()
         .from(EXPERIMENTS)
+        .orderBy(EXPERIMENTS.NAME.asc())
+        .fetch(JooqExperimentRepository::toExperiment);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Experiment> findAllWritable() {
+    return selectExperiments()
+        .from(EXPERIMENTS)
+        .where(canWriteExperiment(EXPERIMENTS.ID))
         .orderBy(EXPERIMENTS.NAME.asc())
         .fetch(JooqExperimentRepository::toExperiment);
   }

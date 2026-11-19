@@ -27,6 +27,10 @@ export class ExperimentService {
     loader: () => firstValueFrom(this.api.getAllExperiments()),
   });
 
+  findWritableExperiments(): Promise<ExperimentResponseDto[]> {
+    return firstValueFrom(this.api.getAllExperiments('WRITE'));
+  }
+
   getExperiment(id: string): Promise<ExperimentResponseDto> {
     return firstValueFrom(this.api.getExperiment(id));
   }

@@ -69,4 +69,8 @@ public class ExperimentService {
   public List<Experiment> findAllExperiments() {
     return repository.findAll();
   }
+
+  public List<Experiment> findAllWritableExperiments() {
+    return repository.findAllWritable();
+  }
 }

@@ -84,4 +84,6 @@ public interface ExperimentRepository {
    * @return all experiments visible to the current user
    */
   List<Experiment> findAll();
+
+  List<Experiment> findAllWritable();
 }
