@@ -64,6 +64,8 @@ class EndpointCoverageTest {
           "GET /api/experiments/{id}/owner-candidates",
           "GET /api/experiments/{id}/notifying-parameters",
           "GET /api/experiments/{id}/recipients",
+          "PUT /api/experiments/{id}/recipients",
+          "GET /api/experiments/{id}/recipient-candidates",
           "POST /api/experiments",
           "GET /api/organisations",
           "GET /api/organisations/all",
