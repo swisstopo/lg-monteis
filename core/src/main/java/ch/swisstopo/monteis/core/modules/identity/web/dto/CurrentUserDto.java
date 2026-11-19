@@ -12,8 +12,10 @@ public record CurrentUserDto(
     @Schema(
             requiredMode = Schema.RequiredMode.REQUIRED,
             description =
-                "admin role: write access to everything; gates Create Experiment, sensor writes,"
-                    + " Sensor menu/route")
-        boolean isAdmin,
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "empty when isAdmin")
+                "experiment:write:all: may write every experiment; gates Create Experiment, sensor"
+                    + " writes, Sensor menu/route")
+        boolean canWriteAllExperiments,
+    @Schema(
+            requiredMode = Schema.RequiredMode.REQUIRED,
+            description = "empty when canWriteAllExperiments")
         List<UUID> writeExperimentIds) {}
