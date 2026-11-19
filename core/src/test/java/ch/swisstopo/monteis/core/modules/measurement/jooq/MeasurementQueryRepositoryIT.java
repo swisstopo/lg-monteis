@@ -22,6 +22,7 @@ import ch.swisstopo.monteis.core.modules.measurement.web.dto.outbound.SensorDeta
 import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.RangeLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
@@ -474,6 +475,10 @@ class MeasurementQueryRepositoryIT {
                   Unit.METER,
                   formula,
                   new AlarmLimits(0.0, 100.0),
+                  new RangeLimits(-1000.0, 1000.0),
+                  null,
+                  null,
+                  null,
                   true,
                   null);
           Sensor sensor =
@@ -810,6 +815,10 @@ class MeasurementQueryRepositoryIT {
         Unit.METER,
         formula,
         new AlarmLimits(0.0, 100.0),
+        new RangeLimits(-1000.0, 1000.0),
+        null,
+        null,
+        null,
         true,
         null,
         null);

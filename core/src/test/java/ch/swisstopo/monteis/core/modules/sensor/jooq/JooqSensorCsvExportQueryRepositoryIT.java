@@ -304,6 +304,10 @@ class JooqSensorCsvExportQueryRepositoryIT {
         Unit.METER,
         formula,
         new AlarmLimits(lower, upper),
+        new RangeLimits(-1000.0, 1000.0),
+        null,
+        null,
+        null,
         true,
         null,
         null);

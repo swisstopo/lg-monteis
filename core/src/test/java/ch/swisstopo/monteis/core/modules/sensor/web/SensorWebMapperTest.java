@@ -6,8 +6,10 @@ import ch.swisstopo.monteis.contracts.Das;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapperImpl;
+import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.RangeLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
@@ -15,6 +17,8 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteFormulaDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParameterDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.RangeLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import java.time.LocalDate;
 import java.time.Month;
@@ -60,6 +64,10 @@ class SensorWebMapperTest {
             Unit.KELVIN,
             new WriteSensorTypeDto("Temperature"),
             new AlarmLimitsDto(-50.0, 100.0),
+            new RangeLimitsDto(-1000.0, 1000.0),
+            null,
+            null,
+            null,
             true,
             null,
             null,
@@ -71,6 +79,72 @@ class SensorWebMapperTest {
     // then
     assertThat(parameter.getFormula()).isNotNull();
     assertThat(parameter.getFormula().getExpression()).isEqualTo("x");
+  }
+
+  @Test
+  void should_map_monitoring_settings_to_domain_and_back() {
+    // given
+    WriteSensorParameterDto dto =
+        new WriteSensorParameterDto(
+            null,
+            "Temperature Param",
+            "TEMP-1-P1",
+            Unit.KELVIN,
+            new WriteSensorTypeDto("Temperature"),
+            new AlarmLimitsDto(-50.0, 100.0),
+            new RangeLimitsDto(-100.0, 200.0),
+            true,
+            true,
+            new AlarmLimitsDto(-60.0, 110.0),
+            true,
+            null,
+            null,
+            null);
+
+    // when
+    SensorParameter parameter = mapper.toDomain(dto);
+    SensorParameterResponseDto response = mapper.toDto(parameter);
+
+    // then
+    assertThat(parameter.getRangeLimits()).isEqualTo(new RangeLimits(-100.0, 200.0));
+    assertThat(parameter.getNotificationActive()).isTrue();
+    assertThat(parameter.getCloselyMonitored()).isTrue();
+    assertThat(parameter.getSpecialAlarmLimits()).isEqualTo(new AlarmLimits(-60.0, 110.0));
+
+    assertThat(response.rangeLimits()).isEqualTo(new RangeLimitsDto(-100.0, 200.0));
+    assertThat(response.notificationActive()).isTrue();
+    assertThat(response.closelyMonitored()).isTrue();
+    assertThat(response.specialAlarmLimits()).isEqualTo(new AlarmLimitsDto(-60.0, 110.0));
+  }
+
+  @Test
+  void should_default_omitted_monitoring_settings() {
+    // given
+    WriteSensorParameterDto dto =
+        new WriteSensorParameterDto(
+            null,
+            "Temperature Param",
+            "TEMP-1-P1",
+            Unit.KELVIN,
+            new WriteSensorTypeDto("Temperature"),
+            new AlarmLimitsDto(-50.0, 100.0),
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null);
+
+    // when
+    SensorParameter parameter = mapper.toDomain(dto);
+
+    // then
+    assertThat(parameter.getRangeLimits()).isNull();
+    assertThat(parameter.getNotificationActive()).isFalse();
+    assertThat(parameter.getCloselyMonitored()).isFalse();
+    assertThat(parameter.getSpecialAlarmLimits()).isNull();
   }
 
   @Test
