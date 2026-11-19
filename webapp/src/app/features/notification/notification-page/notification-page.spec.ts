@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpContext, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   ExperimentControllerService,
@@ -9,6 +9,7 @@ import {
   RecipientsResponseDto,
   WriteSensorParameterDto,
 } from '@core/generated';
+import { SKIP_GLOBAL_ERROR_TOAST_FOR } from '@core/http/http-context';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import translationsEN from '@public/i18n/en.json';
 import { WorkbenchRouter, WorkbenchView } from '@scion/workbench';
@@ -310,12 +311,14 @@ describe('NotificationPage', () => {
     expect(page.hasTable()).toBe(false);
   });
 
-  it('loads the recipients of the experiment in the route', async () => {
+  it('loads the recipients of the experiment in the route, leaving a 404 to the parameter toast', async () => {
     await render(parameter());
 
     expect(recipientApi.findRecipientsOf).toHaveBeenCalledWith('x', 'body', false, {
       context: expect.anything(),
     });
+    const { context } = recipientApi.findRecipientsOf.mock.calls[0][3] as { context: HttpContext };
+    expect(context.get(SKIP_GLOBAL_ERROR_TOAST_FOR)).toEqual([HttpStatusCode.NotFound]);
   });
 
   it('shows the pis as recipient chips while the list was never saved', async () => {
@@ -351,25 +354,6 @@ describe('NotificationPage', () => {
 
     await vi.waitFor(() => expect(page.recipientChips()).toEqual(['Anna Arnold']));
     expect(page.text()).toContain('No sensor parameter is Notification active yet');
-  });
-
-  it('shows an inline error when the recipients cannot be loaded', async () => {
-    recipientApi.findRecipientsOf.mockReturnValue(
-      throwError(() => new HttpErrorResponse({ status: 500 })),
-    );
-
-    const page = await render(parameter());
-
-    await vi.waitFor(() => expect(page.hasRecipientsError()).toBe(true));
-  });
-
-  it('leaves an unknown experiment to the parameter toast, without a recipients error', async () => {
-    recipientApi.findRecipientsOf.mockReturnValue(unknownExperiment());
-
-    const page = await renderAnswering(unknownExperiment());
-
-    await vi.waitFor(() => expect(recipientApi.findRecipientsOf).toHaveBeenCalled());
-    expect(page.hasRecipientsError()).toBe(false);
   });
 });
 
@@ -436,10 +420,6 @@ class PageView {
     return [
       ...this.element.querySelectorAll<HTMLElement>('[data-testid="recipients"] mat-chip'),
     ].map((chip) => chip.textContent?.trim() ?? '');
-  }
-
-  hasRecipientsError(): boolean {
-    return this.element.querySelector('[data-testid="recipients"] app-inline-error') !== null;
   }
 
   hasTable(): boolean {

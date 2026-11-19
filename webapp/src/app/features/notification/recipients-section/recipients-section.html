@@ -1,8 +1,6 @@
 <section data-testid="recipients">
   <h2>{{ 'notification.recipients.title' | translate }}</h2>
-  @if (loadFailed()) {
-    <app-inline-error [message]="'notification.recipients.error' | translate"></app-inline-error>
-  } @else if (recipients.hasValue()) {
+  @if (recipients.hasValue()) {
     <mat-chip-set [attr.aria-label]="'notification.recipients.title' | translate">
       @for (recipient of recipients.value().recipients; track recipient.id) {
         <mat-chip>{{ displayName(recipient) }}</mat-chip>
