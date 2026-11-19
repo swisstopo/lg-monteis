@@ -16,26 +16,24 @@
         {{ 'notification.recipients.empty' | translate }}
       </p>
     }
-  }
-  <mat-form-field class="recipients-section_add" appearance="outline">
-    <mat-label>{{ 'notification.recipients.add' | translate }}</mat-label>
-    <mat-select [disabled]="offered().length === 0" (selectionChange)="add($event)">
-      @for (candidate of offered(); track candidate.id) {
-        <mat-option [value]="candidate"
-          >{{ candidate | userName }}
-          @if (candidate.email) {
-            ({{ candidate.email }})
-          }
-        </mat-option>
+    <mat-form-field class="recipients-section_add" appearance="outline">
+      <mat-label>{{ 'notification.recipients.add' | translate }}</mat-label>
+      <mat-select [disabled]="offered().length === 0" (selectionChange)="add($event)">
+        @for (candidate of offered(); track candidate.id) {
+          <mat-option [value]="candidate"
+            >{{ candidate | userName }}
+            @if (candidate.email) {
+              ({{ candidate.email }})
+            }
+          </mat-option>
+        }
+      </mat-select>
+      @if (candidatesErrorKey(); as candidatesErrorKey) {
+        <mat-hint class="recipients-section_error">{{ candidatesErrorKey | translate }}</mat-hint>
       }
-    </mat-select>
-  </mat-form-field>
-  <button
-    mat-flat-button
-    type="button"
-    [disabled]="!recipients.hasValue() || saving()"
-    (click)="save()"
-  >
-    {{ 'notification.recipients.save' | translate }}
-  </button>
+    </mat-form-field>
+    <button mat-flat-button type="button" [disabled]="saving()" (click)="save()">
+      {{ 'notification.recipients.save' | translate }}
+    </button>
+  }
 </section>

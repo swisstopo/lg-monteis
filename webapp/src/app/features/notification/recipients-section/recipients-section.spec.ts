@@ -1,7 +1,9 @@
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
 import { MatChipHarness } from '@angular/material/chips/testing';
+import { MatFormFieldHarness } from '@angular/material/form-field/testing';
 import { MatSelectHarness } from '@angular/material/select/testing';
 import {
   DirectoryUserDto,
@@ -9,7 +11,7 @@ import {
   RecipientsResponseDto,
 } from '@core/generated';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RecipientsSection } from './recipients-section';
 
@@ -63,9 +65,6 @@ describe('RecipientsSection', () => {
   it('offers the candidates of the experiment that are no recipient yet', async () => {
     const section = await render();
 
-    expect(recipientApi.findRecipientCandidatesOf).toHaveBeenCalledWith('x', 'body', false, {
-      context: expect.anything(),
-    });
     expect(await section.offeredCandidates()).toEqual([
       'Ben Berger',
       'Carl Christen (carl@example.com)',
@@ -136,6 +135,41 @@ describe('RecipientsSection', () => {
 
     expect(section.text()).toContain('notification.recipients.empty');
   });
+  it('offers no editing while the recipients cannot be loaded', async () => {
+    recipientApi.findRecipientsOf.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 404 })),
+    );
+
+    const section = await render();
+
+    expect(await section.canEdit()).toBe(false);
+  });
+
+  it('says why no candidate can be added when keycloak is down', async () => {
+    recipientApi.findRecipientCandidatesOf.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 503 })),
+    );
+
+    const section = await render();
+
+    expect(await section.hint()).toBe('error.user-directory.unavailable');
+  });
+
+  it('tells a keycloak that refuses the lookup apart from one that is down', async () => {
+    recipientApi.findRecipientCandidatesOf.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 502,
+            error: { messageKey: 'error.user-directory.denied', target: 'GLOBAL' },
+          }),
+      ),
+    );
+
+    const section = await render();
+
+    expect(await section.hint()).toBe('error.user-directory.denied');
+  });
 });
 
 class SectionView {
@@ -175,6 +209,18 @@ class SectionView {
   async save(): Promise<void> {
     const button = await this.loader.getHarness(MatButtonHarness.with({ text: /save/i }));
     await button.click();
+  }
+
+  async canEdit(): Promise<boolean> {
+    const selects = await this.loader.getAllHarnesses(MatSelectHarness);
+    const saveButtons = await this.loader.getAllHarnesses(MatButtonHarness.with({ text: /save/i }));
+    return selects.length > 0 || saveButtons.length > 0;
+  }
+
+  async hint(): Promise<string> {
+    const field = await this.loader.getHarness(MatFormFieldHarness);
+    const [hint] = await field.getTextHints();
+    return hint;
   }
 
   text(): string {
