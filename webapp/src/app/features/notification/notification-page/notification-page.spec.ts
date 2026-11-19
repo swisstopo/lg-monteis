@@ -51,14 +51,20 @@ function recipients(saved: boolean, ...members: DirectoryUserDto[]): RecipientsR
 describe('NotificationPage', () => {
   let notifyingParameterApi: { findNotifyingParametersOf: ReturnType<typeof vi.fn> };
   let experimentApi: { getExperiment: ReturnType<typeof vi.fn> };
-  let recipientApi: { findRecipientsOf: ReturnType<typeof vi.fn> };
+  let recipientApi: {
+    findRecipientsOf: ReturnType<typeof vi.fn>;
+    findRecipientCandidatesOf: ReturnType<typeof vi.fn>;
+  };
   let view: { title: string | undefined };
   let workbenchRouter: { navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     notifyingParameterApi = { findNotifyingParametersOf: vi.fn(() => of([parameter()])) };
     experimentApi = { getExperiment: vi.fn(() => of({ id: 'x', name: 'Gas Path' })) };
-    recipientApi = { findRecipientsOf: vi.fn(() => of(recipients(false, PI_ANNA))) };
+    recipientApi = {
+      findRecipientsOf: vi.fn(() => of(recipients(false, PI_ANNA))),
+      findRecipientCandidatesOf: vi.fn(() => of([])),
+    };
     view = { title: undefined };
     workbenchRouter = { navigate: vi.fn(() => Promise.resolve(true)) };
   });
@@ -409,7 +415,10 @@ class PageView {
   recipientChips(): string[] {
     return [
       ...this.element.querySelectorAll<HTMLElement>('[data-testid="recipients"] mat-chip'),
-    ].map((chip) => chip.textContent?.trim() ?? '');
+    ].map((chip) => {
+      const removeIcon = chip.querySelector('mat-icon')?.textContent ?? '';
+      return (chip.textContent ?? '').replace(removeIcon, '').trim();
+    });
   }
 
   hasTable(): boolean {
