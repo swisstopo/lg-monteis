@@ -114,6 +114,12 @@ class SecurityConfigAuthorizationTest {
             HttpMethod.GET,
             "/api/experiments/" + OTHER_EXPERIMENT + "/notifying-parameters",
             allExperiments),
+        Arguments.of(
+            HttpMethod.GET,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/recipients",
+            assignedExperiment),
+        Arguments.of(
+            HttpMethod.GET, "/api/experiments/" + OTHER_EXPERIMENT + "/recipients", allExperiments),
         Arguments.of(HttpMethod.GET, "/api/sensors", everyone),
         Arguments.of(HttpMethod.GET, sensor, everyone),
         Arguments.of(HttpMethod.POST, "/api/sensors", adminOnly),
@@ -282,6 +288,7 @@ class SecurityConfigAuthorizationTest {
       "/api/experiments/{id}",
       "/api/experiments/{id}/documents",
       "/api/experiments/{id}/notifying-parameters",
+      "/api/experiments/{id}/recipients",
       "/api/organisations/{id}",
       "/api/sensors/{id}/documents",
       "/api/sensors/{id}"

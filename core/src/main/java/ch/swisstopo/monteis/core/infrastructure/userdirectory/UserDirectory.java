@@ -9,4 +9,6 @@ public interface UserDirectory {
   Map<UUID, Pis> pisForReading(Collection<UUID> experimentIds);
 
   Pis pisForWriting(UUID experimentId);
+
+  ExperimentMembers findMembersOf(UUID experimentId);
 }

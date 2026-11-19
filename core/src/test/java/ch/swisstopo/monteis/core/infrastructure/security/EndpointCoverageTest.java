@@ -17,6 +17,8 @@ import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocument
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.FulcrumDocumentWebMapper;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.notification.service.NotifyingParameterService;
+import ch.swisstopo.monteis.core.modules.notification.service.RecipientService;
+import ch.swisstopo.monteis.core.modules.notification.web.RecipientWebMapper;
 import ch.swisstopo.monteis.core.modules.organisation.query.OrganisationCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.organisation.service.OrganisationService;
 import ch.swisstopo.monteis.core.modules.organisation.web.OrganisationWebMapper;
@@ -60,6 +62,7 @@ class EndpointCoverageTest {
           "GET /api/experiments/owners",
           "GET /api/experiments/{id}/owner-candidates",
           "GET /api/experiments/{id}/notifying-parameters",
+          "GET /api/experiments/{id}/recipients",
           "POST /api/experiments",
           "GET /api/organisations",
           "GET /api/organisations/all",
@@ -106,6 +109,8 @@ class EndpointCoverageTest {
   @MockitoBean private ExperimentDocumentService experimentDocumentService;
   @MockitoBean private ExperimentDocumentWebMapper experimentDocumentWebMapper;
   @MockitoBean private NotifyingParameterService notifyingParameterService;
+  @MockitoBean private RecipientService recipientService;
+  @MockitoBean private RecipientWebMapper recipientWebMapper;
   @MockitoBean private DirectoryUserWebMapper directoryUserWebMapper;
   @MockitoBean private FulcrumDocumentService fulcrumDocumentService;
   @MockitoBean private FulcrumDocumentSyncRunner fulcrumDocumentSyncRunner;
