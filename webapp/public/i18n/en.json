@@ -597,7 +597,12 @@
       "error": "Failed to load the notifying parameters."
     },
     "recipients": {
-      "title": "Recipients"
+      "title": "Recipients",
+      "add": "Add recipient",
+      "remove": "Remove recipient",
+      "save": "Save recipients",
+      "success": "Recipients saved successfully.",
+      "empty": "No recipients: nobody gets the alarms of this experiment."
     }
   }
 }
