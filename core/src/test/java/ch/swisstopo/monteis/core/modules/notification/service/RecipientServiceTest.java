@@ -8,7 +8,7 @@ import static org.mockito.BDDMockito.willThrow;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.ExperimentMembers;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.ExperimentUsers;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
@@ -44,7 +44,7 @@ class RecipientServiceTest {
   @Test
   void should_take_the_pis_as_recipients_while_the_list_was_never_saved() {
     // given
-    givenMembers(List.of(PI_ANNA, PI_BEN), List.of(PI_ANNA, PI_BEN, READER_CARL));
+    givenExperimentUsers(List.of(PI_ANNA, PI_BEN, READER_CARL), List.of(PI_ANNA, PI_BEN));
     given(recipientRepository.findSavedRecipientIdsOf(EXPERIMENT_ID)).willReturn(Optional.empty());
 
     // when
@@ -57,7 +57,7 @@ class RecipientServiceTest {
   @Test
   void should_keep_a_saved_empty_list_empty_instead_of_taking_the_pis() {
     // given
-    givenMembers(List.of(PI_ANNA), List.of(PI_ANNA, READER_CARL));
+    givenExperimentUsers(List.of(PI_ANNA, READER_CARL), List.of(PI_ANNA));
     given(recipientRepository.findSavedRecipientIdsOf(EXPERIMENT_ID))
         .willReturn(Optional.of(Set.of()));
 
@@ -71,7 +71,7 @@ class RecipientServiceTest {
   @Test
   void should_take_the_saved_list_and_leave_out_a_pi_who_was_removed_from_it() {
     // given
-    givenMembers(List.of(PI_ANNA, PI_BEN), List.of(PI_ANNA, PI_BEN, READER_CARL));
+    givenExperimentUsers(List.of(PI_ANNA, PI_BEN, READER_CARL), List.of(PI_ANNA, PI_BEN));
     given(recipientRepository.findSavedRecipientIdsOf(EXPERIMENT_ID))
         .willReturn(Optional.of(Set.of(PI_ANNA.id(), READER_CARL.id())));
 
@@ -85,7 +85,7 @@ class RecipientServiceTest {
   @Test
   void should_leave_out_a_saved_recipient_who_lost_access() {
     // given
-    givenMembers(List.of(PI_ANNA), List.of(PI_ANNA));
+    givenExperimentUsers(List.of(PI_ANNA), List.of(PI_ANNA));
     given(recipientRepository.findSavedRecipientIdsOf(EXPERIMENT_ID))
         .willReturn(Optional.of(Set.of(PI_ANNA.id(), READER_CARL.id(), LEFT_DORA)));
 
@@ -99,9 +99,9 @@ class RecipientServiceTest {
   @Test
   void should_count_a_saved_recipient_again_once_their_access_is_back() {
     // given
-    given(userDirectory.findMembersOf(EXPERIMENT_ID))
-        .willReturn(new ExperimentMembers(List.of(PI_ANNA), List.of(PI_ANNA)))
-        .willReturn(new ExperimentMembers(List.of(PI_ANNA), List.of(PI_ANNA, READER_CARL)));
+    given(userDirectory.findExperimentUsersOf(EXPERIMENT_ID))
+        .willReturn(new ExperimentUsers(List.of(PI_ANNA), List.of(PI_ANNA)))
+        .willReturn(new ExperimentUsers(List.of(PI_ANNA, READER_CARL), List.of(PI_ANNA)));
     given(recipientRepository.findSavedRecipientIdsOf(EXPERIMENT_ID))
         .willReturn(Optional.of(Set.of(PI_ANNA.id(), READER_CARL.id())));
 
@@ -126,8 +126,8 @@ class RecipientServiceTest {
     then(userDirectory).shouldHaveNoInteractions();
   }
 
-  private void givenMembers(List<DirectoryUser> pis, List<DirectoryUser> withAccess) {
-    given(userDirectory.findMembersOf(EXPERIMENT_ID))
-        .willReturn(new ExperimentMembers(pis, withAccess));
+  private void givenExperimentUsers(List<DirectoryUser> all, List<DirectoryUser> pis) {
+    given(userDirectory.findExperimentUsersOf(EXPERIMENT_ID))
+        .willReturn(new ExperimentUsers(all, pis));
   }
 }

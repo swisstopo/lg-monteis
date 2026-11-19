@@ -59,7 +59,7 @@ A sensor parameter with its own special alarm limits, set only by a Monteis-Admi
 _Avoid_: Spezialalarm, special alarm (alone), Notification active
 
 **Recipient**:
-A user with access to an Experiment who gets the alarms of its Notification active sensor parameters; until a PI or Monteis-Admin first saves the list, the Experiment's PIs are its Recipients.
+An Experiment user who gets the alarms of the Experiment's Notification active sensor parameters; until a PI or Monteis-Admin first saves the list, the Experiment's PIs are its Recipients.
 _Avoid_: Empfänger, subscriber
 
 ## Documents from Fulcrum
@@ -73,6 +73,10 @@ Fulcrum's term for a file it holds; when Fulcrum lists several for one Fulcrum D
 _Avoid_: Fulcrum file
 
 ## People and access
+
+**Experiment user**:
+A user with read access to a specific Experiment, who sees it, its Sensors and their documents; every PI of an Experiment is also its Experiment user.
+_Avoid_: Experiment reader, viewer, Experiment-Benutzer
 
 **PI**:
 A user with write access to a specific Experiment.
