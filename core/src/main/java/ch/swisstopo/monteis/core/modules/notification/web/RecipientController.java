@@ -2,8 +2,8 @@ package ch.swisstopo.monteis.core.modules.notification.web;
 
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserDto;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserIdsDto;
 import ch.swisstopo.monteis.core.modules.notification.service.RecipientService;
-import ch.swisstopo.monteis.core.modules.notification.web.dto.inbound.ReplaceRecipientsDto;
 import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.RecipientsResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -50,14 +50,17 @@ public class RecipientController {
               + " An empty list is valid and means nobody gets the alarms. PIs added to the"
               + " experiment later are not added to a saved list.")
   @ApiResponse(responseCode = "200", description = "Successfully replaced recipients")
+  @ApiResponse(responseCode = "400", description = "The body is no JSON object or holds no UUIDs")
   @ApiResponse(responseCode = "403", description = "The caller may not write the experiment")
   @ApiResponse(responseCode = "404", description = "The experiment does not exist")
+  @ApiResponse(responseCode = "422", description = "The list or one of its ids is missing")
+  @ApiResponse(responseCode = "503", description = "Keycloak is unavailable, nothing was stored")
   @PutMapping(
       path = ApiPaths.EXPERIMENT_RECIPIENTS,
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public RecipientsResponseDto replaceRecipientsOf(
-      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id, @Valid @RequestBody ReplaceRecipientsDto dto) {
+      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id, @Valid @RequestBody DirectoryUserIdsDto dto) {
     return mapper.toDto(service.replaceRecipientsOf(id, Set.copyOf(dto.userIds())));
   }
 
@@ -69,6 +72,7 @@ public class RecipientController {
   @ApiResponse(responseCode = "200", description = "Successfully retrieved candidates")
   @ApiResponse(responseCode = "403", description = "The caller may not write the experiment")
   @ApiResponse(responseCode = "404", description = "The experiment does not exist")
+  @ApiResponse(responseCode = "503", description = "Keycloak is unavailable")
   @GetMapping(
       path = ApiPaths.EXPERIMENT_RECIPIENT_CANDIDATES,
       produces = MediaType.APPLICATION_JSON_VALUE)
