@@ -595,6 +595,10 @@
       "openDetails": "Open details",
       "empty": "No sensor parameter is Notification active yet",
       "error": "Failed to load the notifying parameters."
+    },
+    "recipients": {
+      "title": "Recipients",
+      "error": "Failed to load the recipients."
     }
   }
 }
