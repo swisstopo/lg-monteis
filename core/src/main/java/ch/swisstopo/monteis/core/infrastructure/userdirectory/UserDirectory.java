@@ -10,5 +10,5 @@ public interface UserDirectory {
 
   Pis pisForWriting(UUID experimentId);
 
-  ExperimentUsers findExperimentUsersOf(UUID experimentId);
+  ExperimentMembers findMembersOf(UUID experimentId);
 }

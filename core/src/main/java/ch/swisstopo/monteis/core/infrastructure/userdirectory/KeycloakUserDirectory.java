@@ -37,7 +37,7 @@ class KeycloakUserDirectory implements UserDirectory {
   private final KeycloakClient keycloak;
   private final CurrentUserProvider currentUser;
   private final Cache<CacheKey, Pis> cache;
-  private final Cache<CacheKey, ExperimentUsers> experimentUsersCache;
+  private final Cache<CacheKey, ExperimentMembers> membersCache;
 
   KeycloakUserDirectory(
       KeycloakClient keycloak,
@@ -46,7 +46,7 @@ class KeycloakUserDirectory implements UserDirectory {
     this.keycloak = keycloak;
     this.currentUser = currentUser;
     this.cache = newCache(properties);
-    this.experimentUsersCache = newCache(properties);
+    this.membersCache = newCache(properties);
   }
 
   @Override
@@ -137,19 +137,19 @@ class KeycloakUserDirectory implements UserDirectory {
   }
 
   @Override
-  public ExperimentUsers findExperimentUsersOf(UUID experimentId) {
+  public ExperimentMembers findMembersOf(UUID experimentId) {
     CacheKey key =
         keyForRequestingUser(experimentId)
             .orElseThrow(() -> new UserDirectoryUnavailableException(NO_REQUESTING_USER));
     // loader throws on failure => caffeine caches answers only
-    return experimentUsersCache.get(key, k -> fetchExperimentUsersFromKeycloak(k.experimentId()));
+    return membersCache.get(key, k -> fetchMembersFromKeycloak(k.experimentId()));
   }
 
-  private ExperimentUsers fetchExperimentUsersFromKeycloak(UUID experimentId) {
+  private ExperimentMembers fetchMembersFromKeycloak(UUID experimentId) {
     List<DirectoryUser> pis = enabledMembersOf(findWriteGroupsOf(experimentId));
     List<DirectoryUser> readers =
         enabledMembersOf(findGroupsWith(READ_EXPERIMENT_IDS, experimentId));
-    return new ExperimentUsers(
+    return new ExperimentMembers(
         distinctSortedByName(Stream.concat(pis.stream(), readers.stream())), pis);
   }
 
