@@ -71,6 +71,23 @@ class RlsConnectionProviderTest {
   }
 
   @Test
+  void should_set_each_all_experiments_flag_from_its_own_authority() throws SQLException {
+    RlsSettings readAll =
+        acquireWithin(
+            action ->
+                SecurityContextTestSupport.runAs(
+                    List.of("experiment:read:all"), List.of(), List.of(), action));
+    RlsSettings writeAll =
+        acquireWithin(
+            action ->
+                SecurityContextTestSupport.runAs(
+                    List.of("experiment:write:all"), List.of(), List.of(), action));
+
+    assertEquals(new RlsSettings("true", "false", "", ""), readAll);
+    assertEquals(new RlsSettings("false", "true", "", ""), writeAll);
+  }
+
+  @Test
   void should_set_sorted_read_and_write_ids_for_a_scoped_editor() throws SQLException {
     RlsSettings settings =
         acquireWithin(

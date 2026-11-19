@@ -17,9 +17,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * {@code current_setting(...)} (V17):
  *
  * <ul>
- *   <li>{@code app.read_all_experiments} and {@code app.write_all_experiments}: {@code true} when
- *       the caller may read and write every experiment ({@link
- *       MonteisAuthenticationToken#canWriteAllExperiments()});
+ *   <li>{@code app.read_all_experiments} / {@code app.write_all_experiments}: {@code true} when
+ *       the caller may read / write every experiment ({@code experiment:read:all} / {@code
+ *       experiment:write:all});
  *   <li>{@code app.read_experiment_ids}: the readable experiment ids, comma-separated;
  *   <li>{@code app.write_experiment_ids}: the writable experiment ids, comma-separated, always a
  *       subset of the readable ones.
@@ -90,7 +90,7 @@ public class RlsConnectionProvider implements ConnectionProvider {
 
     private static RlsContext of(MonteisAuthenticationToken token) {
       return new RlsContext(
-          token.canWriteAllExperiments(),
+          token.canReadAllExperiments(),
           token.canWriteAllExperiments(),
           token.readExperimentIds(),
           token.writeExperimentIds());
