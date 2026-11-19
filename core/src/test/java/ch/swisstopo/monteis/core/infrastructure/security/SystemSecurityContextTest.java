@@ -33,7 +33,7 @@ class SystemSecurityContextTest {
     // then
     MonteisAuthenticationToken token =
         assertInstanceOf(MonteisAuthenticationToken.class, captured.get());
-    assertTrue(token.experimentAccess().isAdmin());
+    assertTrue(token.canWriteAllExperiments());
     assertNull(token.getCredentials());
   }
 

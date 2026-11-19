@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.core.infrastructure.jooq;
 
-import ch.swisstopo.monteis.core.infrastructure.security.ExperimentAccess;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -20,7 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * <ul>
  *   <li>{@code app.read_all_experiments} and {@code app.write_all_experiments}: {@code true} when
  *       the caller may read and write every experiment ({@link
- *       ExperimentAccess#isAdmin()});
+ *       MonteisAuthenticationToken#canWriteAllExperiments()});
  *   <li>{@code app.read_experiment_ids}: the readable experiment ids, comma-separated;
  *   <li>{@code app.write_experiment_ids}: the writable experiment ids, comma-separated, always a
  *       subset of the readable ones.
@@ -48,7 +47,7 @@ public class RlsConnectionProvider implements ConnectionProvider {
   @Override
   public Connection acquire() {
     Connection connection = delegate.acquire();
-    writeRlsContext(connection, currentExperimentAccess());
+    writeRlsContext(connection, currentRlsContext());
     return connection;
   }
 
@@ -57,19 +56,19 @@ public class RlsConnectionProvider implements ConnectionProvider {
     delegate.release(connection);
   }
 
-  private static ExperimentAccess currentExperimentAccess() {
+  private static RlsContext currentRlsContext() {
     return SecurityContextHolder.getContext().getAuthentication()
             instanceof MonteisAuthenticationToken token
-        ? token.experimentAccess()
-        : ExperimentAccess.NONE;
+        ? RlsContext.of(token)
+        : RlsContext.NONE;
   }
 
-  private static void writeRlsContext(Connection connection, ExperimentAccess access) {
+  private static void writeRlsContext(Connection connection, RlsContext context) {
     try (PreparedStatement statement = connection.prepareStatement(SET_RLS_CONTEXT)) {
-      statement.setString(1, String.valueOf(access.isAdmin()));
-      statement.setString(2, String.valueOf(access.isAdmin()));
-      statement.setString(3, toSortedCsv(access.readableExperimentIds()));
-      statement.setString(4, toSortedCsv(access.writableExperimentIds()));
+      statement.setString(1, String.valueOf(context.readAllExperiments()));
+      statement.setString(2, String.valueOf(context.writeAllExperiments()));
+      statement.setString(3, toSortedCsv(context.readExperimentIds()));
+      statement.setString(4, toSortedCsv(context.writeExperimentIds()));
       statement.execute();
     } catch (SQLException e) {
       throw new DataAccessException("Failed to set RLS context", e);
@@ -79,5 +78,22 @@ public class RlsConnectionProvider implements ConnectionProvider {
   // sorted so that the same capabilities always produce the same setting value
   private static String toSortedCsv(Set<UUID> experimentIds) {
     return experimentIds.stream().sorted().map(UUID::toString).collect(Collectors.joining(","));
+  }
+
+  private record RlsContext(
+      boolean readAllExperiments,
+      boolean writeAllExperiments,
+      Set<UUID> readExperimentIds,
+      Set<UUID> writeExperimentIds) {
+
+    private static final RlsContext NONE = new RlsContext(false, false, Set.of(), Set.of());
+
+    private static RlsContext of(MonteisAuthenticationToken token) {
+      return new RlsContext(
+          token.canWriteAllExperiments(),
+          token.canWriteAllExperiments(),
+          token.readExperimentIds(),
+          token.writeExperimentIds());
+    }
   }
 }

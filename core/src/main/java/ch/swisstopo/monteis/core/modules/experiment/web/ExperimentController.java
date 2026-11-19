@@ -114,7 +114,7 @@ public class ExperimentController {
     LocalDate today = LocalDate.now(clock);
 
     // owners arrive in the body, the filter chain only sees that a writer of the experiment calls
-    if (dto.ownerIds() != null && !authentication.experimentAccess().isAdmin()) {
+    if (dto.ownerIds() != null && !authentication.canWriteAllExperiments()) {
       throw new AccessDeniedException("Only admins may change the owners of an experiment");
     }
     Experiment updated = experimentService.updateExperiment(mapper.toDomain(dto), dto.ownerIds());

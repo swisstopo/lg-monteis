@@ -1,5 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.EXPERIMENT_WRITE;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.EXPERIMENT_WRITE_ALL;
+
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
 import jakarta.servlet.DispatcherType;
 import java.util.Set;
@@ -50,17 +53,17 @@ public class SecurityConfig {
                     .requestMatchers(PUBLIC_ENDPOINTS)
                     .permitAll()
                     .requestMatchers(ApiPaths.EXPERIMENT_OWNER_CANDIDATES)
-                    .hasAuthority(Permissions.ADMIN)
+                    .hasAuthority(EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
-                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
-                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.EXPERIMENT_DOCUMENT)
-                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
-                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.SENSOR_DOCUMENT)
-                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
                     .authenticated()
                     // grant only, before the write-all rule (MON-173, ADR "Hybride
@@ -68,7 +71,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSORS_FULCRUM_REFRESH)
                     .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
                     .requestMatchers(WRITE_REQUESTS)
-                    .hasAuthority(Permissions.ADMIN)
+                    .hasAuthority(EXPERIMENT_WRITE_ALL)
                     .anyRequest()
                     .authenticated())
         // bearer token on every request, session would only cost work (ADR-011 P4)

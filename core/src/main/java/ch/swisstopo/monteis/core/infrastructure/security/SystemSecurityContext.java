@@ -1,6 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,9 +22,10 @@ public final class SystemSecurityContext {
       new MonteisAuthenticationToken(
           null,
           new MonteisPrincipal(SYSTEM_SUBJECT, "SYSTEM"),
-          List.of(new SimpleGrantedAuthority(Permissions.ADMIN)),
-          List.of(),
-          List.of());
+          List.of(
+              new SimpleGrantedAuthority(MonteisJwtAuthenticationConverter.EXPERIMENT_WRITE_ALL)),
+          Set.of(),
+          Set.of());
 
   private SystemSecurityContext() {}
 
