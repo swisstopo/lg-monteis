@@ -74,7 +74,7 @@ Damit sind die zentralen Fragen zum Alerting-Service so beantwortet:
    - stuft bei einer Änderung der Grenzwerte die gespeicherten Messwerte über das bestehende Reprocessing neu ein (R5);
    - sendet nichts für die Alarmierung und führt keinen Zustand: keine Folgen, kein Auslösen, kein Timeout. Das Topic `sensor-alerts` wird nicht gebraucht (E10).
 2. **View `sensor_parameter_reading_state` (E11): letzter Messwert und Timeout**
-   - liefert pro Sensor-Parameter den letzten Messwert mit seinen drei Status und `timed_out`;
+   - liefert pro Sensor-Parameter den letzten Messwert und `timed_out`;
    - wird live berechnet; `core` liest ihn für das Frontend, der Alerting-Service für den Timeout im Versandlauf;
    - enthält keine Frequency-Logik: Das Frontend zeigt die Status ohne Frequency an (R16).
 3. **Notification-Job (Modul `notification`, geplanter Lauf im Versandintervall R1, ShedLock)**
@@ -158,7 +158,7 @@ Textfassung: Alle Tabellen liegen nach MON-250 in einer Datenbank `monteis`, Sch
 ### E1 Aufteilung: Pipeline setzt Status, Auswertung kurz vor dem Versand
 
 - **Entscheid (R24, R26):** Die Pipeline stuft jeden Messwert zustandslos gegen drei Ranges ein, wie heute für die Sensor range. Ob ein Alarm oder Timeout besteht, wertet der Alerting-Service erst im geplanten Versandlauf aus, auf den gespeicherten Status über den View aus E11 (Timeout) und die letzten N Messwerte (Alarme). Der Notification-Job entscheidet, was davon gemeldet wird, und versendet.
-- **Begründung:** siehe „Warum so“ im Zielbild. Kurz: Bei wenigen Versänden pro Tag zählt nur der Zustand zum Versandzeitpunkt; eine Auswertung bei jedem Messwert bringt dafür keinen Nutzen, aber viele Grenzfälle.
+- **Begründung:** Bei wenigen Versänden pro Tag zählt nur der Zustand zum Versandzeitpunkt; eine Auswertung bei jedem Messwert bringt dafür keinen Nutzen, aber viele Grenzfälle.
 - **Verworfen:**
   - Folgen in der Pipeline: widerspricht R24.
   - Auswertung bei jeder Verletzung über `sensor-alerts` mit gespeicherter Folge (früherer Stand): verspätete Werte, verlorene und doppelte Ereignisse, Rücksetzung ohne Ereignis und nachträglicher Vorrang des Timeouts machen sie fehleranfällig.
@@ -167,12 +167,10 @@ Textfassung: Alle Tabellen liegen nach MON-250 in einer Datenbank `monteis`, Sch
 ### E2 Status pro Messwert in drei Spalten
 
 - **Entscheid:** `sensor_reading` erhält `alarm_status` und `closely_monitored_status` neben dem bestehenden `status` (Sensor range), alle vom Typ `range_category`.
-- **Alternative:** eine einzige Spalte mit kombiniertem Enum. Verworfen, weil sich Alarm limits und Closely monitored limits überlappen können (R12) und ein Wert dann beide verletzt.
 - **Grenzwertänderung (R5, F4):** Das bestehende Reprocessing stuft die gespeicherten Messwerte neu ein. Der nächste Versandlauf sieht über den View automatisch den neuen Stand; ein zusätzliches Ereignis braucht es nicht. Das Reprocessing bleibt so schnell wie heute (R24).
 - **Zu entscheiden:**
   - Spaltennamen der Grenzwerte, heute `lower_alarm_limit` / `upper_alarm_limit` für die Sensor range;
   - Speicherbedarf der zwei zusätzlichen Spalten auf der Hypertable bei der Datenmenge aus F1;
-  - Komprimierung der Chunks: Das Reprocessing ändert dann komprimierte Chunks, falls die Komprimierung aktiviert ist.
 
 ### E6 Gespeichert wird nur, was gemeldet wurde
 
@@ -202,6 +200,17 @@ CREATE TABLE notification_log (
     error             text
 );
 ```
+
+Beispiel für R9 mit Frequency 3 und Versand um 12:00 und 24:00:
+
+|    Zeit     |         Messwerte          | Alerting-Service liefert | `notification_state` |                      Handler                       |
+|-------------|----------------------------|--------------------------|----------------------|----------------------------------------------------|
+| 08:00–09:00 | im Range, letzter um 09:00 | –                        | –                    | –                                                  |
+| 10:00–11:00 | 3× Verstoss                |                          |                      |                                                    |
+| 12:00 Lauf  |                            | Alarm, Kennung 09:00     | keine Zeile          | **meldet**, speichert Kennung 09:00                |
+| 13:00       | im Range → Alarm behoben   |                          |                      |                                                    |
+| 14:00–16:00 | 3× Verstoss → neuer Alarm  |                          |                      |                                                    |
+| 24:00 Lauf  |                            | Alarm, Kennung **13:00** | Kennung 09:00        | 13:00 ≠ 09:00 → **meldet erneut**, speichert 13:00 |
 
 So entstehen die Regeln aus den Anforderungen:
 
@@ -308,8 +317,6 @@ Caveats:
 - Die Default Privileges aus MON-250 geben `core` CRUD auch auf neue Views, deshalb `REVOKE ALL` und nur `SELECT`.
 - `alarm_status` und `closely_monitored_status` gibt es erst mit E2.
 
-Wie gespeichert wird, was schon gemeldet wurde: in `notification_state` des Notification-Job; siehe Abschnitt E6. Wo beide Module laufen: siehe Abschnitt E12.
-
 ### E12 Alerting-Service und Notification-Job als Feature-Module in `core`
 
 - **Entscheid:** zwei logisch getrennte Feature-Module im Deployable `core`.
@@ -329,7 +336,6 @@ Wie gespeichert wird, was schon gemeldet wurde: in `notification_state` des Noti
 
 - **Entscheid:** direkter Aufruf über eine Schnittstelle im Code, im selben Lauf.
 - **Warum kein Topic `alert-events`:** Der Notification-Job bündelt alle Befunde eines Laufs pro Empfänger zu einer E-Mail. Ein Consumer bekommt Ereignisse einzeln und weiss nicht, wann ein Lauf vollständig ist. Dazu kämen Outbox, Consumer und das Aussortieren doppelter Ereignisse. Mit dem direkten Aufruf liegt das ganze Ergebnis eines Laufs in einer Liste vor.
-- **Wann ein Topic sinnvoll wird:** wenn ein zweiter Empfänger der Befunde dazukommt (z. B. Audit, Pipeline-Überwachung R20) oder der Versand als eigenes Deployable herausgelöst wird. Dann bündelt `alerting` pro Empfänger und schreibt eine Nachricht pro Empfänger und Lauf; der Notification-Handler versendet jede Nachricht für sich.
 
 ## ADR-Kandidaten
 
@@ -372,7 +378,7 @@ Wie gespeichert wird, was schon gemeldet wurde: in `notification_state` des Noti
 
 ## Risiken
 
-- **Kurze Alarme werden nicht gemeldet (gewollt, R26):** Ein Alarm, der zwischen zwei Versänden entsteht und wieder endet, erreicht niemanden per Mail. Im Frontend ist er in der Historie sichtbar, nicht als aktiver Alarm.
+- **Kurze Alarme werden nicht gemeldet (gewollt, R26):** Ein Alarm, der zwischen zwei Versänden entsteht und wieder endet, erreicht niemanden per Mail.
 - **Alarm bleibt unbemerkt bestehen:** Weil ein normaler Alarm nur einmal rausgeht (R9) und es keine Erinnerung oder Entwarnung gibt (R13), sieht niemand per Mail, ob ein Sensor-Parameter seit Wochen ausserhalb des Ranges ist. Das ist so gewollt; der aktuelle Zustand muss dann im Frontend sichtbar sein.
 - **Flackern an der Grenze:** Ein Wert im Range beendet einen Alarm (R11). Pendelt ein Sensor-Parameter um eine Grenze, ist bei jedem Versand eine neue Folge aktiv und wird erneut gemeldet. Ein Frequency-Wert dämpft das.
 - **Ausgefallener Versandlauf:** Fällt ein Lauf aus, meldet der nächste den dann aktuellen Zustand. Was dazwischen begann und endete, wird nicht gemeldet. Der Lauf braucht deshalb ein Monitoring (z. B. Zeitpunkt des letzten erfolgreichen Laufs).
