@@ -3,7 +3,7 @@
   @if (recipients.hasValue()) {
     <mat-chip-set [attr.aria-label]="'notification.recipients.title' | translate">
       @for (recipient of recipients.value().recipients; track recipient.id) {
-        <mat-chip>{{ displayName(recipient) }}</mat-chip>
+        <mat-chip>{{ recipient | userName }}</mat-chip>
       }
     </mat-chip-set>
   }

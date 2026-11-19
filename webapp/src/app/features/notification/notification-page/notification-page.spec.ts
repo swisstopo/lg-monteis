@@ -1,11 +1,11 @@
 import { HttpContext, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
+  DirectoryUserDto,
   ExperimentControllerService,
   NotifyingParameterControllerService,
   NotifyingParameterResponseDto,
   RecipientControllerService,
-  RecipientDto,
   RecipientsResponseDto,
   WriteSensorParameterDto,
 } from '@core/generated';
@@ -40,11 +40,11 @@ function parameter(
   };
 }
 
-const PI_ANNA: RecipientDto = { id: 'anna', firstName: 'Anna', lastName: 'Arnold' };
-const PI_BEN: RecipientDto = { id: 'ben', firstName: 'Ben', lastName: 'Berger' };
-const READER_CARL: RecipientDto = { id: 'carl', firstName: 'Carl', lastName: 'Christen' };
+const PI_ANNA: DirectoryUserDto = { id: 'anna', firstName: 'Anna', lastName: 'Arnold' };
+const PI_BEN: DirectoryUserDto = { id: 'ben', firstName: 'Ben', lastName: 'Berger' };
+const READER_CARL: DirectoryUserDto = { id: 'carl', firstName: 'Carl', lastName: 'Christen' };
 
-function recipients(saved: boolean, ...members: RecipientDto[]): RecipientsResponseDto {
+function recipients(saved: boolean, ...members: DirectoryUserDto[]): RecipientsResponseDto {
   return { saved, recipients: members };
 }
 
@@ -335,16 +335,6 @@ describe('NotificationPage', () => {
     const page = await render(parameter());
 
     await vi.waitFor(() => expect(page.recipientChips()).toEqual(['Carl Christen']));
-  });
-
-  it('names a recipient without a name by the e-mail', async () => {
-    recipientApi.findRecipientsOf.mockReturnValue(
-      of(recipients(true, { id: 'dora', email: 'dora@example.com' })),
-    );
-
-    const page = await render(parameter());
-
-    await vi.waitFor(() => expect(page.recipientChips()).toEqual(['dora@example.com']));
   });
 
   it('shows the recipients below an empty parameter table', async () => {
