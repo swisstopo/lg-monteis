@@ -60,7 +60,6 @@ class SensorConfigPublisherTest {
         null,
         null,
         active,
-        null,
         3);
   }
 

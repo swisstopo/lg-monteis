@@ -157,8 +157,7 @@ class JooqSensorCsvExportQueryRepositoryIT {
                   "", // parameter.formula.expression
                   "", // parameter.alarmLimits.lower
                   "", // parameter.alarmLimits.upper
-                  "", // parameter.active
-                  "" // parameter.comment
+                  "" // parameter.active
                   ),
               lines.get(1));
         });
@@ -309,7 +308,6 @@ class JooqSensorCsvExportQueryRepositoryIT {
         null,
         null,
         true,
-        null,
         null);
   }
 

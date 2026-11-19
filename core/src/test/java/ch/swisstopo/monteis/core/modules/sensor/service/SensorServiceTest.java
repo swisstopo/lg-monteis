@@ -67,7 +67,6 @@ class SensorServiceTest {
         null,
         null,
         true,
-        null,
         1);
   }
 

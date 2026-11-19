@@ -377,7 +377,6 @@ class JooqSensorRepositoryIT {
         null,
         null,
         true,
-        null,
         null);
   }
 
@@ -896,7 +895,6 @@ class JooqSensorRepositoryIT {
             null,
             null,
             true,
-            null,
             null);
 
     Sensor sensor = new Sensor(name, dasKey, Das.SOL_EXPERTS, null, null, coordinates, true, null);

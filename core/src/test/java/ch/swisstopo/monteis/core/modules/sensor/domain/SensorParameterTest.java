@@ -144,8 +144,7 @@ class SensorParameterTest {
                     null,
                     true,
                     null,
-                    true,
-                    null));
+                    true));
 
     assertEquals("sensor.specialAlarmLimits.required", exception.getMessageKey());
   }
@@ -164,8 +163,7 @@ class SensorParameterTest {
             null,
             false,
             new AlarmLimits(-10.0, 110.0),
-            true,
-            null);
+            true);
 
     assertFalse(parameter.getCloselyMonitored());
     assertEquals(new AlarmLimits(-10.0, 110.0), parameter.getSpecialAlarmLimits());
@@ -198,8 +196,7 @@ class SensorParameterTest {
         null,
         null,
         null,
-        true,
-        null);
+        true);
   }
 
   private SensorParameter newSensorParameterWithAlias(String dasParameterAlias) {
@@ -214,7 +211,6 @@ class SensorParameterTest {
         null,
         null,
         null,
-        true,
-        null);
+        true);
   }
 }

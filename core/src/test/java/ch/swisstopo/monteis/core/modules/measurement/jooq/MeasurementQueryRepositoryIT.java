@@ -479,8 +479,7 @@ class MeasurementQueryRepositoryIT {
                   null,
                   null,
                   null,
-                  true,
-                  null);
+                  true);
           Sensor sensor =
               new Sensor(
                   "No Reading Sensor",
@@ -820,7 +819,6 @@ class MeasurementQueryRepositoryIT {
         null,
         null,
         true,
-        null,
         null);
   }
 }

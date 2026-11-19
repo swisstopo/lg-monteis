@@ -304,7 +304,6 @@ class SensorControllerTest {
             null,
             true,
             new WriteFormulaDto("x * 2"),
-            null,
             null);
     WriteSensorDto requestDto =
         new WriteSensorDto(
@@ -334,7 +333,6 @@ class SensorControllerTest {
             null,
             null,
             true,
-            null,
             null);
     SensorResponseDto expectedResponseDto =
         new SensorResponseDto(
@@ -694,7 +692,6 @@ class SensorControllerTest {
         null,
         true,
         null,
-        null,
         version);
   }
 
@@ -728,7 +725,6 @@ class SensorControllerTest {
         null,
         null,
         true,
-        null,
         version);
   }
 

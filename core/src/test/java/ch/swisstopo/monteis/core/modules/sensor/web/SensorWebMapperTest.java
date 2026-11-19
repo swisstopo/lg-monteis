@@ -70,7 +70,6 @@ class SensorWebMapperTest {
             null,
             true,
             null,
-            null,
             null);
 
     // when
@@ -97,7 +96,6 @@ class SensorWebMapperTest {
             true,
             new AlarmLimitsDto(-60.0, 110.0),
             true,
-            null,
             null,
             null);
 
@@ -133,7 +131,6 @@ class SensorWebMapperTest {
             null,
             null,
             true,
-            null,
             null,
             null);
 

@@ -50,7 +50,6 @@ public interface SensorJooqMapper {
   @Mapping(target = "name", source = "paramRecord.name")
   @Mapping(target = "unit", source = "paramRecord.unit")
   @Mapping(target = "active", source = "paramRecord.active")
-  @Mapping(target = "comment", source = "paramRecord.comment")
   @Mapping(target = "version", source = "paramRecord.version")
   @Mapping(target = "alarmLimits.lower", source = "paramRecord.lowerAlarmLimit")
   @Mapping(target = "alarmLimits.upper", source = "paramRecord.upperAlarmLimit")
