@@ -21,7 +21,11 @@ export function toErrorDtos(error: unknown): ErrorDto[] {
  * body arrives as a blob too.
  */
 export async function toErrorDtosFromBlob(error: unknown): Promise<ErrorDto[]> {
-  if (!(error instanceof HttpErrorResponse) || !(error.error instanceof Blob)) {
+  // anything but an HTTP error response (e.g. an Error thrown on the client) holds no ErrorDto
+  if (!(error instanceof HttpErrorResponse)) {
+    return [];
+  }
+  if (!(error.error instanceof Blob)) {
     return toErrorDtos(error);
   }
   try {

@@ -3,7 +3,12 @@
     [canWriteConditional]="permissions.hasAnyExperimentWriteAccess()"
     (searchAction)="onSearch($event)"
   >
-    <button read-action matButton="text" [disabled]="csvDownload.downloading()" (click)="csvDownload.download()">
+    <button
+      read-action
+      matButton="text"
+      [disabled]="csvDownload.downloading()"
+      (click)="csvDownload.download()"
+    >
       @if (csvDownload.downloading()) {
         <mat-spinner diameter="16"></mat-spinner>
       } @else {
