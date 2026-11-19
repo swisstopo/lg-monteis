@@ -1,5 +1,4 @@
 import { DatePipe } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
   computed,
@@ -26,17 +25,15 @@ import {
   MatTimepickerToggle,
 } from '@angular/material/timepicker';
 import { APP_ISO_TIMESTAMP_FORMAT } from '@core/date/date.provider';
-import { ErrorDto, MeasurementResponseDto } from '@core/generated';
-import { ToastService } from '@core/notifications/toast.service';
+import { MeasurementResponseDto } from '@core/generated';
 import { FormErrorService } from '@core/utils/form-error.service';
 import { MeasurementsService } from '@features/measurements/services/measurements.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions } from '@ui/chart';
-import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
+import { createCsvDownload } from '@ui/table/csv-download';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
-import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
 import { subDays } from 'date-fns';
@@ -100,8 +97,6 @@ export default class MeasurementsTable {
   private readonly dialog = inject(MatDialog);
   protected readonly measurementsService = inject(MeasurementsService);
   private readonly formErrorService = inject(FormErrorService);
-  private readonly fileDownloadService = inject(FileDownloadService);
-  private readonly toastService = inject(ToastService);
   readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
   readonly dateRangeModel = signal<DateRangeModel>({
@@ -121,8 +116,14 @@ export default class MeasurementsTable {
 
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
-  protected downloading = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
+  protected readonly csvDownload = createCsvDownload({
+    gridApi: this.gridApi,
+    fetchCsv: (sortModel, filterModel) =>
+      this.measurementsService.getMeasurementsCsv(sortModel, filterModel),
+    fileName: 'measurements.csv',
+    failedMessageKey: 'measurements-table.error.downloadFailed',
+  });
 
   protected datasource = createPagedDatasource(
     (params) => this.measurementsService.getMeasurements(params),
@@ -170,34 +171,6 @@ export default class MeasurementsTable {
 
   onReload(): void {
     this.gridApi()?.refreshInfiniteCache();
-  }
-
-  async onDownload(): Promise<void> {
-    const api = this.gridApi();
-    if (!api) return;
-
-    this.downloading.set(true);
-    try {
-      const { sortModel, filterModel } = toGridFilterSortParams(api);
-      const blob = await this.measurementsService.getMeasurementsCsv(sortModel, filterModel);
-      this.fileDownloadService.download(blob, 'measurements.csv');
-    } catch (error) {
-      const errorDto = await blobErrorDto(error);
-      if (errorDto?.messageKey === 'export.tooManyRows') {
-        this.toastService.warning(
-          this.translateService.translate(
-            'measurements-table.downloadTooManyRows',
-            errorDto.params,
-          )(),
-        );
-      } else {
-        this.toastService.error(
-          this.translateService.translate('measurements-table.downloadFailed')(),
-        );
-      }
-    } finally {
-      this.downloading.set(false);
-    }
   }
 
   resetRange(): void {
@@ -283,15 +256,5 @@ export default class MeasurementsTable {
   /** Preserves first-occurrence order. */
   private distinct<T>(values: readonly T[]): T[] {
     return [...new Set(values)];
-  }
-}
-
-/** The CSV is requested as a blob, so a failed request's ErrorDto arrives as a blob too. */
-async function blobErrorDto(error: unknown): Promise<ErrorDto | undefined> {
-  if (!(error instanceof HttpErrorResponse) || !(error.error instanceof Blob)) return undefined;
-  try {
-    return JSON.parse(await error.error.text()) as ErrorDto;
-  } catch {
-    return undefined;
   }
 }
