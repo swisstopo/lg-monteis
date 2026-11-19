@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.core.modules.identity.web;
 
-import static ch.swisstopo.monteis.core.infrastructure.security.Permissions.ADMIN;
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIMENT;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -58,7 +57,9 @@ class CurrentUserControllerTest {
     // e.g. Spring Security Test's jwt() shortcut: authenticated, but not a
     // MonteisAuthenticationToken
     mockMvc
-        .perform(get("/api/me").with(jwt().authorities(new SimpleGrantedAuthority(ADMIN))))
+        .perform(
+            get("/api/me")
+                .with(jwt().authorities(new SimpleGrantedAuthority("experiment:write:all"))))
         .andExpect(status().is5xxServerError())
         .andExpect(jsonPath("$.isAdmin").doesNotExist());
   }

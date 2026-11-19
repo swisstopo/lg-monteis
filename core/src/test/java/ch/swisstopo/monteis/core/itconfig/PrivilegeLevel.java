@@ -2,7 +2,6 @@ package ch.swisstopo.monteis.core.itconfig;
 
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
-import ch.swisstopo.monteis.core.infrastructure.security.Permissions;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -17,7 +16,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
  * The four MON-196 privilege levels, defined once for every test: their Keycloak client roles (as
- * the realm groups grant them), the {@code api:*} authorities those map to, and the experiment ids
+ * the realm groups grant them), the authorities those map to, and the experiment ids
  * a token of that level carries.
  *
  * <p>Scoped levels are assigned {@link #ASSIGNED_EXPERIMENT} ({@code ExperimentPI} with write);
@@ -28,15 +27,19 @@ public enum PrivilegeLevel {
   BASISROLLE(List.of(), List.of(), List.of(), List.of()),
   EXPERIMENT_USER(
       List.of("monteis-client:experiment:read"),
-      List.of(Permissions.EXPERIMENT_READ),
+      List.of("experiment:read"),
       List.of(SeedData.EXPERIMENT_ALPHA, SeedData.EXPERIMENT_GAMMA),
       List.of()),
   EXPERIMENT_PI(
       List.of("monteis-client:experiment:read", "monteis-client:experiment:write"),
-      List.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE),
+      List.of("experiment:read", "experiment:write"),
       List.of(SeedData.EXPERIMENT_GAMMA),
       List.of(SeedData.EXPERIMENT_ALPHA)),
-  MONTEIS_ADMIN(List.of("monteis-client:admin"), List.of(Permissions.ADMIN), List.of(), List.of());
+  MONTEIS_ADMIN(
+      List.of("monteis-client:admin"),
+      List.of("experiment:read:all", "experiment:write:all"),
+      List.of(),
+      List.of());
 
   public static final UUID ASSIGNED_EXPERIMENT = SeedData.EXPERIMENT_ALPHA;
   public static final UUID OTHER_EXPERIMENT = SeedData.EXPERIMENT_GAMMA;
@@ -84,7 +87,11 @@ public enum PrivilegeLevel {
   public MonteisAuthenticationToken authentication() {
     MonteisPrincipal principal = new MonteisPrincipal(UUID.randomUUID(), name().toLowerCase());
     return new MonteisAuthenticationToken(
-        null, principal, grantedAuthorities(), readExperimentIds(), writeExperimentIds());
+        null,
+        principal,
+        grantedAuthorities(),
+        readableExperimentIds(),
+        Set.copyOf(writeExperimentIds()));
   }
 
   /** A decoded access token of this level, as the resource server hands it to the converter. */

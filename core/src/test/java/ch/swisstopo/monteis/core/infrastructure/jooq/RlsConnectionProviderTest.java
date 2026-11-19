@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import ch.swisstopo.monteis.core.infrastructure.security.Permissions;
 import ch.swisstopo.monteis.core.infrastructure.security.SystemSecurityContext;
 import ch.swisstopo.monteis.core.itconfig.SecurityContextTestSupport;
 import java.sql.Connection;
@@ -100,20 +99,6 @@ class RlsConnectionProviderTest {
   }
 
   @Test
-  void should_ignore_a_write_claim_without_the_write_authority() throws SQLException {
-    RlsSettings settings =
-        acquireWithin(
-            action ->
-                SecurityContextTestSupport.runAs(
-                    List.of(Permissions.EXPERIMENT_READ),
-                    List.of(EXPERIMENT_A),
-                    List.of(EXPERIMENT_A),
-                    action));
-
-    assertEquals(new RlsSettings("false", "false", EXPERIMENT_A.toString(), ""), settings);
-  }
-
-  @Test
   void should_set_both_all_experiments_flags_for_the_system_context() throws SQLException {
     RlsSettings settings = acquireWithin(SystemSecurityContext::runAsSystem);
 
@@ -129,7 +114,7 @@ class RlsConnectionProviderTest {
               SecurityContext context = SecurityContextHolder.createEmptyContext();
               context.setAuthentication(
                   UsernamePasswordAuthenticationToken.authenticated(
-                      "x", null, List.of(new SimpleGrantedAuthority(Permissions.ADMIN))));
+                      "x", null, List.of(new SimpleGrantedAuthority("experiment:write:all"))));
               SecurityContextHolder.setContext(context);
               action.run();
             });

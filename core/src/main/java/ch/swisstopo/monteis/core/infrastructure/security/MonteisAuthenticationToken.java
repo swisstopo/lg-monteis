@@ -1,10 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import java.util.Collection;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -19,19 +17,20 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
 
   private final @Nullable Jwt jwt;
   private final transient MonteisPrincipal principal;
-  private final ExperimentAccess experimentAccess;
+  private final Set<UUID> readExperimentIds;
+  private final Set<UUID> writeExperimentIds;
 
   public MonteisAuthenticationToken(
       @Nullable Jwt jwt,
       MonteisPrincipal principal,
       @Nullable Collection<? extends GrantedAuthority> authorities,
-      Collection<UUID> readExperimentIds,
-      Collection<UUID> writeExperimentIds) {
+      Set<UUID> readExperimentIds,
+      Set<UUID> writeExperimentIds) {
     super(authorities);
     this.jwt = jwt;
     this.principal = principal;
-    this.experimentAccess =
-        ExperimentAccess.of(permissionsOf(getAuthorities()), readExperimentIds, writeExperimentIds);
+    this.readExperimentIds = Set.copyOf(readExperimentIds);
+    this.writeExperimentIds = Set.copyOf(writeExperimentIds);
     super.setAuthenticated(true);
   }
 
@@ -45,15 +44,24 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
     return principal;
   }
 
-  public ExperimentAccess experimentAccess() {
-    return experimentAccess;
+  public Set<UUID> readExperimentIds() {
+    return readExperimentIds;
   }
 
-  private static Set<String> permissionsOf(Collection<GrantedAuthority> authorities) {
-    return authorities.stream()
-        .map(GrantedAuthority::getAuthority)
-        .filter(Objects::nonNull)
-        .collect(Collectors.toUnmodifiableSet());
+  public Set<UUID> writeExperimentIds() {
+    return writeExperimentIds;
+  }
+
+  public boolean canReadAllExperiments() {
+    return hasAuthority(MonteisJwtAuthenticationConverter.EXPERIMENT_READ_ALL);
+  }
+
+  public boolean canWriteAllExperiments() {
+    return hasAuthority(MonteisJwtAuthenticationConverter.EXPERIMENT_WRITE_ALL);
+  }
+
+  private boolean hasAuthority(String authority) {
+    return getAuthorities().stream().anyMatch(granted -> authority.equals(granted.getAuthority()));
   }
 
   @Override
@@ -64,7 +72,8 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
     return obj instanceof MonteisAuthenticationToken other
         && getClass() == other.getClass()
         && super.equals(other)
-        && experimentAccess.equals(other.experimentAccess);
+        && readExperimentIds.equals(other.readExperimentIds)
+        && writeExperimentIds.equals(other.writeExperimentIds);
   }
 
   @Override

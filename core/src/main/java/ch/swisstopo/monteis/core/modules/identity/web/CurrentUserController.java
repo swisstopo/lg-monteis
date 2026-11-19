@@ -1,6 +1,5 @@
 package ch.swisstopo.monteis.core.modules.identity.web;
 
-import ch.swisstopo.monteis.core.infrastructure.security.ExperimentAccess;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
 import ch.swisstopo.monteis.core.modules.identity.web.dto.CurrentUserDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,11 +23,10 @@ public class CurrentUserController {
   @ApiResponse(responseCode = "200", description = "Successfully retrieved current user info")
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<CurrentUserDto> getCurrentUser(MonteisAuthenticationToken authentication) {
-    ExperimentAccess access = authentication.experimentAccess();
     return ResponseEntity.ok(
         new CurrentUserDto(
-            access.isAdmin(),
+            authentication.canWriteAllExperiments(),
             // empty when isAdmin (BR4.10); sorted for a stable response
-            access.writableExperimentIds().stream().sorted().toList()));
+            authentication.writeExperimentIds().stream().sorted().toList()));
   }
 }

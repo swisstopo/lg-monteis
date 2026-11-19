@@ -2,10 +2,11 @@ package ch.swisstopo.monteis.core.itconfig;
 
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
 import ch.swisstopo.monteis.core.infrastructure.security.MonteisPrincipal;
-import ch.swisstopo.monteis.core.infrastructure.security.Permissions;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,32 +23,34 @@ public final class SecurityContextTestSupport {
 
   private SecurityContextTestSupport() {}
 
-  /** {@code api:admin}: all experiments, read and write. */
+  private static final List<String> ADMIN = List.of("experiment:read:all", "experiment:write:all");
+
+  /** {@code experiment:read:all} and {@code experiment:write:all}: every experiment. */
   public static void runAsAdmin(Runnable action) {
-    runAs(List.of(Permissions.ADMIN), List.of(), List.of(), action);
+    runAs(ADMIN, List.of(), List.of(), action);
   }
 
-  /** {@code api:experiment:read} on {@code readExperimentIds} only. */
+  /** {@code experiment:read} on {@code readExperimentIds} only. */
   public static void runAsUser(List<UUID> readExperimentIds, Runnable action) {
-    runAs(List.of(Permissions.EXPERIMENT_READ), readExperimentIds, List.of(), action);
+    runAs(List.of("experiment:read"), readExperimentIds, List.of(), action);
   }
 
   /**
-   * {@code api:experiment:read} on {@code readExperimentIds} plus {@code api:experiment:write} on
-   * {@code writeExperimentIds}.
+   * {@code experiment:read} on {@code readExperimentIds} and {@code writeExperimentIds}, plus {@code
+   * experiment:write} on {@code writeExperimentIds}, as the converter grants them.
    */
   public static void runAsUser(
       List<UUID> readExperimentIds, List<UUID> writeExperimentIds, Runnable action) {
     runAs(
-        List.of(Permissions.EXPERIMENT_READ, Permissions.EXPERIMENT_WRITE),
-        readExperimentIds,
+        List.of("experiment:read", "experiment:write"),
+        Stream.concat(readExperimentIds.stream(), writeExperimentIds.stream()).toList(),
         writeExperimentIds,
         action);
   }
 
   /** {@link #runAsAdmin} for an action with a result. */
   public static <T> T callAsAdmin(Supplier<T> action) {
-    return callAs(List.of(Permissions.ADMIN), List.of(), List.of(), action);
+    return callAs(ADMIN, List.of(), List.of(), action);
   }
 
   public static void runAs(
@@ -76,8 +79,8 @@ public final class SecurityContextTestSupport {
             null,
             principal,
             permissions.stream().map(SimpleGrantedAuthority::new).toList(),
-            readExperimentIds,
-            writeExperimentIds);
+            Set.copyOf(readExperimentIds),
+            Set.copyOf(writeExperimentIds));
 
     SecurityContext previous = SecurityContextHolder.getContext();
     try {

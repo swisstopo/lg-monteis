@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ class CurrentUserProviderTest {
 
     SecurityContextHolder.getContext()
         .setAuthentication(
-            new MonteisAuthenticationToken(null, principal, List.of(), List.of(), List.of()));
+            new MonteisAuthenticationToken(null, principal, List.of(), Set.of(), Set.of()));
 
     // when / then
     assertAll(
