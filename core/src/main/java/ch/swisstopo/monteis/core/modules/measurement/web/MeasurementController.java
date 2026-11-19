@@ -37,9 +37,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @RequestMapping("/api/measurements")
 public class MeasurementController {
 
-  /** A larger measurements export is refused, the user narrows the table down first. */
-  private static final int CSV_MAX_ROWS = 1000;
-
   private final MeasurementService measurementService;
   private final PagedRequestParser pagedRequestParser;
   private final Clock clock;
@@ -115,9 +112,9 @@ public class MeasurementController {
       @RequestParam(required = false) String sortModel,
       @RequestParam(required = false) String filterModel) {
     PagedRequest exportRequest =
-        pagedRequestParser.parseForExport(
-            new RawExportRequest(sortModel, filterModel), CSV_MAX_ROWS);
+        pagedRequestParser.parseForExport(new RawExportRequest(sortModel, filterModel));
     return CsvDownload.attachment(
-        "measurements.csv", writer -> csvExportQueryRepository.streamCsv(exportRequest, writer));
+        "measurements.csv",
+        writer -> csvExportQueryRepository.writeCsvUnlessTooManyRows(exportRequest, writer));
   }
 }

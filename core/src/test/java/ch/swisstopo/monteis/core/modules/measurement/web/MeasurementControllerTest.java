@@ -541,16 +541,16 @@ class MeasurementControllerTest {
   @Test
   void should_route_get_measurements_csv_and_stream_csv_content() throws Exception {
     // given
-    PagedRequest exportRequest = new PagedRequest(0, 1000, List.of(), Map.of());
-    given(pagedRequestParser.parseForExport(any(), eq(1000))).willReturn(exportRequest);
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
     willAnswer(
             invocation -> {
               Writer writer = invocation.getArgument(1);
-              writer.write("experimentName,dasKey\r\nMont Terri Alpha,SOL_EXPERTS__TEMP-1__t\r\n");
+              writer.write("experimentName;dasKey\r\nMont Terri Alpha;SOL_EXPERTS__TEMP-1__t\r\n");
               return null;
             })
         .given(csvExportQueryRepository)
-        .streamCsv(eq(exportRequest), any());
+        .writeCsvUnlessTooManyRows(eq(exportRequest), any());
 
     // when / then
     MvcResult csv =
@@ -567,21 +567,22 @@ class MeasurementControllerTest {
             header().string("Content-Disposition", "attachment; filename=\"measurements.csv\""))
         .andExpect(
             content()
-                .string("experimentName,dasKey\r\nMont Terri Alpha,SOL_EXPERTS__TEMP-1__t\r\n"));
+                .string(
+                    "\uFEFFexperimentName;dasKey\r\nMont Terri Alpha;SOL_EXPERTS__TEMP-1__t\r\n"));
 
-    then(pagedRequestParser).should().parseForExport(any(), eq(1000));
-    then(csvExportQueryRepository).should().streamCsv(eq(exportRequest), any());
+    then(pagedRequestParser).should().parseForExport(any());
+    then(csvExportQueryRepository).should().writeCsvUnlessTooManyRows(eq(exportRequest), any());
   }
 
   @Test
   void should_return_bad_request_when_measurements_csv_export_query_rejects_the_filter()
       throws Exception {
     // given
-    PagedRequest exportRequest = new PagedRequest(0, 1000, List.of(), Map.of());
-    given(pagedRequestParser.parseForExport(any(), eq(1000))).willReturn(exportRequest);
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
     willThrow(new InvalidPagedRequestException("Unknown sortable/filterable column: bogus"))
         .given(csvExportQueryRepository)
-        .streamCsv(eq(exportRequest), any());
+        .writeCsvUnlessTooManyRows(eq(exportRequest), any());
 
     // when / then
     MvcResult csv =
@@ -600,11 +601,11 @@ class MeasurementControllerTest {
   void should_return_bad_request_when_the_measurements_csv_export_matches_too_many_rows()
       throws Exception {
     // given
-    PagedRequest exportRequest = new PagedRequest(0, 1000, List.of(), Map.of());
-    given(pagedRequestParser.parseForExport(any(), eq(1000))).willReturn(exportRequest);
-    willThrow(new TooManyExportRowsException(1000))
+    PagedRequest exportRequest = new PagedRequest(0, 50000, List.of(), Map.of());
+    given(pagedRequestParser.parseForExport(any())).willReturn(exportRequest);
+    willThrow(new TooManyExportRowsException(50000))
         .given(csvExportQueryRepository)
-        .streamCsv(eq(exportRequest), any());
+        .writeCsvUnlessTooManyRows(eq(exportRequest), any());
 
     // when / then
     MvcResult csv =
@@ -616,6 +617,6 @@ class MeasurementControllerTest {
         .perform(asyncDispatch(csv))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.messageKey").value("export.tooManyRows"))
-        .andExpect(jsonPath("$.params.max").value(1000));
+        .andExpect(jsonPath("$.params.max").value(50000));
   }
 }

@@ -28,9 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 class JooqMeasurementCsvExportQueryRepositoryIT {
 
   private static final String HEADER =
-      "Experiment,DAS Key,Sensor Name,Parameter,Sensor Type,Newest Measurement,Value,"
-          + "Measurement Status,Unit,Alarm Limit From,Alarm Limit To,Active,X (Local),Y (Local),"
-          + "Z (Local),Comment";
+      "experimentName;dasKey;sensorName;sensorParameterName;sensorType;newestMeasurement;"
+          + "measureValue;measurementStatus;unit;alarmLimits.lower;alarmLimits.upper;active;"
+          + "coordinates.x;coordinates.y;coordinates.z;comment";
 
   private static final List<UUID> EXPERIMENT_1_ONLY =
       List.of(UUID.fromString("00000000-0000-7000-8000-000000000301"));
@@ -52,12 +52,13 @@ class JooqMeasurementCsvExportQueryRepositoryIT {
           String row = lines.get(1);
           assertTrue(
               row.startsWith(
-                  "Mont Terri Alpha,SOL_EXPERTS__TEMP-1__temperature,monteis-001,"
-                      + "Temperature Param,Temperature,"),
+                  "Mont Terri Alpha;SOL_EXPERTS__TEMP-1__temperature;monteis-001;"
+                      + "Temperature Param;Temperature;"),
               row);
           assertTrue(
               row.endsWith(
-                  ",K,-50,100,Yes,100,200,300," + "Air temperature sensor near ventilation intake"),
+                  ";KELVIN;-50.0;100.0;true;100.0;200.0;300.0;"
+                      + "Air temperature sensor near ventilation intake"),
               row);
         });
   }
@@ -87,7 +88,8 @@ class JooqMeasurementCsvExportQueryRepositoryIT {
 
           // when / then
           assertThrows(
-              TooManyExportRowsException.class, () -> exportRepository.streamCsv(request, writer));
+              TooManyExportRowsException.class,
+              () -> exportRepository.writeCsvUnlessTooManyRows(request, writer));
           assertEquals("", writer.toString());
         });
   }
@@ -100,7 +102,7 @@ class JooqMeasurementCsvExportQueryRepositoryIT {
   private String streamToString(PagedRequest request) {
     StringWriter writer = new StringWriter();
     try {
-      exportRepository.streamCsv(request, writer);
+      exportRepository.writeCsvUnlessTooManyRows(request, writer);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
