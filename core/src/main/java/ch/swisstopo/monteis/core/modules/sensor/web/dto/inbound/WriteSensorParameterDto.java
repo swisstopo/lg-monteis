@@ -4,6 +4,7 @@ import ch.swisstopo.monteis.core.infrastructure.validation.Create;
 import ch.swisstopo.monteis.core.infrastructure.validation.NullOrNotBlank;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.RangeLimitsDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -19,6 +20,16 @@ public record WriteSensorParameterDto(
     @NotNull Unit unit,
     @NotNull @Valid WriteSensorTypeDto type,
     @NotNull @Valid AlarmLimitsDto alarmLimits,
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) @Valid RangeLimitsDto rangeLimits,
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Omit for false.")
+        Boolean notificationActive,
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Omit for false.")
+        Boolean closelyMonitored,
+    @Schema(
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+            description = "Required while closelyMonitored is true.")
+        @Valid
+        AlarmLimitsDto specialAlarmLimits,
     @NotNull Boolean active,
     @Schema(
             requiredMode = Schema.RequiredMode.NOT_REQUIRED,
