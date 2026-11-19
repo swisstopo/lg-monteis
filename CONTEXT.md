@@ -24,7 +24,7 @@ _Avoid_: Document (alone), Attachment, Experiment document
 ## Documents from Fulcrum
 
 **Fulcrum Document**:
-A document from the Mont Terri literature that is maintained in Fulcrum and marked for MONTEIS, made up of its metadata (number, title, authors, year, category, keywords) and exactly one file; it only exists in MONTEIS once that file was copied, and it belongs to no Experiment.
+A document from the Mont Terri literature that is maintained in Fulcrum and marked for MONTEIS, made up of its metadata (number, title, authors, year, category, keywords) and exactly one file; it only exists in MONTEIS once that file was copied, and it belongs to no Experiment; every signed-in user can see it.
 _Avoid_: Fulcrum entry, literature reference, citation, Experiment document, Document (alone)
 
 **Attachment**:
@@ -33,12 +33,16 @@ _Avoid_: Fulcrum file
 
 ## People and access
 
+**Experiment user**:
+A user with read access to a specific Experiment, who sees it, its Sensors and their documents; every PI of an Experiment is also its Experiment user.
+_Avoid_: Experiment reader, viewer, Experiment-Benutzer
+
 **PI**:
-A user with write access to a specific Experiment.
-_Avoid_: Principal investigator (spelled out), editor, Experiment-Admin
+A user with write access to a specific Experiment, who may change its Master data and its documents but not its Sensors.
+_Avoid_: Principal investigator (spelled out), editor, Experiment-Admin, Experiment Admin
 
 **Monteis-Admin**:
-A user who may see and change every Experiment and Sensor in MONTEIS, including their documents.
+A user who may see and change every Experiment and Sensor in MONTEIS, including their documents, and the only one who may create Experiments and change Sensors.
 _Avoid_: Admin (alone), superuser
 
 **Experiment Owner**:
