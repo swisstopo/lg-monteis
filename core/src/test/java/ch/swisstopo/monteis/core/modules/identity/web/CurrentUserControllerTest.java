@@ -61,7 +61,7 @@ class CurrentUserControllerTest {
             get("/api/me")
                 .with(jwt().authorities(new SimpleGrantedAuthority("experiment:write:all"))))
         .andExpect(status().is5xxServerError())
-        .andExpect(jsonPath("$.isAdmin").doesNotExist());
+        .andExpect(jsonPath("$.canWriteAllExperiments").doesNotExist());
   }
 
   @Test
@@ -69,7 +69,8 @@ class CurrentUserControllerTest {
     mockMvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
   }
 
-  private static String body(boolean isAdmin, String writeIds) {
-    return "{\"isAdmin\":%s,\"writeExperimentIds\":[%s]}".formatted(isAdmin, writeIds);
+  private static String body(boolean canWriteAllExperiments, String writeIds) {
+    return "{\"canWriteAllExperiments\":%s,\"writeExperimentIds\":[%s]}"
+        .formatted(canWriteAllExperiments, writeIds);
   }
 }

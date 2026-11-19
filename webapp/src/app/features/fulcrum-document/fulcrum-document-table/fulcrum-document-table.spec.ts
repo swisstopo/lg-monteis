@@ -72,7 +72,7 @@ describe('FulcrumDocumentTable', () => {
         provideTranslateService(),
         WorkbenchView,
         { provide: FulcrumDocumentService, useValue: documentService },
-        { provide: PermissionsService, useValue: { isAdmin: signal(false) } },
+        { provide: PermissionsService, useValue: { canWriteAllExperiments: signal(false) } },
         { provide: FileDownloadService, useValue: fileDownload },
         { provide: ToastService, useValue: toast },
       ],
@@ -175,7 +175,7 @@ describe('FulcrumDocumentTable', () => {
         provideTranslateService(),
         WorkbenchView,
         { provide: FulcrumDocumentService, useValue: documentService },
-        { provide: PermissionsService, useValue: { isAdmin: signal(false) } },
+        { provide: PermissionsService, useValue: { canWriteAllExperiments: signal(false) } },
       ],
     });
     const fixture = TestBed.createComponent(FulcrumDocumentTable);

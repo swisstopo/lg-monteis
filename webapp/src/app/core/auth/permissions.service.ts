@@ -5,7 +5,7 @@ import { OAuthService } from 'angular-oauth2-oidc';
 import { Observable, catchError, defer, of, shareReplay } from 'rxjs';
 
 const NO_PERMISSIONS: CurrentUserDto = {
-  isAdmin: false,
+  canWriteAllExperiments: false,
   writeExperimentIds: [],
 };
 
@@ -34,7 +34,7 @@ export class PermissionsService {
 
   private readonly currentUser = toSignal(this.currentUser$, { initialValue: NO_PERMISSIONS });
 
-  readonly isAdmin = computed(() => this.currentUser().isAdmin);
+  readonly canWriteAllExperiments = computed(() => this.currentUser().canWriteAllExperiments);
 
   readonly writeExperimentIds = computed<readonly string[]>(
     () => this.currentUser().writeExperimentIds,
@@ -42,11 +42,11 @@ export class PermissionsService {
 
   /** Whether the caller can write at least one experiment - decides whether a scoped write action is shown at all. */
   readonly hasAnyExperimentWriteAccess = computed(
-    () => this.isAdmin() || this.writeExperimentIds().length > 0,
+    () => this.canWriteAllExperiments() || this.writeExperimentIds().length > 0,
   );
 
   /** Mirrors the backend write rule on MonteisAuthenticationToken. */
   canWriteExperiment(experimentId: string): boolean {
-    return this.isAdmin() || this.writeExperimentIds().includes(experimentId);
+    return this.canWriteAllExperiments() || this.writeExperimentIds().includes(experimentId);
   }
 }

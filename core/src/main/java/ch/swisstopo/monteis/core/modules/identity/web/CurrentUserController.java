@@ -26,7 +26,7 @@ public class CurrentUserController {
     return ResponseEntity.ok(
         new CurrentUserDto(
             authentication.canWriteAllExperiments(),
-            // empty when isAdmin (BR4.10); sorted for a stable response
+            // empty when canWriteAllExperiments (BR4.10); sorted for a stable response
             authentication.writeExperimentIds().stream().sorted().toList()));
   }
 }
