@@ -250,7 +250,7 @@ class ExperimentControllerTest {
         .andExpect(content().contentType("text/csv;charset=UTF-8"))
         .andExpect(
             header().string("Content-Disposition", "attachment; filename=\"experiments.csv\""))
-        .andExpect(content().string("name,status\r\nEXP-01,ACTIVE\r\n"));
+        .andExpect(content().string("\uFEFFname,status\r\nEXP-01,ACTIVE\r\n"));
 
     then(pagedRequestParser).should().parseForExport(any());
     then(csvExportQueryRepository).should().streamCsv(eq(exportRequest), any(), any());

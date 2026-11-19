@@ -10,18 +10,16 @@ import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { OrganisationResponseDto } from '@core/generated';
-import { ToastService } from '@core/notifications/toast.service';
 import OrganisationEdit from '@features/admin/organisatoin/organisation-edit/organisation-edit';
 import { createColumns } from '@features/admin/organisatoin/organisation-table/columns';
 import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { FormDialogService } from '@ui/dialog/form-dialog.service';
-import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
+import { createCsvDownload } from '@ui/table/csv-download';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
-import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
 import { GridApi, GridOptions } from 'ag-grid-community';
 
@@ -36,15 +34,19 @@ export default class OrganisationTable {
   private readonly formDialog = inject(FormDialogService);
   private readonly organisationService = inject(OrganisationService);
   private readonly translateService = inject(TranslateService);
-  private readonly csvDownloadService = inject(FileDownloadService);
-  private readonly toastService = inject(ToastService);
 
   protected readonly columns = createColumns();
   protected readonly selectedOrganisationId = signal<string | undefined>(undefined);
   protected readonly totalCount = signal<number | undefined>(undefined);
   protected readonly loadError = signal(false);
-  protected readonly downloading = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
+  protected readonly csvDownload = createCsvDownload({
+    gridApi: this.gridApi,
+    fetchCsv: (sortModel, filterModel) =>
+      this.organisationService.getOrganisationsCsv(sortModel, filterModel),
+    fileName: 'organisations.csv',
+    failedMessageKey: 'organisation.error.downloadFailed',
+  });
 
   protected readonly gridOptions: GridOptions<OrganisationResponseDto> = {
     domLayout: 'normal',
@@ -87,24 +89,6 @@ export default class OrganisationTable {
     if (organisationId === undefined) return;
 
     this.formDialog.open(OrganisationEdit, { organisationId });
-  }
-
-  async onDownload(): Promise<void> {
-    const api = this.gridApi();
-    if (!api) return;
-
-    this.downloading.set(true);
-    try {
-      const { sortModel, filterModel } = toGridFilterSortParams(api);
-      const blob = await this.organisationService.getOrganisationsCsv(sortModel, filterModel);
-      this.csvDownloadService.download(blob, 'organisations.csv');
-    } catch {
-      this.toastService.error(
-        this.translateService.translate('organisation.error.downloadFailed')(),
-      );
-    } finally {
-      this.downloading.set(false);
-    }
   }
 
   onSearch(term: string): void {

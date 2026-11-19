@@ -70,13 +70,17 @@ class SpringPlumbingTest {
             Stream.of(Transactional.class, Async.class, Cacheable.class)
                     .anyMatch(
                         a -> target.isAnnotatedWith(a) || target.getOwner().isAnnotatedWith(a))
-                && !isPrivate(target));
+                && !isPrivateOrStatic(target));
   }
 
-  private static boolean isPrivate(AccessTarget.MethodCallTarget target) {
+  // a proxy only intercepts calls to overridable instance methods, never private or static ones
+  private static boolean isPrivateOrStatic(AccessTarget.MethodCallTarget target) {
     return target
         .resolveMember()
-        .map(member -> member.getModifiers().contains(JavaModifier.PRIVATE))
+        .map(
+            member ->
+                member.getModifiers().contains(JavaModifier.PRIVATE)
+                    || member.getModifiers().contains(JavaModifier.STATIC))
         .orElse(false);
   }
 }

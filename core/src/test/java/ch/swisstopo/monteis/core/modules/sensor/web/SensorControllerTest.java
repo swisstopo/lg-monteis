@@ -205,7 +205,7 @@ class SensorControllerTest {
         .andExpect(status().isOk())
         .andExpect(content().contentType("text/csv;charset=UTF-8"))
         .andExpect(header().string("Content-Disposition", "attachment; filename=\"sensors.csv\""))
-        .andExpect(content().string("dasSensorAlias,name\r\nSENS-01,Test\r\n"));
+        .andExpect(content().string("\uFEFFdasSensorAlias,name\r\nSENS-01,Test\r\n"));
 
     then(pagedRequestParser).should().parseForExport(any());
     then(csvExportQueryRepository).should().streamCsv(eq(exportRequest), any());

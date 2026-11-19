@@ -13,18 +13,16 @@ import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ExperimentResponseDto } from '@core/generated';
-import { ToastService } from '@core/notifications/toast.service';
 import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
 import { ExperimentDialog } from '@features/experiment/experiment-dialog/experiment-dialog';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { FormDialogService } from '@ui/dialog/form-dialog.service';
-import { FileDownloadService } from '@ui/file-download/file-download.service';
 import { InlineError } from '@ui/inline-error/inline-error';
 import { TableHeader } from '@ui/table-header/table-header';
+import { createCsvDownload } from '@ui/table/csv-download';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
-import { toGridFilterSortParams } from '@ui/table/paged-request.mapper';
 import Table from '@ui/table/table';
 import { GridApi, GridOptions } from 'ag-grid-community';
 import { createColumns } from './columns';
@@ -43,8 +41,6 @@ export default class ExperimentTable {
   private readonly experimentService = inject(ExperimentService);
   private readonly organisationService = inject(OrganisationService);
   private readonly translateService = inject(TranslateService);
-  private readonly fileDownloadService = inject(FileDownloadService);
-  private readonly toastService = inject(ToastService);
   protected readonly permissions = inject(PermissionsService);
 
   readonly searchTerm = signal<string>('');
@@ -63,8 +59,14 @@ export default class ExperimentTable {
   });
   protected readonly totalCount = signal<number | undefined>(undefined);
   protected readonly loadError = signal(false);
-  protected readonly downloading = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
+  protected readonly csvDownload = createCsvDownload({
+    gridApi: this.gridApi,
+    fetchCsv: (sortModel, filterModel) =>
+      this.experimentService.getExperimentsCsv(sortModel, filterModel),
+    fileName: 'experiments.csv',
+    failedMessageKey: 'experiment.error.downloadFailed',
+  });
 
   protected readonly gridOptions: GridOptions<ExperimentResponseDto> = {
     domLayout: 'normal',
@@ -129,22 +131,6 @@ export default class ExperimentTable {
     const experimentId = this.selectedExperimentId();
     if (experimentId !== undefined) {
       this.formDialog.open(ExperimentDialog, { experimentId, viewOnly });
-    }
-  }
-
-  async onDownload(): Promise<void> {
-    const api = this.gridApi();
-    if (!api) return;
-
-    this.downloading.set(true);
-    try {
-      const { sortModel, filterModel } = toGridFilterSortParams(api);
-      const blob = await this.experimentService.getExperimentsCsv(sortModel, filterModel);
-      this.fileDownloadService.download(blob, 'experiments.csv');
-    } catch {
-      this.toastService.error(this.translateService.translate('experiment.error.downloadFailed')());
-    } finally {
-      this.downloading.set(false);
     }
   }
 

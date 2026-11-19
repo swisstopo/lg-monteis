@@ -14,6 +14,7 @@ import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapper;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentService;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.service.FulcrumDocumentSyncRunner;
 import ch.swisstopo.monteis.core.modules.fulcrumdocument.web.FulcrumDocumentWebMapper;
+import ch.swisstopo.monteis.core.modules.measurement.query.MeasurementCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.measurement.service.MeasurementService;
 import ch.swisstopo.monteis.core.modules.organisation.query.OrganisationCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.organisation.service.OrganisationService;
@@ -86,6 +87,7 @@ class EndpointCoverageTest {
           "DELETE /api/sensors/{id}/documents/{documentId}",
           "POST /api/sensors/fulcrum-refresh",
           "GET /api/measurements",
+          "GET /api/measurements/csv",
           "GET /api/measurements/charts/data",
           "GET /api/measurements/sensors/{id}",
           "GET /api/overview/metrics",
@@ -113,6 +115,7 @@ class EndpointCoverageTest {
   @MockitoBean private SensorDocumentService sensorDocumentService;
   @MockitoBean private SensorDocumentWebMapper sensorDocumentWebMapper;
   @MockitoBean private MeasurementService measurementService;
+  @MockitoBean private MeasurementCsvExportQueryRepository measurementCsvExportQueryRepository;
   @MockitoBean private OverviewService overviewService;
   @MockitoBean private PagedRequestParser pagedRequestParser;
   @MockitoBean private Clock clock;
