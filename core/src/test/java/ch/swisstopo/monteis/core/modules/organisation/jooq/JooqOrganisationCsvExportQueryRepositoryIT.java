@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class JooqOrganisationCsvExportQueryRepositoryIT {
 
-  private static final String HEADER = "name,comment,id";
+  private static final String HEADER = "name;comment;id";
 
   @Autowired private DSLContext dsl;
   @Autowired private JooqOrganisationCsvExportQueryRepository exportRepository;
@@ -43,7 +43,7 @@ class JooqOrganisationCsvExportQueryRepositoryIT {
                 List.of(),
                 Map.of("name", new TextFilterModel("contains", "uniquecsvexport", null))));
 
-    assertThat(lines).containsExactly(HEADER, "UniqueCsvExportOrganisation,," + id);
+    assertThat(lines).containsExactly(HEADER, "UniqueCsvExportOrganisation;;" + id);
   }
 
   @Test
@@ -54,8 +54,8 @@ class JooqOrganisationCsvExportQueryRepositoryIT {
     List<String> lines = lines(filterByName("Csv default sort", List.of(), 10));
 
     assertThat(lines).hasSize(3);
-    assertThat(lines.get(1)).startsWith("Csv default sort A,");
-    assertThat(lines.get(2)).startsWith("Csv default sort B,");
+    assertThat(lines.get(1)).startsWith("Csv default sort A;");
+    assertThat(lines.get(2)).startsWith("Csv default sort B;");
   }
 
   @Test
@@ -67,8 +67,8 @@ class JooqOrganisationCsvExportQueryRepositoryIT {
         lines(
             filterByName("Csv sorted", List.of(new SortModelItem("name", SortDirection.DESC)), 10));
 
-    assertThat(lines.get(1)).startsWith("Csv sorted B,");
-    assertThat(lines.get(2)).startsWith("Csv sorted A,");
+    assertThat(lines.get(1)).startsWith("Csv sorted B;");
+    assertThat(lines.get(2)).startsWith("Csv sorted A;");
   }
 
   @Test
@@ -77,7 +77,7 @@ class JooqOrganisationCsvExportQueryRepositoryIT {
 
     List<String> lines = lines(filterByName("Csv, ", List.of(), 10));
 
-    assertThat(lines).contains("\"Csv, \"\"quoted\"\" Org\",," + id);
+    assertThat(lines).contains("\"Csv, \"\"quoted\"\" Org\";;" + id);
   }
 
   @Test

@@ -72,7 +72,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           String csv = streamToString(nameFilter("OwnerCsvExportExperiment"));
 
           List<String> lines = List.of(csv.split("\r\n"));
-          assertTrue(lines.get(1).contains(",0,Bob Builder; Alice Example,,"), csv);
+          assertTrue(lines.get(1).contains(";0;\"Bob Builder; Alice Example\";;"), csv);
         });
   }
 
@@ -95,7 +95,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           String csv = streamToString(nameFilter("SemicolonOwnerCsvExportExperiment"));
 
           List<String> lines = List.of(csv.split("\r\n"));
-          assertTrue(lines.get(1).contains(",0,Carl Sem i; Alice Example,,"), csv);
+          assertTrue(lines.get(1).contains(";0;\"Carl Sem i; Alice Example\";;"), csv);
         });
   }
 
@@ -113,9 +113,9 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           addOwners(experimentId, ALICE.id());
           Map<VisibleOwners, String> cells =
               Map.of(
-                  VisibleOwners.KEYCLOAK_UNAVAILABLE, ",0,(unavailable),",
-                  VisibleOwners.ACCESS_DENIED, ",0,(access denied),",
-                  VisibleOwners.NO_WRITE_GROUP, ",0,(no write group),");
+                  VisibleOwners.KEYCLOAK_UNAVAILABLE, ";0;(unavailable);",
+                  VisibleOwners.ACCESS_DENIED, ";0;(access denied);",
+                  VisibleOwners.NO_WRITE_GROUP, ";0;(no write group);");
           cells.forEach(
               (missing, cell) -> {
                 owners = Map.of(experimentId, missing);
@@ -158,7 +158,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           List<String> lines = List.of(streamToString(request).split("\r\n"));
 
           assertEquals(2, lines.size());
-          assertTrue(lines.get(1).startsWith("FilteredCsvOwned,"));
+          assertTrue(lines.get(1).startsWith("FilteredCsvOwned;"));
         });
   }
 
@@ -221,7 +221,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
   private List<String> exportedNames(PagedRequest request) {
     return Arrays.stream(streamToString(request).split("\r\n"))
         .skip(1)
-        .map(line -> line.substring(0, line.indexOf(',')))
+        .map(line -> line.substring(0, line.indexOf(';')))
         .sorted()
         .toList();
   }
@@ -264,13 +264,13 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           // then
           List<String> lines = List.of(csv.split("\r\n"));
           assertEquals(
-              "name,status,period.start,period.end,sensorCount,owners,comment,id",
+              "name;status;period.start;period.end;sensorCount;owners;comment;id",
               lines.getFirst());
           assertEquals(2, lines.size(), "Header plus exactly one matching row");
           assertTrue(
               lines
                   .get(1)
-                  .startsWith("UniqueCsvExportExperiment,ACTIVE,%s,%s,0,".formatted(start, end)));
+                  .startsWith("UniqueCsvExportExperiment;ACTIVE;%s;%s;0;".formatted(start, end)));
         });
   }
 
@@ -301,7 +301,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           // then
           List<String> lines = List.of(csv.split("\r\n"));
           assertTrue(
-              lines.get(1).startsWith("HistoricCsvExportExperiment,HISTORIC,"),
+              lines.get(1).startsWith("HistoricCsvExportExperiment;HISTORIC;"),
               "A period entirely in the past must be HISTORIC: " + csv);
         });
   }
@@ -333,7 +333,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           // then
           List<String> lines = List.of(csv.split("\r\n"));
           assertTrue(
-              lines.get(1).startsWith("UpcomingCsvExportExperiment,UPCOMING,"),
+              lines.get(1).startsWith("UpcomingCsvExportExperiment;UPCOMING;"),
               "A period entirely in the future must be UPCOMING: " + csv);
         });
   }
