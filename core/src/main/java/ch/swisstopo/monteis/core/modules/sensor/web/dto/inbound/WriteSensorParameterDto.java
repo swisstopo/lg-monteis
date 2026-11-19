@@ -37,6 +37,5 @@ public record WriteSensorParameterDto(
                 "Omit or send null to default to the identity formula (expression \"x\").")
         @Valid
         WriteFormulaDto formula,
-    @NullOrNotBlank @Size(max = 4096) String comment,
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) @Null(groups = Create.class)
         Integer version) {}

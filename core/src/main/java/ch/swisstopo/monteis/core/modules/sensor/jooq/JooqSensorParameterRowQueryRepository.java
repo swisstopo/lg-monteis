@@ -52,7 +52,6 @@ public class JooqSensorParameterRowQueryRepository implements SensorParameterRow
           Map.entry("parameter.dasParameterAlias", SENSOR_PARAMETER.DAS_PARAMETER_ALIAS),
           Map.entry("parameter.unit", SENSOR_PARAMETER.UNIT),
           Map.entry("parameter.active", SENSOR_PARAMETER.ACTIVE),
-          Map.entry("parameter.comment", SENSOR_PARAMETER.COMMENT),
           Map.entry("parameter.type.name", SENSOR_TYPES.NAME),
           Map.entry("parameter.formula.expression", FORMULAS.EXPRESSION),
           Map.entry("parameter.alarmLimits.lower", SENSOR_PARAMETER.LOWER_ALARM_LIMIT),

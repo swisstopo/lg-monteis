@@ -339,7 +339,6 @@ class JooqSensorParameterRowQueryRepositoryIT {
         null,
         null,
         true,
-        null,
         null);
   }
 
@@ -360,7 +359,6 @@ class JooqSensorParameterRowQueryRepositoryIT {
             null,
             null,
             true,
-            null,
             null);
 
     Sensor sensor =

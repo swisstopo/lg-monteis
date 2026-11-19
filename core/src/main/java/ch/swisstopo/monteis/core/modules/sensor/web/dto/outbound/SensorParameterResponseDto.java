@@ -18,5 +18,4 @@ public record SensorParameterResponseDto(
     Boolean closelyMonitored,
     AlarmLimitsDto specialAlarmLimits,
     Boolean active,
-    String comment,
     Integer version) {}

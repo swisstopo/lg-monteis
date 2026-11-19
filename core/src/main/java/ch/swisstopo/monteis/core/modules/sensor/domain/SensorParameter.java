@@ -23,7 +23,6 @@ public class SensorParameter {
   // Required while closelyMonitored is set.
   private AlarmLimits specialAlarmLimits;
   private Boolean active;
-  private String comment;
   private Integer version;
 
   /**
@@ -43,8 +42,7 @@ public class SensorParameter {
       Boolean notificationActive,
       Boolean closelyMonitored,
       AlarmLimits specialAlarmLimits,
-      Boolean active,
-      String comment) {
+      Boolean active) {
     this.name = name;
     // Most DAS devices only ever report a single measurement, conventionally named "value"
     this.dasParameterAlias =
@@ -61,7 +59,6 @@ public class SensorParameter {
     this.specialAlarmLimits = specialAlarmLimits;
     requireSpecialAlarmLimitsWhenCloselyMonitored();
     this.active = active;
-    this.comment = comment;
   }
 
   @SuppressWarnings("java:S107")
@@ -78,7 +75,6 @@ public class SensorParameter {
       Boolean closelyMonitored,
       AlarmLimits specialAlarmLimits,
       Boolean active,
-      String comment,
       Integer version) {
     this.id = id;
     this.name = name;
@@ -93,7 +89,6 @@ public class SensorParameter {
     this.specialAlarmLimits = specialAlarmLimits;
     requireSpecialAlarmLimitsWhenCloselyMonitored();
     this.active = active;
-    this.comment = comment;
     this.version = version;
   }
 
@@ -193,14 +188,6 @@ public class SensorParameter {
 
   public void setActive(Boolean active) {
     this.active = active;
-  }
-
-  public String getComment() {
-    return comment;
-  }
-
-  public void setComment(String comment) {
-    this.comment = comment;
   }
 
   public Integer getVersion() {

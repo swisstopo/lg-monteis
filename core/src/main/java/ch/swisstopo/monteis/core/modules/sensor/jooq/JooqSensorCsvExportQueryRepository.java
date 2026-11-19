@@ -52,8 +52,7 @@ public class JooqSensorCsvExportQueryRepository implements SensorCsvExportQueryR
           "parameter.formula.expression",
           "parameter.alarmLimits.lower",
           "parameter.alarmLimits.upper",
-          "parameter.active",
-          "parameter.comment");
+          "parameter.active");
 
   private final DSLContext dsl;
 
@@ -90,8 +89,7 @@ public class JooqSensorCsvExportQueryRepository implements SensorCsvExportQueryR
                 FORMULAS.EXPRESSION,
                 SENSOR_PARAMETER.LOWER_ALARM_LIMIT,
                 SENSOR_PARAMETER.UPPER_ALARM_LIMIT,
-                SENSOR_PARAMETER.ACTIVE,
-                SENSOR_PARAMETER.COMMENT)
+                SENSOR_PARAMETER.ACTIVE)
             .from(JooqSensorParameterRowQueryRepository.joinedFrom())
             .where(criteria.condition())
             .orderBy(
@@ -119,8 +117,7 @@ public class JooqSensorCsvExportQueryRepository implements SensorCsvExportQueryR
                 r.get(FORMULAS.EXPRESSION),
                 r.get(SENSOR_PARAMETER.LOWER_ALARM_LIMIT),
                 r.get(SENSOR_PARAMETER.UPPER_ALARM_LIMIT),
-                r.get(SENSOR_PARAMETER.ACTIVE),
-                r.get(SENSOR_PARAMETER.COMMENT)));
+                r.get(SENSOR_PARAMETER.ACTIVE)));
         writer.flush();
       }
     }

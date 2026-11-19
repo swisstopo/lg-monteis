@@ -36,8 +36,7 @@ class JooqSensorCsvExportQueryRepositoryIT {
       "dasSensorAlias,name,das,fulcrumId,mainExperiment.name,coordinates.x,coordinates.y,"
           + "coordinates.z,active,comment,parameter.name,parameter.dasParameterAlias,"
           + "parameter.type.name,parameter.unit,parameter.formula.expression,"
-          + "parameter.alarmLimits.lower,parameter.alarmLimits.upper,parameter.active,"
-          + "parameter.comment";
+          + "parameter.alarmLimits.lower,parameter.alarmLimits.upper,parameter.active";
 
   @Autowired private JooqSensorRepository sensorRepository;
 
@@ -157,8 +156,7 @@ class JooqSensorCsvExportQueryRepositoryIT {
                   "", // parameter.formula.expression
                   "", // parameter.alarmLimits.lower
                   "", // parameter.alarmLimits.upper
-                  "", // parameter.active
-                  "" // parameter.comment
+                  "" // parameter.active
                   ),
               lines.get(1));
         });
@@ -309,7 +307,6 @@ class JooqSensorCsvExportQueryRepositoryIT {
         null,
         null,
         true,
-        null,
         null);
   }
 

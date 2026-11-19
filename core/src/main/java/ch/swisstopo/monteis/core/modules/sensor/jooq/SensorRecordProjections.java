@@ -41,7 +41,6 @@ public final class SensorRecordProjections {
         r.get(SENSOR_PARAMETER.CLOSELY_MONITORED),
         toSpecialAlarmLimits(r),
         r.get(SENSOR_PARAMETER.ACTIVE),
-        r.get(SENSOR_PARAMETER.COMMENT),
         r.get(SENSOR_PARAMETER.VERSION));
   }
 
