@@ -41,7 +41,7 @@ Textfassung:
 
 ## Komponenten
 
-### 1. Annahme: AWS Transfer Family
+### 1. Annahme: AWS Transfer Family -> TBD
 
 - Ein Server, ein Benutzer pro Lieferant, Home-Verzeichnis auf `s3://<ingest-bucket>/upload/<lieferant>/` (logisch gemappt).
 - Transfer Family schreibt ein Objekt erst nach abgeschlossenem Upload; halbe Dateien gelangen nicht nach `files/`.
@@ -52,9 +52,9 @@ Textfassung:
 - Eine obere Sicherheitsgrenze (z. B. 500 MB) prüft die Lambda und legt grössere Dateien unter `rejected/` ab.
 - Aufbewahrung von `files/` per S3-Lifecycle-Regel (Dauer TBD); die Dateien bleiben damit für Neuverarbeitung verfügbar.
 
-### 2. Transport: Kafka Connect S3 Source
+### 2. Transport: Kafka Connect S3 Source --> TBD
 
-- Lenses Stream Reactor S3 Source (Apache 2.0, aktiv gepflegt, Release-Linie 12.x).
+- Lenses Stream Reactor S3 Source oder FilePulse Connector
 - Ein KCQL-Eintrag pro Lieferant, Quelle `files/<lieferant>/`, Ziel `internal-raw-csv`:
   - `STOREAS CSV_WITHHEADERS` für Lieferanten mit Kopfzeile: Der Connector überspringt die erste Zeile.
   - `STOREAS TEXT` (oder `CSV`) für Lieferanten ohne Kopfzeile.
