@@ -5,6 +5,7 @@ import { translate } from '@ngx-translate/core';
 import { MAIN_AREA, provideWorkbench, WorkbenchLayoutFactory } from '@scion/workbench';
 import { firstValueFrom, map } from 'rxjs';
 
+// TODO MON-235: wrap in addMonitoringMenu; left out while the page lists every sensor parameter
 const baseLayout = (factory: WorkbenchLayoutFactory) =>
   factory
     .addPart(MAIN_AREA)

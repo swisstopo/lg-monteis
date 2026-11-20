@@ -21,6 +21,7 @@ public class NotifyingParameterController {
     this.service = service;
   }
 
+  // TODO MON-235: drop the "Until the flag is readable" sentence from the description
   @Operation(
       summary = "Get the notifying parameters of an experiment",
       description =
