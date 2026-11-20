@@ -34,6 +34,7 @@ class NotifyingParameterQueryRepositoryIT {
   @Autowired private NotifyingParameterQueryRepository repository;
   @Autowired private DSLContext dsl;
 
+  // TODO MON-235: assert only Notification active parameters (seed 401/402), rename the test
   @Test
   void should_list_every_parameter_of_the_experiment_while_the_flag_is_not_readable() {
     // when

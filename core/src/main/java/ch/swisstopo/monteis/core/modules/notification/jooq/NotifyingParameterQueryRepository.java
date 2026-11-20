@@ -59,6 +59,7 @@ public class NotifyingParameterQueryRepository implements NotifyingParameterQuer
   }
 
   // only seam to MON-235's Notification active flag: true until the flag is readable
+  // TODO MON-235: return SENSOR_PARAMETER.NOTIFICATION_ACTIVE.isTrue() (or the shape MON-235 ships)
   private static Condition notifying() {
     return trueCondition();
   }
