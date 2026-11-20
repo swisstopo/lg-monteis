@@ -27,6 +27,8 @@ import ch.swisstopo.monteis.core.infrastructure.query.PagedRequest;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserDto;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUsers;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
@@ -39,7 +41,6 @@ import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerServi
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentService;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.Writer;
@@ -100,8 +101,8 @@ class ExperimentControllerTest {
 
   private static final DirectoryUser OWNER =
       new DirectoryUser(UUID.randomUUID(), "Alice", "Example", "alice@example.test");
-  private static final ExperimentOwnerDto OWNER_DTO =
-      new ExperimentOwnerDto(OWNER.id(), OWNER.firstName(), OWNER.lastName(), OWNER.email());
+  private static final DirectoryUserDto OWNER_DTO =
+      new DirectoryUserDto(OWNER.id(), OWNER.firstName(), OWNER.lastName(), OWNER.email());
 
   @Test
   void should_route_get_experiment_and_verify_output() throws Exception {
@@ -690,7 +691,7 @@ class ExperimentControllerTest {
             new FieldBusinessValidationException(
                 ExperimentOwnerService.OWNER_IDS_FIELD,
                 Set.of(ownerId),
-                ExperimentOwnerService.NOT_ELIGIBLE_KEY,
+                DirectoryUsers.NOT_ELIGIBLE_KEY,
                 Map.of()));
 
     // when / then

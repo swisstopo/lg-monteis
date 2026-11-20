@@ -3,6 +3,7 @@ package ch.swisstopo.monteis.core.modules.sensor.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.swisstopo.monteis.contracts.Das;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserWebMapperImpl;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Period;
 import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapperImpl;
@@ -22,7 +23,8 @@ import org.junit.jupiter.api.Test;
 
 class SensorWebMapperTest {
 
-  private final SensorWebMapper mapper = new SensorWebMapperImpl(new ExperimentWebMapperImpl());
+  private final SensorWebMapper mapper =
+      new SensorWebMapperImpl(new ExperimentWebMapperImpl(new DirectoryUserWebMapperImpl()));
 
   /**
    * The formula is optional on the write DTO and the form labels it "defaults to 'x'", so the

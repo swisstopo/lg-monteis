@@ -1,6 +1,6 @@
-import { ExperimentOwnerDto } from '@core/generated';
+import { DirectoryUserDto } from '@core/generated';
 
-export function ownerIdsOf(owners: ExperimentOwnerDto[] | undefined): string[] {
+export function ownerIdsOf(owners: DirectoryUserDto[] | undefined): string[] {
   return (owners ?? []).map((owner) => owner.id);
 }
 

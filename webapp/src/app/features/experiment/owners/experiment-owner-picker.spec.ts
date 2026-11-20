@@ -2,7 +2,7 @@ import { manualChangeDetection } from '@angular/cdk/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { ExperimentOwnerDto } from '@core/generated';
+import { DirectoryUserDto } from '@core/generated';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { ALICE, BOB } from '@features/experiment/testing/experiment-fixtures';
 import { ExperimentOwnerPickerHarness } from '@features/experiment/testing/experiment-owner-picker.harness';
@@ -10,13 +10,13 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { describe, expect, it, Mocked, vi } from 'vitest';
 import { ExperimentOwnerPicker } from './experiment-owner-picker';
 
-const FRITZ: ExperimentOwnerDto = { id: 'fritz', firstName: 'Fritz', lastName: 'Former' };
+const FRITZ: DirectoryUserDto = { id: 'fritz', firstName: 'Fritz', lastName: 'Former' };
 
 interface Setup {
   selectedOwnerIds?: string[];
-  owners?: ExperimentOwnerDto[];
+  owners?: DirectoryUserDto[];
   error?: string;
-  candidates?: () => Promise<ExperimentOwnerDto[]>;
+  candidates?: () => Promise<DirectoryUserDto[]>;
 }
 
 async function setup({
