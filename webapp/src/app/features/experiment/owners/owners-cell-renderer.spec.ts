@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ExperimentOwnerDto, ExperimentResponseDto } from '@core/generated';
+import { DirectoryUserDto, ExperimentResponseDto } from '@core/generated';
 import { ALICE, BOB } from '@features/experiment/testing/experiment-fixtures';
 import { provideTranslateService } from '@ngx-translate/core';
 import { ICellRendererParams } from 'ag-grid-community';
@@ -7,11 +7,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { OwnersCellRenderer } from './owners-cell-renderer';
 import { OwnersStatus } from './owners-status';
 
-function params(owners: ExperimentOwnerDto[], ownersStatus: OwnersStatus) {
+function params(owners: DirectoryUserDto[], ownersStatus: OwnersStatus) {
   return {
     value: owners,
     data: { owners, ownersStatus },
-  } as ICellRendererParams<ExperimentResponseDto, ExperimentOwnerDto[]>;
+  } as ICellRendererParams<ExperimentResponseDto, DirectoryUserDto[]>;
 }
 
 describe('OwnersCellRenderer', () => {
@@ -22,7 +22,7 @@ describe('OwnersCellRenderer', () => {
     });
   });
 
-  async function render(owners: ExperimentOwnerDto[], status: OwnersStatus) {
+  async function render(owners: DirectoryUserDto[], status: OwnersStatus) {
     const fixture = TestBed.createComponent(OwnersCellRenderer);
     fixture.componentInstance.agInit(params(owners, status));
     await fixture.whenStable();

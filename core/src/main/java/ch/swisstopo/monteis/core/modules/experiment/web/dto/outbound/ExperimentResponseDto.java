@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound;
 
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserDto;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Status;
 import ch.swisstopo.monteis.core.modules.experiment.query.OwnersStatus;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
@@ -14,6 +15,6 @@ public record ExperimentResponseDto(
     Status status,
     Integer version,
     Integer sensorCount,
-    List<ExperimentOwnerDto> owners,
+    List<DirectoryUserDto> owners,
     OwnersStatus ownersStatus,
     List<UUID> organisationIds) {}

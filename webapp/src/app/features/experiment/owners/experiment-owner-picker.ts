@@ -1,16 +1,16 @@
 import { Component, computed, inject, input, model, resource } from '@angular/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
-import { ExperimentOwnerDto } from '@core/generated';
-import { toErrorDtos } from '@core/http/api-error.model';
+import { DirectoryUserDto } from '@core/generated';
+import { userDirectoryErrorKey } from '@core/user-directory/user-directory-error';
+import { userDisplayName, UserOptionPipe } from '@core/user-directory/user-name';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ownerDisplayName, OwnerNamePipe } from './owner-name';
 
 /** picks the owners of an experiment out of its PIs in Keycloak */
 @Component({
   selector: 'app-experiment-owner-picker',
-  imports: [MatFormFieldModule, MatSelectModule, TranslatePipe, OwnerNamePipe],
+  imports: [MatFormFieldModule, MatSelectModule, TranslatePipe, UserOptionPipe],
   templateUrl: './experiment-owner-picker.html',
   styleUrl: './experiment-owner-picker.scss',
 })
@@ -20,7 +20,7 @@ export class ExperimentOwnerPicker {
   readonly experimentId = input.required<string>();
   readonly selectedOwnerIds = model<string[]>([]);
   // the stored owners, the cached read can still list one the fresh candidates no longer have
-  readonly owners = input<ExperimentOwnerDto[]>([]);
+  readonly owners = input<DirectoryUserDto[]>([]);
   /** message key of a failed save */
   readonly error = input<string>();
 
@@ -29,12 +29,9 @@ export class ExperimentOwnerPicker {
     loader: ({ params }) => this.experimentService.findOwnerCandidatesForExperiment(params.id),
   });
 
-  // denied and unavailable ask for different things, a misconfigured Keycloak needs an admin
-  protected readonly candidatesErrorKey = computed(() => {
-    const error = this.candidates.error();
-    if (!error) return undefined;
-    return toErrorDtos(error)[0]?.messageKey ?? 'error.user-directory.unavailable';
-  });
+  protected readonly candidatesErrorKey = computed(() =>
+    userDirectoryErrorKey(this.candidates.error()),
+  );
 
   // without candidates the disabled select still names the stored owners
   protected readonly selectableOwners = computed(() =>
@@ -57,7 +54,7 @@ export class ExperimentOwnerPicker {
     const selected = new Set(this.selectedOwnerIds());
     return this.selectableOwners()
       .filter((owner) => selected.has(owner.id))
-      .map(ownerDisplayName)
+      .map(userDisplayName)
       .join(', ');
   });
 

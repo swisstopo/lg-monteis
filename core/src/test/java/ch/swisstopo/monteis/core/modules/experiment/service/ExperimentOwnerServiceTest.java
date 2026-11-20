@@ -14,6 +14,7 @@ import static org.mockito.Mockito.never;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUsers;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDeniedException;
@@ -237,7 +238,7 @@ class ExperimentOwnerServiceTest {
               () -> service.replaceOwnersInKeycloak(stored, ownerIds));
 
       assertEquals(ExperimentOwnerService.OWNER_IDS_FIELD, e.getField());
-      assertEquals(ExperimentOwnerService.NOT_ELIGIBLE_KEY, e.getMessageKey());
+      assertEquals(DirectoryUsers.NOT_ELIGIBLE_KEY, e.getMessageKey());
       assertEquals(Set.of(BOB.id()), e.getActualValue());
       then(repository).should(never()).replaceOwners(any(), any());
     }

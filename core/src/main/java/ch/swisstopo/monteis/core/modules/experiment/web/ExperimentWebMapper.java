@@ -1,21 +1,24 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import ch.swisstopo.monteis.core.infrastructure.query.PagedResult;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserWebMapper;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
 import ch.swisstopo.monteis.core.modules.experiment.query.VisibleOwners;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperimentDto;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.mapstruct.Context;
+import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(
+    componentModel = "spring",
+    uses = DirectoryUserWebMapper.class,
+    injectionStrategy = InjectionStrategy.CONSTRUCTOR)
 public interface ExperimentWebMapper {
   // --- Inbound API DTO -> Core Rich Domain Object Mappings ---
   @Mapping(target = "sensorCount", ignore = true)
@@ -34,10 +37,6 @@ public interface ExperimentWebMapper {
     }
     return toDto(domain, null, today);
   }
-
-  ExperimentOwnerDto toOwnerDto(DirectoryUser user);
-
-  List<ExperimentOwnerDto> toOwnerDtos(List<DirectoryUser> users);
 
   default List<ExperimentResponseDto> toDtos(
       List<Experiment> experiments, Map<UUID, VisibleOwners> owners, LocalDate today) {

@@ -1,8 +1,8 @@
 import { Injectable, inject, resource, signal } from '@angular/core';
 import {
+  DirectoryUserDto,
   ExperimentControllerService,
   ExperimentOwnerControllerService,
-  ExperimentOwnerDto,
   ExperimentResponseDto,
   WriteExperimentDto,
 } from '@core/generated';
@@ -43,7 +43,7 @@ export class ExperimentService {
     return saved;
   }
 
-  findOwnerCandidatesForExperiment(id: string): Promise<ExperimentOwnerDto[]> {
+  findOwnerCandidatesForExperiment(id: string): Promise<DirectoryUserDto[]> {
     // the owner picker shows the failure itself
     return firstValueFrom(
       this.ownerApi.findOwnerCandidatesForExperiment(id, 'body', false, {
@@ -52,7 +52,7 @@ export class ExperimentService {
     );
   }
 
-  findAllVisibleOwners(): Promise<ExperimentOwnerDto[]> {
+  findAllVisibleOwners(): Promise<DirectoryUserDto[]> {
     return firstValueFrom(this.ownerApi.findAllVisibleOwners());
   }
 

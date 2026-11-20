@@ -1,6 +1,6 @@
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
-import { ExperimentOwnerDto } from '@core/generated';
+import { DirectoryUserDto } from '@core/generated';
 import { ALICE } from '@features/experiment/testing/experiment-fixtures';
 import { ExperimentOwnerListHarness } from '@features/experiment/testing/experiment-owner-list.harness';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { ExperimentOwnerList } from './experiment-owner-list';
 import { OwnersStatus } from './owners-status';
 
-async function setup(owners: ExperimentOwnerDto[], status: OwnersStatus = 'SHOWN') {
+async function setup(owners: DirectoryUserDto[], status: OwnersStatus = 'SHOWN') {
   TestBed.configureTestingModule({
     imports: [ExperimentOwnerList],
     providers: [provideTranslateService()],

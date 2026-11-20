@@ -9,21 +9,12 @@
   >
     <mat-select-trigger>{{ selectedNames() }}</mat-select-trigger>
     @for (owner of selectableOwners(); track owner.id) {
-      <mat-option [value]="owner.id"
-        >{{ owner | ownerName }}
-        @if (owner.email) {
-          ({{ owner.email }})
-        }
-      </mat-option>
+      <mat-option [value]="owner.id">{{ owner | userOption }}</mat-option>
     }
     @for (owner of formerOwners(); track owner.id) {
       <mat-option [value]="owner.id" disabled
-        >{{ owner | ownerName }}
-        @if (owner.email) {
-          ({{ owner.email }})
-        }
-        – {{ 'experiment.owners.formerPi' | translate }}
-      </mat-option>
+        >{{ owner | userOption }} – {{ 'experiment.owners.formerPi' | translate }}</mat-option
+      >
     }
   </mat-select>
   @if (error(); as error) {
