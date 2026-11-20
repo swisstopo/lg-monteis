@@ -375,7 +375,7 @@ class RecipientControllerTest {
 
   private void givenMembers() {
     given(userDirectory.findMembersOf(ASSIGNED_EXPERIMENT))
-        .willReturn(new ExperimentMembers(List.of(PI_ANNA, READER_CARL), List.of(PI_ANNA), true));
+        .willReturn(new ExperimentMembers(List.of(PI_ANNA), List.of(READER_CARL)));
   }
 
   private void givenKeycloakUnavailable() {

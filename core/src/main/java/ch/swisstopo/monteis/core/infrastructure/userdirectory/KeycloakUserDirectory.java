@@ -128,18 +128,15 @@ class KeycloakUserDirectory implements UserDirectory {
   }
 
   private ExperimentMembers fetchMembersFromKeycloak(UUID experimentId) {
-    List<KeycloakGroup> writeGroups = findWriteGroupsOf(experimentId);
-    List<DirectoryUser> pis = enabledMembersOf(writeGroups);
+    List<DirectoryUser> pis = enabledMembersOf(findGroupsWith(WRITE_EXPERIMENT_IDS, experimentId));
     List<DirectoryUser> readers =
         enabledMembersOf(findGroupsWith(READ_EXPERIMENT_IDS, experimentId));
-    return new ExperimentMembers(
-        distinctSortedByName(Stream.concat(pis.stream(), readers.stream())),
-        pis,
-        !writeGroups.isEmpty());
+    return new ExperimentMembers(pis, usersOutside(readers, pis));
   }
 
-  private List<KeycloakGroup> findWriteGroupsOf(UUID experimentId) {
-    return findGroupsWith(WRITE_EXPERIMENT_IDS, experimentId);
+  private static List<DirectoryUser> usersOutside(
+      List<DirectoryUser> users, List<DirectoryUser> excluded) {
+    return users.stream().filter(user -> !excluded.contains(user)).toList();
   }
 
   private List<KeycloakGroup> findGroupsWith(String attributeName, UUID experimentId) {
