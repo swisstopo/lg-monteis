@@ -8,7 +8,7 @@ import {
   ADMIN,
   AuthorizationCheck,
   authorizationGuard,
-  WRITE_EXPERIMENT,
+  writeExperiment,
 } from './authorization.guard';
 import { PermissionsService } from './permissions.service';
 
@@ -70,27 +70,39 @@ describe('authorizationGuard', () => {
     expect(received?.paramMap.get('experimentId')).toBe('x');
   });
 
-  it('lets a PI of the experiment in the route through WRITE_EXPERIMENT', async () => {
+  it('lets a PI of the experiment in the route through writeExperiment', async () => {
     const pi = { writeExperimentIds: ['x'] };
 
-    await expect(runGuard(WRITE_EXPERIMENT, pi, { experimentId: 'x' })).resolves.toBe(true);
+    await expect(
+      runGuard(writeExperiment('experimentId'), pi, { experimentId: 'x' }),
+    ).resolves.toBe(true);
   });
 
-  it('lets a user who can write every experiment through WRITE_EXPERIMENT', async () => {
+  it('lets a user who can write every experiment through writeExperiment', async () => {
     const globalEditor = { canWriteAllExperiments: true };
 
-    await expect(runGuard(WRITE_EXPERIMENT, globalEditor, { experimentId: 'x' })).resolves.toBe(
-      true,
-    );
+    await expect(
+      runGuard(writeExperiment('experimentId'), globalEditor, { experimentId: 'x' }),
+    ).resolves.toBe(true);
   });
 
-  it('blocks a PI of another experiment at WRITE_EXPERIMENT', async () => {
+  it('blocks a PI of another experiment at writeExperiment', async () => {
     const piOfY = { writeExperimentIds: ['y'] };
 
-    await expect(runGuard(WRITE_EXPERIMENT, piOfY, { experimentId: 'x' })).resolves.toBe(false);
+    await expect(
+      runGuard(writeExperiment('experimentId'), piOfY, { experimentId: 'x' }),
+    ).resolves.toBe(false);
   });
 
-  it('blocks a reader at WRITE_EXPERIMENT', async () => {
-    await expect(runGuard(WRITE_EXPERIMENT, {}, { experimentId: 'x' })).resolves.toBe(false);
+  it('blocks a reader at writeExperiment', async () => {
+    await expect(
+      runGuard(writeExperiment('experimentId'), {}, { experimentId: 'x' }),
+    ).resolves.toBe(false);
+  });
+
+  it('blocks a user who can write every experiment when the route param is missing', async () => {
+    const globalEditor = { canWriteAllExperiments: true };
+
+    await expect(runGuard(writeExperiment('experimentId'), globalEditor, {})).resolves.toBe(false);
   });
 });

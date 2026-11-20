@@ -66,7 +66,7 @@ export default class NotificationPage {
     loader: ({ params: experimentId }) =>
       firstValueFrom(
         this.experimentApi.getExperiment(experimentId, 'body', false, {
-          context: skipGlobalErrorToast(),
+          context: skipGlobalErrorToast(HttpStatusCode.NotFound),
         }),
       ),
   });

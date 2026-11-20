@@ -11,10 +11,14 @@ export type AuthorizationCheck = (
 export const ADMIN: AuthorizationCheck = (permissions) =>
   permissions.currentUser$.pipe(map((currentUser) => currentUser.isAdmin));
 
-export const WRITE_EXPERIMENT: AuthorizationCheck = (permissions, route) =>
-  permissions.currentUser$.pipe(
-    map((currentUser) => canWrite(currentUser, route.paramMap.get('experimentId') ?? '')),
-  );
+// missing param => deny: a global editor would pass canWrite with any id
+export function writeExperiment(experimentIdParam: string): AuthorizationCheck {
+  return (permissions, route) => {
+    const experimentId = route.paramMap.get(experimentIdParam);
+    if (!experimentId) return false;
+    return permissions.currentUser$.pipe(map((currentUser) => canWrite(currentUser, experimentId)));
+  };
+}
 
 export function authorizationGuard(check: AuthorizationCheck): CanActivateFn {
   return (route) => check(inject(PermissionsService), route);
