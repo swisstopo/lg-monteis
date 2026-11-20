@@ -6,7 +6,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { catchError, throwError } from 'rxjs';
 import { AppErrorResponse } from './api-error.model';
-import { SKIP_GLOBAL_ERROR_TOAST } from './http-context';
+import { SKIP_GLOBAL_ERROR_TOAST, SKIP_GLOBAL_ERROR_TOAST_FOR } from './http-context';
 
 /**
  * Shows a toast for every REST error with target `GLOBAL`, regardless of
@@ -14,7 +14,8 @@ import { SKIP_GLOBAL_ERROR_TOAST } from './http-context';
  * left untouched so callers can still display them next to the relevant
  * form/field.
  *
- * Requests marked with {@link SKIP_GLOBAL_ERROR_TOAST} are passed through untouched.
+ * Requests marked with {@link SKIP_GLOBAL_ERROR_TOAST} are passed through untouched, those marked
+ * with {@link SKIP_GLOBAL_ERROR_TOAST_FOR} get no toast for the listed statuses.
  */
 export const restErrorInterceptor: HttpInterceptorFn = (req, next) => {
   if (req.context.get(SKIP_GLOBAL_ERROR_TOAST)) {
@@ -24,10 +25,14 @@ export const restErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const toastService = inject(ToastService);
   const translateService = inject(TranslateService);
   const oauthService = inject(OAuthService);
+  const silentStatuses = req.context.get(SKIP_GLOBAL_ERROR_TOAST_FOR);
 
   return next(req).pipe(
     catchError((httpErrorResponse: unknown) => {
-      if (httpErrorResponse instanceof HttpErrorResponse) {
+      if (
+        httpErrorResponse instanceof HttpErrorResponse &&
+        !silentStatuses.includes(httpErrorResponse.status)
+      ) {
         const appErrorResponse = new AppErrorResponse(httpErrorResponse);
         processHttpErrorResponse(appErrorResponse);
       }
