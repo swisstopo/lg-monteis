@@ -1,8 +1,8 @@
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { SKIP_GLOBAL_ERROR_TOAST } from '@core/http/http-context';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { SKIP_GLOBAL_ERROR_TOAST } from '../../../core/http/http-context';
 import { MeasurementsTiles, TILESET_URL_PREFIX } from './measurements-tiles';
 
 const TILESET_URL = `${TILESET_URL_PREFIX}/some-tileset/tileset.json`;
