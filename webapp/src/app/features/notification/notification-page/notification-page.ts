@@ -36,6 +36,7 @@ export default class NotificationPage {
   private readonly notifyingParameterApi = inject(NotifyingParameterControllerService);
   private readonly experimentApi = inject(ExperimentControllerService);
   private readonly translateService = inject(TranslateService);
+  private readonly view = inject(WorkbenchView);
 
   readonly experimentId = input.required<string>();
 
@@ -70,10 +71,10 @@ export default class NotificationPage {
       ),
   });
 
-  constructor(view: WorkbenchView) {
+  constructor() {
     effect(() => {
       const name = this.experiment.hasValue() ? (this.experiment.value().name ?? '') : '';
-      view.title = this.translateService.translate('tab.notification', { name })().trim();
+      this.view.title = this.translateService.translate('tab.notification', { name })().trim();
     });
   }
 
