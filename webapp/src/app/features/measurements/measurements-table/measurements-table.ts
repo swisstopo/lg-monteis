@@ -33,6 +33,7 @@ import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions }
 import { InlineError } from '@ui/inline-error/inline-error';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import Table from '@ui/table/table';
+import { UrlFilter } from '@ui/table/url-filter';
 import { GridApi } from 'ag-grid-community';
 import { subDays } from 'date-fns';
 import { createColumns } from './columns';
@@ -67,6 +68,7 @@ function combineDateAndTime(date: Date | null, time: Date | null): Date | null {
   selector: 'app-measurements-table',
   imports: [
     Table,
+    UrlFilter,
     TranslatePipe,
     MatButton,
     MatIcon,
@@ -158,7 +160,6 @@ export default class MeasurementsTable {
 
   onGridReady(api: GridApi): void {
     this.gridApi.set(api);
-    api.setGridOption('datasource', this.datasource);
   }
 
   onReload(): void {

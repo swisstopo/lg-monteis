@@ -1,45 +1,70 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideNativeDateAdapter } from '@angular/material/core';
+import { ActivatedRoute, convertToParamMap, Params } from '@angular/router';
 import { MeasurementControllerService, MeasurementResponseDto } from '@core/generated';
 import { provideTranslateService } from '@ngx-translate/core';
-import { WorkbenchView } from '@scion/workbench';
+import { WorkbenchRouter, WorkbenchView } from '@scion/workbench';
+import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import { of } from 'rxjs';
-import { vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MeasurementsTable from './measurements-table';
 
-const measurementControllerMock = {
-  getMeasurements: vi.fn().mockReturnValue(of({ rows: [], totalCount: 0 })),
-  getChartData: vi.fn().mockReturnValue(of([])),
-};
+// registered in main.ts, test bed never runs it
+ModuleRegistry.registerModules([AllCommunityModule]);
+
+const DAS_KEY_FILTER = { dasKey: { filterType: 'text', type: 'equals', filter: 'DAS-1' } };
 
 describe('MeasurementsTable', () => {
-  let fixture: ComponentFixture<MeasurementsTable>;
+  let measurementApi: {
+    getMeasurements: ReturnType<typeof vi.fn>;
+    getChartData: ReturnType<typeof vi.fn>;
+  };
 
-  beforeEach(async () => {
-    measurementControllerMock.getMeasurements.mockReturnValue(of({ rows: [], totalCount: 0 }));
+  beforeEach(() => {
+    measurementApi = {
+      getMeasurements: vi.fn(() => of({ rows: [], totalCount: 0 })),
+      getChartData: vi.fn(() => of([])),
+    };
+  });
 
-    await TestBed.configureTestingModule({
+  function configure(params: Params = {}): void {
+    TestBed.configureTestingModule({
       imports: [MeasurementsTable],
       providers: [
-        {
-          provide: MeasurementControllerService,
-          useValue: measurementControllerMock,
-        },
-        WorkbenchView,
+        { provide: MeasurementControllerService, useValue: measurementApi },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap(params)) } },
+        { provide: WorkbenchView, useValue: { id: 'view.3', title: undefined } },
+        { provide: WorkbenchRouter, useValue: { navigate: vi.fn() } },
         provideTranslateService(),
         provideNativeDateAdapter(),
       ],
-    }).compileComponents();
+    });
+  }
 
-    fixture = TestBed.createComponent(MeasurementsTable);
-    fixture.detectChanges();
+  async function requestedFilterModels(params?: Params): Promise<unknown[]> {
+    configure(params);
+    const fixture = TestBed.createComponent(MeasurementsTable);
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(measurementApi.getMeasurements).toHaveBeenCalled());
+    await fixture.whenStable();
+    // getMeasurements(startRow, endRow, sortModel, filterModel)
+    return measurementApi.getMeasurements.mock.calls.map(([, , , filterModel]) =>
+      filterModel ? JSON.parse(filterModel as string) : undefined,
+    );
+  }
+
+  it('loads the measurements once and unfiltered without a filter param', async () => {
+    expect(await requestedFilterModels()).toEqual([undefined]);
   });
 
-  it('should create', () => {
-    expect(fixture.componentInstance).toBeTruthy();
+  it('loads the measurements once and filtered to the filter param', async () => {
+    const filterModels = await requestedFilterModels({ filter: JSON.stringify(DAS_KEY_FILTER) });
+
+    expect(filterModels).toEqual([DAS_KEY_FILTER]);
   });
 
   it('derives distinct, defined sensor ids from the selected rows only', () => {
+    configure();
     const component = TestBed.createComponent(MeasurementsTable).componentInstance as unknown as {
       selectedRows: { set: (rows: MeasurementResponseDto[]) => void };
       selectedSensorIds: () => string[];
