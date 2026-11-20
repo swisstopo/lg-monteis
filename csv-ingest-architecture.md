@@ -41,7 +41,10 @@ Textfassung:
 
 ## Komponenten
 
-### 1. Annahme: AWS Transfer Family -> TBD
+### 1. Annahme: SFTP-Server
+
+Option AWS Transfer Family: Verwalteter Service mit Workflows allerdings hohe Fixkosten
+Option SFTPGo im EKS: Günstig, eigener Betrieb, Wartung und Härtung
 
 - Ein Server, ein Benutzer pro Lieferant, Home-Verzeichnis auf `s3://<ingest-bucket>/upload/<lieferant>/` (logisch gemappt).
 - Transfer Family schreibt ein Objekt erst nach abgeschlossenem Upload; halbe Dateien gelangen nicht nach `files/`.
@@ -51,10 +54,11 @@ Textfassung:
   3. Original in `upload/` löschen.
 - Eine obere Sicherheitsgrenze (z. B. 500 MB) prüft die Lambda und legt grössere Dateien unter `rejected/` ab.
 - Aufbewahrung von `files/` per S3-Lifecycle-Regel (Dauer TBD); die Dateien bleiben damit für Neuverarbeitung verfügbar.
+- Files werden zum Schluss in den Cold-Storage verschoben
 
-### 2. Transport: Kafka Connect S3 Source --> TBD
+### 2. Transport: Kafka Connect S3 Source
 
-- Lenses Stream Reactor S3 Source oder FilePulse Connector
+- Lenses Stream Reactor S3 Source oder FilePulse Connector -> Connector muss nocht fixiert werden (siehe Connector-Auswahl (D5) )
 - Ein KCQL-Eintrag pro Lieferant, Quelle `files/<lieferant>/`, Ziel `internal-raw-csv`:
   - `STOREAS CSV_WITHHEADERS` für Lieferanten mit Kopfzeile: Der Connector überspringt die erste Zeile.
   - `STOREAS TEXT` (oder `CSV`) für Lieferanten ohne Kopfzeile.
@@ -129,12 +133,42 @@ Die Alarmierung meldet einen Timeout, wenn für einen Sensor-Parameter `now() �
 
 ## Entscheidungen
 
-| ID |              Frage               |                   Entscheid                    |                                                                    Info                                                                     |
-|----|----------------------------------|------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
-| D1 | Annahme der Dateien              | AWS Transfer Family → S3                       | Verwaltet, kein eigener FTP-Server, Datei landet ohne Umweg in S3 (Archiv, Neuverarbeitung). Kein eigener Betrieb und keine eigene Härtung. |
-| D2 | Was transportiert der Connector? | eine Zeile = eine Nachricht                    | Entspricht R4 und R5 direkt, unabhängig von der Dateigrösse                                                                                 |
-| D3 | Ort von Parsen und Prüfen        | Pipeline (`CsvRowIngestListener`)              | Formate und Regeln sind Fachlogik, gehören zu den übrigen Normalizern und sind mit Testcontainers testbar.                                  |
-| D4 | Umgang mit fehlerhaften Zeilen   | Zeile loggen und überspringen, Rest übernehmen |                                                                                                                                             |
+| ID |              Frage               |                                             Entscheid                                             |                                                                                                           Info                                                                                                            |
+|----|----------------------------------|---------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| D1 | Annahme der Dateien              | AWS Transfer Family → S3                                                                          | Verwaltet, kein eigener FTP-Server, Datei landet ohne Umweg in S3 (Archiv, Neuverarbeitung). Kein eigener Betrieb und keine eigene Härtung.                                                                               |
+| D2 | Was transportiert der Connector? | eine Zeile = eine Nachricht                                                                       | Entspricht R4 und R5 direkt, unabhängig von der Dateigrösse                                                                                                                                                               |
+| D3 | Ort von Parsen und Prüfen        | Pipeline (`CsvRowIngestListener`)                                                                 | Formate und Regeln sind Fachlogik, gehören zu den übrigen Normalizern und sind mit Testcontainers testbar.                                                                                                                |
+| D4 | Umgang mit fehlerhaften Zeilen   | Zeile loggen und überspringen, Rest übernehmen                                                    |                                                                                                                                                                                                                           |
+| D5 | Connector und Laufzeitumgebung   | Vorläufig: Stream Reactor 10.0.x auf MSK Connect 3.9.x; Rückfall FilePulse; Bestätigung durch PoC | MSK Connect bietet nur Kafka Connect 2.7.1, 3.7.x und 3.9.x. Stream Reactor 12.x braucht Kafka 4.0+; 10.0.x ist die einzige Linie auf Kafka 3.9. Details und verworfene Alternativen siehe Abschnitt „Connector-Auswahl“. |
+
+## Connector-Auswahl (D5)
+
+Stand der Recherche 2026-11-20. Gesucht ist ein S3 Source Connector, der jede CSV-Zeile als eigene Nachricht schreibt (R4, R5), den Objektschlüssel pro Nachricht mitgibt (Lieferant, Fehler-Log) und auf MSK Connect läuft.
+
+**Laufzeitumgebung:**
+- MSK Connect unterstützt Kafka Connect 2.7.1, 3.7.x und 3.9.x ([AWS-Doku](https://docs.aws.amazon.com/msk/latest/developerguide/msk-connect.html)).
+- MirrorMaker 2 läuft heute auf `kafkaconnect_version = "3.7.x"` (`lg-monteis-infra/infrastructure/variables.tf`), das Plugin ist aus Kafka 3.7.2 gebaut. In MSK Connect hat jeder Connector seine eigene Version; der CSV-Connector kann also auf 3.9.x laufen, ohne MirrorMaker 2 anzufassen.
+- Lokal laufen Broker und Connect auf `apache/kafka:4.4.0`. Lokal und AWS laufen damit auf unterschiedlichen Connect-Versionen.
+
+**Kandidaten:**
+
+|         Connector          |                                                                 Lizenz / Pflege                                                                 |                  Kafka 3.9                  |                                 Zeile = Nachricht                                 |                Objektschlüssel                |                                                      Bewertung                                                      |
+|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|-----------------------------------------------------------------------------------|-----------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| Stream Reactor 12.x / 11.x | Apache 2.0, aktiv                                                                                                                               | nein, braucht Kafka 4.0+ (Changelog 12.0.0) | ja                                                                                | Header `path` (Quellcode)                     | auf MSK Connect nicht unterstützt                                                                                   |
+| **Stream Reactor 10.0.x**  | Apache 2.0, letzter Patch 10.0.5 (April 2026), ausserhalb des regulären Supports (nur aktuelle und vorherige Hauptversion), Fixes nur fallweise | ja (Kafka 3.9.1)                            | ja (`TEXT`, `CSV_WITHHEADERS`)                                                    | Header-Option seit 8.1.23, für 10.x zu prüfen | **gewählt für den PoC**                                                                                             |
+| **FilePulse** 2.18         | Apache 2.0, aktiv (Juni 2026)                                                                                                                   | ja, laut Release Notes                      | wahrscheinlich, nicht bestätigt                                                   | nicht bestätigt                               | **Rückfall**                                                                                                        |
+| Apache Camel 4.22.0        | Apache 2.0, aktiv (Sept. 2026)                                                                                                                  | unklar, eingebunden ist Kafka 4.3.1         | nein, eine Datei = eine Nachricht; zeilenweise nur mit eigener Kamelet-Definition | ja (`CamelAwsS3Key` als Key oder Header)      | verworfen: ganze Datei im Speicher und als eine Nachricht (100 MB), eigener Bau nötig, Laden auf MSK Connect unklar |
+| Aiven S3 Source 3.4.4      | Apache 2.0, aktiv                                                                                                                               | vermutlich                                  | nein, nur `avro`, `parquet`, `jsonl`, `bytes` (feste Blöcke)                      | nicht dokumentiert                            | verworfen                                                                                                           |
+| Confluent S3 Source        | kommerziell                                                                                                                                     | ja                                          | ja                                                                                | nicht dokumentiert                            | verworfen: Lizenz                                                                                                   |
+| kafka-connect-fs           | Apache 2.0, letztes Release 2021 (Kafka 2.7)                                                                                                    | —                                           | Text-/CSV-Reader                                                                  | —                                             | verworfen: nicht gepflegt                                                                                           |
+
+Für keinen Kandidaten dokumentiert AWS oder der Hersteller den Betrieb auf MSK Connect.
+
+**PoC (MSK Connect 3.9.x, CSV-Datei mit Kopfzeile, Leerzeile und mehreren Lieferanten-Präfixen):**
+1. Stream Reactor 10.0.5: Läuft das Plugin? Kommen die Header `path` und `line`? Zählt `line` Leerzeilen mit? Funktionieren `CSV_WITHHEADERS`, `LastModified` und `post.process.action=MOVE`? Neustart mitten in einer Datei: wo setzt der Connector fort?
+2. Trivy- und Grant-Prüfung des Plugin-ZIP: Wie viele HIGH/CRITICAL-Funde, welche Lizenzen?
+3. Parallel FilePulse mit denselben Fragen, falls Punkt 1 oder 2 scheitert.
+4. Scheitern beide: Kafka Connect selbst im EKS betreiben (z. B. Strimzi oder Image `apache/kafka` wie lokal) mit Stream Reactor 12.x. Aktuelle Version und gleiche Umgebung lokal und in AWS, dafür eigener Betrieb (Deployment über ArgoCD, IAM-Anmeldung an MSK, Monitoring). Betrifft `lg-monteis-infra`.
 
 ## Risiken und Stolpersteine
 
@@ -146,5 +180,7 @@ Die Alarmierung meldet einen Timeout, wenn für einen Sensor-Parameter `now() �
 - **Teilweise sichtbare Datei:** Die Zeilen einer Datei werden laufend gespeichert; während der Verarbeitung ist eine Datei teilweise sichtbar. Das ist mit R8 so gewollt.
 - **Doppelte Ereignisse für die Alarmierung:** Doppelt zugestellte Zeilen sieht die Alarm-Auswertung noch einmal. Laut `alarming-architecture.md` (F25) zählt ein erneut zugestellter Wert nicht doppelt; im Test absichern.
 - **Lambda im Workflow:** Schlägt der Custom Step fehl, bleibt die Datei in `upload/` und wird nie verarbeitet. Der Workflow braucht einen Exception-Handler, der die Datei nach `rejected/` verschiebt, und einen Alarm.
-- **Lizenz und Pflege des Connectors:** Stream Reactor ist Apache 2.0; das Plugin muss ins Connect-Image (`plugin.path`) und in die Grant-Lizenzprüfung (`.grant.yml`).
+- **Pflege von Stream Reactor 10.0.x:** Die Linie liegt ausserhalb des regulären Supports; Sicherheitsfixes kommen nur fallweise. Trivy wird mit der Zeit HIGH/CRITICAL-Funde melden und den PR blockieren, bis sie in `.trivyignore` begründet sind. Sobald MSK Connect Kafka Connect 4.x anbietet oder Connect im EKS läuft, auf 12.x wechseln (D5).
+- **Lokal und AWS auf verschiedenen Connect-Versionen:** Lokal 4.4.0, in AWS 3.9.x. Ein lokal grüner Test sagt über MSK Connect nur bedingt etwas aus; der PoC muss auf MSK Connect laufen.
+- **Lizenz und Pflege des Connectors:** Stream Reactor ist Apache 2.0; das Plugin muss ins Connect-Image (`plugin.path`) und in die Grant-Lizenzprüfung (`.grant.yml`). Renovate erkennt die Version im Plugin-Build nicht; Updates von Hand.
 
