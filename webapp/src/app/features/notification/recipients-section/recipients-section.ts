@@ -1,3 +1,4 @@
+import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,6 +21,13 @@ import { userDirectoryErrorKey } from '@core/user-directory/user-directory-error
 import { UserNamePipe, UserOptionPipe } from '@core/user-directory/user-name';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
+
+// unknown experiment, Keycloak denied, Keycloak down
+const SECTION_ERROR_STATUSES = [
+  HttpStatusCode.NotFound,
+  HttpStatusCode.BadGateway,
+  HttpStatusCode.ServiceUnavailable,
+];
 
 @Component({
   selector: 'app-recipients-section',
@@ -44,18 +52,23 @@ export class RecipientsSection {
 
   readonly experimentId = input.required<string>();
 
-  // the section shows the failure itself
+  // the section shows these itself, the global toast the others
   protected readonly recipients = resource({
     params: () => this.experimentId(),
     loader: ({ params: experimentId }) =>
       firstValueFrom(
         this.recipientApi.findRecipientsOf(experimentId, 'body', false, {
-          context: skipGlobalErrorToast(),
+          context: skipGlobalErrorToast(...SECTION_ERROR_STATUSES),
         }),
       ),
   });
 
-  protected readonly errorKey = computed(() => userDirectoryErrorKey(this.recipients.error()));
+  protected readonly errorKey = computed(() => {
+    const error = this.recipients.error();
+    return error instanceof HttpErrorResponse && SECTION_ERROR_STATUSES.includes(error.status)
+      ? userDirectoryErrorKey(error)
+      : undefined;
+  });
 
   protected readonly selected = linkedSignal<DirectoryUserDto[]>(() =>
     this.recipients.hasValue()

@@ -157,6 +157,17 @@ describe('RecipientsSection', () => {
     expect(section.error()).toBe('error.user-directory.unavailable');
   });
 
+  it('leaves other failures to the global toast instead of blaming keycloak', async () => {
+    recipientApi.findRecipientsOf.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+
+    const section = await render();
+
+    expect(section.error()).toBeUndefined();
+    expect(await section.canEdit()).toBe(false);
+  });
+
   it('tells a keycloak that refuses the lookup apart from one that is down', async () => {
     recipientApi.findRecipientsOf.mockReturnValue(
       throwError(
