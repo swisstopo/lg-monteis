@@ -103,7 +103,7 @@ class KeycloakUserDirectoryIT {
     ExperimentMembers users = directory.findMembersOf(UUID.randomUUID());
 
     // then
-    assertThat(users).isEqualTo(new ExperimentMembers(List.of(), List.of(), false));
+    assertThat(users).isEqualTo(new ExperimentMembers(List.of(), List.of()));
   }
 
   // seed users' passwords = their usernames (patch.local.json)
