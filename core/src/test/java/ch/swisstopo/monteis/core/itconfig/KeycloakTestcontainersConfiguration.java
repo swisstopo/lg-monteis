@@ -27,26 +27,9 @@ public class KeycloakTestcontainersConfiguration {
 
   @Bean
   KeycloakContainer keycloak() {
-    String monteisRoot = System.getProperty("monteis.repo.root", "..");
-    RealmRenderer.render(monteisRoot);
-
-    FixedPortKeycloakContainer keycloak =
-        new FixedPortKeycloakContainer("quay.io/keycloak/keycloak:26.6.4");
-    keycloak.withContextPath("/auth");
-    keycloak.withRealmImportFile(RealmRenderer.CLASSPATH_RESOURCE_NAME);
+    KeycloakContainer keycloak =
+        KeycloakTestContainers.withLocalRealmOnFixedPort(FIXED_HOST_PORT, CONTAINER_PORT);
     keycloak.withLogConsumer(new Slf4jLogConsumer(log).withPrefix("KEYCLOAK"));
-    keycloak.bindFixedPort(FIXED_HOST_PORT, CONTAINER_PORT);
     return keycloak;
-  }
-
-  /** Exposes Testcontainers' protected fixed-port API (deliberately discouraged upstream). */
-  private static final class FixedPortKeycloakContainer extends KeycloakContainer {
-    FixedPortKeycloakContainer(String dockerImageName) {
-      super(dockerImageName);
-    }
-
-    void bindFixedPort(int hostPort, int containerPort) {
-      addFixedExposedPort(hostPort, containerPort);
-    }
   }
 }
