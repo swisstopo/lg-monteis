@@ -23,6 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -203,6 +204,23 @@ class SecurityConfigAuthorizationTest {
                 givenDecodableToken(level)));
 
     result.andExpect(documentReaders.contains(level) ? status().isOk() : status().isForbidden());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"/notifying-parameters", "/recipients"})
+  void should_apply_the_notification_rules_to_head_requests(String endpoint) throws Exception {
+    List<PrivilegeLevel> writers =
+        List.of(
+            PrivilegeLevel.EXPERIMENT_PI,
+            PrivilegeLevel.GLOBAL_EDITOR,
+            PrivilegeLevel.MONTEIS_ADMIN);
+    String path = "/api/experiments/" + ASSIGNED_EXPERIMENT + endpoint;
+
+    for (PrivilegeLevel level : PrivilegeLevel.values()) {
+      mockMvc
+          .perform(withBearer(request(HttpMethod.HEAD, path), givenDecodableToken(level)))
+          .andExpect(writers.contains(level) ? status().isOk() : status().isForbidden());
+    }
   }
 
   @Test

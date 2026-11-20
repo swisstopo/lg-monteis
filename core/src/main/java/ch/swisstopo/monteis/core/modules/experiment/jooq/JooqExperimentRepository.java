@@ -28,6 +28,7 @@ import org.jooq.SelectSelectStep;
 import org.jooq.exception.DataChangedException;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -119,6 +120,15 @@ public class JooqExperimentRepository implements ExperimentRepository {
   @Transactional(readOnly = true)
   public void requireVisible(UUID experimentId) {
     requireExperimentVisible(experimentId);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public void requireWritable(UUID experimentId) {
+    requireExperimentVisible(experimentId);
+    if (!dsl.fetchValue(canWriteExperiment(experimentId))) {
+      throw new AccessDeniedException("experiment " + experimentId + " is not writable");
+    }
   }
 
   @Override

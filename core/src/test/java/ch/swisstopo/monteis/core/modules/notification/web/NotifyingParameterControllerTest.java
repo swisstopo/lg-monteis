@@ -4,6 +4,7 @@ import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIM
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.OTHER_EXPERIMENT;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,6 +15,8 @@ import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundExceptio
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
+import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
+import ch.swisstopo.monteis.core.modules.notification.query.NotifyingParameterQuery;
 import ch.swisstopo.monteis.core.modules.notification.service.NotifyingParameterService;
 import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.NotifyingParameterResponseDto;
 import java.time.OffsetDateTime;
@@ -24,10 +27,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @ControllerTest(NotifyingParameterController.class)
+@Import(NotifyingParameterService.class)
 class NotifyingParameterControllerTest {
 
   private static final String NOTIFYING_PARAMETERS = "/api/experiments/{id}/notifying-parameters";
@@ -60,7 +66,8 @@ class NotifyingParameterControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @MockitoBean private NotifyingParameterService service;
+  @MockitoBean private ExperimentRepository experimentRepository;
+  @MockitoBean private NotifyingParameterQuery query;
 
   @ParameterizedTest
   @EnumSource(
@@ -69,7 +76,7 @@ class NotifyingParameterControllerTest {
   void should_list_the_notifying_parameters_for_a_writer_of_the_experiment(PrivilegeLevel level)
       throws Exception {
     // given
-    given(service.findNotifyingParametersOf(ASSIGNED_EXPERIMENT))
+    given(query.findNotifyingParametersOf(ASSIGNED_EXPERIMENT))
         .willReturn(List.of(TEMPERATURE, WITHOUT_READING));
 
     // when / then
@@ -107,7 +114,7 @@ class NotifyingParameterControllerTest {
                 .with(authentication(level.authentication())))
         .andExpect(status().isForbidden());
 
-    then(service).shouldHaveNoInteractions();
+    then(query).shouldHaveNoInteractions();
   }
 
   @Test
@@ -119,15 +126,16 @@ class NotifyingParameterControllerTest {
                 .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
         .andExpect(status().isForbidden());
 
-    then(service).shouldHaveNoInteractions();
+    then(query).shouldHaveNoInteractions();
   }
 
   @Test
   void should_answer_404_for_an_unknown_experiment() throws Exception {
     // given
     UUID unknown = UUID.randomUUID();
-    given(service.findNotifyingParametersOf(unknown))
-        .willThrow(new ObjectNotFoundException(Experiment.class));
+    willThrow(new ObjectNotFoundException(Experiment.class))
+        .given(experimentRepository)
+        .requireWritable(unknown);
 
     // when / then
     mockMvc
@@ -136,5 +144,22 @@ class NotifyingParameterControllerTest {
                 .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication())))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.messageKey").value("object.not-found"));
+  }
+
+  @Test
+  void should_forbid_a_pi_who_only_reads_the_experiment() throws Exception {
+    // given
+    willThrow(new AccessDeniedException("read only"))
+        .given(experimentRepository)
+        .requireWritable(ASSIGNED_EXPERIMENT);
+
+    // when / then
+    mockMvc
+        .perform(
+            get(NOTIFYING_PARAMETERS, ASSIGNED_EXPERIMENT)
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .andExpect(status().isForbidden());
+
+    then(query).shouldHaveNoInteractions();
   }
 }

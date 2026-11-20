@@ -22,7 +22,7 @@ public class NotifyingParameterService {
 
   @Transactional(readOnly = true)
   public List<NotifyingParameterResponseDto> findNotifyingParametersOf(UUID experimentId) {
-    experimentRepository.requireVisible(experimentId);
+    experimentRepository.requireWritable(experimentId);
     return notifyingParameterQuery.findNotifyingParametersOf(experimentId);
   }
 }

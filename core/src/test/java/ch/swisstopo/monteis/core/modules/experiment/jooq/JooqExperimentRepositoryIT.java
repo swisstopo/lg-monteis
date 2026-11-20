@@ -33,6 +33,7 @@ import org.jooq.DSLContext;
 import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -183,6 +184,39 @@ class JooqExperimentRepositoryIT {
         List.of(),
         () ->
             assertThrows(ObjectNotFoundException.class, () -> repository.requireVisible(hiddenId)));
+  }
+
+  @Test
+  @Transactional
+  void should_accept_a_writable_experiment() {
+    UUID experimentId =
+        SecurityContextTestSupport.callAsAdmin(() -> createWritableCheckExperiment());
+
+    SecurityContextTestSupport.runAsUser(
+        List.of(experimentId),
+        List.of(experimentId),
+        () -> assertDoesNotThrow(() -> repository.requireWritable(experimentId)));
+  }
+
+  @Test
+  @Transactional
+  void should_forbid_a_readable_experiment_the_caller_may_not_write() {
+    UUID experimentId =
+        SecurityContextTestSupport.callAsAdmin(() -> createWritableCheckExperiment());
+
+    SecurityContextTestSupport.runAsUser(
+        List.of(experimentId),
+        () ->
+            assertThrows(
+                AccessDeniedException.class, () -> repository.requireWritable(experimentId)));
+  }
+
+  private UUID createWritableCheckExperiment() {
+    return createExperimentWithDsl(
+        "Writable Check " + UUID.randomUUID(),
+        null,
+        LocalDate.of(2024, Month.JANUARY, 1),
+        LocalDate.of(2024, Month.DECEMBER, 31));
   }
 
   @Test

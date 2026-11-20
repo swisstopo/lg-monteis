@@ -36,6 +36,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -138,6 +139,17 @@ class RecipientControllerTest {
             get(RECIPIENTS, OTHER_EXPERIMENT)
                 .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
         .andExpect(status().isForbidden());
+
+    then(userDirectory).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_forbid_a_pi_who_only_reads_the_experiment() throws Exception {
+    // given
+    givenReadOnlyExperiment();
+
+    // when / then
+    mockMvc.perform(getRecipientsAsPi()).andExpect(status().isForbidden());
 
     then(userDirectory).shouldHaveNoInteractions();
   }
@@ -269,6 +281,20 @@ class RecipientControllerTest {
   }
 
   @Test
+  void should_forbid_a_pi_who_only_reads_the_experiment_to_replace_the_recipients()
+      throws Exception {
+    // given
+    givenReadOnlyExperiment();
+
+    // when / then
+    mockMvc
+        .perform(replaceRecipientsAsPi(userIdsJson(PI_ANNA.id())))
+        .andExpect(status().isForbidden());
+
+    then(recipientRepository).shouldHaveNoInteractions();
+  }
+
+  @Test
   void should_answer_404_and_store_nothing_for_an_unknown_experiment() throws Exception {
     // given
     UUID unknown = givenUnknownExperiment();
@@ -329,11 +355,18 @@ class RecipientControllerTest {
         .willThrow(new UserDirectoryUnavailableException("down"));
   }
 
+  // the filter chain lets the PI through, like once MON-196 drops its per-experiment rule
+  private void givenReadOnlyExperiment() {
+    willThrow(new AccessDeniedException("read only"))
+        .given(experimentRepository)
+        .requireWritable(ASSIGNED_EXPERIMENT);
+  }
+
   private UUID givenUnknownExperiment() {
     UUID unknown = UUID.randomUUID();
     willThrow(new ObjectNotFoundException(Experiment.class))
         .given(experimentRepository)
-        .requireVisible(unknown);
+        .requireWritable(unknown);
     return unknown;
   }
 
