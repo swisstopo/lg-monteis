@@ -592,7 +592,7 @@
       "title": "Notifying parameters",
       "column": {
         "sensorParameter": "Sensor parameter",
-        "lastMeasurement": "Last measurement"
+        "latestReading": "Latest reading"
       },
       "inactive": "inactive",
       "openDetails": "Open details",

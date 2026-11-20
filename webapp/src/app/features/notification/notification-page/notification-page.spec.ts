@@ -31,8 +31,8 @@ function parameter(
     sensorParameterName: 'Pressure',
     dasKey: 'DAS-1',
     unit: WriteSensorParameterDto.UnitEnum.Meter,
-    newestMeasurement: '2026-11-17T09:30:00Z',
-    measureValue: 12.5,
+    latestReadingTimestamp: '2026-11-17T09:30:00Z',
+    latestReadingValue: 12.5,
     sensorActive: true,
     sensorParameterActive: true,
     measurementStatus: MeasurementStatusEnum.Correct,
@@ -192,25 +192,25 @@ describe('NotificationPage', () => {
       parameter({
         sensorParameterId: 'p1',
         sensorName: 'A',
-        newestMeasurement: '2026-11-17T09:00:00Z',
-        measureValue: 3,
+        latestReadingTimestamp: '2026-11-17T09:00:00Z',
+        latestReadingValue: 3,
       }),
       parameter({
         sensorParameterId: 'p2',
         sensorName: 'B',
-        newestMeasurement: '2026-11-15T09:00:00Z',
-        measureValue: 1,
+        latestReadingTimestamp: '2026-11-15T09:00:00Z',
+        latestReadingValue: 1,
       }),
       parameter({
         sensorParameterId: 'p3',
         sensorName: 'C',
-        newestMeasurement: '2026-11-16T09:00:00Z',
-        measureValue: 2,
+        latestReadingTimestamp: '2026-11-16T09:00:00Z',
+        latestReadingValue: 2,
       }),
     );
     await page.rowsShown(3);
 
-    await page.sortBy('lastMeasurement');
+    await page.sortBy('latestReading');
 
     expect(page.column('sensorParameter')).toEqual([
       'B – Pressure',
@@ -221,24 +221,24 @@ describe('NotificationPage', () => {
 
   it('shows the last measurement with timestamp, value and unit', async () => {
     const page = await render(
-      parameter({ newestMeasurement: '2026-11-17T09:30:00Z', measureValue: 12.5 }),
+      parameter({ latestReadingTimestamp: '2026-11-17T09:30:00Z', latestReadingValue: 12.5 }),
     );
 
     await page.rowsShown(1);
-    expect(page.column('lastMeasurement')[0]).toMatch(/2026.* 12\.50 m$/);
+    expect(page.column('latestReading')[0]).toMatch(/2026.* 12\.50 m$/);
   });
 
   it('shows - for a sensor parameter without a reading', async () => {
     const page = await render(
       parameter({
-        newestMeasurement: undefined,
-        measureValue: undefined,
+        latestReadingTimestamp: undefined,
+        latestReadingValue: undefined,
         measurementStatus: undefined,
       }),
     );
 
     await page.rowsShown(1);
-    expect(page.column('lastMeasurement')).toEqual(['-']);
+    expect(page.column('latestReading')).toEqual(['-']);
   });
 
   it('marks a last measurement outside the sensor range as alarm', async () => {
@@ -372,7 +372,7 @@ class PageView {
 
   alarms(): boolean[] {
     return this.rows().map((row) =>
-      this.cell(row, 'lastMeasurement').classList.contains('measurement-state-alarm'),
+      this.cell(row, 'latestReading').classList.contains('measurement-state-alarm'),
     );
   }
 

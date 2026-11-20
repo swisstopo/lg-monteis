@@ -37,6 +37,7 @@ test('"Open details" opens a measurement table tab filtered to the sensor parame
   await openAppAs(page, SEED_USERS.alice);
   await openNotificationPage(page, alphaId);
   await expect(viewTab(page, `Notifications ${SEEDED_EXPERIMENTS.alpha}`)).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Latest reading' })).toBeVisible();
 
   const firstPage = page.waitForRequest(isMeasurementsPage);
   await page

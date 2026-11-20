@@ -92,13 +92,13 @@ class NotifyingParameterControllerTest {
         .andExpect(jsonPath("$[0].sensorParameterName").value("Temperature Param"))
         .andExpect(jsonPath("$[0].dasKey").value("SOL_EXPERTS__TEMP-1__temperature"))
         .andExpect(jsonPath("$[0].unit").value("KELVIN"))
-        .andExpect(jsonPath("$[0].newestMeasurement").value("2026-11-16T08:30:00Z"))
-        .andExpect(jsonPath("$[0].measureValue").value(12.5))
+        .andExpect(jsonPath("$[0].latestReadingTimestamp").value("2026-11-16T08:30:00Z"))
+        .andExpect(jsonPath("$[0].latestReadingValue").value(12.5))
         .andExpect(jsonPath("$[0].sensorActive").value(true))
         .andExpect(jsonPath("$[0].sensorParameterActive").value(false))
         .andExpect(jsonPath("$[0].measurementStatus").value("TOO_LOW"))
-        .andExpect(jsonPath("$[1].newestMeasurement").doesNotExist())
-        .andExpect(jsonPath("$[1].measureValue").doesNotExist())
+        .andExpect(jsonPath("$[1].latestReadingTimestamp").doesNotExist())
+        .andExpect(jsonPath("$[1].latestReadingValue").doesNotExist())
         .andExpect(jsonPath("$[1].measurementStatus").doesNotExist());
   }
 
