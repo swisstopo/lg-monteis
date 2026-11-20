@@ -55,12 +55,13 @@ public class SecurityConfig {
                     .access(allowIf(Capabilities::canManageExperimentOwners))
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
                     .access(experimentWrite)
-                    // a read, but the notification setup is for writers only (MON-245)
-                    .requestMatchers(HttpMethod.GET, ApiPaths.EXPERIMENT_NOTIFYING_PARAMETERS)
-                    .access(experimentWrite)
-                    .requestMatchers(HttpMethod.GET, ApiPaths.EXPERIMENT_RECIPIENTS)
-                    .access(experimentWrite)
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT_RECIPIENTS)
+                    .access(experimentWrite)
+                    // reads, but the notification setup is for writers only (MON-245); all
+                    // methods: Spring answers HEAD via GET handler
+                    .requestMatchers(ApiPaths.EXPERIMENT_NOTIFYING_PARAMETERS)
+                    .access(experimentWrite)
+                    .requestMatchers(ApiPaths.EXPERIMENT_RECIPIENTS)
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
                     .access(experimentWrite)

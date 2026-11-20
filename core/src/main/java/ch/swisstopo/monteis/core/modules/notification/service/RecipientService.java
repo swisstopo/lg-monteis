@@ -28,7 +28,7 @@ public class RecipientService {
   }
 
   public Recipients findRecipientsOf(UUID experimentId) {
-    experimentRepository.requireVisible(experimentId);
+    experimentRepository.requireWritable(experimentId);
     ExperimentMembers members = userDirectory.findMembersOf(experimentId);
     return recipientRepository
         .findSavedRecipientIdsOf(experimentId)
@@ -37,7 +37,7 @@ public class RecipientService {
   }
 
   public Recipients replaceRecipientsOf(UUID experimentId, Set<UUID> userIds) {
-    experimentRepository.requireVisible(experimentId);
+    experimentRepository.requireWritable(experimentId);
     // asked before the write: keycloak down => 503 with nothing stored
     ExperimentMembers members = userDirectory.findMembersOf(experimentId);
     // lost access => hidden from the list, kept so they count again once access is back

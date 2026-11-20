@@ -68,6 +68,8 @@ public interface ExperimentRepository {
    */
   void requireVisible(UUID id);
 
+  void requireWritable(UUID id);
+
   /**
    * Retrieves a page of {@link Experiment}s
    *
