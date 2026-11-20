@@ -1,20 +1,17 @@
 import { inject } from '@angular/core';
-import { ExperimentService } from '@features/experiment/services/experiment.service';
+import { PermissionsService } from '@core/auth/permissions.service';
 import { WorkbenchLayout } from '@scion/workbench';
+import { firstValueFrom } from 'rxjs';
 
 const MONITORING_MENU = 'monitoring-menu';
 
 // injects: call from a layout function, it runs in an injection context
 // TODO: runs once per app load, write access gained or lost meanwhile shows only after a reload
 export async function addMonitoringMenu(layout: WorkbenchLayout): Promise<WorkbenchLayout> {
-  // loading fails => no part, a rejected layout function would stop the workbench from starting
-  const experiments = await inject(ExperimentService)
-    .findWritableExperiments()
-    .catch((error: unknown) => {
-      console.error('Monitoring menu left out: writable experiments failed to load', error);
-      return [];
-    });
-  if (experiments.length === 0) {
+  const permissions = inject(PermissionsService);
+  // signal holds the fail-closed default until /api/me answered
+  await firstValueFrom(permissions.currentUser$);
+  if (!permissions.hasAnyExperimentWriteAccess()) {
     return layout;
   }
   return layout
