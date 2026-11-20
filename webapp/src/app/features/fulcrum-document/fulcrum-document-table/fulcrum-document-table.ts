@@ -36,6 +36,7 @@ export default class FulcrumDocumentTable {
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
+  private readonly view = inject(WorkbenchView);
   protected readonly permissions = inject(PermissionsService);
 
   readonly searchTerm = signal<string>('');
@@ -61,9 +62,9 @@ export default class FulcrumDocumentTable {
     ...(this.permissions.canAccessDocuments() ? {} : { rowSelection: undefined }),
   }));
 
-  constructor(view: WorkbenchView) {
+  constructor() {
     effect(() => {
-      view.title = this.translateService.translate('tab.fulcrumDocument')();
+      this.view.title = this.translateService.translate('tab.fulcrumDocument')();
     });
   }
 

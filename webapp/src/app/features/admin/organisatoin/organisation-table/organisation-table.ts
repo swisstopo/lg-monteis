@@ -36,6 +36,7 @@ export default class OrganisationTable {
   private readonly formDialog = inject(FormDialogService);
   private readonly organisationService = inject(OrganisationService);
   private readonly translateService = inject(TranslateService);
+  private readonly view = inject(WorkbenchView);
   private readonly csvDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
 
@@ -56,10 +57,10 @@ export default class OrganisationTable {
     this.loadError,
   );
 
-  constructor(view: WorkbenchView) {
+  constructor() {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
-      view.title = this.translateService.translate('tab.organisation')();
+      this.view.title = this.translateService.translate('tab.organisation')();
     });
 
     // the infinite row model has no way to notice a save in the dialog, so the visible pages are

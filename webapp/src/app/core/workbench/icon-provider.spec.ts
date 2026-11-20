@@ -1,6 +1,6 @@
 import { WorkbenchIconDescriptor } from '@scion/workbench';
-import { MaterialIcon } from '../../ui/icons/material-icon';
-import { MeasurementsIcon } from '../../ui/icons/measurements-icon';
+import { MaterialIcon } from '@ui/icons/material-icon';
+import { MeasurementsIcon } from '@ui/icons/measurements-icon';
 import { appIconProvider } from './icon-provider';
 
 describe('appIconProvider', () => {
