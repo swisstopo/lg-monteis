@@ -101,8 +101,8 @@ class RecipientServiceTest {
   void should_count_a_saved_recipient_again_once_their_access_is_back() {
     // given
     given(userDirectory.findMembersOf(EXPERIMENT_ID))
-        .willReturn(new ExperimentMembers(List.of(PI_ANNA), List.of(PI_ANNA)))
-        .willReturn(new ExperimentMembers(List.of(PI_ANNA, READER_CARL), List.of(PI_ANNA)));
+        .willReturn(new ExperimentMembers(List.of(PI_ANNA), List.of(PI_ANNA), true))
+        .willReturn(new ExperimentMembers(List.of(PI_ANNA, READER_CARL), List.of(PI_ANNA), true));
     given(recipientRepository.findSavedRecipientIdsOf(EXPERIMENT_ID))
         .willReturn(Optional.of(Set.of(PI_ANNA.id(), READER_CARL.id())));
 
@@ -244,6 +244,7 @@ class RecipientServiceTest {
   }
 
   private void givenExperimentMembers(List<DirectoryUser> all, List<DirectoryUser> pis) {
-    given(userDirectory.findMembersOf(EXPERIMENT_ID)).willReturn(new ExperimentMembers(all, pis));
+    given(userDirectory.findMembersOf(EXPERIMENT_ID))
+        .willReturn(new ExperimentMembers(all, pis, !pis.isEmpty()));
   }
 }

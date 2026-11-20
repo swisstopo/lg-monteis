@@ -146,7 +146,9 @@ class KeycloakUserDirectoryTest {
 
     assertEquals(
         new ExperimentMembers(
-            List.of(directoryUser(CARL), directoryUser(ALICE)), List.of(directoryUser(ALICE))),
+            List.of(directoryUser(CARL), directoryUser(ALICE)),
+            List.of(directoryUser(ALICE)),
+            true),
         directory.findMembersOf(EXPERIMENT_ID));
   }
 
@@ -156,7 +158,7 @@ class KeycloakUserDirectoryTest {
     given(keycloak.findGroupsByAttribute(READ_IDS, EXPERIMENT)).willReturn(List.of());
 
     assertEquals(
-        new ExperimentMembers(List.of(), List.of()), directory.findMembersOf(EXPERIMENT_ID));
+        new ExperimentMembers(List.of(), List.of(), false), directory.findMembersOf(EXPERIMENT_ID));
   }
 
   @Test
