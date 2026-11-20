@@ -1,4 +1,3 @@
-import { HttpStatusCode } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -44,43 +43,40 @@ export class RecipientsSection {
 
   readonly experimentId = input.required<string>();
 
-  // parameter request already toasts unknown id, 2nd toast would repeat it
+  // the section shows the failure itself
   protected readonly recipients = resource({
     params: () => this.experimentId(),
     loader: ({ params: experimentId }) =>
       firstValueFrom(
         this.recipientApi.findRecipientsOf(experimentId, 'body', false, {
-          context: skipGlobalErrorToast(HttpStatusCode.NotFound),
-        }),
-      ),
-  });
-
-  // the section shows the failure itself
-  private readonly candidates = resource({
-    params: () => this.experimentId(),
-    loader: ({ params: experimentId }) =>
-      firstValueFrom(
-        this.recipientApi.findRecipientCandidatesOf(experimentId, 'body', false, {
           context: skipGlobalErrorToast(),
         }),
       ),
   });
 
   // denied and unavailable ask for different things, a misconfigured Keycloak needs an admin
-  protected readonly candidatesErrorKey = computed(() => {
-    const error = this.candidates.error();
+  protected readonly errorKey = computed(() => {
+    const error = this.recipients.error();
     if (!error) return undefined;
     return toErrorDtos(error)[0]?.messageKey ?? 'error.user-directory.unavailable';
   });
 
   protected readonly selected = linkedSignal<DirectoryUserDto[]>(() =>
-    this.recipients.hasValue() ? this.recipients.value().recipients : [],
+    this.recipients.hasValue()
+      ? this.recipients
+          .value()
+          .candidates.filter((candidate) => candidate.selected)
+          .map((candidate) => candidate.user)
+      : [],
   );
 
   protected readonly offered = computed(() => {
-    if (!this.candidates.hasValue()) return [];
+    if (!this.recipients.hasValue()) return [];
     const selectedIds = new Set(this.selected().map((recipient) => recipient.id));
-    return this.candidates.value().filter((candidate) => !selectedIds.has(candidate.id));
+    return this.recipients
+      .value()
+      .candidates.map((candidate) => candidate.user)
+      .filter((user) => !selectedIds.has(user.id));
   });
 
   protected readonly saving = signal(false);

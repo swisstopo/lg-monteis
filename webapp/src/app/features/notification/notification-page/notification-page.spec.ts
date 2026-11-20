@@ -9,7 +9,7 @@ import {
   RecipientsResponseDto,
   WriteSensorParameterDto,
 } from '@core/generated';
-import { SKIP_GLOBAL_ERROR_TOAST_FOR } from '@core/http/http-context';
+import { SKIP_GLOBAL_ERROR_TOAST } from '@core/http/http-context';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import translationsEN from '@public/i18n/en.json';
 import { WorkbenchRouter, WorkbenchView } from '@scion/workbench';
@@ -44,27 +44,25 @@ const PI_ANNA: DirectoryUserDto = { id: 'anna', firstName: 'Anna', lastName: 'Ar
 const PI_BEN: DirectoryUserDto = { id: 'ben', firstName: 'Ben', lastName: 'Berger' };
 const READER_CARL: DirectoryUserDto = { id: 'carl', firstName: 'Carl', lastName: 'Christen' };
 
-function recipients(saved: boolean, ...members: DirectoryUserDto[]): RecipientsResponseDto {
-  return { saved, recipients: members };
+function recipients(saved: boolean, ...selected: DirectoryUserDto[]): RecipientsResponseDto {
+  const candidates = [PI_ANNA, PI_BEN, READER_CARL].map((user) => ({
+    user,
+    selected: selected.includes(user),
+  }));
+  return { saved, candidates };
 }
 
 describe('NotificationPage', () => {
   let notifyingParameterApi: { findNotifyingParametersOf: ReturnType<typeof vi.fn> };
   let experimentApi: { getExperiment: ReturnType<typeof vi.fn> };
-  let recipientApi: {
-    findRecipientsOf: ReturnType<typeof vi.fn>;
-    findRecipientCandidatesOf: ReturnType<typeof vi.fn>;
-  };
+  let recipientApi: { findRecipientsOf: ReturnType<typeof vi.fn> };
   let view: { title: string | undefined };
   let workbenchRouter: { navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     notifyingParameterApi = { findNotifyingParametersOf: vi.fn(() => of([parameter()])) };
     experimentApi = { getExperiment: vi.fn(() => of({ id: 'x', name: 'Gas Path' })) };
-    recipientApi = {
-      findRecipientsOf: vi.fn(() => of(recipients(false, PI_ANNA))),
-      findRecipientCandidatesOf: vi.fn(() => of([])),
-    };
+    recipientApi = { findRecipientsOf: vi.fn(() => of(recipients(false, PI_ANNA))) };
     view = { title: undefined };
     workbenchRouter = { navigate: vi.fn(() => Promise.resolve(true)) };
   });
@@ -317,14 +315,14 @@ describe('NotificationPage', () => {
     expect(page.hasTable()).toBe(false);
   });
 
-  it('loads the recipients of the experiment in the route, leaving a 404 to the parameter toast', async () => {
+  it('loads the recipients of the experiment in the route, leaving their errors to the section', async () => {
     await render(parameter());
 
     expect(recipientApi.findRecipientsOf).toHaveBeenCalledWith('x', 'body', false, {
       context: expect.anything(),
     });
     const { context } = recipientApi.findRecipientsOf.mock.calls[0][3] as { context: HttpContext };
-    expect(context.get(SKIP_GLOBAL_ERROR_TOAST_FOR)).toEqual([HttpStatusCode.NotFound]);
+    expect(context.get(SKIP_GLOBAL_ERROR_TOAST)).toBe(true);
   });
 
   it('shows the pis as recipient chips while the list was never saved', async () => {

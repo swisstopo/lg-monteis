@@ -62,8 +62,6 @@ public class SecurityConfig {
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT_RECIPIENTS)
                     .access(experimentWrite)
-                    .requestMatchers(HttpMethod.GET, ApiPaths.EXPERIMENT_RECIPIENT_CANDIDATES)
-                    .access(experimentWrite)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.EXPERIMENT_DOCUMENT)

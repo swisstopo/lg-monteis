@@ -28,12 +28,13 @@
           </mat-option>
         }
       </mat-select>
-      @if (candidatesErrorKey(); as candidatesErrorKey) {
-        <mat-hint class="recipients-section_error">{{ candidatesErrorKey | translate }}</mat-hint>
-      }
     </mat-form-field>
     <button mat-flat-button type="button" [disabled]="saving()" (click)="save()">
       {{ 'notification.recipients.save' | translate }}
     </button>
+  } @else if (errorKey(); as errorKey) {
+    <p class="recipients-section_error" data-testid="recipients-error">
+      {{ errorKey | translate }}
+    </p>
   }
 </section>

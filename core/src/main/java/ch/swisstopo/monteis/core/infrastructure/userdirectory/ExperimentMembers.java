@@ -19,10 +19,6 @@ public record ExperimentMembers(
     return all;
   }
 
-  public List<DirectoryUser> among(Collection<UUID> userIds) {
-    return all.stream().filter(user -> userIds.contains(user.id())).toList();
-  }
-
   public Set<UUID> nonMembersAmong(Collection<UUID> userIds) {
     Set<UUID> memberIds = all.stream().map(DirectoryUser::id).collect(Collectors.toSet());
     return userIds.stream()

@@ -3,7 +3,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
 import { MatChipHarness } from '@angular/material/chips/testing';
-import { MatFormFieldHarness } from '@angular/material/form-field/testing';
 import { MatSelectHarness } from '@angular/material/select/testing';
 import {
   DirectoryUserDto,
@@ -29,21 +28,23 @@ const READER_CARL: DirectoryUserDto = {
   email: 'carl@example.com',
 };
 
-function recipients(saved: boolean, ...members: DirectoryUserDto[]): RecipientsResponseDto {
-  return { saved, recipients: members };
+function recipients(saved: boolean, ...selected: DirectoryUserDto[]): RecipientsResponseDto {
+  const candidates = [PI_ANNA, PI_BEN, READER_CARL].map((user) => ({
+    user,
+    selected: selected.includes(user),
+  }));
+  return { saved, candidates };
 }
 
 describe('RecipientsSection', () => {
   let recipientApi: {
     findRecipientsOf: ReturnType<typeof vi.fn>;
-    findRecipientCandidatesOf: ReturnType<typeof vi.fn>;
     replaceRecipientsOf: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     recipientApi = {
       findRecipientsOf: vi.fn(() => of(recipients(false, PI_ANNA))),
-      findRecipientCandidatesOf: vi.fn(() => of([PI_ANNA, PI_BEN, READER_CARL])),
       replaceRecipientsOf: vi.fn(() => of(recipients(true))),
     };
   });
@@ -135,6 +136,7 @@ describe('RecipientsSection', () => {
 
     expect(section.text()).toContain('notification.recipients.empty');
   });
+
   it('offers no editing while the recipients cannot be loaded', async () => {
     recipientApi.findRecipientsOf.mockReturnValue(
       throwError(() => new HttpErrorResponse({ status: 404 })),
@@ -145,18 +147,18 @@ describe('RecipientsSection', () => {
     expect(await section.canEdit()).toBe(false);
   });
 
-  it('says why no candidate can be added when keycloak is down', async () => {
-    recipientApi.findRecipientCandidatesOf.mockReturnValue(
+  it('says why the recipients cannot be edited when keycloak is down', async () => {
+    recipientApi.findRecipientsOf.mockReturnValue(
       throwError(() => new HttpErrorResponse({ status: 503 })),
     );
 
     const section = await render();
 
-    expect(await section.hint()).toBe('error.user-directory.unavailable');
+    expect(section.error()).toBe('error.user-directory.unavailable');
   });
 
   it('tells a keycloak that refuses the lookup apart from one that is down', async () => {
-    recipientApi.findRecipientCandidatesOf.mockReturnValue(
+    recipientApi.findRecipientsOf.mockReturnValue(
       throwError(
         () =>
           new HttpErrorResponse({
@@ -168,7 +170,7 @@ describe('RecipientsSection', () => {
 
     const section = await render();
 
-    expect(await section.hint()).toBe('error.user-directory.denied');
+    expect(section.error()).toBe('error.user-directory.denied');
   });
 });
 
@@ -217,10 +219,8 @@ class SectionView {
     return selects.length > 0 || saveButtons.length > 0;
   }
 
-  async hint(): Promise<string> {
-    const field = await this.loader.getHarness(MatFormFieldHarness);
-    const [hint] = await field.getTextHints();
-    return hint;
+  error(): string | undefined {
+    return this.element.querySelector('[data-testid="recipients-error"]')?.textContent?.trim();
   }
 
   text(): string {
