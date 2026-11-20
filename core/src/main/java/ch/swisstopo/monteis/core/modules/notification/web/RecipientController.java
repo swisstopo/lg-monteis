@@ -55,7 +55,9 @@ public class RecipientController {
   @ApiResponse(responseCode = "400", description = "The body is no JSON object or holds no UUIDs")
   @ApiResponse(responseCode = "403", description = "The caller may not write the experiment")
   @ApiResponse(responseCode = "404", description = "The experiment does not exist")
-  @ApiResponse(responseCode = "422", description = "The list or one of its ids is missing")
+  @ApiResponse(
+      responseCode = "422",
+      description = "The list or one of its ids is missing, or an id is no Recipient candidate")
   @ApiResponse(responseCode = "503", description = "Keycloak is unavailable, nothing was stored")
   @PutMapping(
       path = ApiPaths.EXPERIMENT_RECIPIENTS,
