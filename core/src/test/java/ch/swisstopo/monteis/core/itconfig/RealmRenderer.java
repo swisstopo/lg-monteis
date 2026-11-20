@@ -14,13 +14,13 @@ import java.io.UncheckedIOException;
  * and users as the docker-compose Keycloak used for local dev. Keep the two in sync manually if
  * that patch's shape ever changes.
  */
-public final class RealmRenderer {
+final class RealmRenderer {
 
-  public static final String CLASSPATH_RESOURCE_NAME = "realm-e2e.json";
+  static final String CLASSPATH_RESOURCE_NAME = "realm-e2e.json";
 
   private RealmRenderer() {}
 
-  public static void render(String monteisRoot) {
+  static void render(String monteisRoot) {
     try {
       ObjectMapper mapper = new ObjectMapper();
       File realmDir = new File(monteisRoot, "docker/keycloak/realm");

@@ -7,7 +7,7 @@ import static org.mockito.BDDMockito.given;
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakConfig;
 import ch.swisstopo.monteis.core.infrastructure.keycloak.KeycloakProperties;
 import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
-import ch.swisstopo.monteis.core.itconfig.RealmRenderer;
+import ch.swisstopo.monteis.core.itconfig.KeycloakTestContainers;
 import ch.swisstopo.monteis.core.itconfig.SeedData;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import java.util.List;
@@ -41,7 +41,7 @@ class KeycloakUserDirectoryIT {
   private static final UUID ADMIN_USER = UUID.fromString("4efbee50-d322-44ed-aece-92dbf9b9d969");
   private static final UUID BASIS_USER = UUID.fromString("ba51c5e7-3a22-4906-b74e-3688e6d738e8");
 
-  @Container static final KeycloakContainer keycloak = keycloakWithLocalRealm();
+  @Container static final KeycloakContainer keycloak = KeycloakTestContainers.withLocalRealm();
 
   @Autowired private UserDirectory directory;
   @MockitoBean private CurrentUserProvider currentUser;
@@ -131,13 +131,6 @@ class KeycloakUserDirectoryIT {
 
   private static List<UUID> idsOf(List<DirectoryUser> users) {
     return users.stream().map(DirectoryUser::id).toList();
-  }
-
-  private static KeycloakContainer keycloakWithLocalRealm() {
-    RealmRenderer.render(System.getProperty("monteis.repo.root", ".."));
-    return new KeycloakContainer("quay.io/keycloak/keycloak:26.6.4")
-        .withContextPath("/auth")
-        .withRealmImportFile(RealmRenderer.CLASSPATH_RESOURCE_NAME);
   }
 
   @Configuration
