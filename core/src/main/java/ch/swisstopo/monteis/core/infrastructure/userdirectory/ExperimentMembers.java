@@ -6,7 +6,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public record ExperimentMembers(List<DirectoryUser> all, List<DirectoryUser> pis) {
+public record ExperimentMembers(
+    List<DirectoryUser> all, List<DirectoryUser> pis, boolean hasWriteGroup) {
 
   public ExperimentMembers {
     all = List.copyOf(all);

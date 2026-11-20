@@ -36,8 +36,7 @@ class KeycloakUserDirectory implements UserDirectory {
 
   private final KeycloakClient keycloak;
   private final CurrentUserProvider currentUser;
-  private final Cache<CacheKey, Pis> cache;
-  private final Cache<CacheKey, ExperimentMembers> membersCache;
+  private final Cache<CacheKey, ExperimentMembers> cache;
 
   KeycloakUserDirectory(
       KeycloakClient keycloak,
@@ -45,8 +44,11 @@ class KeycloakUserDirectory implements UserDirectory {
       UserDirectoryProperties properties) {
     this.keycloak = keycloak;
     this.currentUser = currentUser;
-    this.cache = newCache(properties);
-    this.membersCache = newCache(properties);
+    this.cache =
+        Caffeine.newBuilder()
+            .expireAfterWrite(properties.cacheTtl())
+            .maximumSize(properties.cacheMaxSize())
+            .build();
   }
 
   @Override
@@ -63,7 +65,7 @@ class KeycloakUserDirectory implements UserDirectory {
   @Override
   public Pis pisForWriting(UUID experimentId) {
     Optional<CacheKey> key = keyForRequestingUser(experimentId);
-    return key.map(this::loadPis).orElseGet(KeycloakUserDirectory::noRequestingUser);
+    return key.map(this::fetchPis).orElseGet(KeycloakUserDirectory::noRequestingUser);
   }
 
   private Optional<CacheKey> keyForRequestingUser(UUID experimentId) {
@@ -84,9 +86,12 @@ class KeycloakUserDirectory implements UserDirectory {
     Map<UUID, Pis> pisByExperiment = new LinkedHashMap<>();
     KeycloakUnavailable outage = null;
     for (CacheKey key : keys) {
-      Pis pis = cache.getIfPresent(key);
-      if (pis == null) {
-        pis = outage != null ? outage : loadPis(key);
+      ExperimentMembers cached = cache.getIfPresent(key);
+      Pis pis;
+      if (cached != null) {
+        pis = pisOf(cached);
+      } else {
+        pis = outage != null ? outage : fetchPis(key);
       }
       if (pis instanceof KeycloakUnavailable unavailable) {
         outage = unavailable;
@@ -96,27 +101,41 @@ class KeycloakUserDirectory implements UserDirectory {
     return pisByExperiment;
   }
 
-  private Pis loadPis(CacheKey key) {
-    Pis pis = fetchPisFromKeycloak(key.experimentId());
-    cacheKeycloakAnswer(key, pis);
-    return pis;
-  }
-
-  private void cacheKeycloakAnswer(CacheKey key, Pis pis) {
-    if (pis instanceof Known) {
-      cache.put(key, pis);
-    }
-  }
-
-  private Pis fetchPisFromKeycloak(UUID experimentId) {
+  private Pis fetchPis(CacheKey key) {
     try {
-      return new Known(enabledMembersOf(findWriteGroupsOf(experimentId)));
+      ExperimentMembers members = fetchMembersFromKeycloak(key.experimentId());
+      cache.put(key, members);
+      return pisOf(members);
     } catch (UserDirectoryDeniedException e) {
       return new AccessDenied(e.getMessage());
     } catch (UserDirectoryUnavailableException e) {
       log.warn("Keycloak is unavailable, not asking it again in this call: {}", e.getMessage());
       return new KeycloakUnavailable(e.getMessage());
     }
+  }
+
+  private static Pis pisOf(ExperimentMembers members) {
+    return new Known(members.pis());
+  }
+
+  @Override
+  public ExperimentMembers findMembersOf(UUID experimentId) {
+    CacheKey key =
+        keyForRequestingUser(experimentId)
+            .orElseThrow(() -> new UserDirectoryUnavailableException(NO_REQUESTING_USER));
+    // loader throws on failure => caffeine caches answers only
+    return cache.get(key, k -> fetchMembersFromKeycloak(k.experimentId()));
+  }
+
+  private ExperimentMembers fetchMembersFromKeycloak(UUID experimentId) {
+    List<KeycloakGroup> writeGroups = findWriteGroupsOf(experimentId);
+    List<DirectoryUser> pis = enabledMembersOf(writeGroups);
+    List<DirectoryUser> readers =
+        enabledMembersOf(findGroupsWith(READ_EXPERIMENT_IDS, experimentId));
+    return new ExperimentMembers(
+        distinctSortedByName(Stream.concat(pis.stream(), readers.stream())),
+        pis,
+        !writeGroups.isEmpty());
   }
 
   private List<KeycloakGroup> findWriteGroupsOf(UUID experimentId) {
@@ -136,23 +155,6 @@ class KeycloakUserDirectory implements UserDirectory {
             .map(DirectoryUser::from));
   }
 
-  @Override
-  public ExperimentMembers findMembersOf(UUID experimentId) {
-    CacheKey key =
-        keyForRequestingUser(experimentId)
-            .orElseThrow(() -> new UserDirectoryUnavailableException(NO_REQUESTING_USER));
-    // loader throws on failure => caffeine caches answers only
-    return membersCache.get(key, k -> fetchMembersFromKeycloak(k.experimentId()));
-  }
-
-  private ExperimentMembers fetchMembersFromKeycloak(UUID experimentId) {
-    List<DirectoryUser> pis = enabledMembersOf(findWriteGroupsOf(experimentId));
-    List<DirectoryUser> readers =
-        enabledMembersOf(findGroupsWith(READ_EXPERIMENT_IDS, experimentId));
-    return new ExperimentMembers(
-        distinctSortedByName(Stream.concat(pis.stream(), readers.stream())), pis);
-  }
-
   private static <T> T askKeycloak(Supplier<T> request) {
     try {
       return request.get();
@@ -165,12 +167,5 @@ class KeycloakUserDirectory implements UserDirectory {
 
   private static List<DirectoryUser> distinctSortedByName(Stream<DirectoryUser> users) {
     return users.distinct().sorted(DirectoryUser.BY_NAME).toList();
-  }
-
-  private static <V> Cache<CacheKey, V> newCache(UserDirectoryProperties properties) {
-    return Caffeine.newBuilder()
-        .expireAfterWrite(properties.cacheTtl())
-        .maximumSize(properties.cacheMaxSize())
-        .build();
   }
 }
