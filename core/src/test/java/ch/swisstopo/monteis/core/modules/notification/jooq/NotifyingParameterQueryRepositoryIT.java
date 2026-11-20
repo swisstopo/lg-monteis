@@ -78,7 +78,7 @@ class NotifyingParameterQueryRepositoryIT {
   }
 
   @Test
-  void should_list_a_parameter_without_a_reading_with_an_empty_last_measurement() {
+  void should_list_a_parameter_without_a_reading_with_an_empty_latest_reading() {
     // when
     NotifyingParameterResponseDto bulk =
         callAsAdmin(() -> repository.findNotifyingParametersOf(SeedData.EXPERIMENT_ALPHA))
@@ -88,14 +88,14 @@ class NotifyingParameterQueryRepositoryIT {
     assertThat(bulk.sensorName()).isEqualTo("bulk-sensor-1");
     assertThat(bulk.dasKey()).isEqualTo("SOL_EXPERTS__BULK-1__BULK-P1");
     assertThat(bulk.unit()).isEqualTo("METER");
-    assertThat(bulk.newestMeasurement()).isNull();
-    assertThat(bulk.measureValue()).isNull();
+    assertThat(bulk.latestReadingTimestamp()).isNull();
+    assertThat(bulk.latestReadingValue()).isNull();
     assertThat(bulk.measurementStatus()).isNull();
   }
 
   @Test
   @Transactional
-  void should_carry_the_newest_reading_and_its_measurement_state() {
+  void should_carry_the_latest_reading_and_its_measurement_state() {
     // given
     var newest =
         callAsAdmin(
@@ -119,8 +119,8 @@ class NotifyingParameterQueryRepositoryIT {
     assertThat(temperature.sensorParameterName()).isEqualTo("Temperature Param");
     assertThat(temperature.dasKey()).isEqualTo("SOL_EXPERTS__TEMP-1__temperature");
     assertThat(temperature.unit()).isEqualTo("KELVIN");
-    assertThat(temperature.newestMeasurement()).isEqualTo(newest.value1());
-    assertThat(temperature.measureValue()).isEqualTo(newest.value2());
+    assertThat(temperature.latestReadingTimestamp()).isEqualTo(newest.value1());
+    assertThat(temperature.latestReadingValue()).isEqualTo(newest.value2());
     assertThat(temperature.measurementStatus())
         .isEqualTo(MeasurementStatus.fromDbValue(newest.value3()));
   }

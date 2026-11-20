@@ -3,7 +3,7 @@
   @for (experiment of writableExperiments.value() ?? []; track experiment.id) {
     <app-route-button
       data-testid="monitoring-menu-notifications-entry"
-      [route]="['/monitoring', experiment.id!]"
+      [route]="['/monitoring', experiment.id]"
       [label]="'menu.notificationsOf' | translate: { name: experiment.name }"
     ></app-route-button>
   }

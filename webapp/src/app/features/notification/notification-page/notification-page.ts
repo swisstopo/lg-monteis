@@ -78,5 +78,5 @@ export default class NotificationPage {
     });
   }
 
-  protected getRowId = (row: NotifyingParameterResponseDto): string => row.sensorParameterId ?? '';
+  protected getRowId = (row: NotifyingParameterResponseDto): string => row.sensorParameterId;
 }

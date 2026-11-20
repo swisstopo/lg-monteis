@@ -24,10 +24,10 @@ export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParamete
   const workbenchRouter = inject(WorkbenchRouter);
   const unitMetadata = getUnitMetadata();
 
-  const formatLastMeasurement = (parameter: NotifyingParameterResponseDto): string => {
-    if (!parameter.newestMeasurement || parameter.measureValue == null) return '-';
-    const timestamp = datePipe.transform(parameter.newestMeasurement, 'medium');
-    const value = parameter.measureValue.toFixed(2);
+  const formatLatestReading = (parameter: NotifyingParameterResponseDto): string => {
+    if (!parameter.latestReadingTimestamp || parameter.latestReadingValue == null) return '-';
+    const timestamp = datePipe.transform(parameter.latestReadingTimestamp, 'medium');
+    const value = parameter.latestReadingValue.toFixed(2);
     const unit = unitMetadata[parameter.unit as Unit]?.symbol() ?? parameter.unit ?? '';
     return `${timestamp} ${value} ${unit}`.trim();
   };
@@ -46,10 +46,10 @@ export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParamete
       flex: 2,
     },
     {
-      colId: 'lastMeasurement',
-      headerName: translateService.translate('notification.parameters.column.lastMeasurement')(),
-      valueGetter: (params) => params.data?.newestMeasurement,
-      valueFormatter: (params) => (params.data ? formatLastMeasurement(params.data) : '-'),
+      colId: 'latestReading',
+      headerName: translateService.translate('notification.parameters.column.latestReading')(),
+      valueGetter: (params) => params.data?.latestReadingTimestamp,
+      valueFormatter: (params) => (params.data ? formatLatestReading(params.data) : '-'),
       cellClass: (params) => measurementStateClass(params.data?.measurementStatus),
       sortable: true,
       filter: false,
