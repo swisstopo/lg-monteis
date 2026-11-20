@@ -62,10 +62,10 @@ class KeycloakUserDirectoryTest {
   }
 
   @Test
-  void should_tell_a_missing_write_group() {
+  void should_have_no_pis_without_a_write_group() {
     given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT)).willReturn(List.of());
 
-    assertEquals(new Pis.NoWriteGroup(), pisForReading(EXPERIMENT_ID));
+    assertEquals(new Pis.Known(List.of()), pisForReading(EXPERIMENT_ID));
   }
 
   @Test

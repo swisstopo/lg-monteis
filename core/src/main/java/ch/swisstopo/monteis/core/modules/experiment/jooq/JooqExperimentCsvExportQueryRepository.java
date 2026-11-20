@@ -110,7 +110,6 @@ public class JooqExperimentCsvExportQueryRepository implements ExperimentCsvExpo
       case SHOWN -> namesOf(owners.users());
       case KEYCLOAK_UNAVAILABLE -> "(unavailable)";
       case ACCESS_DENIED -> "(access denied)";
-      case NO_WRITE_GROUP -> "(no write group)";
     };
   }
 

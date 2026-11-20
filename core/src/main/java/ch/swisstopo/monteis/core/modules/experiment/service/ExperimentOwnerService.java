@@ -7,7 +7,6 @@ import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.AccessDenied;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.KeycloakUnavailable;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.Known;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.NoWriteGroup;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDeniedException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
@@ -94,8 +93,6 @@ public class ExperimentOwnerService {
     UUID experimentId = storedOwners.experimentId();
     return switch (pis) {
       case Known(var users) -> ownersAmong(users, storedOwners);
-      case NoWriteGroup() ->
-          hideOwners(experimentId, VisibleOwners.NO_WRITE_GROUP, "no write group");
       case AccessDenied(var reason) ->
           hideOwners(experimentId, VisibleOwners.ACCESS_DENIED, reason);
       case KeycloakUnavailable _ -> VisibleOwners.KEYCLOAK_UNAVAILABLE;
@@ -124,7 +121,6 @@ public class ExperimentOwnerService {
     UUID experimentId = experiment.getId();
     return switch (userDirectory.pisForWriting(experimentId)) {
       case Known(var pis) -> replaceOwnersAmong(experimentId, ownerIds, pis);
-      case NoWriteGroup() -> replaceOwnersAmong(experimentId, ownerIds, List.of());
       case AccessDenied(var reason) -> keepOwners(experiment, reason);
       case KeycloakUnavailable(var reason) -> keepOwners(experiment, reason);
     };
@@ -133,7 +129,6 @@ public class ExperimentOwnerService {
   private List<DirectoryUser> currentPisOrFail(UUID experimentId) {
     return switch (userDirectory.pisForWriting(experimentId)) {
       case Known(var pis) -> pis;
-      case NoWriteGroup() -> List.of();
       case AccessDenied(var reason) -> throw new UserDirectoryDeniedException(reason);
       case KeycloakUnavailable(var reason) -> throw new UserDirectoryUnavailableException(reason);
     };
