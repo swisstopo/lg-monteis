@@ -60,7 +60,7 @@ export default class NotificationPage {
     );
   });
 
-  // parameter request already toasts unknown id, 2nd toast would repeat it
+  // findNotifyingParametersOf above already toasts unknown id, 2nd toast would repeat it
   private readonly experiment = resource({
     params: () => this.experimentId(),
     loader: ({ params: experimentId }) =>

@@ -57,8 +57,8 @@ public class SecurityConfig {
                     .access(experimentWrite)
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT_RECIPIENTS)
                     .access(experimentWrite)
-                    // reads, but the notification setup is for writers only (MON-245); all
-                    // methods: Spring answers HEAD via GET handler
+                    // reads, but the notification setup is for writers only; all methods: Spring
+                    // answers HEAD via GET handler
                     .requestMatchers(ApiPaths.EXPERIMENT_NOTIFYING_PARAMETERS)
                     .access(experimentWrite)
                     .requestMatchers(ApiPaths.EXPERIMENT_RECIPIENTS)
