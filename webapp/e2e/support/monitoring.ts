@@ -1,4 +1,5 @@
-import { expect, Locator, Page } from '@playwright/test';
+import { APIRequestContext, expect, Locator, Page } from '@playwright/test';
+import { readJson } from './responses';
 
 /**
  * Opens the notification page of `experimentId` by deep link, the way a bookmarked tab opens it.
@@ -24,4 +25,31 @@ export function recipientsSection(page: Page): Locator {
 
 export function recipientChips(page: Page): Locator {
   return recipientsSection(page).locator('mat-chip');
+}
+
+/** Creates a sensor of `experimentId` without DAS sensor and parameter alias, so without DAS key. */
+export async function createSensorWithoutDasKey(
+  api: APIRequestContext,
+  experimentId: string,
+  name: string,
+): Promise<void> {
+  const response = await api.post('/api/sensors', {
+    data: {
+      name,
+      das: 'SOL_EXPERTS',
+      mainExperimentId: experimentId,
+      coordinates: { x: 1, y: 2, z: 3 },
+      active: true,
+      parameters: [
+        {
+          name: 'No DAS key',
+          unit: 'METER',
+          type: { name: 'Temperature' },
+          alarmLimits: { lower: 0, upper: 1 },
+          active: true,
+        },
+      ],
+    },
+  });
+  await readJson(response, `Creating sensor "${name}"`);
 }

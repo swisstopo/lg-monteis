@@ -1,4 +1,4 @@
-import { HttpContext, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
+import { HttpContext, HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   DirectoryUserDto,
@@ -282,7 +282,7 @@ describe('NotificationPage', () => {
     );
     await page.rowsShown(2);
 
-    page.openDetails(1);
+    await page.openDetails(1);
 
     expect(workbenchRouter.navigate).toHaveBeenCalledWith(
       [
@@ -303,7 +303,7 @@ describe('NotificationPage', () => {
     );
     await page.rowsShown(1);
 
-    expect(page.openDetailsDisabled(0)).toBe(true);
+    expect(await page.openDetailsDisabled(0)).toBe(true);
   });
 
   it('shows the empty state instead of the table without notifying parameters', async () => {
@@ -382,12 +382,25 @@ class PageView {
     );
   }
 
-  openDetails(rowIndex: number): void {
-    this.cell(this.rows()[rowIndex], 'details').querySelector<HTMLElement>('button')!.click();
+  async openDetails(rowIndex: number): Promise<void> {
+    (await this.openDetailsItem(rowIndex)).click();
   }
 
-  openDetailsDisabled(rowIndex: number): boolean {
-    return this.cell(this.rows()[rowIndex], 'details').querySelector('button')!.disabled;
+  async openDetailsDisabled(rowIndex: number): Promise<boolean> {
+    return (await this.openDetailsItem(rowIndex)).disabled;
+  }
+
+  private async openDetailsItem(rowIndex: number): Promise<HTMLButtonElement> {
+    this.cell(this.rows()[rowIndex], 'actions')
+      .querySelector<HTMLElement>('button[aria-label="Row actions"]')!
+      .click();
+    return vi.waitFor(() => {
+      const item = [...document.querySelectorAll<HTMLButtonElement>('[mat-menu-item]')].find(
+        (button) => button.textContent?.includes('Open details'),
+      );
+      if (!item) throw new Error('open details menu item not shown');
+      return item;
+    });
   }
 
   async sortBy(colId: string): Promise<void> {
