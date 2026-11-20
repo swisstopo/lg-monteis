@@ -21,9 +21,14 @@ public record Recipients(List<RecipientCandidate> candidates, boolean saved) {
     return new Recipients(candidatesSelecting(members, savedIds), true);
   }
 
+  // group members only: admins and global editors get access by role, not group
+  public static List<DirectoryUser> candidatesOf(ExperimentMembers members) {
+    return members.all();
+  }
+
   private static List<RecipientCandidate> candidatesSelecting(
       ExperimentMembers members, Collection<UUID> selectedIds) {
-    return members.recipientCandidates().stream()
+    return candidatesOf(members).stream()
         .map(user -> new RecipientCandidate(user, selectedIds.contains(user.id())))
         .toList();
   }

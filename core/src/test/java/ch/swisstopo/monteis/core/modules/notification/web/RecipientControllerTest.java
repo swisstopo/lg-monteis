@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserWebMapperImpl;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.ExperimentMembers;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
@@ -42,7 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @ControllerTest(RecipientController.class)
-@Import({RecipientService.class, RecipientWebMapperImpl.class})
+@Import({RecipientService.class, RecipientWebMapperImpl.class, DirectoryUserWebMapperImpl.class})
 class RecipientControllerTest {
 
   private static final String RECIPIENTS = "/api/experiments/{id}/recipients";

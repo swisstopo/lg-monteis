@@ -1,8 +1,8 @@
 package ch.swisstopo.monteis.core.modules.notification.web;
 
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserIdsDto;
 import ch.swisstopo.monteis.core.modules.notification.service.RecipientService;
+import ch.swisstopo.monteis.core.modules.notification.web.dto.inbound.RecipientIdsDto;
 import ch.swisstopo.monteis.core.modules.notification.web.dto.outbound.RecipientsResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -62,7 +62,7 @@ public class RecipientController {
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public RecipientsResponseDto replaceRecipientsOf(
-      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id, @Valid @RequestBody DirectoryUserIdsDto dto) {
+      @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id, @Valid @RequestBody RecipientIdsDto dto) {
     return mapper.toDto(service.replaceRecipientsOf(id, Set.copyOf(dto.userIds())));
   }
 }
