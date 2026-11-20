@@ -254,7 +254,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
         request.filterModel() != null
             && (request.filterModel().containsKey("measureValue")
                 || request.filterModel().containsKey("newestMeasurement")
-                // dasKey now resolves against latest_readings too (see DAS_KEY above)
+                // dasKey resolves against latest_readings too (see DAS_KEY above)
                 || request.filterModel().containsKey("dasKey"));
 
     int totalCount =
