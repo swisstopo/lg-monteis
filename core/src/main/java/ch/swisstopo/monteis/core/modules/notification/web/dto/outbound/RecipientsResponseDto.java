@@ -1,11 +1,10 @@
 package ch.swisstopo.monteis.core.modules.notification.web.dto.outbound;
 
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 public record RecipientsResponseDto(
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED) List<DirectoryUserDto> recipients,
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED) List<RecipientCandidateDto> candidates,
     @Schema(
             requiredMode = Schema.RequiredMode.REQUIRED,
             description =

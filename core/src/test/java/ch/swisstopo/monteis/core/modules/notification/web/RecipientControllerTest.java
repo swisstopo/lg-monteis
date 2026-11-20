@@ -4,6 +4,7 @@ import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIM
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.OTHER_EXPERIMENT;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -13,14 +14,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.ExperimentMembers;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.domain.Experiment;
-import ch.swisstopo.monteis.core.modules.notification.domain.Recipients;
+import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
+import ch.swisstopo.monteis.core.modules.notification.domain.RecipientRepository;
 import ch.swisstopo.monteis.core.modules.notification.service.RecipientService;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -36,55 +41,80 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @ControllerTest(RecipientController.class)
-@Import(RecipientWebMapperImpl.class)
+@Import({RecipientService.class, RecipientWebMapperImpl.class})
 class RecipientControllerTest {
 
   private static final String RECIPIENTS = "/api/experiments/{id}/recipients";
-  private static final String CANDIDATES = "/api/experiments/{id}/recipient-candidates";
 
-  private static final DirectoryUser ANNA =
+  private static final DirectoryUser PI_ANNA =
       new DirectoryUser(UUID.randomUUID(), "Anna", "Amman", "anna@example.test");
+  private static final DirectoryUser READER_CARL =
+      new DirectoryUser(UUID.randomUUID(), "Carl", "Christen", "carl@example.test");
+  private static final UUID LEFT_DORA = UUID.randomUUID();
 
   @Autowired private MockMvc mockMvc;
 
-  @MockitoBean private RecipientService service;
+  @MockitoBean private ExperimentRepository experimentRepository;
+  @MockitoBean private RecipientRepository recipientRepository;
+  @MockitoBean private UserDirectory userDirectory;
 
   @ParameterizedTest
   @EnumSource(
       value = PrivilegeLevel.class,
       names = {"MONTEIS_ADMIN", "GLOBAL_EDITOR", "EXPERIMENT_PI"})
-  void should_list_the_recipients_with_their_contact_details_for_a_writer_of_the_experiment(
-      PrivilegeLevel level) throws Exception {
+  void should_select_the_pis_while_the_list_was_never_saved(PrivilegeLevel level) throws Exception {
     // given
-    given(service.findRecipientsOf(ASSIGNED_EXPERIMENT))
-        .willReturn(new Recipients(List.of(ANNA), true));
+    givenMembers();
+    given(recipientRepository.findSavedRecipientIdsOf(ASSIGNED_EXPERIMENT))
+        .willReturn(Optional.empty());
 
     // when / then
     mockMvc
         .perform(get(RECIPIENTS, ASSIGNED_EXPERIMENT).with(authentication(level.authentication())))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.saved").value(true))
-        .andExpect(jsonPath("$.recipients.length()").value(1))
-        .andExpect(jsonPath("$.recipients[0].id").value(ANNA.id().toString()))
-        .andExpect(jsonPath("$.recipients[0].firstName").value("Anna"))
-        .andExpect(jsonPath("$.recipients[0].lastName").value("Amman"))
-        .andExpect(jsonPath("$.recipients[0].email").value("anna@example.test"));
+        .andExpect(jsonPath("$.saved").value(false))
+        .andExpect(jsonPath("$.candidates.length()").value(2))
+        .andExpect(jsonPath("$.candidates[0].user.id").value(PI_ANNA.id().toString()))
+        .andExpect(jsonPath("$.candidates[0].user.firstName").value("Anna"))
+        .andExpect(jsonPath("$.candidates[0].user.lastName").value("Amman"))
+        .andExpect(jsonPath("$.candidates[0].user.email").value("anna@example.test"))
+        .andExpect(jsonPath("$.candidates[0].selected").value(true))
+        .andExpect(jsonPath("$.candidates[1].user.id").value(READER_CARL.id().toString()))
+        .andExpect(jsonPath("$.candidates[1].selected").value(false));
   }
 
   @Test
-  void should_tell_a_list_that_was_never_saved() throws Exception {
+  void should_select_the_saved_recipients_and_leave_out_those_who_lost_access() throws Exception {
     // given
-    given(service.findRecipientsOf(ASSIGNED_EXPERIMENT))
-        .willReturn(new Recipients(List.of(ANNA), false));
+    givenMembers();
+    given(recipientRepository.findSavedRecipientIdsOf(ASSIGNED_EXPERIMENT))
+        .willReturn(Optional.of(Set.of(READER_CARL.id(), LEFT_DORA)));
 
     // when / then
     mockMvc
-        .perform(
-            get(RECIPIENTS, ASSIGNED_EXPERIMENT)
-                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .perform(getRecipientsAsPi())
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.saved").value(false))
-        .andExpect(jsonPath("$.recipients[0].id").value(ANNA.id().toString()));
+        .andExpect(jsonPath("$.saved").value(true))
+        .andExpect(jsonPath("$.candidates.length()").value(2))
+        .andExpect(jsonPath("$.candidates[0].selected").value(false))
+        .andExpect(jsonPath("$.candidates[1].user.id").value(READER_CARL.id().toString()))
+        .andExpect(jsonPath("$.candidates[1].selected").value(true));
+  }
+
+  @Test
+  void should_select_nobody_for_a_saved_empty_list() throws Exception {
+    // given
+    givenMembers();
+    given(recipientRepository.findSavedRecipientIdsOf(ASSIGNED_EXPERIMENT))
+        .willReturn(Optional.of(Set.of()));
+
+    // when / then
+    mockMvc
+        .perform(getRecipientsAsPi())
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.saved").value(true))
+        .andExpect(jsonPath("$.candidates[0].selected").value(false))
+        .andExpect(jsonPath("$.candidates[1].selected").value(false));
   }
 
   @ParameterizedTest
@@ -97,7 +127,7 @@ class RecipientControllerTest {
         .perform(get(RECIPIENTS, ASSIGNED_EXPERIMENT).with(authentication(level.authentication())))
         .andExpect(status().isForbidden());
 
-    then(service).shouldHaveNoInteractions();
+    then(userDirectory).shouldHaveNoInteractions();
   }
 
   @Test
@@ -109,15 +139,13 @@ class RecipientControllerTest {
                 .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
         .andExpect(status().isForbidden());
 
-    then(service).shouldHaveNoInteractions();
+    then(userDirectory).shouldHaveNoInteractions();
   }
 
   @Test
   void should_answer_404_for_an_unknown_experiment() throws Exception {
     // given
-    UUID unknown = UUID.randomUUID();
-    given(service.findRecipientsOf(unknown))
-        .willThrow(new ObjectNotFoundException(Experiment.class));
+    UUID unknown = givenUnknownExperiment();
 
     // when / then
     mockMvc
@@ -131,54 +159,85 @@ class RecipientControllerTest {
   @Test
   void should_answer_503_when_keycloak_is_unavailable() throws Exception {
     // given
-    given(service.findRecipientsOf(ASSIGNED_EXPERIMENT))
-        .willThrow(new UserDirectoryUnavailableException("down"));
+    givenKeycloakUnavailable();
 
     // when / then
     mockMvc
-        .perform(
-            get(RECIPIENTS, ASSIGNED_EXPERIMENT)
-                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .perform(getRecipientsAsPi())
         .andExpect(status().isServiceUnavailable())
         .andExpect(jsonPath("$.messageKey").value(UserDirectoryUnavailableException.MESSAGE_KEY));
+  }
+
+  @Test
+  void should_not_offer_the_removed_candidates_endpoint() throws Exception {
+    // when / then
+    mockMvc
+        .perform(
+            get("/api/experiments/{id}/recipient-candidates", ASSIGNED_EXPERIMENT)
+                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .andExpect(status().isNotFound());
   }
 
   @ParameterizedTest
   @EnumSource(
       value = PrivilegeLevel.class,
       names = {"MONTEIS_ADMIN", "GLOBAL_EDITOR", "EXPERIMENT_PI"})
-  void should_replace_the_recipients_for_a_writer_of_the_experiment(PrivilegeLevel level)
+  void should_replace_the_recipients_and_answer_like_the_get(PrivilegeLevel level)
       throws Exception {
     // given
-    given(service.replaceRecipientsOf(ASSIGNED_EXPERIMENT, Set.of(ANNA.id())))
-        .willReturn(new Recipients(List.of(ANNA), true));
+    givenMembers();
+    given(recipientRepository.findSavedRecipientIdsOf(ASSIGNED_EXPERIMENT))
+        .willReturn(Optional.empty());
 
     // when / then
     mockMvc
         .perform(
-            replaceRecipients(ASSIGNED_EXPERIMENT, userIdsJson(ANNA.id(), ANNA.id()))
+            replaceRecipients(ASSIGNED_EXPERIMENT, userIdsJson(READER_CARL.id(), READER_CARL.id()))
                 .with(authentication(level.authentication())))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.saved").value(true))
-        .andExpect(jsonPath("$.recipients.length()").value(1))
-        .andExpect(jsonPath("$.recipients[0].id").value(ANNA.id().toString()))
-        .andExpect(jsonPath("$.recipients[0].email").value("anna@example.test"));
+        .andExpect(jsonPath("$.candidates.length()").value(2))
+        .andExpect(jsonPath("$.candidates[0].user.id").value(PI_ANNA.id().toString()))
+        .andExpect(jsonPath("$.candidates[0].selected").value(false))
+        .andExpect(jsonPath("$.candidates[1].user.email").value("carl@example.test"))
+        .andExpect(jsonPath("$.candidates[1].selected").value(true));
+    then(recipientRepository)
+        .should()
+        .replaceRecipientsOf(ASSIGNED_EXPERIMENT, Set.of(READER_CARL.id()));
   }
 
   @Test
   void should_accept_an_empty_list() throws Exception {
     // given
-    given(service.replaceRecipientsOf(ASSIGNED_EXPERIMENT, Set.of()))
-        .willReturn(new Recipients(List.of(), true));
+    givenMembers();
+    given(recipientRepository.findSavedRecipientIdsOf(ASSIGNED_EXPERIMENT))
+        .willReturn(Optional.empty());
 
     // when / then
     mockMvc
-        .perform(
-            replaceRecipients(ASSIGNED_EXPERIMENT, userIdsJson())
-                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .perform(replaceRecipientsAsPi(userIdsJson()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.saved").value(true))
-        .andExpect(jsonPath("$.recipients").isEmpty());
+        .andExpect(jsonPath("$.candidates[0].selected").value(false))
+        .andExpect(jsonPath("$.candidates[1].selected").value(false));
+    then(recipientRepository).should().replaceRecipientsOf(ASSIGNED_EXPERIMENT, Set.of());
+  }
+
+  @Test
+  void should_keep_a_saved_recipient_who_lost_access() throws Exception {
+    // given
+    givenMembers();
+    given(recipientRepository.findSavedRecipientIdsOf(ASSIGNED_EXPERIMENT))
+        .willReturn(Optional.of(Set.of(PI_ANNA.id(), LEFT_DORA)));
+
+    // when / then
+    mockMvc
+        .perform(replaceRecipientsAsPi(userIdsJson(READER_CARL.id())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.candidates.length()").value(2));
+    then(recipientRepository)
+        .should()
+        .replaceRecipientsOf(ASSIGNED_EXPERIMENT, Set.of(READER_CARL.id(), LEFT_DORA));
   }
 
   @ParameterizedTest
@@ -190,11 +249,11 @@ class RecipientControllerTest {
     // when / then
     mockMvc
         .perform(
-            replaceRecipients(ASSIGNED_EXPERIMENT, userIdsJson(ANNA.id()))
+            replaceRecipients(ASSIGNED_EXPERIMENT, userIdsJson(PI_ANNA.id()))
                 .with(authentication(level.authentication())))
         .andExpect(status().isForbidden());
 
-    then(service).shouldHaveNoInteractions();
+    then(recipientRepository).shouldHaveNoInteractions();
   }
 
   @Test
@@ -202,27 +261,38 @@ class RecipientControllerTest {
     // when / then
     mockMvc
         .perform(
-            replaceRecipients(OTHER_EXPERIMENT, userIdsJson(ANNA.id()))
+            replaceRecipients(OTHER_EXPERIMENT, userIdsJson(PI_ANNA.id()))
                 .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
         .andExpect(status().isForbidden());
 
-    then(service).shouldHaveNoInteractions();
+    then(recipientRepository).shouldHaveNoInteractions();
   }
 
   @Test
-  void should_answer_404_when_replacing_the_recipients_of_an_unknown_experiment() throws Exception {
+  void should_answer_404_and_store_nothing_for_an_unknown_experiment() throws Exception {
     // given
-    UUID unknown = UUID.randomUUID();
-    given(service.replaceRecipientsOf(unknown, Set.of(ANNA.id())))
-        .willThrow(new ObjectNotFoundException(Experiment.class));
+    UUID unknown = givenUnknownExperiment();
 
     // when / then
     mockMvc
         .perform(
-            replaceRecipients(unknown, userIdsJson(ANNA.id()))
+            replaceRecipients(unknown, userIdsJson(PI_ANNA.id()))
                 .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication())))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.messageKey").value("object.not-found"));
+    then(recipientRepository).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_answer_503_and_store_nothing_when_keycloak_is_unavailable() throws Exception {
+    // given
+    givenKeycloakUnavailable();
+
+    // when / then
+    mockMvc
+        .perform(replaceRecipientsAsPi(userIdsJson(PI_ANNA.id())))
+        .andExpect(status().isServiceUnavailable());
+    then(recipientRepository).shouldHaveNoInteractions();
   }
 
   @ParameterizedTest
@@ -230,13 +300,11 @@ class RecipientControllerTest {
   void should_reject_a_missing_list_or_a_missing_id_with_422(String body) throws Exception {
     // when / then
     mockMvc
-        .perform(
-            replaceRecipients(ASSIGNED_EXPERIMENT, body)
-                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .perform(replaceRecipientsAsPi(body))
         .andExpect(status().isUnprocessableContent())
         .andExpect(jsonPath("$[0].messageKey").value("validation.required"));
 
-    then(service).shouldHaveNoInteractions();
+    then(recipientRepository).shouldHaveNoInteractions();
   }
 
   @ParameterizedTest
@@ -244,75 +312,39 @@ class RecipientControllerTest {
   void should_reject_a_malformed_body_with_400(String body) throws Exception {
     // when / then
     mockMvc
-        .perform(
-            replaceRecipients(ASSIGNED_EXPERIMENT, body)
-                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
+        .perform(replaceRecipientsAsPi(body))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.messageKey").value("error.system.internal"));
 
-    then(service).shouldHaveNoInteractions();
+    then(recipientRepository).shouldHaveNoInteractions();
   }
 
-  @ParameterizedTest
-  @EnumSource(
-      value = PrivilegeLevel.class,
-      names = {"MONTEIS_ADMIN", "GLOBAL_EDITOR", "EXPERIMENT_PI"})
-  void should_list_the_candidates_with_their_contact_details_for_a_writer_of_the_experiment(
-      PrivilegeLevel level) throws Exception {
-    // given
-    given(service.findRecipientCandidatesOf(ASSIGNED_EXPERIMENT)).willReturn(List.of(ANNA));
-
-    // when / then
-    mockMvc
-        .perform(get(CANDIDATES, ASSIGNED_EXPERIMENT).with(authentication(level.authentication())))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(1))
-        .andExpect(jsonPath("$[0].id").value(ANNA.id().toString()))
-        .andExpect(jsonPath("$[0].firstName").value("Anna"))
-        .andExpect(jsonPath("$[0].lastName").value("Amman"))
-        .andExpect(jsonPath("$[0].email").value("anna@example.test"));
+  private void givenMembers() {
+    given(userDirectory.findMembersOf(ASSIGNED_EXPERIMENT))
+        .willReturn(new ExperimentMembers(List.of(PI_ANNA, READER_CARL), List.of(PI_ANNA), true));
   }
 
-  @ParameterizedTest
-  @EnumSource(
-      value = PrivilegeLevel.class,
-      names = {"BASISROLLE", "EXPERIMENT_USER"})
-  void should_forbid_a_caller_without_write_access_to_list_the_candidates(PrivilegeLevel level)
-      throws Exception {
-    // when / then
-    mockMvc
-        .perform(get(CANDIDATES, ASSIGNED_EXPERIMENT).with(authentication(level.authentication())))
-        .andExpect(status().isForbidden());
-
-    then(service).shouldHaveNoInteractions();
+  private void givenKeycloakUnavailable() {
+    given(userDirectory.findMembersOf(ASSIGNED_EXPERIMENT))
+        .willThrow(new UserDirectoryUnavailableException("down"));
   }
 
-  @Test
-  void should_forbid_a_pi_of_another_experiment_to_list_the_candidates() throws Exception {
-    // when / then
-    mockMvc
-        .perform(
-            get(CANDIDATES, OTHER_EXPERIMENT)
-                .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication())))
-        .andExpect(status().isForbidden());
-
-    then(service).shouldHaveNoInteractions();
-  }
-
-  @Test
-  void should_answer_404_for_the_candidates_of_an_unknown_experiment() throws Exception {
-    // given
+  private UUID givenUnknownExperiment() {
     UUID unknown = UUID.randomUUID();
-    given(service.findRecipientCandidatesOf(unknown))
-        .willThrow(new ObjectNotFoundException(Experiment.class));
+    willThrow(new ObjectNotFoundException(Experiment.class))
+        .given(experimentRepository)
+        .requireVisible(unknown);
+    return unknown;
+  }
 
-    // when / then
-    mockMvc
-        .perform(
-            get(CANDIDATES, unknown)
-                .with(authentication(PrivilegeLevel.MONTEIS_ADMIN.authentication())))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.messageKey").value("object.not-found"));
+  private static MockHttpServletRequestBuilder getRecipientsAsPi() {
+    return get(RECIPIENTS, ASSIGNED_EXPERIMENT)
+        .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()));
+  }
+
+  private static MockHttpServletRequestBuilder replaceRecipientsAsPi(String body) {
+    return replaceRecipients(ASSIGNED_EXPERIMENT, body)
+        .with(authentication(PrivilegeLevel.EXPERIMENT_PI.authentication()));
   }
 
   private static MockHttpServletRequestBuilder replaceRecipients(UUID experimentId, String body) {
