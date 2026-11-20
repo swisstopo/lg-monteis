@@ -14,10 +14,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 import { DirectoryUserDto, RecipientControllerService } from '@core/generated';
-import { toErrorDtos } from '@core/http/api-error.model';
 import { skipGlobalErrorToast } from '@core/http/http-context';
 import { ToastService } from '@core/notifications/toast.service';
-import { UserNamePipe } from '@core/user-directory/user-name';
+import { userDirectoryErrorKey } from '@core/user-directory/user-directory-error';
+import { UserNamePipe, UserOptionPipe } from '@core/user-directory/user-name';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 
@@ -31,6 +31,7 @@ import { firstValueFrom } from 'rxjs';
     MatSelectModule,
     TranslatePipe,
     UserNamePipe,
+    UserOptionPipe,
   ],
   templateUrl: './recipients-section.html',
   styleUrl: './recipients-section.scss',
@@ -54,12 +55,7 @@ export class RecipientsSection {
       ),
   });
 
-  // denied and unavailable ask for different things, a misconfigured Keycloak needs an admin
-  protected readonly errorKey = computed(() => {
-    const error = this.recipients.error();
-    if (!error) return undefined;
-    return toErrorDtos(error)[0]?.messageKey ?? 'error.user-directory.unavailable';
-  });
+  protected readonly errorKey = computed(() => userDirectoryErrorKey(this.recipients.error()));
 
   protected readonly selected = linkedSignal<DirectoryUserDto[]>(() =>
     this.recipients.hasValue()

@@ -1,10 +1,12 @@
 package ch.swisstopo.monteis.core.modules.notification.service;
 
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.ExperimentMembers;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.modules.experiment.domain.ExperimentRepository;
 import ch.swisstopo.monteis.core.modules.notification.domain.RecipientRepository;
 import ch.swisstopo.monteis.core.modules.notification.domain.Recipients;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -40,14 +42,20 @@ public class RecipientService {
     experimentRepository.requireWritable(experimentId);
     // asked before the write: keycloak down => 503 with nothing stored
     ExperimentMembers members = userDirectory.findMembersOf(experimentId);
+    List<DirectoryUser> candidates = Recipients.candidatesOf(members);
     // lost access => hidden from the list, kept so they count again once access is back
     Set<UUID> hiddenIds =
         recipientRepository
             .findSavedRecipientIdsOf(experimentId)
-            .map(members::nonMembersAmong)
+            .map(savedIds -> idsOutside(savedIds, candidates))
             .orElse(Set.of());
     recipientRepository.replaceRecipientsOf(experimentId, union(userIds, hiddenIds));
     return Recipients.savedAmong(members, userIds);
+  }
+
+  private static Set<UUID> idsOutside(Set<UUID> ids, List<DirectoryUser> users) {
+    Set<UUID> userIds = users.stream().map(DirectoryUser::id).collect(Collectors.toSet());
+    return ids.stream().filter(id -> !userIds.contains(id)).collect(Collectors.toUnmodifiableSet());
   }
 
   private static Set<UUID> union(Set<UUID> first, Set<UUID> second) {

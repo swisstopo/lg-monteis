@@ -20,12 +20,7 @@
       <mat-label>{{ 'notification.recipients.add' | translate }}</mat-label>
       <mat-select [disabled]="offered().length === 0" (selectionChange)="add($event)">
         @for (candidate of offered(); track candidate.id) {
-          <mat-option [value]="candidate"
-            >{{ candidate | userName }}
-            @if (candidate.email) {
-              ({{ candidate.email }})
-            }
-          </mat-option>
+          <mat-option [value]="candidate">{{ candidate | userOption }}</mat-option>
         }
       </mat-select>
     </mat-form-field>
