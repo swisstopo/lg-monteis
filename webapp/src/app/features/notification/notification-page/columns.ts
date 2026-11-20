@@ -1,11 +1,16 @@
 import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
 import { NotifyingParameterResponseDto } from '@core/generated';
+import {
+  dasKeyFilterModel,
+  measurementsTableLink,
+} from '@features/measurements/measurements-table-link';
 import { measurementStateClass } from '@features/measurements/models/measurement-state';
 import { getUnitMetadata, Unit } from '@features/sensor/models/sensor.model';
 import { TranslateService } from '@ngx-translate/core';
+import { WorkbenchRouter } from '@scion/workbench';
+import { rowActionsColumn } from '@ui/table/row-actions-cell-renderer/row-actions-cell-renderer';
 import { TableColumn } from '@ui/table/table.types';
-import { OpenDetailsCellRenderer } from './open-details-cell-renderer';
 import { SensorParameterCellRenderer } from './sensor-parameter-cell-renderer';
 
 export function sensorParameterLabel(parameter: NotifyingParameterResponseDto): string {
@@ -16,6 +21,7 @@ export function sensorParameterLabel(parameter: NotifyingParameterResponseDto): 
 
 export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParameterResponseDto>[] {
   const translateService = inject(TranslateService);
+  const workbenchRouter = inject(WorkbenchRouter);
   const unitMetadata = getUnitMetadata();
 
   const formatLastMeasurement = (parameter: NotifyingParameterResponseDto): string => {
@@ -50,14 +56,19 @@ export function createColumns(datePipe: DatePipe): TableColumn<NotifyingParamete
       floatingFilter: false,
       flex: 2,
     },
-    {
-      colId: 'details',
-      headerName: translateService.translate('notification.parameters.column.details')(),
-      cellRenderer: OpenDetailsCellRenderer,
-      sortable: false,
-      filter: false,
-      floatingFilter: false,
-      flex: 1,
-    },
+    rowActionsColumn<NotifyingParameterResponseDto>([
+      {
+        labelKey: 'notification.parameters.openDetails',
+        icon: 'open_in_new',
+        disabled: (parameter) => !parameter.dasKey,
+        // blank, not auto: auto would re-filter every open measurement table tab
+        run: ({ dasKey }) => {
+          if (!dasKey) return;
+          void workbenchRouter.navigate(measurementsTableLink(dasKeyFilterModel(dasKey)), {
+            target: 'blank',
+          });
+        },
+      },
+    ]),
   ];
 }

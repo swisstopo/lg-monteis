@@ -16,7 +16,8 @@
       "cancel": "Cancel",
       "apply": "Apply",
       "floatingFilterSummary": "{{count}} selected"
-    }
+    },
+    "rowActions": "Row actions"
   },
   "error": {
     "system": {
@@ -586,8 +587,7 @@
       "title": "Notifying parameters",
       "column": {
         "sensorParameter": "Sensor parameter",
-        "lastMeasurement": "Last measurement",
-        "details": "Details"
+        "lastMeasurement": "Last measurement"
       },
       "inactive": "inactive",
       "openDetails": "Open details",

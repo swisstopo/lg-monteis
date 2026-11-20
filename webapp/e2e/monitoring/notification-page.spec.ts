@@ -1,10 +1,16 @@
 import { Request } from '@playwright/test';
-import { createExperiment, SEEDED_EXPERIMENTS, uniqueExperimentName } from '../support/experiments';
+import {
+  createExperiment,
+  randomSuffix,
+  SEEDED_EXPERIMENTS,
+  uniqueExperimentName,
+} from '../support/experiments';
 import { expect, test } from '../support/fixtures';
 import { gridCell } from '../support/grid';
 import { addUserToGroup, createExperimentAccessGroups } from '../support/keycloak';
 import { openAppAs, SEED_USERS } from '../support/login';
 import {
+  createSensorWithoutDasKey,
   openNotificationPage,
   recipientChips,
   recipientsSection,
@@ -35,8 +41,9 @@ test('"Open details" opens a measurement table tab filtered to the sensor parame
   const firstPage = page.waitForRequest(isMeasurementsPage);
   await page
     .locator('.ag-row', { hasText: TEMPERATURE })
-    .getByRole('button', { name: 'Open details' })
+    .getByRole('button', { name: 'Row actions' })
     .click();
+  await page.getByRole('menuitem', { name: 'Open details' }).click();
 
   // the unfiltered table must never flash up
   const filterModel = new URL((await firstPage).url()).searchParams.get('filterModel') ?? '';
@@ -46,6 +53,24 @@ test('"Open details" opens a measurement table tab filtered to the sensor parame
   );
   await expect(gridCell(page, TEMPERATURE_DAS_KEY)).toBeVisible();
   await expect(viewTab(page, `Notifications ${SEEDED_EXPERIMENTS.alpha}`)).toBeVisible();
+});
+
+test('"Open details" is disabled for a sensor parameter without DAS key', async ({
+  page,
+  adminApi,
+}) => {
+  const experiment = await createExperiment(adminApi, uniqueExperimentName());
+  const sensorName = `e2e-${randomSuffix()}`;
+  await createSensorWithoutDasKey(adminApi, experiment.id, sensorName);
+  await openAppAs(page, SEED_USERS.admin);
+  await openNotificationPage(page, experiment.id);
+
+  await page
+    .locator('.ag-row', { hasText: sensorName })
+    .getByRole('button', { name: 'Row actions' })
+    .click();
+
+  await expect(page.getByRole('menuitem', { name: 'Open details' })).toBeDisabled();
 });
 
 test('a PI replaces the default recipients and the saved list survives a reload', async ({
