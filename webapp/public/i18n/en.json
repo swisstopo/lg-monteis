@@ -377,7 +377,7 @@
       "save": "Save"
     },
     "owner": {
-      "not-eligible": "At least one selected owner is no longer a PI of this experiment."
+      "not-eligible": "At least one selected user may no longer be chosen for this experiment. Reload the page and select again."
     }
   },
   "measurements-table": {
