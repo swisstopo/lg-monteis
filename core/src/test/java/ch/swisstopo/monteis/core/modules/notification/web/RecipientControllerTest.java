@@ -253,6 +253,33 @@ class RecipientControllerTest {
         .replaceRecipientsOf(ASSIGNED_EXPERIMENT, Set.of(READER_CARL.id(), LEFT_DORA));
   }
 
+  @Test
+  void should_reject_a_user_who_is_no_candidate_with_422() throws Exception {
+    // given
+    givenMembers();
+    UUID stranger = UUID.randomUUID();
+
+    // when / then
+    mockMvc
+        .perform(replaceRecipientsAsPi(userIdsJson(PI_ANNA.id(), stranger)))
+        .andExpect(status().isUnprocessableContent())
+        .andExpect(jsonPath("$.field").value("userIds"))
+        .andExpect(jsonPath("$.messageKey").value("experiment.owner.not-eligible"));
+    then(recipientRepository).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_reject_a_saved_recipient_who_lost_access_when_sent_again() throws Exception {
+    // given
+    givenMembers();
+
+    // when / then
+    mockMvc
+        .perform(replaceRecipientsAsPi(userIdsJson(LEFT_DORA)))
+        .andExpect(status().isUnprocessableContent());
+    then(recipientRepository).shouldHaveNoInteractions();
+  }
+
   @ParameterizedTest
   @EnumSource(
       value = PrivilegeLevel.class,
