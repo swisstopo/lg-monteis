@@ -9,7 +9,6 @@ import ch.swisstopo.monteis.core.infrastructure.security.CurrentUserProvider;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.AccessDenied;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.KeycloakUnavailable;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.Known;
-import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis.NoWriteGroup;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.Collection;
@@ -102,18 +101,14 @@ class KeycloakUserDirectory implements UserDirectory {
   }
 
   private void cacheKeycloakAnswer(CacheKey key, Pis pis) {
-    if (pis instanceof Known || pis instanceof NoWriteGroup) {
+    if (pis instanceof Known) {
       cache.put(key, pis);
     }
   }
 
   private Pis fetchPisFromKeycloak(UUID experimentId) {
     try {
-      List<KeycloakGroup> writeGroups = findWriteGroupsOf(experimentId);
-      if (writeGroups.isEmpty()) {
-        return new NoWriteGroup();
-      }
-      return new Known(enabledMembersOf(writeGroups));
+      return new Known(enabledMembersOf(findWriteGroupsOf(experimentId)));
     } catch (KeycloakAccessDeniedException e) {
       return new AccessDenied(e.getMessage());
     } catch (KeycloakUnavailableException e) {

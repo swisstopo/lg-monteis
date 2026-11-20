@@ -103,13 +103,6 @@ class ExperimentOwnerServiceTest {
     }
 
     @Test
-    void should_hide_owners_without_a_write_group() {
-      givenPis(EXPERIMENT_ID, new Pis.NoWriteGroup());
-
-      assertEquals(VisibleOwners.NO_WRITE_GROUP, ownersOf(experiment(EXPERIMENT_ID, ALICE.id())));
-    }
-
-    @Test
     void should_hide_owners_when_keycloak_denies_reading_them() {
       givenPis(EXPERIMENT_ID, new Pis.AccessDenied("403"));
 
@@ -195,7 +188,7 @@ class ExperimentOwnerServiceTest {
 
     @Test
     void should_have_none_without_a_write_group() {
-      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(new Pis.NoWriteGroup());
+      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known());
 
       assertEquals(List.of(), service.findOwnerCandidates(EXPERIMENT_ID));
     }
@@ -246,7 +239,7 @@ class ExperimentOwnerServiceTest {
     @Test
     void should_allow_clearing_the_owners_without_a_write_group() {
       Experiment cleared = experiment(EXPERIMENT_ID);
-      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(new Pis.NoWriteGroup());
+      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known());
       given(repository.replaceOwners(EXPERIMENT_ID, Set.of())).willReturn(cleared);
 
       assertSame(cleared, service.replaceOwnersInKeycloak(stored, Set.of()));
