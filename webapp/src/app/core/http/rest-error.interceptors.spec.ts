@@ -1,4 +1,9 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpStatusCode,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -158,5 +163,23 @@ describe('restErrorInterceptor', () => {
     httpMock.expectOne('/api/whatever').flush(null, { status: 500, statusText: 'Server Error' });
 
     expect(toastService.error).not.toHaveBeenCalled();
+  });
+
+  it('stays silent for a status the request opts out of', () => {
+    httpClient
+      .get('/api/whatever', { context: skipGlobalErrorToast(HttpStatusCode.NotFound) })
+      .subscribe({ error: () => {} });
+    httpMock.expectOne('/api/whatever').flush(null, { status: 404, statusText: 'Not Found' });
+
+    expect(toastService.error).not.toHaveBeenCalled();
+  });
+
+  it('still toasts a status the request did not opt out of', () => {
+    httpClient
+      .get('/api/whatever', { context: skipGlobalErrorToast(HttpStatusCode.NotFound) })
+      .subscribe({ error: () => {} });
+    httpMock.expectOne('/api/whatever').flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect(toastService.error).toHaveBeenCalledWith('error.system.generic');
   });
 });
