@@ -16,7 +16,8 @@
       "cancel": "Cancel",
       "apply": "Apply",
       "floatingFilterSummary": "{{count}} selected"
-    }
+    },
+    "rowActions": "Row actions"
   },
   "error": {
     "system": {
@@ -376,7 +377,7 @@
       "save": "Save"
     },
     "owner": {
-      "not-eligible": "At least one selected owner is no longer a PI of this experiment."
+      "not-eligible": "At least one selected user may no longer be chosen for this experiment. Reload the page and select again."
     }
   },
   "measurements-table": {
@@ -438,7 +439,10 @@
     "admin": "Admin",
     "organisation": "Organisations",
     "fulcrumDocument": "Fulcrum Documents",
-    "knowledge": "Knowledge"
+    "knowledge": "Knowledge",
+    "monitoring": "Monitoring",
+    "notifications": "Notifications",
+    "notificationsOf": "Notifications – {{name}}"
   },
   "chart": {
     "error": {
@@ -466,7 +470,8 @@
     "organisation": "Organisations",
     "measurements-table": "Measurements",
     "measurements-visualization": "Measurements 3D View",
-    "fulcrumDocument": "Fulcrum Documents"
+    "fulcrumDocument": "Fulcrum Documents",
+    "notification": "Notifications {{name}}"
   },
   "tableHeader": {
     "search": "Search"
@@ -575,6 +580,27 @@
     "statusUnknown": "The sync status could not be loaded.",
     "error": {
       "start": "The sync with Fulcrum could not be started."
+    }
+  },
+  "notification": {
+    "parameters": {
+      "title": "Notifying parameters",
+      "column": {
+        "sensorParameter": "Sensor parameter",
+        "latestReading": "Latest reading"
+      },
+      "inactive": "inactive",
+      "openDetails": "Open details",
+      "empty": "No sensor parameter is Notification active yet",
+      "error": "Failed to load the notifying parameters."
+    },
+    "recipients": {
+      "title": "Recipients",
+      "add": "Add recipient",
+      "remove": "Remove recipient",
+      "save": "Save recipients",
+      "success": "Recipients saved successfully.",
+      "empty": "No recipients: nobody gets the alarms of this experiment."
     }
   }
 }

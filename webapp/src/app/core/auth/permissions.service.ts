@@ -11,6 +11,13 @@ const NO_PERMISSIONS: CurrentUserDto = {
   canAccessDocuments: false,
 };
 
+// mirrors backend Capabilities: canWriteAllExperiments covers admins => admin rule only in backend
+export function canWrite(currentUser: CurrentUserDto, experimentId: string): boolean {
+  return (
+    currentUser.canWriteAllExperiments || currentUser.writeExperimentIds.includes(experimentId)
+  );
+}
+
 /**
  * Single source for the cosmetic UI decisions (render a button or a menu entry, guard a route).
  * Loads `GET /api/me` once; the backend enforces every rule, this only mirrors it.
@@ -51,11 +58,7 @@ export class PermissionsService {
     () => this.canWriteAllExperiments() || this.writeExperimentIds().length > 0,
   );
 
-  /**
-   * Mirrors the backend Capabilities. `canWriteAllExperiments` already covers admins, so the admin
-   * rule lives in the backend only.
-   */
   canWriteExperiment(experimentId: string): boolean {
-    return this.canWriteAllExperiments() || this.writeExperimentIds().includes(experimentId);
+    return canWrite(this.currentUser(), experimentId);
   }
 }

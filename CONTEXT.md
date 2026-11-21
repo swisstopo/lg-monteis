@@ -17,6 +17,13 @@ _Avoid_: Document (alone)
 
 ## Sensors
 
+**DAS key**:
+The key a sensor parameter's readings arrive under from the DAS; unique per sensor parameter, so it can identify one in a link or filter. A sensor parameter has none only before its first reading.
+
+**Latest reading**:
+The most recent reading of a sensor parameter that the user may see: its time, value and status. A sensor parameter has none before its first reading.
+_Avoid_: Newest measurement, last measurement, last value
+
 **Sensor document**:
 A file a Monteis-Admin or a PI of one of the Sensor's Experiments uploaded to a specific Sensor; everyone who can see the Sensor can see it, and the same people who can upload it can delete it for good.
 _Avoid_: Document (alone), Attachment, Experiment document
@@ -32,6 +39,36 @@ _Avoid_: Sync, import, Aktualisieren (alone)
 **Last Fulcrum refresh**:
 When MONTEIS last read a Sensor's coordinates from Fulcrum, whether or not they changed; a Sensor without a Fulcrum ID has none.
 _Avoid_: Last sync, updated at
+
+## Alarming
+
+**Sensor range**:
+The plausibility limits of a sensor parameter, given by the sensor's manufacturer and set by a Monteis-Admin; values outside it are marked in colour.
+_Avoid_: Range (alone), Alarm limits
+
+**Alarm limits**:
+The limits of a sensor parameter whose violation raises an alarm.
+_Avoid_: Sensor range, Special alarm limits
+
+**Notification active**:
+A sensor parameter whose alarms go to the Recipients of every Experiment it belongs to; a Monteis-Admin or a PI of the sensor's main Experiment switches it on or off.
+_Avoid_: Under alarm, monitored, Alarm gesetzt
+
+**Notifying parameter**:
+A Notification active sensor parameter seen from one Experiment it belongs to: when its alarm limits are crossed, it notifies that Experiment's Recipients.
+_Avoid_: Notification parameter, alarmed parameter, alarming parameter
+
+**Closely monitored**:
+A sensor parameter with its own special alarm limits, set only by a Monteis-Admin, whose alarms go to a recipient list of Monteis-Admins instead of the Experiments' Recipients.
+_Avoid_: Spezialalarm, special alarm (alone), Notification active
+
+**Recipient**:
+A user with access to an Experiment who gets the alarms of its Notification active sensor parameters; until a PI or Monteis-Admin first saves the list, the Experiment's PIs are its Recipients.
+_Avoid_: Empfänger, subscriber
+
+**Recipient candidate**:
+A user who can be picked as a Recipient of an Experiment: an enabled member of its read or read + write group. Access through a role alone (Monteis-Admin, global editor) doesn't make someone a candidate.
+_Avoid_: member (alone), Empfänger-Kandidat
 
 ## Documents from Fulcrum
 

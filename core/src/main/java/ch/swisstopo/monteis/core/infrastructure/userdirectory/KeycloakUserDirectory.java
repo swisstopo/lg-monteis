@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -24,15 +26,17 @@ import org.springframework.stereotype.Component;
 @Component
 class KeycloakUserDirectory implements UserDirectory {
 
+  static final String READ_EXPERIMENT_IDS = "read_experiment_ids";
   static final String WRITE_EXPERIMENT_IDS = "write_experiment_ids";
 
+  private static final String NO_REQUESTING_USER = "no requesting user to ask Keycloak with";
   private static final Logger log = LoggerFactory.getLogger(KeycloakUserDirectory.class);
 
   private record CacheKey(UUID requestingUserId, UUID experimentId) {}
 
   private final KeycloakClient keycloak;
   private final CurrentUserProvider currentUser;
-  private final Cache<CacheKey, Pis> cache;
+  private final Cache<CacheKey, ExperimentMembers> cache;
 
   KeycloakUserDirectory(
       KeycloakClient keycloak,
@@ -61,7 +65,7 @@ class KeycloakUserDirectory implements UserDirectory {
   @Override
   public Pis pisForWriting(UUID experimentId) {
     Optional<CacheKey> key = keyForRequestingUser(experimentId);
-    return key.map(this::loadPis).orElseGet(KeycloakUserDirectory::noRequestingUser);
+    return key.map(this::fetchPis).orElseGet(KeycloakUserDirectory::noRequestingUser);
   }
 
   private Optional<CacheKey> keyForRequestingUser(UUID experimentId) {
@@ -69,7 +73,7 @@ class KeycloakUserDirectory implements UserDirectory {
   }
 
   private static Pis noRequestingUser() {
-    return new KeycloakUnavailable("no requesting user to ask Keycloak with");
+    return new KeycloakUnavailable(NO_REQUESTING_USER);
   }
 
   private static Map<UUID, Pis> eachWith(Collection<UUID> experimentIds, Pis pis) {
@@ -82,9 +86,12 @@ class KeycloakUserDirectory implements UserDirectory {
     Map<UUID, Pis> pisByExperiment = new LinkedHashMap<>();
     KeycloakUnavailable outage = null;
     for (CacheKey key : keys) {
-      Pis pis = cache.getIfPresent(key);
-      if (pis == null) {
-        pis = outage != null ? outage : loadPis(key);
+      ExperimentMembers cached = cache.getIfPresent(key);
+      Pis pis;
+      if (cached != null) {
+        pis = pisOf(cached);
+      } else {
+        pis = outage != null ? outage : fetchPis(key);
       }
       if (pis instanceof KeycloakUnavailable unavailable) {
         outage = unavailable;
@@ -94,40 +101,68 @@ class KeycloakUserDirectory implements UserDirectory {
     return pisByExperiment;
   }
 
-  private Pis loadPis(CacheKey key) {
-    Pis pis = fetchPisFromKeycloak(key.experimentId());
-    cacheKeycloakAnswer(key, pis);
-    return pis;
-  }
-
-  private void cacheKeycloakAnswer(CacheKey key, Pis pis) {
-    if (pis instanceof Known) {
-      cache.put(key, pis);
-    }
-  }
-
-  private Pis fetchPisFromKeycloak(UUID experimentId) {
+  private Pis fetchPis(CacheKey key) {
     try {
-      return new Known(enabledMembersOf(findWriteGroupsOf(experimentId)));
-    } catch (KeycloakAccessDeniedException e) {
+      ExperimentMembers members = fetchMembersFromKeycloak(key.experimentId());
+      cache.put(key, members);
+      return pisOf(members);
+    } catch (UserDirectoryDeniedException e) {
       return new AccessDenied(e.getMessage());
-    } catch (KeycloakUnavailableException e) {
+    } catch (UserDirectoryUnavailableException e) {
       log.warn("Keycloak is unavailable, not asking it again in this call: {}", e.getMessage());
       return new KeycloakUnavailable(e.getMessage());
     }
   }
 
-  private List<KeycloakGroup> findWriteGroupsOf(UUID experimentId) {
-    return keycloak.findGroupsByAttribute(WRITE_EXPERIMENT_IDS, experimentId.toString());
+  private static Pis pisOf(ExperimentMembers members) {
+    return new Known(members.pis());
+  }
+
+  @Override
+  public ExperimentMembers findMembersOf(UUID experimentId) {
+    CacheKey key =
+        keyForRequestingUser(experimentId)
+            .orElseThrow(() -> new UserDirectoryUnavailableException(NO_REQUESTING_USER));
+    // loader throws on failure => caffeine caches answers only
+    return cache.get(key, k -> fetchMembersFromKeycloak(k.experimentId()));
+  }
+
+  private ExperimentMembers fetchMembersFromKeycloak(UUID experimentId) {
+    List<DirectoryUser> pis = enabledMembersOf(findGroupsWith(WRITE_EXPERIMENT_IDS, experimentId));
+    List<DirectoryUser> readers =
+        enabledMembersOf(findGroupsWith(READ_EXPERIMENT_IDS, experimentId));
+    return new ExperimentMembers(pis, usersOutside(readers, pis));
+  }
+
+  private static List<DirectoryUser> usersOutside(
+      List<DirectoryUser> users, List<DirectoryUser> excluded) {
+    return users.stream().filter(user -> !excluded.contains(user)).toList();
+  }
+
+  private List<KeycloakGroup> findGroupsWith(String attributeName, UUID experimentId) {
+    return askKeycloak(
+        () -> keycloak.findGroupsByAttribute(attributeName, experimentId.toString()));
   }
 
   private List<DirectoryUser> enabledMembersOf(List<KeycloakGroup> groups) {
-    return groups.stream()
-        .flatMap(group -> keycloak.groupMembers(group.id()).stream())
-        .filter(KeycloakUser::enabled)
-        .map(DirectoryUser::from)
-        .distinct()
-        .sorted(DirectoryUser.BY_NAME)
-        .toList();
+    return distinctSortedByName(
+        groups.stream()
+            .flatMap(group -> askKeycloak(() -> keycloak.groupMembers(group.id())).stream())
+            .filter(KeycloakUser::enabled)
+            .map(DirectoryUser::from));
+  }
+
+  private static <T> T askKeycloak(Supplier<T> request) {
+    try {
+      return request.get();
+    } catch (KeycloakAccessDeniedException e) {
+      throw new UserDirectoryDeniedException(e.getMessage());
+    } catch (KeycloakUnavailableException e) {
+      throw new UserDirectoryUnavailableException(e.getMessage());
+    }
+  }
+
+  private static List<DirectoryUser> distinctSortedByName(Stream<DirectoryUser> users) {
+    return users.distinct().sorted(DirectoryUser.BY_NAME).toList();
   }
 }

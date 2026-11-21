@@ -68,6 +68,8 @@ public interface ExperimentRepository {
    */
   void requireVisible(UUID id);
 
+  void requireWritable(UUID id);
+
   /**
    * Retrieves a page of {@link Experiment}s
    *
@@ -84,4 +86,6 @@ public interface ExperimentRepository {
    * @return all experiments visible to the current user
    */
   List<Experiment> findAll();
+
+  List<Experiment> findAllWritable();
 }

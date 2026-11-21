@@ -23,6 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -106,6 +107,26 @@ class SecurityConfigAuthorizationTest {
             HttpMethod.GET,
             "/api/experiments/" + ASSIGNED_EXPERIMENT + "/owner-candidates",
             adminOnly),
+        Arguments.of(
+            HttpMethod.GET,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/notifying-parameters",
+            assignedExperiment),
+        Arguments.of(
+            HttpMethod.GET,
+            "/api/experiments/" + OTHER_EXPERIMENT + "/notifying-parameters",
+            allExperiments),
+        Arguments.of(
+            HttpMethod.GET,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/recipients",
+            assignedExperiment),
+        Arguments.of(
+            HttpMethod.GET, "/api/experiments/" + OTHER_EXPERIMENT + "/recipients", allExperiments),
+        Arguments.of(
+            HttpMethod.PUT,
+            "/api/experiments/" + ASSIGNED_EXPERIMENT + "/recipients",
+            assignedExperiment),
+        Arguments.of(
+            HttpMethod.PUT, "/api/experiments/" + OTHER_EXPERIMENT + "/recipients", allExperiments),
         Arguments.of(HttpMethod.GET, "/api/sensors", everyone),
         Arguments.of(HttpMethod.GET, sensor, everyone),
         Arguments.of(HttpMethod.POST, "/api/sensors", adminOnly),
@@ -183,6 +204,23 @@ class SecurityConfigAuthorizationTest {
                 givenDecodableToken(level)));
 
     result.andExpect(documentReaders.contains(level) ? status().isOk() : status().isForbidden());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"/notifying-parameters", "/recipients"})
+  void should_apply_the_notification_rules_to_head_requests(String endpoint) throws Exception {
+    List<PrivilegeLevel> writers =
+        List.of(
+            PrivilegeLevel.EXPERIMENT_PI,
+            PrivilegeLevel.GLOBAL_EDITOR,
+            PrivilegeLevel.MONTEIS_ADMIN);
+    String path = "/api/experiments/" + ASSIGNED_EXPERIMENT + endpoint;
+
+    for (PrivilegeLevel level : PrivilegeLevel.values()) {
+      mockMvc
+          .perform(withBearer(request(HttpMethod.HEAD, path), givenDecodableToken(level)))
+          .andExpect(writers.contains(level) ? status().isOk() : status().isForbidden());
+    }
   }
 
   @Test
@@ -273,6 +311,8 @@ class SecurityConfigAuthorizationTest {
     @GetMapping({
       "/api/experiments/{id}",
       "/api/experiments/{id}/documents",
+      "/api/experiments/{id}/notifying-parameters",
+      "/api/experiments/{id}/recipients",
       "/api/organisations/{id}",
       "/api/sensors/{id}/documents",
       "/api/sensors/{id}"
@@ -296,7 +336,12 @@ class SecurityConfigAuthorizationTest {
       return "ok";
     }
 
-    @PutMapping({"/api/experiments/{id}", "/api/organisations/{id}", "/api/sensors/{id}"})
+    @PutMapping({
+      "/api/experiments/{id}",
+      "/api/experiments/{id}/recipients",
+      "/api/organisations/{id}",
+      "/api/sensors/{id}"
+    })
     public String update(@PathVariable String id) {
       return "ok";
     }
