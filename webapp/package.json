@@ -17,7 +17,7 @@
     "e2e:report": "playwright show-report"
   },
   "private": true,
-  "packageManager": "pnpm@12.18.0",
+  "packageManager": "pnpm@12.21.0",
   "dependencies": {
     "@angular/cdk": "^22.1.7",
     "@angular/common": "^22.1.6",
@@ -36,7 +36,7 @@
     "@scion/workbench-client": "1.0.0-beta.43",
     "ag-grid-angular": "^36.3.0",
     "ag-grid-community": "^36.3.0",
-    "angular-eslint": "^22.6.0",
+    "angular-eslint": "^22.8.0",
     "angular-oauth2-oidc": "^22.0.2",
     "chart.js": "^4.6.1",
     "chartjs-adapter-date-fns": "^3.0.0",
@@ -47,26 +47,26 @@
     "tslib": "^2.9.1"
   },
   "devDependencies": {
-    "@analogjs/vite-plugin-angular": "^2.9.6",
-    "@angular-eslint/builder": "22.6.0",
+    "@analogjs/vite-plugin-angular": "^2.9.7",
+    "@angular-eslint/builder": "22.8.0",
     "@angular/build": "^22.1.8",
     "@angular/cli": "^22.1.8",
     "@angular/compiler-cli": "^22.1.6",
     "@eslint/js": "^10.0.1",
-    "@openapitools/openapi-generator-cli": "^2.42.1",
-    "@playwright/test": "^1.65.0",
+    "@openapitools/openapi-generator-cli": "^2.42.2",
+    "@playwright/test": "^1.65.1",
     "@types/node": "^26.6.6",
     "@types/three": "^0.187.0",
-    "@vitest/browser-playwright": "^5.1.0",
-    "angular-eslint": "22.6.0",
+    "@vitest/browser-playwright": "^5.1.1",
+    "angular-eslint": "22.8.0",
     "corepack": "^0.36.0",
-    "eslint": "^10.14.0",
+    "eslint": "^10.15.0",
     "jsdom": "^29.1.1",
-    "playwright": "^1.65.0",
-    "prettier": "^3.9.10",
+    "playwright": "^1.65.1",
+    "prettier": "^3.10.1",
     "prettier-plugin-organize-imports": "^4.3.0",
     "typescript": "~6.0.3",
-    "typescript-eslint": "8.72.2",
-    "vitest": "^5.1.0"
+    "typescript-eslint": "8.73.0",
+    "vitest": "^5.1.1"
   }
 }
