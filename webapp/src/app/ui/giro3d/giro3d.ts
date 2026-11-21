@@ -17,6 +17,7 @@ import Instance from '@giro3d/giro3d/core/Instance.js';
 import { CoordinateSystem } from '@giro3d/giro3d/core/geographic/CoordinateSystem.js';
 import Tiles3D from '@giro3d/giro3d/entities/Tiles3D.js';
 import { TranslatePipe } from '@ngx-translate/core';
+import { InlineError } from '@ui/inline-error/inline-error';
 import {
   AmbientLight,
   Color,
@@ -33,7 +34,6 @@ import {
 } from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
-import { InlineError } from '../inline-error/inline-error';
 import { TilesFetch, TilesFetchPlugin } from './tiles-fetch-plugin';
 
 const BLACK = new Color('#000');

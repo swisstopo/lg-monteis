@@ -94,6 +94,8 @@ export default class MeasurementsTable {
   private readonly dialog = inject(MatDialog);
   protected readonly measurementsService = inject(MeasurementsService);
   private readonly formErrorService = inject(FormErrorService);
+  private readonly view = inject(WorkbenchView);
+
   readonly serviceError = this.measurementsService.error;
   private readonly currentRange = signal<{ start: Date; end: Date } | null>(null);
   readonly dateRangeModel = signal<DateRangeModel>({
@@ -134,11 +136,11 @@ export default class MeasurementsTable {
 
   private readonly plottedIds = signal<string[]>([]);
 
-  constructor(view: WorkbenchView) {
+  constructor() {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
       const count = this.totalCount() ?? 0;
-      view.title = this.translateService.translate('tab.measurements-table', { count })();
+      this.view.title = this.translateService.translate('tab.measurements-table', { count })();
     });
 
     effect(() => {

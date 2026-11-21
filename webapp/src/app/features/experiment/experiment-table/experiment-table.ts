@@ -43,6 +43,7 @@ export default class ExperimentTable {
   private readonly experimentService = inject(ExperimentService);
   private readonly organisationService = inject(OrganisationService);
   private readonly translateService = inject(TranslateService);
+  private readonly view = inject(WorkbenchView);
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   protected readonly permissions = inject(PermissionsService);
@@ -85,10 +86,10 @@ export default class ExperimentTable {
     this.loadError,
   );
 
-  constructor(view: WorkbenchView) {
+  constructor() {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
-      view.title = this.translateService.translate('tab.experiment')();
+      this.view.title = this.translateService.translate('tab.experiment')();
     });
 
     // the cells only show organisation names once the organisations have loaded

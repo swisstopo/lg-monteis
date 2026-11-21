@@ -33,6 +33,7 @@ export default class SensorTable {
   private readonly formDialog = inject(FormDialogService);
   protected sensorService = inject(SensorService);
   private readonly translateService = inject(TranslateService);
+  private readonly view = inject(WorkbenchView);
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   protected readonly permissions = inject(PermissionsService);
@@ -57,10 +58,10 @@ export default class SensorTable {
     this.loadError,
   );
 
-  constructor(view: WorkbenchView) {
+  constructor() {
     // SCION Workbench: Dynamically update the tab title whenever the data changes
     effect(() => {
-      view.title = this.translateService.translate('tab.sensor')();
+      this.view.title = this.translateService.translate('tab.sensor')();
     });
 
     // the infinite row model has no way to notice a save in the dialog, so the visible pages are
