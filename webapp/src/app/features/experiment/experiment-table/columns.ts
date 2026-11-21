@@ -1,8 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { inject } from '@angular/core';
-import { ExperimentOwnerDto, ExperimentResponseDto } from '@core/generated';
+import { DirectoryUserDto, ExperimentResponseDto } from '@core/generated';
+import { userDisplayName } from '@core/user-directory/user-name';
 import { OrganisationService } from '@features/admin/organisatoin/services/organisation.service';
-import { ownerDisplayName } from '@features/experiment/owners/owner-name';
 import { OwnersCellRenderer } from '@features/experiment/owners/owners-cell-renderer';
 import { ExperimentService } from '@features/experiment/services/experiment.service';
 import { TranslateService } from '@ngx-translate/core';
@@ -91,14 +91,14 @@ export function createColumns(
         valuesProvider: async () => {
           const owners = await experimentService.findAllVisibleOwners();
           return owners.map((owner) => ({
-            displayName: ownerDisplayName(owner),
+            displayName: userDisplayName(owner),
             value: owner.id,
           }));
         },
         blankOptionLabel: translateService.translate('experiment.owners.none')(),
       },
       valueFormatter: (params) =>
-        (params.value as ExperimentOwnerDto[] | undefined)?.map(ownerDisplayName).join(', ') ?? '',
+        (params.value as DirectoryUserDto[] | undefined)?.map(userDisplayName).join(', ') ?? '',
       cellRenderer: OwnersCellRenderer,
     },
     {

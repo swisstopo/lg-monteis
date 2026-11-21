@@ -1,13 +1,13 @@
-import { ExperimentOwnerDto, ExperimentResponseDto } from '@core/generated';
+import { DirectoryUserDto, ExperimentResponseDto } from '@core/generated';
 
-export const ALICE: ExperimentOwnerDto = {
+export const ALICE: DirectoryUserDto = {
   id: 'alice',
   firstName: 'Alice',
   lastName: 'Muster',
   email: 'alice@example.com',
 };
 
-export const BOB: ExperimentOwnerDto = {
+export const BOB: DirectoryUserDto = {
   id: 'bob',
   firstName: 'Bob',
   lastName: 'Beispiel',

@@ -10,8 +10,6 @@ public record VisibleOwners(List<DirectoryUser> users, OwnersStatus status) {
       new VisibleOwners(List.of(), OwnersStatus.KEYCLOAK_UNAVAILABLE);
   public static final VisibleOwners ACCESS_DENIED =
       new VisibleOwners(List.of(), OwnersStatus.ACCESS_DENIED);
-  public static final VisibleOwners NO_WRITE_GROUP =
-      new VisibleOwners(List.of(), OwnersStatus.NO_WRITE_GROUP);
 
   public VisibleOwners {
     users = List.copyOf(users);

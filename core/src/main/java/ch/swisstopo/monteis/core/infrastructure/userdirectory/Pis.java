@@ -10,8 +10,6 @@ public sealed interface Pis {
     }
   }
 
-  record NoWriteGroup() implements Pis {}
-
   record AccessDenied(String reason) implements Pis {}
 
   record KeycloakUnavailable(String reason) implements Pis {}

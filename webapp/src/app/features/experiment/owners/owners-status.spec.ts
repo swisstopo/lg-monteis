@@ -12,6 +12,5 @@ describe('missingOwnersKey', () => {
       'experiment.owners.status.KEYCLOAK_UNAVAILABLE',
     );
     expect(missingOwnersKey('ACCESS_DENIED')).toBe('experiment.owners.status.ACCESS_DENIED');
-    expect(missingOwnersKey('NO_WRITE_GROUP')).toBe('experiment.owners.status.NO_WRITE_GROUP');
   });
 });
