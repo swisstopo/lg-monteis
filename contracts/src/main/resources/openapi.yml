@@ -93,6 +93,20 @@ components:
           default: true
           description: Alerts on the alarm limits while true. Defaults to true for configs published
             before this field existed.
+        timeout:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Seconds without a new reading before a notification goes out, e.g. 9000 for
+            2.5 hours. Absent means no timeout alert.
+          example: 9000
+        notification_trigger_count:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Consecutive readings outside the alarm limits before a notification goes out.
+            Absent means the first one already notifies.
+          example: 10
         closely_monitored:
           type: boolean
           default: false

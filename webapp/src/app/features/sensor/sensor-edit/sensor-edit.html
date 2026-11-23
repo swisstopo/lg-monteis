@@ -162,7 +162,34 @@
     @for (parameter of sensorForm.parameters; track parameterKeys()[i]; let i = $index) {
       <mat-divider class="full-width" />
       <fieldset class="parameter-block full-width" [attr.data-testid]="'parameter-block-' + i">
+        @if (!readOnly()) {
+          <div class="parameter-actions">
+            <button
+              matButton
+              type="button"
+              [disabled]="!canRemoveParameter()"
+              [attr.aria-label]="'sensor.parameter.removeButton' | translate"
+              (click)="removeParameter(i)"
+            >
+              <mat-icon fontIcon="delete"></mat-icon>
+              {{ 'sensor.parameter.deleteButton' | translate }}
+            </button>
+          </div>
+        }
+
         <div class="form-column">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.parameter.active.label' | translate }}</mat-label>
+            <mat-select [formField]="parameter.active">
+              <mat-option [value]="true"
+                >{{ 'sensor.active.option.active' | translate }}
+              </mat-option>
+              <mat-option [value]="false"
+                >{{ 'sensor.active.option.inactive' | translate }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
           <mat-form-field appearance="outline">
             <mat-label>{{ 'sensor.parameter.name.label' | translate }}</mat-label>
             <input
@@ -187,7 +214,9 @@
               [placeholder]="'sensor.parameter.dasParameterAlias.placeholder' | translate"
             />
           </mat-form-field>
+        </div>
 
+        <div class="form-column">
           <mat-form-field appearance="outline">
             <mat-label>{{ 'sensor.type.label' | translate }}</mat-label>
             <input
@@ -213,20 +242,6 @@
             }
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'sensor.parameter.active.label' | translate }}</mat-label>
-            <mat-select [formField]="parameter.active">
-              <mat-option [value]="true"
-                >{{ 'sensor.active.option.active' | translate }}
-              </mat-option>
-              <mat-option [value]="false"
-                >{{ 'sensor.active.option.inactive' | translate }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-        </div>
-
-        <div class="form-column">
           <mat-form-field appearance="outline">
             <mat-label>{{ 'sensor.unit.label' | translate }}</mat-label>
             <mat-select [formField]="parameter.unit">
@@ -271,6 +286,80 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.rangeLimit.low.label' | translate }}</mat-label>
+            <input matInput type="number" [formField]="parameter.rangeLimits.lower" />
+            @if (
+              parameter.rangeLimits.lower().touched() && parameter.rangeLimits.lower().invalid()
+            ) {
+              <mat-error>
+                @for (error of parameter.rangeLimits.lower().errors(); track error) {
+                  {{ error.message }}
+                }
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.rangeLimit.high.label' | translate }}</mat-label>
+            <input matInput type="number" [formField]="parameter.rangeLimits.upper" />
+            @if (
+              parameter.rangeLimits.upper().touched() && parameter.rangeLimits.upper().invalid()
+            ) {
+              <mat-error>
+                @for (error of parameter.rangeLimits.upper().errors(); track error) {
+                  {{ error.message }}
+                }
+              </mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="form-column">
+          <div class="toggle-field">
+            <mat-slide-toggle [formField]="parameter.notificationActive">
+              {{ 'sensor.parameter.notificationActive.label' | translate }}
+            </mat-slide-toggle>
+          </div>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sensor.parameter.timeout.label' | translate }}</mat-label>
+            <input matInput type="number" step="any" [formField]="parameter.timeout" />
+            <span matTextSuffix>{{ 'sensor.parameter.timeout.suffix' | translate }}</span>
+            @if (parameter.timeout().touched() && parameter.timeout().invalid()) {
+              <mat-error>
+                @for (error of parameter.timeout().errors(); track error) {
+                  {{ error.message }}
+                }
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{
+              'sensor.parameter.notificationTriggerCount.label' | translate
+            }}</mat-label>
+            <input
+              matInput
+              type="number"
+              step="1"
+              [formField]="parameter.notificationTriggerCount"
+            />
+            <span matTextSuffix>{{
+              'sensor.parameter.notificationTriggerCount.suffix' | translate
+            }}</span>
+            @if (
+              parameter.notificationTriggerCount().touched() &&
+              parameter.notificationTriggerCount().invalid()
+            ) {
+              <mat-error>
+                @for (error of parameter.notificationTriggerCount().errors(); track error) {
+                  {{ error.message }}
+                }
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
             <mat-label>{{ 'sensor.alarmLimit.from.label' | translate }}</mat-label>
             <input matInput type="number" [formField]="parameter.alarmLimits.lower" />
             @if (
@@ -299,26 +388,48 @@
           </mat-form-field>
         </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'sensor.parameter.comment.label' | translate }}</mat-label>
-          <textarea matInput [formField]="parameter.comment" rows="5"></textarea>
-        </mat-form-field>
+        <div class="form-column">
+          <div class="toggle-field">
+            <mat-slide-toggle [formField]="parameter.closelyMonitored">
+              {{ 'sensor.parameter.closelyMonitored.label' | translate }}
+            </mat-slide-toggle>
+          </div>
 
-        @if (!readOnly()) {
-          <button
-            matButton
-            type="button"
-            [disabled]="!canRemoveParameter()"
-            [attr.aria-label]="'sensor.parameter.removeButton' | translate"
-            (click)="removeParameter(i)"
-          >
-            <mat-icon fontIcon="delete"></mat-icon>
-            {{ 'sensor.parameter.removeButton' | translate }}
-          </button>
-        }
-        <mat-divider class="full-width" />
+          @if (parameter.closelyMonitored().value()) {
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'sensor.specialAlarmLimit.low.label' | translate }}</mat-label>
+              <input matInput type="number" [formField]="parameter.specialAlarmLimits.lower" />
+              @if (
+                parameter.specialAlarmLimits.lower().touched() &&
+                parameter.specialAlarmLimits.lower().invalid()
+              ) {
+                <mat-error>
+                  @for (error of parameter.specialAlarmLimits.lower().errors(); track error) {
+                    {{ error.message }}
+                  }
+                </mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'sensor.specialAlarmLimit.high.label' | translate }}</mat-label>
+              <input matInput type="number" [formField]="parameter.specialAlarmLimits.upper" />
+              @if (
+                parameter.specialAlarmLimits.upper().touched() &&
+                parameter.specialAlarmLimits.upper().invalid()
+              ) {
+                <mat-error>
+                  @for (error of parameter.specialAlarmLimits.upper().errors(); track error) {
+                    {{ error.message }}
+                  }
+                </mat-error>
+              }
+            </mat-form-field>
+          }
+        </div>
       </fieldset>
     }
+    <mat-divider class="full-width" />
   </form>
 
   @if (sensorId(); as sensorId) {

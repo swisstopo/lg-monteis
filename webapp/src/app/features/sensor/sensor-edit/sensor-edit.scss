@@ -26,8 +26,33 @@
   border-style: none;
 }
 
+.parameter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.toggle-field {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  margin-bottom: 22px;
+}
+
 .parameter-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+// No spinner arrows on number fields
+input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }

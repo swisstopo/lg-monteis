@@ -192,14 +192,5 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
           ? translateService.translate('sensor.active.column.yes')()
           : translateService.translate('sensor.active.column.no')(),
     },
-    {
-      field: 'parameter.comment',
-      headerName: translateService.translate('sensor.parameter.comment.label')(),
-      sortable: true,
-      filter: 'agTextColumnFilter',
-      tooltip: (params) => params.value,
-      width: 400,
-      suppressAutoSize: true,
-    },
   ];
 }
