@@ -602,7 +602,7 @@ class SensorControllerTest {
   @ParameterizedTest
   @EnumSource(
       value = PrivilegeLevel.class,
-      names = {"EXPERIMENT_PI", "GLOBAL_EDITOR", "MONTEIS_ADMIN"})
+      names = {"EXPERIMENT_PI", "MONTEIS_ADMIN"})
   void should_let_experiment_writers_refresh_sensors_from_fulcrum(PrivilegeLevel level)
       throws Exception {
     // when / then

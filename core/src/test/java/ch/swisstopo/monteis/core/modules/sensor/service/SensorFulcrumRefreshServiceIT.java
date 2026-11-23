@@ -416,8 +416,8 @@ class SensorFulcrumRefreshServiceIT {
             null,
             new MonteisPrincipal(PI_SUBJECT, "pi"),
             PrivilegeLevel.EXPERIMENT_PI.grantedAuthorities(),
-            List.of(readByPi.getId()),
-            List.of(writtenByPi.getId())),
+            Set.of(writtenByPi.getId(), readByPi.getId()),
+            Set.of(writtenByPi.getId())),
         () -> {
           action.run();
           return null;

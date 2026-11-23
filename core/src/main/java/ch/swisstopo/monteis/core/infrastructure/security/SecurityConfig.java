@@ -69,7 +69,7 @@ public class SecurityConfig {
                     // grant only, before the write-all rule (MON-173, ADR "Hybride
                     // Durchsetzung"): RLS limits the sensors, values come from Fulcrum only
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSORS_FULCRUM_REFRESH)
-                    .hasAnyAuthority(Permissions.EXPERIMENT_WRITE, Permissions.ADMIN)
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(WRITE_REQUESTS)
                     .hasAuthority(EXPERIMENT_WRITE_ALL)
                     .anyRequest()
