@@ -44,15 +44,3 @@
   justify-content: space-between;
   align-items: center;
 }
-
-// No spinner arrows on number fields
-input[type='number'] {
-  appearance: textfield;
-  -moz-appearance: textfield;
-
-  &::-webkit-outer-spin-button,
-  &::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-}

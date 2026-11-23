@@ -69,7 +69,6 @@ public interface SensorJooqMapper {
       FormulasRecord formulaRecord,
       SensorTypesRecord typeRecord);
 
-  // Optional limits: a nested "x.lower" mapping would build a record from two null columns.
   @Named("rangeLimits")
   default RangeLimits toRangeLimits(SensorParameterRecord r) {
     return r.getLowerRangeLimit() == null

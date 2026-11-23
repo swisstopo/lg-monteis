@@ -22,7 +22,6 @@ public class SensorParameter {
   private Integer timeout;
   private Integer notificationTriggerCount;
   private Boolean closelyMonitored;
-  // Required while closelyMonitored is set.
   private AlarmLimits specialAlarmLimits;
   private Boolean active;
   private Integer version;
@@ -170,7 +169,6 @@ public class SensorParameter {
     return notificationActive;
   }
 
-  // Omitted means off.
   public void setNotificationActive(Boolean notificationActive) {
     this.notificationActive = Boolean.TRUE.equals(notificationActive);
   }
@@ -195,7 +193,6 @@ public class SensorParameter {
     return closelyMonitored;
   }
 
-  // Omitted means off.
   public void setCloselyMonitored(Boolean closelyMonitored) {
     this.closelyMonitored = Boolean.TRUE.equals(closelyMonitored);
   }

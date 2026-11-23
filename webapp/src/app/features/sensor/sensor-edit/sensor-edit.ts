@@ -84,7 +84,6 @@ interface SensorParameterFormData {
   };
   rangeLimits: OptionalLimits;
   notificationActive: boolean;
-  // In hours, see hoursToSeconds
   timeout: number | null;
   notificationTriggerCount: number | null;
   closelyMonitored: boolean;
