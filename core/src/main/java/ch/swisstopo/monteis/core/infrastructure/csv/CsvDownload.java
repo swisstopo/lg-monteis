@@ -15,6 +15,8 @@ public final class CsvDownload {
 
   public static final MediaType TEXT_CSV = new MediaType("text", "csv", StandardCharsets.UTF_8);
 
+  static final char BYTE_ORDER_MARK = '﻿';
+
   private CsvDownload() {}
 
   public static ResponseEntity<StreamingResponseBody> attachment(String fileName, CsvRows rows) {
@@ -28,6 +30,9 @@ public final class CsvDownload {
               // flushed but not closed, spring flushes the stream once more after the body
               Writer writer =
                   new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
+              // without a byte order mark Excel reads the file in the system code page, and
+              // breaks umlauts
+              writer.write(BYTE_ORDER_MARK);
               rows.writeTo(writer);
               writer.flush();
             });

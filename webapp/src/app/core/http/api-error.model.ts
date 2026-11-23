@@ -16,6 +16,25 @@ export function toErrorDtos(error: unknown): ErrorDto[] {
   return [];
 }
 
+/**
+ * {@link toErrorDtos} for a request made with responseType 'blob' (a file download), whose error
+ * body arrives as a blob too.
+ */
+export async function toErrorDtosFromBlob(error: unknown): Promise<ErrorDto[]> {
+  // anything but an HTTP error response (e.g. an Error thrown on the client) holds no ErrorDto
+  if (!(error instanceof HttpErrorResponse)) {
+    return [];
+  }
+  if (!(error.error instanceof Blob)) {
+    return toErrorDtos(error);
+  }
+  try {
+    return toErrorDtos(JSON.parse(await error.error.text()));
+  } catch {
+    return [];
+  }
+}
+
 export class AppErrorResponse {
   constructor(private readonly error: HttpErrorResponse) {}
 

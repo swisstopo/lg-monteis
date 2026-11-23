@@ -42,6 +42,7 @@
   "fulcrum.sensor.not-found": "Fulcrum holds no record with this Fulcrum ID. Check the ID in Fulcrum, or clear it and enter the coordinates manually.",
   "fulcrum.sync.alreadyRunning": "A sync with Fulcrum is already running.",
   "fulcrum.disabled": "Fulcrum is switched off in this environment, nothing can be loaded from it.",
+  "export.tooManyRows": "The table holds more than {{max}} entries. Narrow it down with filters to download it.",
   "access.denied": "You are not allowed to change this record.",
   "validation": {
     "required": "There is a validation error with this field.",
@@ -382,9 +383,13 @@
   },
   "measurements-table": {
     "loading": "Streaming logs from database...",
-    "error": "Failed to connect to the backend server.",
+    "error": {
+      "connection": "Failed to connect to the backend server.",
+      "downloadFailed": "Failed to download measurements as CSV."
+    },
     "plot": "Plot",
     "reload": "Reload",
+    "download": "Download",
     "form": {
       "startDate": {
         "label": "Start Date",

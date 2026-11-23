@@ -26,6 +26,7 @@ import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Record;
 import org.jooq.Result;
+import org.jooq.SortField;
 import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
@@ -59,7 +60,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
   // valid when they were ingested even if the sensor/parameter alias is later remapped (see
   // db/meta/schema/V14) - falling back to composing it from current metadata (mirrors
   // ch.swisstopo.monteis.contracts.DasKey.compose) for a parameter with no readings yet.
-  private static final Field<String> DAS_KEY =
+  static final Field<String> DAS_KEY =
       DSL.coalesce(
               LATEST_READINGS.field(SENSOR_READING_SECURED.DAS_KEY),
               DSL.concat(
@@ -70,7 +71,18 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                   SENSOR_PARAMETER.DAS_PARAMETER_ALIAS))
           .as("das_key");
 
-  private static final Map<String, Field<?>> MEASUREMENT_COLUMNS_BY_COL_ID =
+  private static final Table<?> BASE_TABLE =
+      SENSORS
+          .join(SENSOR_PARAMETER)
+          .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
+          .leftJoin(EXPERIMENTS)
+          .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
+          .leftJoin(SENSOR_TYPES)
+          .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID));
+
+  static final Table<?> JOINED_FROM = BASE_TABLE.leftJoin(LATEST_READINGS).on(trueCondition());
+
+  static final Map<String, Field<?>> MEASUREMENT_COLUMNS_BY_COL_ID =
       Map.ofEntries(
           Map.entry("sensorParameterId", SENSOR_PARAMETER.ID),
           Map.entry("dasKey", DAS_KEY),
@@ -92,6 +104,14 @@ public class MeasurementQueryRepository implements MeasurementQuery {
           Map.entry("alarmLimits.upper", SENSOR_PARAMETER.UPPER_ALARM_LIMIT),
           Map.entry("active", SENSORS.ACTIVE),
           Map.entry("comment", SENSORS.COMMENT));
+
+  // the default sort (sensor id) and most column sorts tie across the parameters of one sensor,
+  // the parameter id orders those the same way on every query, so pages neither skip nor repeat
+  static List<SortField<?>> withStableTiebreaker(Collection<SortField<?>> sortFields) {
+    List<SortField<?>> withTiebreaker = new ArrayList<>(sortFields);
+    withTiebreaker.add(SENSOR_PARAMETER.ID.asc());
+    return withTiebreaker;
+  }
 
   public MeasurementQueryRepository(DSLContext dsl, Clock clock) {
     this.dsl = dsl;
@@ -189,17 +209,6 @@ public class MeasurementQueryRepository implements MeasurementQuery {
         PagedRequestJooqTranslator.translate(
             request, MEASUREMENT_COLUMNS_BY_COL_ID, SENSOR_PARAMETER.SENSOR_ID.asc());
 
-    var baseTable =
-        SENSORS
-            .join(SENSOR_PARAMETER)
-            .on(SENSOR_PARAMETER.SENSOR_ID.eq(SENSORS.ID))
-            .leftJoin(EXPERIMENTS)
-            .on(SENSORS.MAIN_EXPERIMENT.eq(EXPERIMENTS.ID))
-            .leftJoin(SENSOR_TYPES)
-            .on(SENSOR_PARAMETER.TYPE_ID.eq(SENSOR_TYPES.ID));
-
-    var fullTable = baseTable.leftJoin(LATEST_READINGS).on(trueCondition());
-
     List<MeasurementRow> rows =
         dsl.select(
                 SENSOR_PARAMETER.ID,
@@ -219,9 +228,9 @@ public class MeasurementQueryRepository implements MeasurementQuery {
                 SENSOR_PARAMETER.UPPER_ALARM_LIMIT,
                 SENSORS.ACTIVE,
                 SENSORS.COMMENT)
-            .from(fullTable)
+            .from(JOINED_FROM)
             .where(criteria.condition())
-            .orderBy(criteria.sortFields())
+            .orderBy(withStableTiebreaker(criteria.sortFields()))
             .limit(request.limit())
             .offset(request.offset())
             .fetch(mapping(MeasurementRow::new));
@@ -260,7 +269,7 @@ public class MeasurementQueryRepository implements MeasurementQuery {
     int totalCount =
         dsl.fetchCount(
             dsl.select(SENSORS.ID)
-                .from(needsReadings ? fullTable : baseTable)
+                .from(needsReadings ? JOINED_FROM : BASE_TABLE)
                 .where(criteria.condition()));
 
     return new PagedResult<>(data, totalCount);

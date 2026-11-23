@@ -18,6 +18,7 @@ import {
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel, MatSuffix } from '@angular/material/input';
+import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import {
   MatTimepicker,
   MatTimepickerInput,
@@ -31,6 +32,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { ChartComponent, ChartOptions, ChartRangeEvent, createTimeChartOptions } from '@ui/chart';
 import { InlineError } from '@ui/inline-error/inline-error';
+import { createCsvDownload } from '@ui/table/csv-download';
 import { createPagedDatasource } from '@ui/table/paged-datasource.factory';
 import Table from '@ui/table/table';
 import { GridApi } from 'ag-grid-community';
@@ -83,6 +85,7 @@ function combineDateAndTime(date: Date | null, time: Date | null): Date | null {
     FormField,
     MatError,
     InlineError,
+    MatProgressSpinner,
   ],
   providers: [DatePipe],
   templateUrl: './measurements-table.html',
@@ -114,6 +117,13 @@ export default class MeasurementsTable {
   protected totalCount = signal<number | undefined>(undefined);
   protected loadError = signal(false);
   private readonly gridApi = signal<GridApi | undefined>(undefined);
+  protected readonly csvDownload = createCsvDownload({
+    gridApi: this.gridApi,
+    fetchCsv: (sortModel, filterModel) =>
+      this.measurementsService.getMeasurementsCsv(sortModel, filterModel),
+    fileName: 'measurements.csv',
+    failedMessageKey: 'measurements-table.error.downloadFailed',
+  });
 
   protected datasource = createPagedDatasource(
     (params) => this.measurementsService.getMeasurements(params),
