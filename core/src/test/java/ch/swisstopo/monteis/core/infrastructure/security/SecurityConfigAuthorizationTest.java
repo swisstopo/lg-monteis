@@ -3,8 +3,8 @@ package ch.swisstopo.monteis.core.infrastructure.security;
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.ASSIGNED_EXPERIMENT;
 import static ch.swisstopo.monteis.core.itconfig.PrivilegeLevel.UNASSIGNED_EXPERIMENT;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -27,7 +27,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.security.config.observation.SecurityObservationSettings;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -35,7 +34,6 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -194,22 +192,13 @@ class SecurityConfigAuthorizationTest {
   }
 
   @Test
-  void should_not_create_a_session_for_a_rejected_browser_request() throws Exception {
-    MvcResult result =
-        mockMvc
-            .perform(get("/api/experiments").accept(MediaType.TEXT_HTML))
-            .andExpect(status().isUnauthorized())
-            .andReturn();
-
-    assertNull(result.getRequest().getSession(false));
+  void should_answer_an_anonymous_write_with_401() throws Exception {
+    mockMvc.perform(post("/api/experiments").with(csrf())).andExpect(status().isUnauthorized());
   }
 
   @Test
-  void should_answer_an_anonymous_write_with_401_and_no_session() throws Exception {
-    MvcResult result =
-        mockMvc.perform(post("/api/experiments")).andExpect(status().isUnauthorized()).andReturn();
-
-    assertNull(result.getRequest().getSession(false));
+  void should_reject_a_write_without_bearer_token_and_csrf_token_with_403() throws Exception {
+    mockMvc.perform(post("/api/experiments")).andExpect(status().isForbidden());
   }
 
   @Test

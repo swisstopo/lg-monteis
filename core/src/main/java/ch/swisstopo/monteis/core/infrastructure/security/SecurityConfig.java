@@ -13,8 +13,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.observation.SecurityObservationSettings;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
@@ -46,7 +44,7 @@ public class SecurityConfig {
     http.authorizeHttpRequests(
             request ->
                 request
-                    // error dispatch has no auth (stateless, bearer filter runs once) => would
+                    // error dispatch has no auth (bearer filter runs once) => would
                     // turn 404/500 into 401
                     .dispatcherTypeMatchers(DispatcherType.ERROR)
                     .permitAll()
@@ -74,11 +72,6 @@ public class SecurityConfig {
                     .hasAuthority(EXPERIMENT_WRITE_ALL)
                     .anyRequest()
                     .authenticated())
-        // bearer token on every request, session would only cost work (ADR-011 P4)
-        .sessionManagement(
-            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        // browser sends no credential automatically (no cookie) => no csrf risk (ADR-011 P4)
-        .csrf(AbstractHttpConfigurer::disable)
         .oauth2ResourceServer(
             oauth2 ->
                 oauth2
