@@ -38,7 +38,7 @@ services:
 
   metadata_db:
     container_name: monteis-meta-db
-    image: postgres:18
+    image: postgres:19
     restart: unless-stopped
     depends_on:
       ts_db:
