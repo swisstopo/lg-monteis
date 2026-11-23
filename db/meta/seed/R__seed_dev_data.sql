@@ -86,7 +86,7 @@ INSERT INTO sensor_parameter (
     lower_range_limit, upper_range_limit,
     notification_active, upper_alarm_limit, lower_alarm_limit,
     closely_monitored, upper_special_alarm_limit, lower_special_alarm_limit,
-    active, comment, version
+    active, version
 )
 -- das_parameter_alias is the DAS-side field name for the measurement itself (e.g. "temperature"),
 -- not a repeat of the sensor's own das_sensor_alias - a real DAS device reports one or more named
@@ -99,7 +99,7 @@ VALUES
      -100.0, 200.0,
      true, 100.0, -50.0,
      true, 110.0, -60.0,
-     true, 'Primary temperature reading', 1),
+     true, 1),
 
     -- Param for PRESS-1&2: range limits and notifications, no close monitoring
     ('00000000-0000-7000-8000-000000000402', '00000000-0000-7000-8000-000000000202',
@@ -108,7 +108,7 @@ VALUES
      0.0, 6000.0,
      true, 5000.0, 0.0,
      false, NULL, NULL,
-     true, 'Primary pressure reading', 1),
+     true, 1),
 
     -- Param for DISP-2: range limits only
     ('00000000-0000-7000-8000-000000000403', '00000000-0000-7000-8000-000000000203',
@@ -117,7 +117,7 @@ VALUES
      -100.0, 100.0,
      false, 50.0, -50.0,
      false, NULL, NULL,
-     true, 'Primary displacement reading', 1),
+     true, 1),
 
     -- Param for FLOW-2: range limits only
     ('00000000-0000-7000-8000-000000000404', '00000000-0000-7000-8000-000000000204',
@@ -126,7 +126,7 @@ VALUES
      0.0, 2000.0,
      false, 1500.0, 0.0,
      false, NULL, NULL,
-     true, 'Primary flow reading', 1),
+     true, 1),
 
     -- Param for ADMIN: range limits only
     ('00000000-0000-7000-8000-000000000405', '00000000-0000-7000-8000-000000000205',
@@ -135,7 +135,7 @@ VALUES
      0.0, 2000.0,
      false, 1500.0, 0.0,
      false, NULL, NULL,
-     true, 'Admin flow parameter', 1);
+     true, 1);
 
 
 -- 6. Link Sensors to secondary Experiments (Many-to-Many)
@@ -215,7 +215,7 @@ FROM generate_series(1, 10) AS i
 bulk_parameters AS (
 INSERT INTO sensor_parameter (
     sensor_id, name, das_parameter_alias, type_id, unit, formula_id,
-    upper_alarm_limit, lower_alarm_limit, active, comment
+    upper_alarm_limit, lower_alarm_limit, active
 )
 SELECT
     id,
@@ -226,8 +226,7 @@ SELECT
     '00000000-0000-7000-8000-000000000004',           -- formula_id (passthrough)
     100.0,                                            -- upper_alarm_bound
     -50.0,                                            -- lower_alarm_bound
-    true,
-    'Auto-generated parameter'
+    true
 FROM bulk_sensors
     RETURNING id
     )
@@ -246,8 +245,7 @@ INSERT INTO sensor_parameter (
     formula_id,
     upper_alarm_limit,
     lower_alarm_limit,
-    active,
-    comment
+    active
 )
 SELECT
     id,
@@ -258,7 +256,6 @@ SELECT
     '00000000-0000-7000-8000-000000000004',
     200.0,
     -100.0,
-    true,
-    'Second auto-generated parameter'
+    true
 FROM sensors
 WHERE das_sensor_alias = 'BULK-1';
