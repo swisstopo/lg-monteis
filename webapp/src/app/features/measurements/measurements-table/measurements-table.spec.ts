@@ -97,7 +97,8 @@ describe('MeasurementsTable', () => {
 
   function downloadable(): DownloadAccess {
     configure();
-    const component = TestBed.createComponent(MeasurementsTable).componentInstance as unknown as DownloadAccess;
+    const component = TestBed.createComponent(MeasurementsTable)
+      .componentInstance as unknown as DownloadAccess;
     component.gridApi.set({
       getSortModel: () => [],
       getFilterModel: () => ({}),
