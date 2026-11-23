@@ -18,9 +18,6 @@ import {
 } from '../support/monitoring';
 import { findExperimentIdByName } from '../support/monteis-api';
 
-// TODO MON-235: menu journeys once the layout calls addMonitoringMenu: a PI sees only their
-// experiments, an admin sees all
-
 // TEMP-1 of Alpha, with readings in db/timescale/seed/R__seed_dev_data.sql
 const TEMPERATURE = 'monteis-001 – Temperature Param';
 const TEMPERATURE_DAS_KEY = 'SOL_EXPERTS__TEMP-1__temperature';

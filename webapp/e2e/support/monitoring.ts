@@ -14,6 +14,12 @@ export async function openNotificationPage(page: Page, experimentId: string): Pr
   await page.goto(deepLink);
 }
 
+/** Opens the Monitoring menu and returns its `Notifications – <Experiment>` links. */
+export async function openNotificationsMenu(page: Page): Promise<Locator> {
+  await page.getByTitle('Monitoring').click();
+  return page.getByTestId('monitoring-menu-notifications-entry');
+}
+
 /** The workbench tab titled `title`. */
 export function viewTab(page: Page, title: string): Locator {
   return page.locator('wb-view-tab', { hasText: title });
