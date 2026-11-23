@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -25,10 +26,11 @@ class CurrentUserProviderTest {
   void should_return_subject_and_username_of_the_monteis_principal() {
     // given
     UUID subject = UUID.randomUUID();
-    MonteisPrincipal principal = new MonteisPrincipal(subject, "alice", List.of(), List.of());
+    MonteisPrincipal principal = new MonteisPrincipal(subject, "alice");
 
     SecurityContextHolder.getContext()
-        .setAuthentication(new MonteisAuthenticationToken(null, principal, List.of()));
+        .setAuthentication(
+            new MonteisAuthenticationToken(null, principal, List.of(), Set.of(), Set.of()));
 
     // when / then
     assertAll(

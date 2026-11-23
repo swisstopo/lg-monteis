@@ -56,9 +56,7 @@ public class FulcrumDocumentController {
 
   @Operation(
       summary = "Download the file of a Fulcrum Document",
-      description =
-          "Streams the file MONTEIS stored for the document as an attachment. Requires"
-              + " documents:read.")
+      description = "Streams the file MONTEIS stored for the document as an attachment.")
   @ApiResponse(
       responseCode = "200",
       description = "Successfully streamed the file",
@@ -99,7 +97,7 @@ public class FulcrumDocumentController {
       summary = "Start a Fulcrum sync",
       description =
           "Starts loading the Fulcrum Documents and their files from Fulcrum again, in the"
-              + " background. Requires documents:read.")
+              + " background.")
   @ApiResponse(responseCode = "202", description = "Sync started")
   @PostMapping(path = ApiPaths.FULCRUM_SYNC, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<FulcrumSyncStatusResponseDto> startFulcrumSync() {

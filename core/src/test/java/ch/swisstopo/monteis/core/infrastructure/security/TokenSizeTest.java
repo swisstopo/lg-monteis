@@ -37,8 +37,8 @@ class TokenSizeTest {
   void should_keep_a_token_with_all_roles_and_25_plus_25_experiment_ids_under_4_kb()
       throws JOSEException, NoSuchAlgorithmException {
     // given
+    List<String> readIds = experimentIds();
     List<String> writeIds = experimentIds();
-    List<String> readIds = writeIds; // Keycloak aggregates write ids into the read ids too
 
     // when
     String encoded = sign(realisticAccessToken(readIds, writeIds));
@@ -81,8 +81,6 @@ class TokenSizeTest {
                 List.of(
                     "monteis-client:experiment:read",
                     "monteis-client:experiment:write",
-                    "monteis-client:experiment:write:all",
-                    "monteis-client:documents:read",
                     "monteis-client:admin")))
         .claim("read_experiment_ids", readIds)
         .claim("write_experiment_ids", writeIds)

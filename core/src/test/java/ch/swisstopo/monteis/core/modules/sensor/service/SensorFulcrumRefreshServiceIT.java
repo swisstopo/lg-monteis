@@ -411,14 +411,13 @@ class SensorFulcrumRefreshServiceIT {
   }
 
   private void asPi(Runnable action) {
-    MonteisPrincipal pi =
-        new MonteisPrincipal(
-            PI_SUBJECT,
-            "pi",
-            List.of(writtenByPi.getId(), readByPi.getId()),
-            List.of(writtenByPi.getId()));
     callAs(
-        new MonteisAuthenticationToken(null, pi, PrivilegeLevel.EXPERIMENT_PI.grantedAuthorities()),
+        new MonteisAuthenticationToken(
+            null,
+            new MonteisPrincipal(PI_SUBJECT, "pi"),
+            PrivilegeLevel.EXPERIMENT_PI.grantedAuthorities(),
+            Set.of(writtenByPi.getId(), readByPi.getId()),
+            Set.of(writtenByPi.getId())),
         () -> {
           action.run();
           return null;

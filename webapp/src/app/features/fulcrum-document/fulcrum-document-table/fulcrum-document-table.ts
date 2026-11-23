@@ -9,7 +9,6 @@ import {
 } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
-import { PermissionsService } from '@core/auth/permissions.service';
 import { FulcrumDocumentResponseDto } from '@core/generated';
 import { ToastService } from '@core/notifications/toast.service';
 import { FulcrumSync } from '@features/fulcrum-document/fulcrum-sync/fulcrum-sync';
@@ -36,7 +35,6 @@ export default class FulcrumDocumentTable {
   private readonly fileDownloadService = inject(FileDownloadService);
   private readonly toastService = inject(ToastService);
   private readonly translateService = inject(TranslateService);
-  protected readonly permissions = inject(PermissionsService);
 
   readonly searchTerm = signal<string>('');
 
@@ -55,11 +53,7 @@ export default class FulcrumDocumentTable {
     return this.documents.value().filter((document) => matchesSearch(document, term));
   });
 
-  // without document access there is no action for a selected row, so a click selects nothing
-  protected readonly gridOptions = computed<GridOptions<FulcrumDocumentResponseDto>>(() => ({
-    domLayout: 'normal',
-    ...(this.permissions.canAccessDocuments() ? {} : { rowSelection: undefined }),
-  }));
+  protected readonly gridOptions: GridOptions<FulcrumDocumentResponseDto> = { domLayout: 'normal' };
 
   constructor(view: WorkbenchView) {
     effect(() => {

@@ -1,6 +1,8 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import java.util.Collection;
+import java.util.Set;
+import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -15,14 +17,20 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
 
   private final @Nullable Jwt jwt;
   private final transient MonteisPrincipal principal;
+  private final Set<UUID> readExperimentIds;
+  private final Set<UUID> writeExperimentIds;
 
   public MonteisAuthenticationToken(
       @Nullable Jwt jwt,
       MonteisPrincipal principal,
-      @Nullable Collection<? extends GrantedAuthority> authorities) {
+      @Nullable Collection<? extends GrantedAuthority> authorities,
+      Set<UUID> readExperimentIds,
+      Set<UUID> writeExperimentIds) {
     super(authorities);
     this.jwt = jwt;
     this.principal = principal;
+    this.readExperimentIds = Set.copyOf(readExperimentIds);
+    this.writeExperimentIds = Set.copyOf(writeExperimentIds);
     super.setAuthenticated(true);
   }
 
@@ -32,8 +40,28 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
   }
 
   @Override
-  public Object getPrincipal() {
+  public MonteisPrincipal getPrincipal() {
     return principal;
+  }
+
+  public Set<UUID> readExperimentIds() {
+    return readExperimentIds;
+  }
+
+  public Set<UUID> writeExperimentIds() {
+    return writeExperimentIds;
+  }
+
+  public boolean canReadAllExperiments() {
+    return hasAuthority(MonteisJwtAuthenticationConverter.EXPERIMENT_READ_ALL);
+  }
+
+  public boolean canWriteAllExperiments() {
+    return hasAuthority(MonteisJwtAuthenticationConverter.EXPERIMENT_WRITE_ALL);
+  }
+
+  private boolean hasAuthority(String authority) {
+    return getAuthorities().stream().anyMatch(granted -> authority.equals(granted.getAuthority()));
   }
 
   @Override
@@ -41,7 +69,11 @@ public class MonteisAuthenticationToken extends AbstractAuthenticationToken {
     if (this == obj) {
       return true;
     }
-    return obj != null && getClass() == obj.getClass() && super.equals(obj);
+    return obj instanceof MonteisAuthenticationToken other
+        && getClass() == other.getClass()
+        && super.equals(other)
+        && readExperimentIds.equals(other.readExperimentIds)
+        && writeExperimentIds.equals(other.writeExperimentIds);
   }
 
   @Override

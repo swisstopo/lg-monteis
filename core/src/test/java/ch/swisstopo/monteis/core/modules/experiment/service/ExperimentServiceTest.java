@@ -54,7 +54,7 @@ class ExperimentServiceTest {
     given(repository.update(inputExperiment)).willReturn(expectedExperiment);
 
     // when
-    Experiment actualExperiment = service.updateExperiment(inputExperiment);
+    Experiment actualExperiment = service.updateExperiment(inputExperiment, null);
 
     // then
     then(repository).should().update(inputExperiment);
@@ -73,7 +73,7 @@ class ExperimentServiceTest {
     given(ownerService.replaceOwnersInKeycloak(updatedExperiment, ownerIds)).willReturn(withOwners);
 
     // when
-    Experiment actualExperiment = service.updateExperimentAndOwners(inputExperiment, ownerIds);
+    Experiment actualExperiment = service.updateExperiment(inputExperiment, ownerIds);
 
     // then
     assertSame(withOwners, actualExperiment);
@@ -104,7 +104,7 @@ class ExperimentServiceTest {
     given(organisationRepository.findExistingIdsAmong(List.of(unknown))).willReturn(Set.of());
 
     assertThrows(
-        FieldBusinessValidationException.class, () -> service.updateExperiment(experiment));
+        FieldBusinessValidationException.class, () -> service.updateExperiment(experiment, null));
     then(repository).shouldHaveNoInteractions();
   }
 
@@ -147,7 +147,8 @@ class ExperimentServiceTest {
         .willThrow(new ObjectNotFoundException(Experiment.class));
 
     // when / then
-    assertThrows(ObjectNotFoundException.class, () -> service.updateExperiment(inputExperiment));
+    assertThrows(
+        ObjectNotFoundException.class, () -> service.updateExperiment(inputExperiment, null));
   }
 
   @Test

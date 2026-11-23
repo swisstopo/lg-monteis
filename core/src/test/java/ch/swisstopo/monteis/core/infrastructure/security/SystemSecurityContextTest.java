@@ -1,18 +1,19 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class SystemSecurityContextTest {
@@ -23,7 +24,7 @@ class SystemSecurityContextTest {
   }
 
   @Test
-  void should_bind_an_authentication_that_access_policy_answers_with_system_capabilities() {
+  void should_bind_an_authentication_that_may_read_and_write_every_experiment() {
     // given
     AtomicReference<Authentication> captured = new AtomicReference<>();
 
@@ -31,18 +32,17 @@ class SystemSecurityContextTest {
     SystemSecurityContext.runAsSystem(
         () -> captured.set(SecurityContextHolder.getContext().getAuthentication()));
 
-    // then: all-experiment read and nothing else, without any authority of its own
-    assertSame(Capabilities.SYSTEM, Capabilities.of(captured.get()));
-    assertTrue(captured.get().getAuthorities().isEmpty());
-    assertTrue(SystemSecurityContext.isSystemAuthentication(captured.get()));
-  }
-
-  @Test
-  void should_not_recognise_other_authentications_as_system() {
-    assertFalse(SystemSecurityContext.isSystemAuthentication(null));
-    assertFalse(
-        SystemSecurityContext.isSystemAuthentication(
-            UsernamePasswordAuthenticationToken.authenticated("SYSTEM", null, List.of())));
+    // then
+    MonteisAuthenticationToken token =
+        assertInstanceOf(MonteisAuthenticationToken.class, captured.get());
+    assertEquals(
+        Set.of("experiment:read:all", "experiment:write:all"),
+        token.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .collect(Collectors.toSet()));
+    assertEquals(Set.of(), token.readExperimentIds());
+    assertEquals(Set.of(), token.writeExperimentIds());
+    assertNull(token.getCredentials());
   }
 
   @Test
@@ -56,11 +56,7 @@ class SystemSecurityContextTest {
 
     // then
     assertEquals(
-        new MonteisPrincipal(
-            UUID.fromString("00000000-0000-0000-0000-000000000000"),
-            "SYSTEM",
-            List.of(),
-            List.of()),
+        new MonteisPrincipal(UUID.fromString("00000000-0000-0000-0000-000000000000"), "SYSTEM"),
         captured.get().getPrincipal());
     assertEquals("SYSTEM", captured.get().getName());
   }

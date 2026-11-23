@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.jooq;
 
-import ch.swisstopo.monteis.core.infrastructure.security.Capabilities;
+import ch.swisstopo.monteis.core.infrastructure.security.MonteisAuthenticationToken;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -12,26 +12,22 @@ import org.jooq.exception.DataAccessException;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * Writes the {@link Capabilities} of the caller bound to the current thread onto each jOOQ
- * connection as four Postgres GUCs, which the row-level security functions read via {@code
- * current_setting(...)} (V17):
+ * Writes the permissions of the {@link MonteisAuthenticationToken} bound to the current thread onto
+ * each jOOQ connection as four Postgres GUCs, which the row-level security functions read via
+ * {@code current_setting(...)} (V17):
  *
  * <ul>
- *   <li>{@code app.read_all_experiments}: {@code true} when the caller may read every experiment
- *       ({@link Capabilities#canReadAllExperiments()});
- *   <li>{@code app.write_all_experiments}: {@code true} when the caller may update every
- *       experiment ({@link Capabilities#canWriteAllExperiments()}); false for the system context,
- *       which reads everything but writes nothing;
+ *   <li>{@code app.read_all_experiments} / {@code app.write_all_experiments}: {@code true} when
+ *       the caller may read / write every experiment ({@code experiment:read:all} / {@code
+ *       experiment:write:all});
  *   <li>{@code app.read_experiment_ids}: the readable experiment ids, comma-separated;
  *   <li>{@code app.write_experiment_ids}: the writable experiment ids, comma-separated, always a
  *       subset of the readable ones.
  * </ul>
  *
- * <p>The values come from {@link Capabilities} only, so the database applies the same rules as the
- * filter chain. They are transaction-local, not session-scoped, so they never leak to the next
- * borrower of a pooled connection: callers must run inside a Spring transaction. An unbound or
- * unrecognised authentication yields {@link Capabilities#NONE} and therefore fails closed (no
- * flags, empty id lists) rather than throwing.
+ * <p>They are transaction-local, not session-scoped, so they never leak to the next borrower of a
+ * pooled connection: callers must run inside a Spring transaction. Any other or no authentication
+ * fails closed (no flags, empty id lists) rather than throwing.
  */
 public class RlsConnectionProvider implements ConnectionProvider {
 
@@ -51,7 +47,7 @@ public class RlsConnectionProvider implements ConnectionProvider {
   @Override
   public Connection acquire() {
     Connection connection = delegate.acquire();
-    applySecurityContext(connection);
+    writeRlsContext(connection, currentRlsContext());
     return connection;
   }
 
@@ -60,15 +56,19 @@ public class RlsConnectionProvider implements ConnectionProvider {
     delegate.release(connection);
   }
 
-  private static void applySecurityContext(Connection connection) {
-    Capabilities capabilities =
-        Capabilities.of(SecurityContextHolder.getContext().getAuthentication());
+  private static RlsContext currentRlsContext() {
+    return SecurityContextHolder.getContext().getAuthentication()
+            instanceof MonteisAuthenticationToken token
+        ? RlsContext.of(token)
+        : RlsContext.NONE;
+  }
+
+  private static void writeRlsContext(Connection connection, RlsContext context) {
     try (PreparedStatement statement = connection.prepareStatement(SET_RLS_CONTEXT)) {
-      statement.setString(1, String.valueOf(capabilities.canReadAllExperiments()));
-      statement.setString(2, String.valueOf(capabilities.canWriteAllExperiments()));
-      // Capabilities leaves an id set empty when its all-experiments flag is set
-      statement.setString(3, toSortedCsv(capabilities.readableExperimentIds()));
-      statement.setString(4, toSortedCsv(capabilities.writableExperimentIds()));
+      statement.setString(1, String.valueOf(context.readAllExperiments()));
+      statement.setString(2, String.valueOf(context.writeAllExperiments()));
+      statement.setString(3, toSortedCsv(context.readExperimentIds()));
+      statement.setString(4, toSortedCsv(context.writeExperimentIds()));
       statement.execute();
     } catch (SQLException e) {
       throw new DataAccessException("Failed to set RLS context", e);
@@ -78,5 +78,22 @@ public class RlsConnectionProvider implements ConnectionProvider {
   // sorted so that the same capabilities always produce the same setting value
   private static String toSortedCsv(Set<UUID> experimentIds) {
     return experimentIds.stream().sorted().map(UUID::toString).collect(Collectors.joining(","));
+  }
+
+  private record RlsContext(
+      boolean readAllExperiments,
+      boolean writeAllExperiments,
+      Set<UUID> readExperimentIds,
+      Set<UUID> writeExperimentIds) {
+
+    private static final RlsContext NONE = new RlsContext(false, false, Set.of(), Set.of());
+
+    private static RlsContext of(MonteisAuthenticationToken token) {
+      return new RlsContext(
+          token.canReadAllExperiments(),
+          token.canWriteAllExperiments(),
+          token.readExperimentIds(),
+          token.writeExperimentIds());
+    }
   }
 }

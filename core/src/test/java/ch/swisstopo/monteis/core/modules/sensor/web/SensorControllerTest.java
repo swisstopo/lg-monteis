@@ -566,7 +566,7 @@ class SensorControllerTest {
   @ParameterizedTest
   @EnumSource(
       value = PrivilegeLevel.class,
-      names = {"BASISROLLE", "EXPERIMENT_USER", "EXPERIMENT_PI", "GLOBAL_EDITOR"})
+      names = {"BASISROLLE", "EXPERIMENT_USER", "EXPERIMENT_PI"})
   void should_forbid_sensor_writes_to_non_admins(PrivilegeLevel level) throws Exception {
     String body = objectMapper.writeValueAsString(defaultWriteDto(SENSOR_ID, 1, PARAMETER_ID, 1));
     List<MockHttpServletRequestBuilder> requests =
@@ -602,7 +602,7 @@ class SensorControllerTest {
   @ParameterizedTest
   @EnumSource(
       value = PrivilegeLevel.class,
-      names = {"EXPERIMENT_PI", "GLOBAL_EDITOR", "MONTEIS_ADMIN"})
+      names = {"EXPERIMENT_PI", "MONTEIS_ADMIN"})
   void should_let_experiment_writers_refresh_sensors_from_fulcrum(PrivilegeLevel level)
       throws Exception {
     // when / then

@@ -1,18 +1,20 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.EXPERIMENT_READ_ALL;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.EXPERIMENT_WRITE_ALL;
+
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * Explicit, auditable opt-in for background jobs with no HTTP request/JWT (e.g. the startup audit
- * backfill) that still need all-experiment read access. An unbound {@link SecurityContextHolder}
+ * backfill) that still need access to every experiment. An unbound {@link SecurityContextHolder}
  * must never implicitly resolve to elevated access — callers bind this deliberately.
- *
- * <p>The bound authentication carries no authority. {@link Capabilities#of} recognises it by identity
- * and answers {@link Capabilities#SYSTEM}, so no request token can ever produce it (BR4.7).
  */
 public final class SystemSecurityContext {
 
@@ -21,7 +23,13 @@ public final class SystemSecurityContext {
 
   private static final Authentication SYSTEM =
       new MonteisAuthenticationToken(
-          null, new MonteisPrincipal(SYSTEM_SUBJECT, "SYSTEM", List.of(), List.of()), List.of());
+          null,
+          new MonteisPrincipal(SYSTEM_SUBJECT, "SYSTEM"),
+          List.of(
+              new SimpleGrantedAuthority(EXPERIMENT_READ_ALL),
+              new SimpleGrantedAuthority(EXPERIMENT_WRITE_ALL)),
+          Set.of(),
+          Set.of());
 
   private SystemSecurityContext() {}
 
@@ -35,10 +43,5 @@ public final class SystemSecurityContext {
     } finally {
       SecurityContextHolder.setContext(previous);
     }
-  }
-
-  /** Whether {@code authentication} is the one {@link #runAsSystem} binds. */
-  static boolean isSystemAuthentication(Authentication authentication) {
-    return authentication == SYSTEM;
   }
 }

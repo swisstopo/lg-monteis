@@ -1,27 +1,27 @@
 package ch.swisstopo.monteis.core.infrastructure.security;
 
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.EXPERIMENT_WRITE;
+import static ch.swisstopo.monteis.core.infrastructure.security.MonteisJwtAuthenticationConverter.EXPERIMENT_WRITE_ALL;
+
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
+import jakarta.servlet.DispatcherType;
 import java.util.Set;
-import java.util.function.Predicate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.authorization.AuthorizationDecision;
-import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.observation.SecurityObservationSettings;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * The HTTP request rules (BR4.8), evaluated in order, first match wins. Every non-public decision
- * asks {@link Capabilities}; reads are only authenticated here, because row-level security filters
- * the rows (hybrid filter-chain-plus-RLS model, ADR-003).
+ * Reads are only authenticated here, because row-level security filters the rows (hybrid filter-chain-plus-RLS
+ * model, ADR-003).
  */
 @Configuration
 @EnableWebSecurity
@@ -30,7 +30,6 @@ public class SecurityConfig {
   static final String[] PUBLIC_ENDPOINTS = {
     "/actuator/**", "/actuator", "/swagger-ui/**", "/v3/api-docs/**"
   };
-  static final String SENSORS_PATHS = ApiPaths.SENSORS + "/**";
 
   // every method that changes state; all of them are admin-only unless an earlier rule matched
   private static final Set<String> WRITE_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
@@ -42,55 +41,42 @@ public class SecurityConfig {
       HttpSecurity http,
       Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter,
       ObjectMapper objectMapper) {
-    MonteisAccessDeniedHandler accessDeniedHandler = new MonteisAccessDeniedHandler(objectMapper);
-    ExperimentWriteAuthorizationManager experimentWrite = new ExperimentWriteAuthorizationManager();
     http.authorizeHttpRequests(
             request ->
                 request
+                    // error dispatch has no auth (bearer filter runs once) => would
+                    // turn 404/500 into 401
+                    .dispatcherTypeMatchers(DispatcherType.ERROR)
+                    .permitAll()
                     .requestMatchers(PUBLIC_ENDPOINTS)
                     .permitAll()
-                    // first match wins, the per-experiment writes have to come before the
-                    // admin-only write rule below
                     .requestMatchers(ApiPaths.EXPERIMENT_OWNER_CANDIDATES)
-                    .access(allowIf(Capabilities::canManageExperimentOwners))
+                    .hasAuthority(EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
-                    .access(experimentWrite)
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
-                    .access(experimentWrite)
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.EXPERIMENT_DOCUMENT)
-                    .access(experimentWrite)
-                    // grant only, the insert and delete policies of sensor_documents decide per
-                    // sensor
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
-                    .access(allowIf(Capabilities::canWriteExperiments))
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.DELETE, ApiPaths.SENSOR_DOCUMENT)
-                    .access(allowIf(Capabilities::canWriteExperiments))
-                    .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)
-                    .access(allowIf(Capabilities::canCreateExperiment))
-                    // all methods: Spring answers HEAD via GET handler
-                    .requestMatchers(ApiPaths.FULCRUM_DOCUMENT_CONTENT)
-                    .access(allowIf(Capabilities::canAccessDocuments))
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
-                    .access(allowIf(Capabilities::canAccessDocuments))
-                    // grant only, before the admin-only sensor rule (MON-173, ADR "Hybride
+                    .authenticated()
+                    // grant only, before the write-all rule (MON-173, ADR "Hybride
                     // Durchsetzung"): RLS limits the sensors, values come from Fulcrum only
                     .requestMatchers(HttpMethod.POST, ApiPaths.SENSORS_FULCRUM_REFRESH)
-                    .access(allowIf(Capabilities::canWriteExperiments))
-                    // sensor reads need no rule of their own: RLS filters the rows by experiment
-                    .requestMatchers(HttpMethod.GET, SENSORS_PATHS)
-                    .authenticated()
-                    .requestMatchers(SENSORS_PATHS)
-                    .access(allowIf(Capabilities::canManageSensors))
+                    .hasAnyAuthority(EXPERIMENT_WRITE, EXPERIMENT_WRITE_ALL)
                     .requestMatchers(WRITE_REQUESTS)
-                    .access(allowIf(Capabilities::isAdmin))
+                    .hasAuthority(EXPERIMENT_WRITE_ALL)
                     .anyRequest()
                     .authenticated())
-        .exceptionHandling(exceptions -> exceptions.accessDeniedHandler(accessDeniedHandler))
         .oauth2ResourceServer(
             oauth2 ->
                 oauth2
                     .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
-                    .accessDeniedHandler(accessDeniedHandler));
+                    .accessDeniedHandler(new MonteisAccessDeniedHandler(objectMapper)));
 
     return http.build();
   }
@@ -100,9 +86,9 @@ public class SecurityConfig {
     return new MonteisJwtAuthenticationConverter();
   }
 
-  private static AuthorizationManager<RequestAuthorizationContext> allowIf(
-      Predicate<Capabilities> capability) {
-    return (authentication, context) ->
-        new AuthorizationDecision(capability.test(Capabilities.of(authentication.get())));
+  // nobody reads them, default wraps every security filter of every request (ADR-011 P5)
+  @Bean
+  public SecurityObservationSettings securityObservationSettings() {
+    return SecurityObservationSettings.noObservations();
   }
 }

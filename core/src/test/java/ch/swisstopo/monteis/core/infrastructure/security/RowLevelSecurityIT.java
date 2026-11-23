@@ -151,17 +151,6 @@ class RowLevelSecurityIT {
 
   @Test
   @Transactional
-  void global_editor_sees_every_sensor_and_experiment() {
-    SecurityContextTestSupport.runAsGlobalEditor(
-        () -> {
-          assertEquals(15, dsl.fetchCount(SENSORS), "Global editor should see all seeded sensors");
-          assertEquals(
-              9, dsl.fetchCount(EXPERIMENTS), "Global editor should see all seeded experiments");
-        });
-  }
-
-  @Test
-  @Transactional
   void scoped_editor_may_update_only_the_experiments_it_may_write() {
     SecurityContextTestSupport.runAsUser(
         List.of(EXPERIMENT_ALPHA, EXPERIMENT_BETA),
@@ -223,13 +212,10 @@ class RowLevelSecurityIT {
 
   @Test
   @Transactional
-  void system_context_may_not_update_an_experiment() {
-    // background jobs run without a filter chain, so RLS is the only guard against their writes
+  void system_context_may_update_an_experiment() {
+    // system context = api:admin token, RLS no longer guards background job writes (MON-196 R4)
     SystemSecurityContext.runAsSystem(
-        () ->
-            assertThrows(
-                PermissionDeniedDataAccessException.class,
-                () -> renameExperiment(EXPERIMENT_ALPHA, "Mont Terri Alpha renamed")));
+        () -> assertEquals(1, renameExperiment(EXPERIMENT_ALPHA, "Mont Terri Alpha renamed")));
   }
 
   @Test
