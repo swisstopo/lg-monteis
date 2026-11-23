@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
@@ -23,6 +24,13 @@ public record WriteSensorParameterDto(
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) @Valid RangeLimitsDto rangeLimits,
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Omit for false.")
         Boolean notificationActive,
+    @Schema(
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+            description = "In seconds, e.g. 9000 for 2.5 hours.")
+        @Positive
+        Integer timeout,
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) @Positive
+        Integer notificationTriggerCount,
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Omit for false.")
         Boolean closelyMonitored,
     @Schema(

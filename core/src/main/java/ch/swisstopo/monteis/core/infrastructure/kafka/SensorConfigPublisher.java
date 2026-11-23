@@ -50,6 +50,8 @@ public class SensorConfigPublisher {
             .upperBound(parameter.getAlarmLimits().upper())
             .lowerBound(parameter.getAlarmLimits().lower())
             .notificationActive(parameter.getNotificationActive())
+            .timeout(parameter.getTimeout())
+            .notificationTriggerCount(parameter.getNotificationTriggerCount())
             .closelyMonitored(parameter.getCloselyMonitored())
             .version(parameter.getVersion());
 

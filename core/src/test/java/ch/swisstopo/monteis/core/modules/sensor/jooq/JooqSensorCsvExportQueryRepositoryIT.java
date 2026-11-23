@@ -307,6 +307,8 @@ class JooqSensorCsvExportQueryRepositoryIT {
         null,
         null,
         null,
+        null,
+        null,
         true,
         null);
   }

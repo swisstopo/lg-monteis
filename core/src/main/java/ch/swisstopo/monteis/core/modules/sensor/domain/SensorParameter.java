@@ -19,6 +19,8 @@ public class SensorParameter {
   private AlarmLimits alarmLimits;
   private RangeLimits rangeLimits;
   private Boolean notificationActive;
+  private Integer timeout;
+  private Integer notificationTriggerCount;
   private Boolean closelyMonitored;
   // Required while closelyMonitored is set.
   private AlarmLimits specialAlarmLimits;
@@ -40,6 +42,8 @@ public class SensorParameter {
       AlarmLimits alarmLimits,
       RangeLimits rangeLimits,
       Boolean notificationActive,
+      Integer timeout,
+      Integer notificationTriggerCount,
       Boolean closelyMonitored,
       AlarmLimits specialAlarmLimits,
       Boolean active) {
@@ -55,6 +59,8 @@ public class SensorParameter {
     this.alarmLimits = alarmLimits;
     this.rangeLimits = rangeLimits;
     this.notificationActive = Boolean.TRUE.equals(notificationActive);
+    this.timeout = timeout;
+    this.notificationTriggerCount = notificationTriggerCount;
     this.closelyMonitored = Boolean.TRUE.equals(closelyMonitored);
     this.specialAlarmLimits = specialAlarmLimits;
     requireSpecialAlarmLimitsWhenCloselyMonitored();
@@ -72,6 +78,8 @@ public class SensorParameter {
       AlarmLimits alarmLimits,
       RangeLimits rangeLimits,
       Boolean notificationActive,
+      Integer timeout,
+      Integer notificationTriggerCount,
       Boolean closelyMonitored,
       AlarmLimits specialAlarmLimits,
       Boolean active,
@@ -85,6 +93,8 @@ public class SensorParameter {
     this.alarmLimits = alarmLimits;
     this.rangeLimits = rangeLimits;
     this.notificationActive = Boolean.TRUE.equals(notificationActive);
+    this.timeout = timeout;
+    this.notificationTriggerCount = notificationTriggerCount;
     this.closelyMonitored = Boolean.TRUE.equals(closelyMonitored);
     this.specialAlarmLimits = specialAlarmLimits;
     requireSpecialAlarmLimitsWhenCloselyMonitored();
@@ -165,6 +175,22 @@ public class SensorParameter {
     this.notificationActive = Boolean.TRUE.equals(notificationActive);
   }
 
+  public Integer getTimeout() {
+    return timeout;
+  }
+
+  public void setTimeout(Integer timeout) {
+    this.timeout = timeout;
+  }
+
+  public Integer getNotificationTriggerCount() {
+    return notificationTriggerCount;
+  }
+
+  public void setNotificationTriggerCount(Integer notificationTriggerCount) {
+    this.notificationTriggerCount = notificationTriggerCount;
+  }
+
   public Boolean getCloselyMonitored() {
     return closelyMonitored;
   }
@@ -209,6 +235,8 @@ public class SensorParameter {
         || !Objects.equals(old.getFormula().getExpression(), this.formula.getExpression())
         || !Objects.equals(old.getAlarmLimits(), this.alarmLimits)
         || !Objects.equals(old.getNotificationActive(), this.notificationActive)
+        || !Objects.equals(old.getTimeout(), this.timeout)
+        || !Objects.equals(old.getNotificationTriggerCount(), this.notificationTriggerCount)
         || !Objects.equals(old.getCloselyMonitored(), this.closelyMonitored)
         || !Objects.equals(old.getSpecialAlarmLimits(), this.specialAlarmLimits);
   }

@@ -55,6 +55,8 @@ public interface SensorJooqMapper {
   @Mapping(target = "alarmLimits.upper", source = "paramRecord.upperAlarmLimit")
   @Mapping(target = "rangeLimits", source = "paramRecord", qualifiedByName = "rangeLimits")
   @Mapping(target = "notificationActive", source = "paramRecord.notificationActive")
+  @Mapping(target = "timeout", source = "paramRecord.timeout")
+  @Mapping(target = "notificationTriggerCount", source = "paramRecord.notificationTriggerCount")
   @Mapping(target = "closelyMonitored", source = "paramRecord.closelyMonitored")
   @Mapping(
       target = "specialAlarmLimits",

@@ -15,6 +15,8 @@ public record SensorParameterResponseDto(
     AlarmLimitsDto alarmLimits,
     RangeLimitsDto rangeLimits,
     Boolean notificationActive,
+    Integer timeout,
+    Integer notificationTriggerCount,
     Boolean closelyMonitored,
     AlarmLimitsDto specialAlarmLimits,
     Boolean active,

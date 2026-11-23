@@ -38,6 +38,8 @@ public final class SensorRecordProjections {
             r.get(SENSOR_PARAMETER.LOWER_ALARM_LIMIT), r.get(SENSOR_PARAMETER.UPPER_ALARM_LIMIT)),
         toRangeLimits(r),
         r.get(SENSOR_PARAMETER.NOTIFICATION_ACTIVE),
+        r.get(SENSOR_PARAMETER.TIMEOUT),
+        r.get(SENSOR_PARAMETER.NOTIFICATION_TRIGGER_COUNT),
         r.get(SENSOR_PARAMETER.CLOSELY_MONITORED),
         toSpecialAlarmLimits(r),
         r.get(SENSOR_PARAMETER.ACTIVE),

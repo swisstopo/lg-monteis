@@ -93,6 +93,17 @@ class SensorParameterTest {
   }
 
   @Test
+  void should_trigger_publish_when_timeout_changed() {
+    // given
+    SensorParameter before = sensorParameterWith("x * 2", 0.0, 100.0);
+    SensorParameter after = sensorParameterWith("x * 2", 0.0, 100.0);
+    after.setTimeout(9000);
+
+    // when / then
+    assertTrue(after.changeTriggersPublish(before));
+  }
+
+  @Test
   void should_trigger_publish_when_special_alarm_limits_changed() {
     // given
     SensorParameter before = sensorParameterWith("x * 2", 0.0, 100.0);
@@ -142,6 +153,8 @@ class SensorParameterTest {
                     new AlarmLimits(0.0, 100.0),
                     new RangeLimits(-1000.0, 1000.0),
                     null,
+                    null,
+                    null,
                     true,
                     null,
                     true));
@@ -160,6 +173,8 @@ class SensorParameterTest {
             new Formula("x"),
             new AlarmLimits(0.0, 100.0),
             new RangeLimits(-1000.0, 1000.0),
+            null,
+            null,
             null,
             false,
             new AlarmLimits(-10.0, 110.0),
@@ -196,6 +211,8 @@ class SensorParameterTest {
         null,
         null,
         null,
+        null,
+        null,
         true);
   }
 
@@ -208,6 +225,8 @@ class SensorParameterTest {
         new Formula("x * 2"),
         new AlarmLimits(0.0, 100.0),
         new RangeLimits(-1000.0, 1000.0),
+        null,
+        null,
         null,
         null,
         null,

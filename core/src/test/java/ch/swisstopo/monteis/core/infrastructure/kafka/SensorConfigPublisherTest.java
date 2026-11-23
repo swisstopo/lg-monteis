@@ -59,6 +59,8 @@ class SensorConfigPublisherTest {
         null,
         null,
         null,
+        null,
+        null,
         active,
         3);
   }
@@ -97,6 +99,8 @@ class SensorConfigPublisherTest {
     SensorConfigPublisher publisher = new SensorConfigPublisher(kafkaTemplate, "topic");
     SensorParameter parameter = parameter(UUID.randomUUID(), true, "temperature");
     parameter.setNotificationActive(true);
+    parameter.setTimeout(9000);
+    parameter.setNotificationTriggerCount(3);
     parameter.setCloselyMonitored(true);
     parameter.setSpecialAlarmLimits(new AlarmLimits(10.0, 90.0));
 
@@ -107,6 +111,8 @@ class SensorConfigPublisherTest {
     then(kafkaTemplate).should().send(eq("topic"), any(), configCaptor.capture());
     SensorParameterConfig sentConfig = configCaptor.getValue();
     assertThat(sentConfig.getNotificationActive()).isTrue();
+    assertThat(sentConfig.getTimeout()).isEqualTo(9000);
+    assertThat(sentConfig.getNotificationTriggerCount()).isEqualTo(3);
     assertThat(sentConfig.getCloselyMonitored()).isTrue();
     assertThat(sentConfig.getUpperSpecialAlarmLimit()).isEqualTo(90.0);
     assertThat(sentConfig.getLowerSpecialAlarmLimit()).isEqualTo(10.0);
@@ -125,6 +131,7 @@ class SensorConfigPublisherTest {
     then(kafkaTemplate).should().send(eq("topic"), any(), configCaptor.capture());
     SensorParameterConfig sentConfig = configCaptor.getValue();
     assertThat(sentConfig.getNotificationActive()).isFalse();
+    assertThat(sentConfig.getTimeout()).isNull();
     assertThat(sentConfig.getCloselyMonitored()).isFalse();
     assertThat(sentConfig.getUpperSpecialAlarmLimit()).isNull();
     assertThat(sentConfig.getLowerSpecialAlarmLimit()).isNull();

@@ -338,6 +338,8 @@ class JooqSensorParameterRowQueryRepositoryIT {
         null,
         null,
         null,
+        null,
+        null,
         true,
         null);
   }
@@ -355,6 +357,8 @@ class JooqSensorParameterRowQueryRepositoryIT {
             formula,
             new AlarmLimits(0.0, 100.0),
             new RangeLimits(-1000.0, 1000.0),
+            null,
+            null,
             null,
             null,
             null,
