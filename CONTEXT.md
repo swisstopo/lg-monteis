@@ -59,8 +59,12 @@ A Notification active sensor parameter seen from one Experiment it belongs to: w
 _Avoid_: Notification parameter, alarmed parameter, alarming parameter
 
 **Closely monitored**:
-A sensor parameter with its own special alarm limits, set only by a Monteis-Admin, whose alarms go to a recipient list of Monteis-Admins instead of the Experiments' Recipients.
+A sensor parameter with its own special alarm limits, set only by a Monteis-Admin, whose special-limit alarms go to the Closely monitored recipients.
 _Avoid_: Spezialalarm, special alarm (alone), Notification active
+
+**Closely monitored recipient**:
+A Monteis-Admin who gets the alarms of every Closely monitored sensor parameter; there is one list for all of them, it starts empty and may stay empty. Losing the Monteis-Admin role ends it.
+_Avoid_: Admin recipient, Empfänger
 
 **Recipient**:
 A user with access to an Experiment who gets the alarms of its Notification active sensor parameters; until a PI or Monteis-Admin first saves the list, the Experiment's PIs are its Recipients.
