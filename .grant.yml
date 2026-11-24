@@ -83,6 +83,7 @@ ignore-packages: [
   "@algolia/client-query-suggestions",
   "@algolia/requester-browser-xhr",
   "lightningcss-linux-x64-musl", # MPL-2.0 (optional musl-libc prebuilt binary installed on CI runner, no package.json to read from)
+  "dart", # BSD-3-Clause (Dart VM binary bundled in sass-embedded-<platform>/dart-sass/src/dart, build-time only; license text in dart-sass/src/LICENSE, which syft's binary cataloger does not read)
   "@eslint-community/eslint-utils", # MIT
 
   # --- Accepted Legacy / Transitive Risks ---
