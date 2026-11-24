@@ -175,7 +175,7 @@ importers:
   .:
     dependencies:
       '@angular/animations':
-        specifier: 22.3.0
+        specifier: ^22.3.0
         version: 22.3.0(@angular/core@22.3.0(@angular/compiler@22.3.0)(rxjs@7.8.2))
       '@angular/cdk':
         specifier: ^22.3.0
