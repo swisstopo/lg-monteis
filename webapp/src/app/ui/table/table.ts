@@ -1,4 +1,13 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  InjectionToken,
+  input,
+  output,
+  signal,
+  untracked,
+} from '@angular/core';
 import { AgGridAngular } from 'ag-grid-angular';
 import {
   ColDef,
@@ -6,6 +15,7 @@ import {
   GridApi,
   GridOptions,
   GridReadyEvent,
+  GridState,
   iconSetMaterial,
   IDatasource,
   RowClickedEvent,
@@ -15,6 +25,9 @@ import {
   themeBalham,
 } from 'ag-grid-community';
 import { TableColumn } from './table.types';
+
+// directives on <app-table> can't set its gridOptions input, they provide initial state here
+export const TABLE_INITIAL_STATE = new InjectionToken<() => GridState>('TABLE_INITIAL_STATE');
 
 @Component({
   selector: 'app-table',
@@ -48,6 +61,8 @@ export default class Table<T = any> {
   // 'infinite' row model's cache after data changes elsewhere (ag-grid has no way to detect that).
   gridReady = output<GridApi<T>>();
 
+  private readonly initialState = inject(TABLE_INITIAL_STATE, { optional: true });
+
   protected theme = themeBalham.withPart(iconSetMaterial);
   // Ids (via getRowId) of the currently selected rows, tracked so a later 'infinite' row model
   // cache refresh can tell whether a selected row was evicted and needs deselecting.
@@ -67,6 +82,7 @@ export default class Table<T = any> {
   };
 
   protected mergedGridOptions = computed<GridOptions<T>>(() => {
+    const providedState = untracked(() => this.initialState?.());
     const rowSelection: RowSelectionOptions<T> = this.multiple()
       ? {
           mode: 'multiRow',
@@ -86,6 +102,9 @@ export default class Table<T = any> {
       rowSelection,
       getRowId: (params: GetRowIdParams<T>) => this.getRowId()(params.data),
       ...this.gridOptions(),
+      ...(providedState && {
+        initialState: { ...this.gridOptions().initialState, ...providedState },
+      }),
     };
   });
 
