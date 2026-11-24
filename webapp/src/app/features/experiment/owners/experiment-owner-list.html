@@ -5,7 +5,7 @@
   } @else {
     @for (owner of owners(); track owner.id) {
       <p class="experiment-owner-list_owner" data-testid="experiment-owner">
-        <span>{{ owner | ownerName }}</span>
+        <span>{{ owner | userName }}</span>
         @if (owner.email) {
           <a [href]="'mailto:' + owner.email">{{ owner.email }}</a>
         }

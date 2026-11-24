@@ -1,8 +1,9 @@
 package ch.swisstopo.monteis.core.modules.experiment.web;
 
 import ch.swisstopo.monteis.core.infrastructure.api.ApiPaths;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserDto;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserWebMapper;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.util.List;
@@ -16,10 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ExperimentOwnerController {
 
   private final ExperimentOwnerService ownerService;
-  private final ExperimentWebMapper mapper;
+  private final DirectoryUserWebMapper mapper;
 
   public ExperimentOwnerController(
-      ExperimentOwnerService ownerService, ExperimentWebMapper mapper) {
+      ExperimentOwnerService ownerService, DirectoryUserWebMapper mapper) {
     this.ownerService = ownerService;
     this.mapper = mapper;
   }
@@ -31,8 +32,8 @@ public class ExperimentOwnerController {
               + " the owner filter of the experiment table. Empty when Keycloak is unavailable.")
   @ApiResponse(responseCode = "200", description = "Successfully retrieved owners")
   @GetMapping(path = ApiPaths.ALL_EXPERIMENT_OWNERS, produces = MediaType.APPLICATION_JSON_VALUE)
-  public List<ExperimentOwnerDto> findAllVisibleOwners() {
-    return mapper.toOwnerDtos(ownerService.findAllVisibleOwners());
+  public List<DirectoryUserDto> findAllVisibleOwners() {
+    return mapper.toDtos(ownerService.findAllVisibleOwners());
   }
 
   @Operation(
@@ -43,8 +44,8 @@ public class ExperimentOwnerController {
   @GetMapping(
       path = ApiPaths.EXPERIMENT_OWNER_CANDIDATES,
       produces = MediaType.APPLICATION_JSON_VALUE)
-  public List<ExperimentOwnerDto> findOwnerCandidatesForExperiment(
+  public List<DirectoryUserDto> findOwnerCandidatesForExperiment(
       @PathVariable(ApiPaths.EXPERIMENT_ID) UUID id) {
-    return mapper.toOwnerDtos(ownerService.findOwnerCandidates(id));
+    return mapper.toDtos(ownerService.findOwnerCandidates(id));
   }
 }

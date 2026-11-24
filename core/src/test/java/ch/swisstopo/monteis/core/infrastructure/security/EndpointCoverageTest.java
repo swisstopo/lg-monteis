@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.swisstopo.monteis.core.infrastructure.query.PagedRequestParser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserWebMapper;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.experiment.query.ExperimentCsvExportQueryRepository;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentDocumentService;
@@ -104,6 +105,7 @@ class EndpointCoverageTest {
   @MockitoBean private OrganisationCsvExportQueryRepository organisationCsvExportQueryRepository;
   @MockitoBean private ExperimentDocumentService experimentDocumentService;
   @MockitoBean private ExperimentDocumentWebMapper experimentDocumentWebMapper;
+  @MockitoBean private DirectoryUserWebMapper directoryUserWebMapper;
   @MockitoBean private FulcrumDocumentService fulcrumDocumentService;
   @MockitoBean private FulcrumDocumentSyncRunner fulcrumDocumentSyncRunner;
   @MockitoBean private FulcrumDocumentWebMapper fulcrumDocumentWebMapper;

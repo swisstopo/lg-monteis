@@ -14,6 +14,7 @@ import static org.mockito.Mockito.never;
 import ch.swisstopo.monteis.core.infrastructure.exception.FieldBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.exception.ObjectNotFoundException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUsers;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.Pis;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectory;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDeniedException;
@@ -102,13 +103,6 @@ class ExperimentOwnerServiceTest {
     }
 
     @Test
-    void should_hide_owners_without_a_write_group() {
-      givenPis(EXPERIMENT_ID, new Pis.NoWriteGroup());
-
-      assertEquals(VisibleOwners.NO_WRITE_GROUP, ownersOf(experiment(EXPERIMENT_ID, ALICE.id())));
-    }
-
-    @Test
     void should_hide_owners_when_keycloak_denies_reading_them() {
       givenPis(EXPERIMENT_ID, new Pis.AccessDenied("403"));
 
@@ -194,7 +188,7 @@ class ExperimentOwnerServiceTest {
 
     @Test
     void should_have_none_without_a_write_group() {
-      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(new Pis.NoWriteGroup());
+      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known());
 
       assertEquals(List.of(), service.findOwnerCandidates(EXPERIMENT_ID));
     }
@@ -237,7 +231,7 @@ class ExperimentOwnerServiceTest {
               () -> service.replaceOwnersInKeycloak(stored, ownerIds));
 
       assertEquals(ExperimentOwnerService.OWNER_IDS_FIELD, e.getField());
-      assertEquals(ExperimentOwnerService.NOT_ELIGIBLE_KEY, e.getMessageKey());
+      assertEquals(DirectoryUsers.NOT_ELIGIBLE_KEY, e.getMessageKey());
       assertEquals(Set.of(BOB.id()), e.getActualValue());
       then(repository).should(never()).replaceOwners(any(), any());
     }
@@ -245,7 +239,7 @@ class ExperimentOwnerServiceTest {
     @Test
     void should_allow_clearing_the_owners_without_a_write_group() {
       Experiment cleared = experiment(EXPERIMENT_ID);
-      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(new Pis.NoWriteGroup());
+      given(userDirectory.pisForWriting(EXPERIMENT_ID)).willReturn(known());
       given(repository.replaceOwners(EXPERIMENT_ID, Set.of())).willReturn(cleared);
 
       assertSame(cleared, service.replaceOwnersInKeycloak(stored, Set.of()));

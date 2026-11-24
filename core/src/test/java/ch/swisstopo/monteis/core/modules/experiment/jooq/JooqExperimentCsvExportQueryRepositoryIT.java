@@ -114,8 +114,7 @@ class JooqExperimentCsvExportQueryRepositoryIT {
           Map<VisibleOwners, String> cells =
               Map.of(
                   VisibleOwners.KEYCLOAK_UNAVAILABLE, ";0;(unavailable);",
-                  VisibleOwners.ACCESS_DENIED, ";0;(access denied);",
-                  VisibleOwners.NO_WRITE_GROUP, ";0;(no write group);");
+                  VisibleOwners.ACCESS_DENIED, ";0;(access denied);");
           cells.forEach(
               (missing, cell) -> {
                 owners = Map.of(experimentId, missing);

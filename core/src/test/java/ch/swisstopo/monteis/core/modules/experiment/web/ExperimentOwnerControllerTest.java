@@ -9,36 +9,34 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUser;
+import ch.swisstopo.monteis.core.infrastructure.userdirectory.DirectoryUserWebMapperImpl;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryDeniedException;
 import ch.swisstopo.monteis.core.infrastructure.userdirectory.UserDirectoryUnavailableException;
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.itconfig.PrivilegeLevel;
 import ch.swisstopo.monteis.core.modules.experiment.service.ExperimentOwnerService;
-import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @ControllerTest(ExperimentOwnerController.class)
+@Import(DirectoryUserWebMapperImpl.class)
 class ExperimentOwnerControllerTest {
 
   private static final DirectoryUser ALICE =
       new DirectoryUser(UUID.randomUUID(), "Alice", "Example", "alice@example.test");
-  private static final ExperimentOwnerDto ALICE_DTO =
-      new ExperimentOwnerDto(ALICE.id(), ALICE.firstName(), ALICE.lastName(), ALICE.email());
 
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private ExperimentOwnerService ownerService;
-  @MockitoBean private ExperimentWebMapper mapper;
 
   @Test
   void should_list_visible_owners_for_every_reader() throws Exception {
     given(ownerService.findAllVisibleOwners()).willReturn(List.of(ALICE));
-    given(mapper.toOwnerDtos(List.of(ALICE))).willReturn(List.of(ALICE_DTO));
 
     mockMvc
         .perform(
@@ -53,7 +51,6 @@ class ExperimentOwnerControllerTest {
   @Test
   void should_list_candidates_for_an_admin() throws Exception {
     given(ownerService.findOwnerCandidates(ASSIGNED_EXPERIMENT)).willReturn(List.of(ALICE));
-    given(mapper.toOwnerDtos(List.of(ALICE))).willReturn(List.of(ALICE_DTO));
 
     mockMvc
         .perform(
