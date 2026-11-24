@@ -2,6 +2,7 @@ package ch.swisstopo.monteis.core.infrastructure.userdirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -30,13 +31,18 @@ class KeycloakUserDirectoryTest {
 
   private static final UUID EXPERIMENT_ID = UUID.randomUUID();
   private static final String EXPERIMENT = EXPERIMENT_ID.toString();
+  private static final String READ_IDS = KeycloakUserDirectory.READ_EXPERIMENT_IDS;
   private static final String WRITE_IDS = KeycloakUserDirectory.WRITE_EXPERIMENT_IDS;
+  private static final KeycloakGroup READ_GROUP =
+      new KeycloakGroup("r", "/Experiments/Alpha/read", null, null);
   private static final KeycloakGroup WRITE_GROUP =
       new KeycloakGroup("rw", "/Experiments/Alpha/read + write", null, null);
   private static final KeycloakUser ALICE =
       new KeycloakUser(UUID.randomUUID(), "Alice", "Zimmer", "alice@example.test", true);
   private static final KeycloakUser BOB =
       new KeycloakUser(UUID.randomUUID(), "Bob", "Amman", "bob@example.test", true);
+  private static final KeycloakUser CARL =
+      new KeycloakUser(UUID.randomUUID(), "Carl", "Christen", "carl@example.test", true);
   private static final KeycloakUser DISABLED =
       new KeycloakUser(UUID.randomUUID(), "Dan", "Disabled", null, false);
 
@@ -131,6 +137,77 @@ class KeycloakUserDirectoryTest {
 
     assertInstanceOf(Pis.KeycloakUnavailable.class, pisForReading(EXPERIMENT_ID));
     then(keycloak).shouldHaveNoInteractions();
+  }
+
+  @Test
+  void should_find_the_members_and_the_pis_among_the_enabled_group_members() {
+    givenWriteGroupWith(ALICE, DISABLED);
+    givenReadGroupWith(CARL, ALICE, DISABLED);
+
+    assertEquals(
+        new ExperimentMembers(List.of(directoryUser(ALICE)), List.of(directoryUser(CARL))),
+        directory.findMembersOf(EXPERIMENT_ID));
+  }
+
+  @Test
+  void should_find_no_members_of_an_experiment_without_groups() {
+    given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT)).willReturn(List.of());
+    given(keycloak.findGroupsByAttribute(READ_IDS, EXPERIMENT)).willReturn(List.of());
+
+    assertEquals(
+        new ExperimentMembers(List.of(), List.of()), directory.findMembersOf(EXPERIMENT_ID));
+  }
+
+  @Test
+  void should_cache_the_members_per_caller() {
+    givenWriteGroupWith(ALICE);
+    givenReadGroupWith(CARL);
+
+    directory.findMembersOf(EXPERIMENT_ID);
+    directory.findMembersOf(EXPERIMENT_ID);
+    given(currentUser.currentSubject()).willReturn(Optional.of(UUID.randomUUID()));
+    directory.findMembersOf(EXPERIMENT_ID);
+
+    then(keycloak).should(times(2)).groupMembers("r");
+  }
+
+  @Test
+  void should_fail_the_members_lookup_on_a_denial_or_an_unavailable_keycloak() {
+    given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT))
+        .willThrow(new KeycloakAccessDeniedException("forbidden", null))
+        .willThrow(new KeycloakUnavailableException("down", null));
+
+    assertThrows(UserDirectoryDeniedException.class, () -> directory.findMembersOf(EXPERIMENT_ID));
+    assertThrows(
+        UserDirectoryUnavailableException.class, () -> directory.findMembersOf(EXPERIMENT_ID));
+  }
+
+  @Test
+  void should_not_cache_a_failed_members_lookup() {
+    given(keycloak.findGroupsByAttribute(WRITE_IDS, EXPERIMENT))
+        .willThrow(new KeycloakUnavailableException("down", null))
+        .willReturn(List.of(WRITE_GROUP));
+    given(keycloak.groupMembers("rw")).willReturn(List.of(ALICE));
+    given(keycloak.findGroupsByAttribute(READ_IDS, EXPERIMENT)).willReturn(List.of());
+
+    assertThrows(
+        UserDirectoryUnavailableException.class, () -> directory.findMembersOf(EXPERIMENT_ID));
+
+    assertEquals(List.of(directoryUser(ALICE)), directory.findMembersOf(EXPERIMENT_ID).pis());
+  }
+
+  @Test
+  void should_not_ask_keycloak_for_members_without_a_caller() {
+    given(currentUser.currentSubject()).willReturn(Optional.empty());
+
+    assertThrows(
+        UserDirectoryUnavailableException.class, () -> directory.findMembersOf(EXPERIMENT_ID));
+    then(keycloak).shouldHaveNoInteractions();
+  }
+
+  private void givenReadGroupWith(KeycloakUser... members) {
+    given(keycloak.findGroupsByAttribute(READ_IDS, EXPERIMENT)).willReturn(List.of(READ_GROUP));
+    given(keycloak.groupMembers("r")).willReturn(List.of(members));
   }
 
   private void givenWriteGroupWith(KeycloakUser... members) {

@@ -1,11 +1,12 @@
 import { inject } from '@angular/core';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { appIconProvider } from '@core/workbench/icon-provider';
+import { addMonitoringMenu } from '@features/notification/monitoring-menu/add-monitoring-menu';
 import { translate } from '@ngx-translate/core';
 import { MAIN_AREA, provideWorkbench, WorkbenchLayoutFactory } from '@scion/workbench';
 import { firstValueFrom, map } from 'rxjs';
 
-const baseLayout = (factory: WorkbenchLayoutFactory) =>
+const commonLayout = (factory: WorkbenchLayoutFactory) =>
   factory
     .addPart(MAIN_AREA)
     .navigatePart(MAIN_AREA, ['measurements-overview'])
@@ -26,8 +27,10 @@ const baseLayout = (factory: WorkbenchLayoutFactory) =>
     )
     .navigatePart('knowledge-menu', ['knowledge-menu']);
 
-const adminLayout = (factory: WorkbenchLayoutFactory) =>
-  baseLayout(factory)
+const baseLayout = (factory: WorkbenchLayoutFactory) => addMonitoringMenu(commonLayout(factory));
+
+const adminLayout = async (factory: WorkbenchLayoutFactory) =>
+  (await baseLayout(factory))
     .addPart(
       'admin-menu',
       { dockTo: 'left-top' },

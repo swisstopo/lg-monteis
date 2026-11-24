@@ -33,6 +33,7 @@ import org.jooq.DSLContext;
 import org.jooq.exception.DataChangedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -187,6 +188,39 @@ class JooqExperimentRepositoryIT {
 
   @Test
   @Transactional
+  void should_accept_a_writable_experiment() {
+    UUID experimentId =
+        SecurityContextTestSupport.callAsAdmin(() -> createWritableCheckExperiment());
+
+    SecurityContextTestSupport.runAsUser(
+        List.of(experimentId),
+        List.of(experimentId),
+        () -> assertDoesNotThrow(() -> repository.requireWritable(experimentId)));
+  }
+
+  @Test
+  @Transactional
+  void should_forbid_a_readable_experiment_the_caller_may_not_write() {
+    UUID experimentId =
+        SecurityContextTestSupport.callAsAdmin(() -> createWritableCheckExperiment());
+
+    SecurityContextTestSupport.runAsUser(
+        List.of(experimentId),
+        () ->
+            assertThrows(
+                AccessDeniedException.class, () -> repository.requireWritable(experimentId)));
+  }
+
+  private UUID createWritableCheckExperiment() {
+    return createExperimentWithDsl(
+        "Writable Check " + UUID.randomUUID(),
+        null,
+        LocalDate.of(2024, Month.JANUARY, 1),
+        LocalDate.of(2024, Month.DECEMBER, 31));
+  }
+
+  @Test
+  @Transactional
   void should_find_all_experiments_sorted_by_name() {
     SecurityContextTestSupport.runAsAdmin(
         () -> {
@@ -211,6 +245,59 @@ class JooqExperimentRepositoryIT {
               namesInOrder.indexOf("Alpha Experiment") < namesInOrder.indexOf("Zebra Experiment"),
               "Experiments should be sorted alphabetically by name");
         });
+  }
+
+  @Test
+  @Transactional
+  void should_find_every_experiment_as_writable_for_an_admin_and_a_global_editor() {
+    List<UUID> ids = createZebraAndAlphaAsAdmin();
+
+    SecurityContextTestSupport.runAsAdmin(
+        () -> assertTrue(idsOf(repository.findAllWritable()).containsAll(ids)));
+    SecurityContextTestSupport.runAsGlobalEditor(
+        () -> assertTrue(idsOf(repository.findAllWritable()).containsAll(ids)));
+  }
+
+  @Test
+  @Transactional
+  void should_find_only_the_experiments_a_pi_may_write_sorted_by_name() {
+    List<UUID> ids = createZebraAndAlphaAsAdmin();
+    UUID zebra = ids.get(0);
+    UUID alpha = ids.get(1);
+
+    SecurityContextTestSupport.runAsUser(
+        ids, ids, () -> assertEquals(List.of(alpha, zebra), idsOf(repository.findAllWritable())));
+    SecurityContextTestSupport.runAsUser(
+        ids,
+        List.of(zebra),
+        () -> assertEquals(List.of(zebra), idsOf(repository.findAllWritable())));
+  }
+
+  @Test
+  @Transactional
+  void should_find_no_writable_experiment_for_a_reader() {
+    List<UUID> ids = createZebraAndAlphaAsAdmin();
+
+    SecurityContextTestSupport.runAsUser(
+        ids, () -> assertEquals(List.of(), repository.findAllWritable()));
+  }
+
+  private List<UUID> createZebraAndAlphaAsAdmin() {
+    return SecurityContextTestSupport.callAsAdmin(
+        () ->
+            Stream.of("Zebra Writable", "Alpha Writable")
+                .map(
+                    name ->
+                        createExperimentWithDsl(
+                            name,
+                            null,
+                            LocalDate.of(2024, Month.JANUARY, 1),
+                            LocalDate.of(2024, Month.DECEMBER, 31)))
+                .toList());
+  }
+
+  private static List<UUID> idsOf(List<Experiment> experiments) {
+    return experiments.stream().map(Experiment::getId).toList();
   }
 
   @Test

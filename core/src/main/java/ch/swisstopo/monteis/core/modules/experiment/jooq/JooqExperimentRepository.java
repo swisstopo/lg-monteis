@@ -1,5 +1,6 @@
 package ch.swisstopo.monteis.core.modules.experiment.jooq;
 
+import static ch.swisstopo.monteis.core.jooq.generated.Routines.canWriteExperiment;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENTS;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_ORGANISATION;
 import static ch.swisstopo.monteis.core.jooq.generated.Tables.EXPERIMENT_OWNER;
@@ -27,6 +28,7 @@ import org.jooq.SelectSelectStep;
 import org.jooq.exception.DataChangedException;
 import org.jooq.impl.DSL;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -122,6 +124,15 @@ public class JooqExperimentRepository implements ExperimentRepository {
 
   @Override
   @Transactional(readOnly = true)
+  public void requireWritable(UUID experimentId) {
+    requireExperimentVisible(experimentId);
+    if (!dsl.fetchValue(canWriteExperiment(experimentId))) {
+      throw new AccessDeniedException("experiment " + experimentId + " is not writable");
+    }
+  }
+
+  @Override
+  @Transactional(readOnly = true)
   public PagedResult<Experiment> getExperiments(PagedRequest request) {
 
     // Default to a deterministic order so offset-based paging stays stable across separate
@@ -154,6 +165,16 @@ public class JooqExperimentRepository implements ExperimentRepository {
   public List<Experiment> findAll() {
     return selectExperiments()
         .from(EXPERIMENTS)
+        .orderBy(EXPERIMENTS.NAME.asc())
+        .fetch(JooqExperimentRepository::toExperiment);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Experiment> findAllWritable() {
+    return selectExperiments()
+        .from(EXPERIMENTS)
+        .where(canWriteExperiment(EXPERIMENTS.ID))
         .orderBy(EXPERIMENTS.NAME.asc())
         .fetch(JooqExperimentRepository::toExperiment);
   }
