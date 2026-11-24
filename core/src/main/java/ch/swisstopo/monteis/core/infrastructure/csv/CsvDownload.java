@@ -25,17 +25,16 @@ public final class CsvDownload {
         .header(
             HttpHeaders.CONTENT_DISPOSITION,
             ContentDisposition.attachment().filename(fileName).build().toString())
-        .body(
-            outputStream -> {
-              // flushed but not closed, spring flushes the stream once more after the body
-              Writer writer =
-                  new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
-              // without a byte order mark Excel reads the file in the system code page, and
-              // breaks umlauts
-              writer.write(BYTE_ORDER_MARK);
-              rows.writeTo(writer);
-              writer.flush();
-            });
+        .body(outputStream -> {
+          // flushed but not closed, spring flushes the stream once more after the body
+          Writer writer =
+              new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
+          // without a byte order mark Excel reads the file in the system code page, and
+          // breaks umlauts
+          writer.write(BYTE_ORDER_MARK);
+          rows.writeTo(writer);
+          writer.flush();
+        });
   }
 
   @FunctionalInterface

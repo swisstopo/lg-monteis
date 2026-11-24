@@ -68,12 +68,11 @@ public class SensorFulcrumRefreshService {
   private static List<FulcrumReading> readingsOf(
       List<Sensor> sensors, Map<UUID, FulcrumSensor> fulcrumSensorsById) {
     return sensors.stream()
-        .flatMap(
-            sensor ->
-                Optional.ofNullable(fulcrumSensorsById.get(sensor.getFulcrumId()))
-                    .flatMap(FulcrumCoordinatesMapper::coordinatesOf)
-                    .map(coordinates -> new FulcrumReading(sensor, coordinates))
-                    .stream())
+        .flatMap(sensor ->
+            Optional.ofNullable(fulcrumSensorsById.get(sensor.getFulcrumId()))
+                .flatMap(FulcrumCoordinatesMapper::coordinatesOf)
+                .map(coordinates -> new FulcrumReading(sensor, coordinates))
+                .stream())
         .toList();
   }
 

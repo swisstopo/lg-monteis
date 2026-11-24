@@ -78,45 +78,43 @@ public class HistoricalReadingChunkProcessor {
 
     List<SensorReadingRecord> updatedRecords =
         oldRecords.stream()
-            .map(
-                reading -> {
-                  try {
-                    SensorReadingRecord transformed =
-                        transformationOrchestrator.transform(
-                            reading.getDasKey(),
-                            reading.getRawValue(),
-                            reading.getTimestamp(), // This is already an OffsetDateTime from DB
-                            activeSensorConfig,
-                            ProcessingOrigin.REPROCESS);
-                    successCounter.increment();
-                    return transformed;
-                  } catch (TransformationException ex) {
-                    log.error(
-                        "POISON PILL REPROCESSING: Math failed for historical record of sensor {}."
-                            + " Raw Value: [{}]. Bumping version to bypass infinite loop. Reason:"
-                            + " {}",
+            .map(reading -> {
+              try {
+                SensorReadingRecord transformed =
+                    transformationOrchestrator.transform(
                         reading.getDasKey(),
                         reading.getRawValue(),
-                        ex.getMessage(),
-                        ex);
+                        reading.getTimestamp(), // This is already an OffsetDateTime from DB
+                        activeSensorConfig,
+                        ProcessingOrigin.REPROCESS);
+                successCounter.increment();
+                return transformed;
+              } catch (TransformationException ex) {
+                log.error(
+                    "POISON PILL REPROCESSING: Math failed for historical record of sensor {}."
+                        + " Raw Value: [{}]. Bumping version to bypass infinite loop. Reason:"
+                        + " {}",
+                    reading.getDasKey(),
+                    reading.getRawValue(),
+                    ex.getMessage(),
+                    ex);
 
-                    // CRITICAL: We must update the version to break the do-while loop!
-                    reading.setVersion(activeSensorConfig.getConfig().getVersion().shortValue());
+                // CRITICAL: We must update the version to break the do-while loop!
+                reading.setVersion(activeSensorConfig.getConfig().getVersion().shortValue());
 
-                    // Set norm_value to null because the new formula cannot process this specific
-                    // raw value.
-                    reading.setNormValue(null);
+                // Set norm_value to null because the new formula cannot process this specific
+                // raw value.
+                reading.setNormValue(null);
 
-                    // Still stamp the config's id even on a poison pill: the stale-row scan also
-                    // matches on a differing sensor_parameter_id, so leaving it would re-select
-                    // this row forever.
-                    reading.setSensorParameterId(
-                        activeSensorConfig.getConfig().getSensorParameterId());
+                // Still stamp the config's id even on a poison pill: the stale-row scan also
+                // matches on a differing sensor_parameter_id, so leaving it would re-select
+                // this row forever.
+                reading.setSensorParameterId(activeSensorConfig.getConfig().getSensorParameterId());
 
-                    poisonPillCounter.increment();
-                    return reading;
-                  }
-                })
+                poisonPillCounter.increment();
+                return reading;
+              }
+            })
             .toList();
 
     transactionTemplate.executeWithoutResult(

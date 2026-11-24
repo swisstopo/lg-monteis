@@ -27,21 +27,19 @@ class SchedulingConfigTest {
   @Test
   void should_keep_boots_task_executor_for_the_background_sync() {
     // when / then
-    contextRunner.run(
-        context -> {
-          assertThat(context).hasBean("applicationTaskExecutor");
-          assertThat(context.getBean("applicationTaskExecutor")).isInstanceOf(TaskExecutor.class);
-        });
+    contextRunner.run(context -> {
+      assertThat(context).hasBean("applicationTaskExecutor");
+      assertThat(context.getBean("applicationTaskExecutor")).isInstanceOf(TaskExecutor.class);
+    });
   }
 
   @Test
   void should_run_scheduled_jobs_on_boots_scheduler_not_on_the_lock_keep_alive_thread() {
     // when / then
-    contextRunner.run(
-        context -> {
-          assertThat(context).hasSingleBean(TaskScheduler.class);
-          assertThat(context).doesNotHaveBean(ScheduledExecutorService.class);
-          assertThat(context).hasSingleBean(LockProvider.class);
-        });
+    contextRunner.run(context -> {
+      assertThat(context).hasSingleBean(TaskScheduler.class);
+      assertThat(context).doesNotHaveBean(ScheduledExecutorService.class);
+      assertThat(context).hasSingleBean(LockProvider.class);
+    });
   }
 }

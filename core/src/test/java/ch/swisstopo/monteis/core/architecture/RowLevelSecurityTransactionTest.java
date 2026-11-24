@@ -33,12 +33,11 @@ class RowLevelSecurityTransactionTest {
               method.getOwner().getAllRawInterfaces().stream()
                   .filter(QUERY_INTERFACE::test)
                   .flatMap(iface -> iface.getMethods().stream())
-                  .anyMatch(
-                      interfaceMethod ->
-                          interfaceMethod.getName().equals(method.getName())
-                              && interfaceMethod
-                                  .getRawParameterTypes()
-                                  .equals(method.getRawParameterTypes())));
+                  .anyMatch(interfaceMethod ->
+                      interfaceMethod.getName().equals(method.getName())
+                          && interfaceMethod
+                              .getRawParameterTypes()
+                              .equals(method.getRawParameterTypes())));
 
   private static final DescribedPredicate<JavaMethod> RUNS_INSIDE_A_SPRING_TRANSACTION =
       describe(

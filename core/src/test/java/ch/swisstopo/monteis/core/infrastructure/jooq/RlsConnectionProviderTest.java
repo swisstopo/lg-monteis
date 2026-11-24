@@ -80,10 +80,9 @@ class RlsConnectionProviderTest {
   @Test
   void should_set_sorted_read_and_write_ids_for_a_scoped_editor() throws SQLException {
     RlsSettings settings =
-        acquireWithin(
-            action ->
-                SecurityContextTestSupport.runAsUser(
-                    List.of(EXPERIMENT_B, EXPERIMENT_A), List.of(EXPERIMENT_A), action));
+        acquireWithin(action ->
+            SecurityContextTestSupport.runAsUser(
+                List.of(EXPERIMENT_B, EXPERIMENT_A), List.of(EXPERIMENT_A), action));
 
     assertEquals(
         new RlsSettings(
@@ -94,10 +93,9 @@ class RlsConnectionProviderTest {
   @Test
   void should_drop_write_ids_that_are_not_readable() throws SQLException {
     RlsSettings settings =
-        acquireWithin(
-            action ->
-                SecurityContextTestSupport.runAsUser(
-                    List.of(EXPERIMENT_A), List.of(EXPERIMENT_A, EXPERIMENT_C), action));
+        acquireWithin(action ->
+            SecurityContextTestSupport.runAsUser(
+                List.of(EXPERIMENT_A), List.of(EXPERIMENT_A, EXPERIMENT_C), action));
 
     assertEquals(
         new RlsSettings("false", "false", EXPERIMENT_A.toString(), EXPERIMENT_A.toString()),
@@ -107,13 +105,12 @@ class RlsConnectionProviderTest {
   @Test
   void should_ignore_a_write_claim_without_the_write_authority() throws SQLException {
     RlsSettings settings =
-        acquireWithin(
-            action ->
-                SecurityContextTestSupport.runAs(
-                    List.of(Grant.EXPERIMENT_READ),
-                    List.of(EXPERIMENT_A),
-                    List.of(EXPERIMENT_A),
-                    action));
+        acquireWithin(action ->
+            SecurityContextTestSupport.runAs(
+                List.of(Grant.EXPERIMENT_READ),
+                List.of(EXPERIMENT_A),
+                List.of(EXPERIMENT_A),
+                action));
 
     assertEquals(new RlsSettings("false", "false", EXPERIMENT_A.toString(), ""), settings);
   }
@@ -129,15 +126,13 @@ class RlsConnectionProviderTest {
   void should_fail_closed_for_an_unbound_or_foreign_authentication() throws SQLException {
     RlsSettings unbound = acquireWithin(Runnable::run);
     RlsSettings foreign =
-        acquireWithin(
-            action -> {
-              SecurityContext context = SecurityContextHolder.createEmptyContext();
-              context.setAuthentication(
-                  UsernamePasswordAuthenticationToken.authenticated(
-                      "x", null, List.of(Grant.ADMIN)));
-              SecurityContextHolder.setContext(context);
-              action.run();
-            });
+        acquireWithin(action -> {
+          SecurityContext context = SecurityContextHolder.createEmptyContext();
+          context.setAuthentication(
+              UsernamePasswordAuthenticationToken.authenticated("x", null, List.of(Grant.ADMIN)));
+          SecurityContextHolder.setContext(context);
+          action.run();
+        });
 
     assertEquals(new RlsSettings("false", "false", "", ""), unbound);
     assertEquals(new RlsSettings("false", "false", "", ""), foreign);

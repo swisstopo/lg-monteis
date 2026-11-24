@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ch.swisstopo.monteis.core.itconfig.ControllerTest;
 import ch.swisstopo.monteis.core.modules.overview.service.OverviewService;
 import ch.swisstopo.monteis.core.modules.overview.web.dto.ReadSimpleMetricDto;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 @ControllerTest(OverviewController.class)
 class OverviewControllerTest {
@@ -26,7 +26,7 @@ class OverviewControllerTest {
   @Autowired private MockMvc mockMvc;
 
   @SuppressWarnings("unused")
-  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   @MockitoBean private OverviewService overviewService;
 

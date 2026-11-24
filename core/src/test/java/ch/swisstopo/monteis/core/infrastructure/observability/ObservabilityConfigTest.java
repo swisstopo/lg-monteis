@@ -24,11 +24,10 @@ class ObservabilityConfigTest {
 
   @Test
   void should_register_nothing_by_default() {
-    contextRunner.run(
-        context -> {
-          assertThat(context).doesNotHaveBean(ObservabilityConfig.class);
-          assertThat(context).doesNotHaveBean(ExecuteListenerProvider.class);
-        });
+    contextRunner.run(context -> {
+      assertThat(context).doesNotHaveBean(ObservabilityConfig.class);
+      assertThat(context).doesNotHaveBean(ExecuteListenerProvider.class);
+    });
   }
 
   @Test
@@ -42,26 +41,24 @@ class ObservabilityConfigTest {
   void should_register_the_filter_and_the_jooq_listener_when_enabled() {
     contextRunner
         .withPropertyValues("monteis.observability.request-timing.enabled=true")
-        .run(
-            context -> {
-              assertThat(context).hasSingleBean(ObservabilityConfig.class);
-              assertThat(context).hasSingleBean(ExecuteListenerProvider.class);
-              assertThat(context.getBean(FilterRegistrationBean.class).getFilter())
-                  .isInstanceOf(RequestTimingFilter.class);
-            });
+        .run(context -> {
+          assertThat(context).hasSingleBean(ObservabilityConfig.class);
+          assertThat(context).hasSingleBean(ExecuteListenerProvider.class);
+          assertThat(context.getBean(FilterRegistrationBean.class).getFilter())
+              .isInstanceOf(RequestTimingFilter.class);
+        });
   }
 
   @Test
   void should_skip_the_default_actuator_path_when_none_is_configured() {
     contextRunner
         .withPropertyValues("monteis.observability.request-timing.enabled=true")
-        .run(
-            context -> {
-              RequestTimingFilter filter = filterFrom(context);
+        .run(context -> {
+          RequestTimingFilter filter = filterFrom(context);
 
-              assertThat(filter.shouldNotFilter(get("/actuator/health/liveness"))).isTrue();
-              assertThat(filter.shouldNotFilter(get("/api/overview/metrics"))).isFalse();
-            });
+          assertThat(filter.shouldNotFilter(get("/actuator/health/liveness"))).isTrue();
+          assertThat(filter.shouldNotFilter(get("/api/overview/metrics"))).isFalse();
+        });
   }
 
   @Test
@@ -70,13 +67,12 @@ class ObservabilityConfigTest {
         .withPropertyValues(
             "monteis.observability.request-timing.enabled=true",
             "management.endpoints.web.base-path=/management")
-        .run(
-            context -> {
-              RequestTimingFilter filter = filterFrom(context);
+        .run(context -> {
+          RequestTimingFilter filter = filterFrom(context);
 
-              assertThat(filter.shouldNotFilter(get("/management/health/readiness"))).isTrue();
-              assertThat(filter.shouldNotFilter(get("/actuator/health/readiness"))).isFalse();
-            });
+          assertThat(filter.shouldNotFilter(get("/management/health/readiness"))).isTrue();
+          assertThat(filter.shouldNotFilter(get("/actuator/health/readiness"))).isFalse();
+        });
   }
 
   private static RequestTimingFilter filterFrom(ApplicationContext context) {
@@ -91,13 +87,12 @@ class ObservabilityConfigTest {
   void should_provide_a_fresh_listener_per_execution() {
     contextRunner
         .withPropertyValues("monteis.observability.request-timing.enabled=true")
-        .run(
-            context -> {
-              ExecuteListenerProvider provider = context.getBean(ExecuteListenerProvider.class);
+        .run(context -> {
+          ExecuteListenerProvider provider = context.getBean(ExecuteListenerProvider.class);
 
-              // The listener holds per-statement state, so a shared instance would corrupt
-              // concurrent timings
-              assertThat(provider.provide()).isNotSameAs(provider.provide());
-            });
+          // The listener holds per-statement state, so a shared instance would corrupt
+          // concurrent timings
+          assertThat(provider.provide()).isNotSameAs(provider.provide());
+        });
   }
 }

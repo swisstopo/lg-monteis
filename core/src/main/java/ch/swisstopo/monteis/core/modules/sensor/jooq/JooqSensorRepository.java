@@ -243,11 +243,10 @@ public class JooqSensorRepository implements SensorRepository {
             .where(SENSORS.ID.eq(id))
             .fetchOptional(this::toSensorWithExperiment);
 
-    sensorOpt.ifPresent(
-        sensor ->
-            sensor.setParameters(
-                fetchParametersBySensorIds(List.of(sensor.getId()))
-                    .getOrDefault(sensor.getId(), new ArrayList<>())));
+    sensorOpt.ifPresent(sensor ->
+        sensor.setParameters(
+            fetchParametersBySensorIds(List.of(sensor.getId()))
+                .getOrDefault(sensor.getId(), new ArrayList<>())));
 
     return sensorOpt;
   }

@@ -41,7 +41,6 @@ import ch.swisstopo.monteis.core.modules.experiment.web.dto.inbound.WriteExperim
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.nested.PeriodDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentOwnerDto;
 import ch.swisstopo.monteis.core.modules.experiment.web.dto.outbound.ExperimentResponseDto;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.Writer;
 import java.time.*;
 import java.util.List;
@@ -57,6 +56,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import tools.jackson.databind.ObjectMapper;
 
 @ControllerTest(ExperimentController.class)
 class ExperimentControllerTest {
@@ -74,7 +74,7 @@ class ExperimentControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   @MockitoBean private ExperimentService experimentService;
   @MockitoBean private ExperimentOwnerService ownerService;

@@ -52,22 +52,20 @@ class AlertingConfigTest {
     // given
     CountDownLatch releaseSend = new CountDownLatch(1);
     given(kafkaTemplate.send(anyString(), anyString(), any(SensorBoundBreachedEvent.class)))
-        .willAnswer(
-            invocation -> {
-              releaseSend.await(5, TimeUnit.SECONDS);
-              return CompletableFuture.completedFuture(null);
-            });
-
-    contextRunner.run(
-        context -> {
-          try {
-            // when / then
-            assertTimeoutPreemptively(NON_BLOCKING, () -> context.publishEvent(event("s1")));
-            then(kafkaTemplate).should(timeout(1000)).send(eq(ALERT_TOPIC), eq("s1"), any());
-          } finally {
-            releaseSend.countDown();
-          }
+        .willAnswer(invocation -> {
+          releaseSend.await(5, TimeUnit.SECONDS);
+          return CompletableFuture.completedFuture(null);
         });
+
+    contextRunner.run(context -> {
+      try {
+        // when / then
+        assertTimeoutPreemptively(NON_BLOCKING, () -> context.publishEvent(event("s1")));
+        then(kafkaTemplate).should(timeout(1000)).send(eq(ALERT_TOPIC), eq("s1"), any());
+      } finally {
+        releaseSend.countDown();
+      }
+    });
   }
 
   @Test
@@ -76,35 +74,33 @@ class AlertingConfigTest {
     CountDownLatch sendStarted = new CountDownLatch(1);
     CountDownLatch releaseSend = new CountDownLatch(1);
     given(kafkaTemplate.send(anyString(), anyString(), any(SensorBoundBreachedEvent.class)))
-        .willAnswer(
-            invocation -> {
-              sendStarted.countDown();
-              releaseSend.await(5, TimeUnit.SECONDS);
-              return CompletableFuture.completedFuture(null);
-            });
+        .willAnswer(invocation -> {
+          sendStarted.countDown();
+          releaseSend.await(5, TimeUnit.SECONDS);
+          return CompletableFuture.completedFuture(null);
+        });
 
     contextRunner
         .withPropertyValues("app.pipeline.alerts.queue-capacity=1")
-        .run(
-            context -> {
-              try {
-                // when
-                assertTimeoutPreemptively(
-                    NON_BLOCKING,
-                    () -> {
-                      context.publishEvent(event("s1"));
-                      sendStarted.await();
-                      context.publishEvent(event("s2"));
-                      context.publishEvent(event("s3"));
-                    });
-              } finally {
-                releaseSend.countDown();
-              }
+        .run(context -> {
+          try {
+            // when
+            assertTimeoutPreemptively(
+                NON_BLOCKING,
+                () -> {
+                  context.publishEvent(event("s1"));
+                  sendStarted.await();
+                  context.publishEvent(event("s2"));
+                  context.publishEvent(event("s3"));
+                });
+          } finally {
+            releaseSend.countDown();
+          }
 
-              // then
-              then(kafkaTemplate).should(timeout(1000)).send(eq(ALERT_TOPIC), eq("s2"), any());
-              then(kafkaTemplate).should(after(200).never()).send(eq(ALERT_TOPIC), eq("s3"), any());
-            });
+          // then
+          then(kafkaTemplate).should(timeout(1000)).send(eq(ALERT_TOPIC), eq("s2"), any());
+          then(kafkaTemplate).should(after(200).never()).send(eq(ALERT_TOPIC), eq("s3"), any());
+        });
   }
 
   @Test
@@ -112,30 +108,28 @@ class AlertingConfigTest {
     // given
     CountDownLatch sendStarted = new CountDownLatch(1);
     given(kafkaTemplate.send(anyString(), anyString(), any(SensorBoundBreachedEvent.class)))
-        .willAnswer(
-            invocation -> {
-              sendStarted.countDown();
-              Thread.sleep(200);
-              return CompletableFuture.completedFuture(null);
-            });
-
-    contextRunner.run(
-        context -> {
-          context.publishEvent(event("s1"));
-          sendStarted.await(1, TimeUnit.SECONDS);
-          context.publishEvent(event("s2"));
-          context.publishEvent(event("s3"));
-
-          // when
-          context.close();
-
-          // then
-          InOrder inOrder = inOrder(kafkaTemplate);
-          inOrder
-              .verify(kafkaTemplate, times(3))
-              .send(eq(ALERT_TOPIC), anyString(), any(SensorBoundBreachedEvent.class));
-          inOrder.verify(kafkaTemplate).destroy();
+        .willAnswer(invocation -> {
+          sendStarted.countDown();
+          Thread.sleep(200);
+          return CompletableFuture.completedFuture(null);
         });
+
+    contextRunner.run(context -> {
+      context.publishEvent(event("s1"));
+      sendStarted.await(1, TimeUnit.SECONDS);
+      context.publishEvent(event("s2"));
+      context.publishEvent(event("s3"));
+
+      // when
+      context.close();
+
+      // then
+      InOrder inOrder = inOrder(kafkaTemplate);
+      inOrder
+          .verify(kafkaTemplate, times(3))
+          .send(eq(ALERT_TOPIC), anyString(), any(SensorBoundBreachedEvent.class));
+      inOrder.verify(kafkaTemplate).destroy();
+    });
   }
 
   private static SensorBoundBreachedEvent event(String sensorId) {

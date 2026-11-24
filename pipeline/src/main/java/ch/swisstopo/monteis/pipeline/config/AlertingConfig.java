@@ -28,9 +28,8 @@ public class AlertingConfig {
     executor.setMaxPoolSize(1);
     executor.setQueueCapacity(queueCapacity);
     executor.setThreadNamePrefix("alert-publisher-");
-    executor.setRejectedExecutionHandler(
-        (task, pool) ->
-            log.warn("Alert queue full ({} queued), dropping alert", pool.getQueue().size()));
+    executor.setRejectedExecutionHandler((task, pool) ->
+        log.warn("Alert queue full ({} queued), dropping alert", pool.getQueue().size()));
     executor.setWaitForTasksToCompleteOnShutdown(true);
     executor.setAwaitTerminationSeconds(SHUTDOWN_TIMEOUT_SECONDS);
     return executor;

@@ -44,53 +44,51 @@ public class SecurityConfig {
       ObjectMapper objectMapper) {
     MonteisAccessDeniedHandler accessDeniedHandler = new MonteisAccessDeniedHandler(objectMapper);
     ExperimentWriteAuthorizationManager experimentWrite = new ExperimentWriteAuthorizationManager();
-    http.authorizeHttpRequests(
-            request ->
-                request
-                    .requestMatchers(PUBLIC_ENDPOINTS)
-                    .permitAll()
-                    // first match wins, the per-experiment writes have to come before the
-                    // admin-only write rule below
-                    .requestMatchers(ApiPaths.EXPERIMENT_OWNER_CANDIDATES)
-                    .access(allowIf(Capabilities::canManageExperimentOwners))
-                    .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
-                    .access(experimentWrite)
-                    .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
-                    .access(experimentWrite)
-                    .requestMatchers(HttpMethod.DELETE, ApiPaths.EXPERIMENT_DOCUMENT)
-                    .access(experimentWrite)
-                    // grant only, the insert and delete policies of sensor_documents decide per
-                    // sensor
-                    .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
-                    .access(allowIf(Capabilities::canWriteExperiments))
-                    .requestMatchers(HttpMethod.DELETE, ApiPaths.SENSOR_DOCUMENT)
-                    .access(allowIf(Capabilities::canWriteExperiments))
-                    .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)
-                    .access(allowIf(Capabilities::canCreateExperiment))
-                    // all methods: Spring answers HEAD via GET handler
-                    .requestMatchers(ApiPaths.FULCRUM_DOCUMENT_CONTENT)
-                    .access(allowIf(Capabilities::canAccessDocuments))
-                    .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
-                    .access(allowIf(Capabilities::canAccessDocuments))
-                    // grant only, before the admin-only sensor rule (MON-173, ADR "Hybride
-                    // Durchsetzung"): RLS limits the sensors, values come from Fulcrum only
-                    .requestMatchers(HttpMethod.POST, ApiPaths.SENSORS_FULCRUM_REFRESH)
-                    .access(allowIf(Capabilities::canWriteExperiments))
-                    // sensor reads need no rule of their own: RLS filters the rows by experiment
-                    .requestMatchers(HttpMethod.GET, SENSORS_PATHS)
-                    .authenticated()
-                    .requestMatchers(SENSORS_PATHS)
-                    .access(allowIf(Capabilities::canManageSensors))
-                    .requestMatchers(WRITE_REQUESTS)
-                    .access(allowIf(Capabilities::isAdmin))
-                    .anyRequest()
-                    .authenticated())
+    http.authorizeHttpRequests(request ->
+            request
+                .requestMatchers(PUBLIC_ENDPOINTS)
+                .permitAll()
+                // first match wins, the per-experiment writes have to come before the
+                // admin-only write rule below
+                .requestMatchers(ApiPaths.EXPERIMENT_OWNER_CANDIDATES)
+                .access(allowIf(Capabilities::canManageExperimentOwners))
+                .requestMatchers(HttpMethod.PUT, ApiPaths.EXPERIMENT)
+                .access(experimentWrite)
+                .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENT_DOCUMENTS)
+                .access(experimentWrite)
+                .requestMatchers(HttpMethod.DELETE, ApiPaths.EXPERIMENT_DOCUMENT)
+                .access(experimentWrite)
+                // grant only, the insert and delete policies of sensor_documents decide per
+                // sensor
+                .requestMatchers(HttpMethod.POST, ApiPaths.SENSOR_DOCUMENTS)
+                .access(allowIf(Capabilities::canWriteExperiments))
+                .requestMatchers(HttpMethod.DELETE, ApiPaths.SENSOR_DOCUMENT)
+                .access(allowIf(Capabilities::canWriteExperiments))
+                .requestMatchers(HttpMethod.POST, ApiPaths.EXPERIMENTS)
+                .access(allowIf(Capabilities::canCreateExperiment))
+                // all methods: Spring answers HEAD via GET handler
+                .requestMatchers(ApiPaths.FULCRUM_DOCUMENT_CONTENT)
+                .access(allowIf(Capabilities::canAccessDocuments))
+                .requestMatchers(HttpMethod.POST, ApiPaths.FULCRUM_SYNC)
+                .access(allowIf(Capabilities::canAccessDocuments))
+                // grant only, before the admin-only sensor rule (MON-173, ADR "Hybride
+                // Durchsetzung"): RLS limits the sensors, values come from Fulcrum only
+                .requestMatchers(HttpMethod.POST, ApiPaths.SENSORS_FULCRUM_REFRESH)
+                .access(allowIf(Capabilities::canWriteExperiments))
+                // sensor reads need no rule of their own: RLS filters the rows by experiment
+                .requestMatchers(HttpMethod.GET, SENSORS_PATHS)
+                .authenticated()
+                .requestMatchers(SENSORS_PATHS)
+                .access(allowIf(Capabilities::canManageSensors))
+                .requestMatchers(WRITE_REQUESTS)
+                .access(allowIf(Capabilities::isAdmin))
+                .anyRequest()
+                .authenticated())
         .exceptionHandling(exceptions -> exceptions.accessDeniedHandler(accessDeniedHandler))
-        .oauth2ResourceServer(
-            oauth2 ->
-                oauth2
-                    .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
-                    .accessDeniedHandler(accessDeniedHandler));
+        .oauth2ResourceServer(oauth2 ->
+            oauth2
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
+                .accessDeniedHandler(accessDeniedHandler));
 
     return http.build();
   }

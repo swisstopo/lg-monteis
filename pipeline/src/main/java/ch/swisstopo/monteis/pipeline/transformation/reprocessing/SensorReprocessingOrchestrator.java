@@ -35,19 +35,18 @@ public class SensorReprocessingOrchestrator {
   }
 
   public void checkAndReprocessHistoricalData(ActiveSensorConfig activeSensorConfig) {
-    reprocessingRunTimer.record(
-        () -> {
-          int totalProcessed = reprocessByDasKey(activeSensorConfig);
+    reprocessingRunTimer.record(() -> {
+      int totalProcessed = reprocessByDasKey(activeSensorConfig);
 
-          if (totalProcessed > 0) {
-            log.info(
-                "Successfully reprocessed {} historical records for DAS key {} (sensor parameter"
-                    + " {})",
-                totalProcessed,
-                activeSensorConfig.dasKey(),
-                activeSensorConfig.getConfig().getSensorParameterId());
-          }
-        });
+      if (totalProcessed > 0) {
+        log.info(
+            "Successfully reprocessed {} historical records for DAS key {} (sensor parameter"
+                + " {})",
+            totalProcessed,
+            activeSensorConfig.dasKey(),
+            activeSensorConfig.getConfig().getSensorParameterId());
+      }
+    });
   }
 
   private int reprocessByDasKey(ActiveSensorConfig activeSensorConfig) {

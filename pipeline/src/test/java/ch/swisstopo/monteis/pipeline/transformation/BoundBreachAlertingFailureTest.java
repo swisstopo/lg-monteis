@@ -107,15 +107,14 @@ class BoundBreachAlertingFailureTest {
     given(kafkaTemplate.send(eq("sensor-alerts"), anyString(), any(SensorBoundBreachedEvent.class)))
         .willThrow(new KafkaException("Topic sensor-alerts not present in metadata"));
 
-    contextRunner.run(
-        context -> {
-          // when
-          assertTimeoutPreemptively(NON_BLOCKING, () -> processBreachingReading(context));
+    contextRunner.run(context -> {
+      // when
+      assertTimeoutPreemptively(NON_BLOCKING, () -> processBreachingReading(context));
 
-          // then
-          assertBreachingReadingStoredAndAcked();
-          then(kafkaTemplate).should(timeout(1000)).send(eq("sensor-alerts"), anyString(), any());
-        });
+      // then
+      assertBreachingReadingStoredAndAcked();
+      then(kafkaTemplate).should(timeout(1000)).send(eq("sensor-alerts"), anyString(), any());
+    });
   }
 
   @Test
@@ -123,24 +122,22 @@ class BoundBreachAlertingFailureTest {
     // given
     CountDownLatch releaseSend = new CountDownLatch(1);
     given(kafkaTemplate.send(eq("sensor-alerts"), anyString(), any(SensorBoundBreachedEvent.class)))
-        .willAnswer(
-            invocation -> {
-              releaseSend.await(SEND_BLOCK_SECONDS, TimeUnit.SECONDS);
-              throw new KafkaException("Send failed");
-            });
-
-    contextRunner.run(
-        context -> {
-          try {
-            // when
-            assertTimeoutPreemptively(NON_BLOCKING, () -> processBreachingReading(context));
-
-            // then
-            assertBreachingReadingStoredAndAcked();
-          } finally {
-            releaseSend.countDown();
-          }
+        .willAnswer(invocation -> {
+          releaseSend.await(SEND_BLOCK_SECONDS, TimeUnit.SECONDS);
+          throw new KafkaException("Send failed");
         });
+
+    contextRunner.run(context -> {
+      try {
+        // when
+        assertTimeoutPreemptively(NON_BLOCKING, () -> processBreachingReading(context));
+
+        // then
+        assertBreachingReadingStoredAndAcked();
+      } finally {
+        releaseSend.countDown();
+      }
+    });
   }
 
   private void processBreachingReading(ApplicationContext context) {
@@ -164,11 +161,10 @@ class BoundBreachAlertingFailureTest {
     then(sensorReadingRepository).should().upsertBatch(stored.capture());
     assertThat(stored.getValue())
         .singleElement()
-        .satisfies(
-            reading -> {
-              assertThat(reading.getRawValue()).isEqualTo(3059.774);
-              assertThat(reading.getStatus()).isEqualTo(RangeCategory.too_high);
-            });
+        .satisfies(reading -> {
+          assertThat(reading.getRawValue()).isEqualTo(3059.774);
+          assertThat(reading.getStatus()).isEqualTo(RangeCategory.too_high);
+        });
     then(ack).should().acknowledge();
   }
 }

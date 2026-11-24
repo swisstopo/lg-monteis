@@ -100,7 +100,10 @@
               <modelPackage>ch.swisstopo.monteis.contracts</modelPackage>
 
               <configOptions>
-                <useRecords>true</useRecords>
+                <!-- false keeps the classes (getters, fluent setters) the code uses. Generator
+                     7.25 ignored useRecords=true; 7.27 honours it. Migrating to records is a
+                     separate ticket. -->
+                <useRecords>false</useRecords>
               </configOptions>
             </configuration>
           </execution>
@@ -126,8 +129,18 @@
               <modelPackage>ch.swisstopo.monteis.contracts.fulcrum</modelPackage>
               <output>${project.build.directory}/generated-sources/openapi-fulcrum</output>
 
+              <!-- One explicit tag for every operation, so the interface is always FulcrumApi.
+                   Without it the generator names untagged operations after the path prefix
+                   (DefaultApi up to 7.25, V2Api from 7.27), which changes with generator or
+                   Fulcrum API versions. -->
+              <openapiNormalizer>SET_TAGS_FOR_ALL_OPERATIONS=Fulcrum</openapiNormalizer>
+
               <configOptions>
-                <useRecords>true</useRecords>
+                <useTags>true</useTags>
+                <!-- false keeps the classes (getters, fluent setters) the code uses. Generator
+                     7.25 ignored useRecords=true; 7.27 honours it. Migrating to records is a
+                     separate ticket. -->
+                <useRecords>false</useRecords>
                 <openApiNullable>false</openApiNullable>
                 <useOneOfInterfaces>false</useOneOfInterfaces>
               </configOptions>

@@ -1,6 +1,6 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
-import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import ch.swisstopo.monteis.contracts.fulcrum.api.FulcrumApi;
 import java.util.function.Consumer;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.HttpClientSettings;
@@ -17,7 +17,7 @@ import org.springframework.web.client.support.RestClientHttpServiceGroupConfigur
 import org.springframework.web.service.registry.ImportHttpServices;
 
 @Configuration
-@ImportHttpServices(group = FulcrumConfig.GROUP, types = DefaultApi.class)
+@ImportHttpServices(group = FulcrumConfig.GROUP, types = FulcrumApi.class)
 public class FulcrumConfig {
 
   public static final String GROUP = "fulcrum";
@@ -30,11 +30,8 @@ public class FulcrumConfig {
     return groups ->
         groups
             .filterByName(GROUP)
-            .forEachClient(
-                (group, builder) ->
-                    builder
-                        .requestFactory(requestFactoryOf(properties))
-                        .apply(configure(properties)));
+            .forEachClient((group, builder) ->
+                builder.requestFactory(requestFactoryOf(properties)).apply(configure(properties)));
   }
 
   // refuses every call while Fulcrum off, callers need no check. tests reuse it with own factory

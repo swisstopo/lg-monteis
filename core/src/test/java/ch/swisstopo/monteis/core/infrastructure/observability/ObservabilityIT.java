@@ -34,30 +34,28 @@ class ObservabilityIT {
   @Test
   @Transactional
   void should_record_real_queries_into_the_current_request() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          RequestTiming.begin();
-          dsl.select(SENSORS.DAS_SENSOR_ALIAS).from(SENSORS).fetch();
-          dsl.select(SENSORS.DAS_SENSOR_ALIAS).from(SENSORS).limit(1).fetch();
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      RequestTiming.begin();
+      dsl.select(SENSORS.DAS_SENSOR_ALIAS).from(SENSORS).fetch();
+      dsl.select(SENSORS.DAS_SENSOR_ALIAS).from(SENSORS).limit(1).fetch();
 
-          RequestTiming timing = RequestTiming.current();
-          assertEquals(
-              2,
-              timing.queries(),
-              "the ExecuteListenerProvider bean is not attached to the application's DSLContext");
-          assertTrue(timing.rows() > 0, "expected fetched rows to be counted");
-        });
+      RequestTiming timing = RequestTiming.current();
+      assertEquals(
+          2,
+          timing.queries(),
+          "the ExecuteListenerProvider bean is not attached to the application's DSLContext");
+      assertTrue(timing.rows() > 0, "expected fetched rows to be counted");
+    });
   }
 
   @Test
   @Transactional
   void should_not_record_anything_outside_a_request() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // No RequestTiming.begin() — mirrors a scheduled job or startup task
-          dsl.select(SENSORS.DAS_SENSOR_ALIAS).from(SENSORS).limit(1).fetch();
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // No RequestTiming.begin() — mirrors a scheduled job or startup task
+      dsl.select(SENSORS.DAS_SENSOR_ALIAS).from(SENSORS).limit(1).fetch();
 
-          assertNull(RequestTiming.current());
-        });
+      assertNull(RequestTiming.current());
+    });
   }
 }

@@ -58,130 +58,124 @@ class JooqExperimentCsvExportQueryRepositoryIT {
   @Test
   @Transactional
   void should_export_the_names_of_the_visible_owners() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID experimentId =
-              createExperiment(
-                  "OwnerCsvExportExperiment",
-                  null,
-                  LocalDate.of(2024, Month.JANUARY, 1),
-                  LocalDate.of(2024, Month.DECEMBER, 31));
-          addOwners(experimentId, ALICE.id(), BOB.id());
-          owners = Map.of(experimentId, VisibleOwners.of(List.of(BOB, ALICE)));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID experimentId =
+          createExperiment(
+              "OwnerCsvExportExperiment",
+              null,
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
+      addOwners(experimentId, ALICE.id(), BOB.id());
+      owners = Map.of(experimentId, VisibleOwners.of(List.of(BOB, ALICE)));
 
-          String csv = streamToString(nameFilter("OwnerCsvExportExperiment"));
+      String csv = streamToString(nameFilter("OwnerCsvExportExperiment"));
 
-          List<String> lines = List.of(csv.split("\r\n"));
-          assertTrue(lines.get(1).contains(";0;\"Bob Builder; Alice Example\";;"), csv);
-        });
+      List<String> lines = List.of(csv.split("\r\n"));
+      assertTrue(lines.get(1).contains(";0;\"Bob Builder; Alice Example\";;"), csv);
+    });
   }
 
   @Test
   @Transactional
   void should_drop_the_separator_from_owner_names() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID experimentId =
-              createExperiment(
-                  "SemicolonOwnerCsvExportExperiment",
-                  null,
-                  LocalDate.of(2024, Month.JANUARY, 1),
-                  LocalDate.of(2024, Month.DECEMBER, 31));
-          DirectoryUser semicolon =
-              new DirectoryUser(UUID.randomUUID(), "Ca;rl", "Sem; i", "carl@example.test");
-          addOwners(experimentId, semicolon.id(), ALICE.id());
-          owners = Map.of(experimentId, VisibleOwners.of(List.of(semicolon, ALICE)));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID experimentId =
+          createExperiment(
+              "SemicolonOwnerCsvExportExperiment",
+              null,
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
+      DirectoryUser semicolon =
+          new DirectoryUser(UUID.randomUUID(), "Ca;rl", "Sem; i", "carl@example.test");
+      addOwners(experimentId, semicolon.id(), ALICE.id());
+      owners = Map.of(experimentId, VisibleOwners.of(List.of(semicolon, ALICE)));
 
-          String csv = streamToString(nameFilter("SemicolonOwnerCsvExportExperiment"));
+      String csv = streamToString(nameFilter("SemicolonOwnerCsvExportExperiment"));
 
-          List<String> lines = List.of(csv.split("\r\n"));
-          assertTrue(lines.get(1).contains(";0;\"Carl Sem i; Alice Example\";;"), csv);
-        });
+      List<String> lines = List.of(csv.split("\r\n"));
+      assertTrue(lines.get(1).contains(";0;\"Carl Sem i; Alice Example\";;"), csv);
+    });
   }
 
   @Test
   @Transactional
   void should_write_why_the_owners_are_missing() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID experimentId =
-              createExperiment(
-                  "OfflineCsvExportExperiment",
-                  null,
-                  LocalDate.of(2024, Month.JANUARY, 1),
-                  LocalDate.of(2024, Month.DECEMBER, 31));
-          addOwners(experimentId, ALICE.id());
-          Map<VisibleOwners, String> cells =
-              Map.of(
-                  VisibleOwners.KEYCLOAK_UNAVAILABLE, ";0;(unavailable);",
-                  VisibleOwners.ACCESS_DENIED, ";0;(access denied);",
-                  VisibleOwners.NO_WRITE_GROUP, ";0;(no write group);");
-          cells.forEach(
-              (missing, cell) -> {
-                owners = Map.of(experimentId, missing);
-                String csv = streamToString(nameFilter("OfflineCsvExportExperiment"));
-                assertTrue(List.of(csv.split("\r\n")).get(1).contains(cell), csv);
-              });
-        });
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID experimentId =
+          createExperiment(
+              "OfflineCsvExportExperiment",
+              null,
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
+      addOwners(experimentId, ALICE.id());
+      Map<VisibleOwners, String> cells =
+          Map.of(
+              VisibleOwners.KEYCLOAK_UNAVAILABLE, ";0;(unavailable);",
+              VisibleOwners.ACCESS_DENIED, ";0;(access denied);",
+              VisibleOwners.NO_WRITE_GROUP, ";0;(no write group);");
+      cells.forEach((missing, cell) -> {
+        owners = Map.of(experimentId, missing);
+        String csv = streamToString(nameFilter("OfflineCsvExportExperiment"));
+        assertTrue(List.of(csv.split("\r\n")).get(1).contains(cell), csv);
+      });
+    });
   }
 
   @Test
   @Transactional
   void should_apply_the_owner_filter_to_the_export() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID owned =
-              createExperiment(
-                  "FilteredCsvOwned",
-                  null,
-                  LocalDate.of(2024, Month.JANUARY, 1),
-                  LocalDate.of(2024, Month.DECEMBER, 31));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID owned =
           createExperiment(
-              "FilteredCsvOther",
+              "FilteredCsvOwned",
               null,
               LocalDate.of(2024, Month.JANUARY, 1),
               LocalDate.of(2024, Month.DECEMBER, 31));
-          addOwners(owned, ALICE.id());
-          owners = Map.of(owned, VisibleOwners.of(List.of(ALICE)));
+      createExperiment(
+          "FilteredCsvOther",
+          null,
+          LocalDate.of(2024, Month.JANUARY, 1),
+          LocalDate.of(2024, Month.DECEMBER, 31));
+      addOwners(owned, ALICE.id());
+      owners = Map.of(owned, VisibleOwners.of(List.of(ALICE)));
 
-          PagedRequest request =
-              new PagedRequest(
-                  0,
-                  10,
-                  List.of(),
-                  Map.of(
-                      "name",
-                      new TextFilterModel("contains", "FilteredCsv", null),
-                      "owners",
-                      new SetFilterModel("set", Set.of(ALICE.id().toString()))));
+      PagedRequest request =
+          new PagedRequest(
+              0,
+              10,
+              List.of(),
+              Map.of(
+                  "name",
+                  new TextFilterModel("contains", "FilteredCsv", null),
+                  "owners",
+                  new SetFilterModel("set", Set.of(ALICE.id().toString()))));
 
-          List<String> lines = List.of(streamToString(request).split("\r\n"));
+      List<String> lines = List.of(streamToString(request).split("\r\n"));
 
-          assertEquals(2, lines.size());
-          assertTrue(lines.get(1).startsWith("FilteredCsvOwned;"));
-        });
+      assertEquals(2, lines.size());
+      assertTrue(lines.get(1).startsWith("FilteredCsvOwned;"));
+    });
   }
 
   @Test
   @Transactional
   void should_apply_the_organisation_filter_to_the_export() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID swisstopo = createOrganisation("CsvOrgFilter swisstopo");
-          UUID eth = createOrganisation("CsvOrgFilter ETH");
-          UUID ofSwisstopo = createDefaultExperiment("OrgFilteredCsvSwisstopo");
-          UUID ofEth = createDefaultExperiment("OrgFilteredCsvEth");
-          createDefaultExperiment("OrgFilteredCsvNone");
-          linkOrganisation(ofSwisstopo, swisstopo);
-          linkOrganisation(ofEth, eth);
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID swisstopo = createOrganisation("CsvOrgFilter swisstopo");
+      UUID eth = createOrganisation("CsvOrgFilter ETH");
+      UUID ofSwisstopo = createDefaultExperiment("OrgFilteredCsvSwisstopo");
+      UUID ofEth = createDefaultExperiment("OrgFilteredCsvEth");
+      createDefaultExperiment("OrgFilteredCsvNone");
+      linkOrganisation(ofSwisstopo, swisstopo);
+      linkOrganisation(ofEth, eth);
 
-          List<String> bySwisstopo = exportedNames(organisationFilter(swisstopo.toString()));
-          List<String> bySwisstopoOrNone =
-              exportedNames(organisationFilter(swisstopo.toString(), null));
+      List<String> bySwisstopo = exportedNames(organisationFilter(swisstopo.toString()));
+      List<String> bySwisstopoOrNone =
+          exportedNames(organisationFilter(swisstopo.toString(), null));
 
-          assertEquals(List.of("OrgFilteredCsvSwisstopo"), bySwisstopo);
-          assertEquals(List.of("OrgFilteredCsvNone", "OrgFilteredCsvSwisstopo"), bySwisstopoOrNone);
-        });
+      assertEquals(List.of("OrgFilteredCsvSwisstopo"), bySwisstopo);
+      assertEquals(List.of("OrgFilteredCsvNone", "OrgFilteredCsvSwisstopo"), bySwisstopoOrNone);
+    });
   }
 
   private UUID createDefaultExperiment(String name) {
@@ -243,137 +237,128 @@ class JooqExperimentCsvExportQueryRepositoryIT {
   @Test
   @Transactional
   void should_stream_header_and_rows_matching_the_filter() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // given: a period spanning today, so status is deterministically ACTIVE
-          LocalDate start = LocalDate.now().minusYears(1);
-          LocalDate end = LocalDate.now().plusYears(1);
-          createExperiment("UniqueCsvExportExperiment", "A comment", start, end);
-          createExperiment("Other Experiment", "Another comment", start, end);
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // given: a period spanning today, so status is deterministically ACTIVE
+      LocalDate start = LocalDate.now().minusYears(1);
+      LocalDate end = LocalDate.now().plusYears(1);
+      createExperiment("UniqueCsvExportExperiment", "A comment", start, end);
+      createExperiment("Other Experiment", "Another comment", start, end);
 
-          PagedRequest request =
-              new PagedRequest(
-                  0,
-                  10,
-                  List.of(),
-                  Map.of("name", new TextFilterModel("contains", "uniquecsvexport", null)));
+      PagedRequest request =
+          new PagedRequest(
+              0,
+              10,
+              List.of(),
+              Map.of("name", new TextFilterModel("contains", "uniquecsvexport", null)));
 
-          // when
-          String csv = streamToString(request);
+      // when
+      String csv = streamToString(request);
 
-          // then
-          List<String> lines = List.of(csv.split("\r\n"));
-          assertEquals(
-              "name;status;period.start;period.end;sensorCount;owners;comment;id",
-              lines.getFirst());
-          assertEquals(2, lines.size(), "Header plus exactly one matching row");
-          assertTrue(
-              lines
-                  .get(1)
-                  .startsWith("UniqueCsvExportExperiment;ACTIVE;%s;%s;0;".formatted(start, end)));
-        });
+      // then
+      List<String> lines = List.of(csv.split("\r\n"));
+      assertEquals(
+          "name;status;period.start;period.end;sensorCount;owners;comment;id", lines.getFirst());
+      assertEquals(2, lines.size(), "Header plus exactly one matching row");
+      assertTrue(
+          lines
+              .get(1)
+              .startsWith("UniqueCsvExportExperiment;ACTIVE;%s;%s;0;".formatted(start, end)));
+    });
   }
 
   @Test
   @Transactional
   void should_compute_historic_status_for_a_period_entirely_in_the_past() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // given: a period that ended well before today
-          createExperiment(
-              "HistoricCsvExportExperiment",
-              "Comment",
-              LocalDate.now().minusYears(2),
-              LocalDate.now().minusYears(1));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // given: a period that ended well before today
+      createExperiment(
+          "HistoricCsvExportExperiment",
+          "Comment",
+          LocalDate.now().minusYears(2),
+          LocalDate.now().minusYears(1));
 
-          PagedRequest request =
-              new PagedRequest(
-                  0,
-                  10,
-                  List.of(),
-                  Map.of(
-                      "name",
-                      new TextFilterModel("contains", "HistoricCsvExportExperiment", null)));
+      PagedRequest request =
+          new PagedRequest(
+              0,
+              10,
+              List.of(),
+              Map.of("name", new TextFilterModel("contains", "HistoricCsvExportExperiment", null)));
 
-          // when
-          String csv = streamToString(request);
+      // when
+      String csv = streamToString(request);
 
-          // then
-          List<String> lines = List.of(csv.split("\r\n"));
-          assertTrue(
-              lines.get(1).startsWith("HistoricCsvExportExperiment;HISTORIC;"),
-              "A period entirely in the past must be HISTORIC: " + csv);
-        });
+      // then
+      List<String> lines = List.of(csv.split("\r\n"));
+      assertTrue(
+          lines.get(1).startsWith("HistoricCsvExportExperiment;HISTORIC;"),
+          "A period entirely in the past must be HISTORIC: " + csv);
+    });
   }
 
   @Test
   @Transactional
   void should_compute_upcoming_status_for_a_period_entirely_in_the_future() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // given: a period that starts well after today
-          createExperiment(
-              "UpcomingCsvExportExperiment",
-              "Comment",
-              LocalDate.now().plusYears(1),
-              LocalDate.now().plusYears(2));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // given: a period that starts well after today
+      createExperiment(
+          "UpcomingCsvExportExperiment",
+          "Comment",
+          LocalDate.now().plusYears(1),
+          LocalDate.now().plusYears(2));
 
-          PagedRequest request =
-              new PagedRequest(
-                  0,
-                  10,
-                  List.of(),
-                  Map.of(
-                      "name",
-                      new TextFilterModel("contains", "UpcomingCsvExportExperiment", null)));
+      PagedRequest request =
+          new PagedRequest(
+              0,
+              10,
+              List.of(),
+              Map.of("name", new TextFilterModel("contains", "UpcomingCsvExportExperiment", null)));
 
-          // when
-          String csv = streamToString(request);
+      // when
+      String csv = streamToString(request);
 
-          // then
-          List<String> lines = List.of(csv.split("\r\n"));
-          assertTrue(
-              lines.get(1).startsWith("UpcomingCsvExportExperiment;UPCOMING;"),
-              "A period entirely in the future must be UPCOMING: " + csv);
-        });
+      // then
+      List<String> lines = List.of(csv.split("\r\n"));
+      assertTrue(
+          lines.get(1).startsWith("UpcomingCsvExportExperiment;UPCOMING;"),
+          "A period entirely in the future must be UPCOMING: " + csv);
+    });
   }
 
   @Test
   @Transactional
   void should_cap_rows_at_the_export_requests_limit() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // given: three experiments matching the filter, but the request's limit only allows 2
-          createExperiment(
-              "CapExperiment One",
-              "c",
-              LocalDate.of(2024, Month.JANUARY, 1),
-              LocalDate.of(2024, Month.DECEMBER, 31));
-          createExperiment(
-              "CapExperiment Two",
-              "c",
-              LocalDate.of(2024, Month.JANUARY, 1),
-              LocalDate.of(2024, Month.DECEMBER, 31));
-          createExperiment(
-              "CapExperiment Three",
-              "c",
-              LocalDate.of(2024, Month.JANUARY, 1),
-              LocalDate.of(2024, Month.DECEMBER, 31));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // given: three experiments matching the filter, but the request's limit only allows 2
+      createExperiment(
+          "CapExperiment One",
+          "c",
+          LocalDate.of(2024, Month.JANUARY, 1),
+          LocalDate.of(2024, Month.DECEMBER, 31));
+      createExperiment(
+          "CapExperiment Two",
+          "c",
+          LocalDate.of(2024, Month.JANUARY, 1),
+          LocalDate.of(2024, Month.DECEMBER, 31));
+      createExperiment(
+          "CapExperiment Three",
+          "c",
+          LocalDate.of(2024, Month.JANUARY, 1),
+          LocalDate.of(2024, Month.DECEMBER, 31));
 
-          PagedRequest request =
-              new PagedRequest(
-                  0,
-                  2,
-                  List.of(),
-                  Map.of("name", new TextFilterModel("contains", "CapExperiment", null)));
+      PagedRequest request =
+          new PagedRequest(
+              0,
+              2,
+              List.of(),
+              Map.of("name", new TextFilterModel("contains", "CapExperiment", null)));
 
-          // when
-          String csv = streamToString(request);
+      // when
+      String csv = streamToString(request);
 
-          // then
-          List<String> lines = List.of(csv.split("\r\n"));
-          assertEquals(3, lines.size(), "Header plus exactly 2 rows, not all 3 matches");
-        });
+      // then
+      List<String> lines = List.of(csv.split("\r\n"));
+      assertEquals(3, lines.size(), "Header plus exactly 2 rows, not all 3 matches");
+    });
   }
 
   private String streamToString(PagedRequest request) {

@@ -30,22 +30,20 @@ class S3ConfigTest {
     // when / then
     contextRunner
         .withPropertyValues("monteis.documents.s3.local-endpoint=http://localhost:9010")
-        .run(
-            context ->
-                assertThat(endpointOverride(context.getBean(S3Client.class)))
-                    .isEqualTo(URI.create("http://localhost:9010")));
+        .run(context ->
+            assertThat(endpointOverride(context.getBean(S3Client.class)))
+                .isEqualTo(URI.create("http://localhost:9010")));
   }
 
   @Test
   void should_time_out_a_hanging_s3_request() {
     // when / then
-    contextRunner.run(
-        context -> {
-          ClientOverrideConfiguration override =
-              context.getBean(S3Client.class).serviceClientConfiguration().overrideConfiguration();
-          assertThat(override.apiCallTimeout()).contains(Duration.ofSeconds(60));
-          assertThat(override.apiCallAttemptTimeout()).contains(Duration.ofSeconds(30));
-        });
+    contextRunner.run(context -> {
+      ClientOverrideConfiguration override =
+          context.getBean(S3Client.class).serviceClientConfiguration().overrideConfiguration();
+      assertThat(override.apiCallTimeout()).contains(Duration.ofSeconds(60));
+      assertThat(override.apiCallAttemptTimeout()).contains(Duration.ofSeconds(30));
+    });
   }
 
   @Test
@@ -54,16 +52,12 @@ class S3ConfigTest {
     contextRunner
         .withPropertyValues(
             "monteis.documents.s3.call-timeout=2m", "monteis.documents.s3.attempt-timeout=45s")
-        .run(
-            context -> {
-              ClientOverrideConfiguration override =
-                  context
-                      .getBean(S3Client.class)
-                      .serviceClientConfiguration()
-                      .overrideConfiguration();
-              assertThat(override.apiCallTimeout()).contains(Duration.ofMinutes(2));
-              assertThat(override.apiCallAttemptTimeout()).contains(Duration.ofSeconds(45));
-            });
+        .run(context -> {
+          ClientOverrideConfiguration override =
+              context.getBean(S3Client.class).serviceClientConfiguration().overrideConfiguration();
+          assertThat(override.apiCallTimeout()).contains(Duration.ofMinutes(2));
+          assertThat(override.apiCallAttemptTimeout()).contains(Duration.ofSeconds(45));
+        });
   }
 
   @Test

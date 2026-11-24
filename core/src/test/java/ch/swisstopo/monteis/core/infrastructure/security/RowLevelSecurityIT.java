@@ -98,20 +98,19 @@ class RowLevelSecurityIT {
   @Test
   @Transactional
   void admin_sees_every_sensor_experiment_and_reading() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          assertEquals(15, dsl.fetchCount(SENSORS), "Admin should see all seeded sensors");
-          assertEquals(9, dsl.fetchCount(EXPERIMENTS), "Admin should see all seeded experiments");
-          assertEquals(
-              Set.of(
-                  "SOL_EXPERTS__TEMP-1__temperature",
-                  "SOL_EXPERTS__PRESS-1&2__pressure",
-                  "SOL_EXPERTS__DISP-2__displacement",
-                  "SOL_EXPERTS__FLOW-2__flow",
-                  "SOL_EXPERTS__FLOW-Admin__flow"),
-              fetchVisibleSensorCodes(),
-              "Admin should see every seeded reading's sensor code");
-        });
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      assertEquals(15, dsl.fetchCount(SENSORS), "Admin should see all seeded sensors");
+      assertEquals(9, dsl.fetchCount(EXPERIMENTS), "Admin should see all seeded experiments");
+      assertEquals(
+          Set.of(
+              "SOL_EXPERTS__TEMP-1__temperature",
+              "SOL_EXPERTS__PRESS-1&2__pressure",
+              "SOL_EXPERTS__DISP-2__displacement",
+              "SOL_EXPERTS__FLOW-2__flow",
+              "SOL_EXPERTS__FLOW-Admin__flow"),
+          fetchVisibleSensorCodes(),
+          "Admin should see every seeded reading's sensor code");
+    });
   }
 
   @Test
@@ -129,13 +128,12 @@ class RowLevelSecurityIT {
     // A null sensor/experiment id can never actually reach these functions in practice (ids are
     // NOT NULL columns), but the RLS policies call them for every row, so a null argument must
     // resolve to "no access" rather than raise a SQL error and take the whole query down with it.
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // can_read_all_experiments() short-circuits the OR, so a null target id is irrelevant
-          // for admins.
-          assertEquals(Boolean.TRUE, callCanAccessSensor(null));
-          assertEquals(Boolean.TRUE, callCanAccessExperiment(null));
-        });
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // can_read_all_experiments() short-circuits the OR, so a null target id is irrelevant
+      // for admins.
+      assertEquals(Boolean.TRUE, callCanAccessSensor(null));
+      assertEquals(Boolean.TRUE, callCanAccessExperiment(null));
+    });
 
     SecurityContextTestSupport.runAsUser(
         List.of(EXPERIMENT_ALPHA),
@@ -152,12 +150,11 @@ class RowLevelSecurityIT {
   @Test
   @Transactional
   void global_editor_sees_every_sensor_and_experiment() {
-    SecurityContextTestSupport.runAsGlobalEditor(
-        () -> {
-          assertEquals(15, dsl.fetchCount(SENSORS), "Global editor should see all seeded sensors");
-          assertEquals(
-              9, dsl.fetchCount(EXPERIMENTS), "Global editor should see all seeded experiments");
-        });
+    SecurityContextTestSupport.runAsGlobalEditor(() -> {
+      assertEquals(15, dsl.fetchCount(SENSORS), "Global editor should see all seeded sensors");
+      assertEquals(
+          9, dsl.fetchCount(EXPERIMENTS), "Global editor should see all seeded experiments");
+    });
   }
 
   @Test
@@ -213,23 +210,21 @@ class RowLevelSecurityIT {
   @Test
   @Transactional
   void system_context_sees_every_sensor_and_experiment() {
-    SystemSecurityContext.runAsSystem(
-        () -> {
-          assertEquals(15, dsl.fetchCount(SENSORS), "System context should see all seeded sensors");
-          assertEquals(
-              9, dsl.fetchCount(EXPERIMENTS), "System context should see all seeded experiments");
-        });
+    SystemSecurityContext.runAsSystem(() -> {
+      assertEquals(15, dsl.fetchCount(SENSORS), "System context should see all seeded sensors");
+      assertEquals(
+          9, dsl.fetchCount(EXPERIMENTS), "System context should see all seeded experiments");
+    });
   }
 
   @Test
   @Transactional
   void system_context_may_not_update_an_experiment() {
     // background jobs run without a filter chain, so RLS is the only guard against their writes
-    SystemSecurityContext.runAsSystem(
-        () ->
-            assertThrows(
-                PermissionDeniedDataAccessException.class,
-                () -> renameExperiment(EXPERIMENT_ALPHA, "Mont Terri Alpha renamed")));
+    SystemSecurityContext.runAsSystem(() ->
+        assertThrows(
+            PermissionDeniedDataAccessException.class,
+            () -> renameExperiment(EXPERIMENT_ALPHA, "Mont Terri Alpha renamed")));
   }
 
   @Test
@@ -328,11 +323,9 @@ class RowLevelSecurityIT {
                     .where(EXPERIMENT_OWNER.EXPERIMENT_ID.eq(EXPERIMENT_ALPHA))
                     .execute(),
                 "the delete policy filters the rows instead of raising"));
-    SecurityContextTestSupport.runAsAdmin(
-        () ->
-            assertEquals(
-                1,
-                dsl.fetchCount(
-                    EXPERIMENT_OWNER, EXPERIMENT_OWNER.EXPERIMENT_ID.eq(EXPERIMENT_ALPHA))));
+    SecurityContextTestSupport.runAsAdmin(() ->
+        assertEquals(
+            1,
+            dsl.fetchCount(EXPERIMENT_OWNER, EXPERIMENT_OWNER.EXPERIMENT_ID.eq(EXPERIMENT_ALPHA))));
   }
 }

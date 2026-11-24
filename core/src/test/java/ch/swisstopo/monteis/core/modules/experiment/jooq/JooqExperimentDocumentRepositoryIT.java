@@ -48,10 +48,9 @@ class JooqExperimentDocumentRepositoryIT {
 
     // when
     ExperimentDocument document =
-        callAsAdmin(
-            () ->
-                repository.create(
-                    documentId, experimentId, REPORT, SecurityContextTestSupport.USERNAME));
+        callAsAdmin(() ->
+            repository.create(
+                documentId, experimentId, REPORT, SecurityContextTestSupport.USERNAME));
 
     // then
     assertThat(document.id()).isEqualTo(documentId);
@@ -82,18 +81,13 @@ class JooqExperimentDocumentRepositoryIT {
     // the upload time (both would share now() of the test transaction otherwise)
     UUID experimentId = newExperiment();
     ExperimentDocument newer =
-        callAsAdmin(
-            () ->
-                repository.create(
-                    repository.nextId(),
-                    experimentId,
-                    REPORT,
-                    SecurityContextTestSupport.USERNAME));
-    UUID older = insertDocumentUploadedAt(experimentId, OffsetDateTime.now().minusDays(1));
-    callAsAdmin(
-        () ->
+        callAsAdmin(() ->
             repository.create(
-                repository.nextId(), newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
+                repository.nextId(), experimentId, REPORT, SecurityContextTestSupport.USERNAME));
+    UUID older = insertDocumentUploadedAt(experimentId, OffsetDateTime.now().minusDays(1));
+    callAsAdmin(() ->
+        repository.create(
+            repository.nextId(), newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
 
     // when
     List<ExperimentDocument> documents =
@@ -109,13 +103,9 @@ class JooqExperimentDocumentRepositoryIT {
     // given
     UUID otherExperimentId = newExperiment();
     ExperimentDocument document =
-        callAsAdmin(
-            () ->
-                repository.create(
-                    repository.nextId(),
-                    newExperiment(),
-                    REPORT,
-                    SecurityContextTestSupport.USERNAME));
+        callAsAdmin(() ->
+            repository.create(
+                repository.nextId(), newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
 
     // when / then
     assertThrows(
@@ -142,15 +132,13 @@ class JooqExperimentDocumentRepositoryIT {
     UUID readable = newExperiment();
     UUID hidden = newExperiment();
     ExperimentDocument readableDocument =
-        callAsAdmin(
-            () ->
-                repository.create(
-                    repository.nextId(), readable, REPORT, SecurityContextTestSupport.USERNAME));
+        callAsAdmin(() ->
+            repository.create(
+                repository.nextId(), readable, REPORT, SecurityContextTestSupport.USERNAME));
     ExperimentDocument hiddenDocument =
-        callAsAdmin(
-            () ->
-                repository.create(
-                    repository.nextId(), hidden, REPORT, SecurityContextTestSupport.USERNAME));
+        callAsAdmin(() ->
+            repository.create(
+                repository.nextId(), hidden, REPORT, SecurityContextTestSupport.USERNAME));
 
     UUID hiddenDocumentId = hiddenDocument.id();
 
@@ -214,22 +202,17 @@ class JooqExperimentDocumentRepositoryIT {
   void should_reject_updating_a_document_even_for_an_admin() {
     // given
     ExperimentDocument document =
-        callAsAdmin(
-            () ->
-                repository.create(
-                    repository.nextId(),
-                    newExperiment(),
-                    REPORT,
-                    SecurityContextTestSupport.USERNAME));
+        callAsAdmin(() ->
+            repository.create(
+                repository.nextId(), newExperiment(), REPORT, SecurityContextTestSupport.USERNAME));
 
     // when: no UPDATE policy, RLS filters every row out
     int updated =
-        callAsAdmin(
-            () ->
-                dsl.update(EXPERIMENT_DOCUMENTS)
-                    .set(EXPERIMENT_DOCUMENTS.FILE_NAME, "renamed.pdf")
-                    .where(EXPERIMENT_DOCUMENTS.ID.eq(document.id()))
-                    .execute());
+        callAsAdmin(() ->
+            dsl.update(EXPERIMENT_DOCUMENTS)
+                .set(EXPERIMENT_DOCUMENTS.FILE_NAME, "renamed.pdf")
+                .where(EXPERIMENT_DOCUMENTS.ID.eq(document.id()))
+                .execute());
 
     // then
     assertThat(updated).isZero();
@@ -275,36 +258,33 @@ class JooqExperimentDocumentRepositoryIT {
   }
 
   private ExperimentDocument createAsAdmin(UUID experimentId) {
-    return callAsAdmin(
-        () ->
-            repository.create(
-                repository.nextId(), experimentId, REPORT, SecurityContextTestSupport.USERNAME));
+    return callAsAdmin(() ->
+        repository.create(
+            repository.nextId(), experimentId, REPORT, SecurityContextTestSupport.USERNAME));
   }
 
   private UUID newExperiment() {
-    return callAsAdmin(
-        () ->
-            dsl.insertInto(EXPERIMENTS)
-                .set(EXPERIMENTS.NAME, "documents-it-" + UUID.randomUUID())
-                .set(EXPERIMENTS.START, LocalDate.of(2030, Month.JANUARY, 1))
-                .set(EXPERIMENTS.END, LocalDate.of(2030, Month.DECEMBER, 31))
-                .returning(EXPERIMENTS.ID)
-                .fetchSingle()
-                .getId());
+    return callAsAdmin(() ->
+        dsl.insertInto(EXPERIMENTS)
+            .set(EXPERIMENTS.NAME, "documents-it-" + UUID.randomUUID())
+            .set(EXPERIMENTS.START, LocalDate.of(2030, Month.JANUARY, 1))
+            .set(EXPERIMENTS.END, LocalDate.of(2030, Month.DECEMBER, 31))
+            .returning(EXPERIMENTS.ID)
+            .fetchSingle()
+            .getId());
   }
 
   private UUID insertDocumentUploadedAt(UUID experimentId, OffsetDateTime uploadedAt) {
-    return callAsAdmin(
-        () ->
-            dsl.insertInto(EXPERIMENT_DOCUMENTS)
-                .set(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID, experimentId)
-                .set(EXPERIMENT_DOCUMENTS.FILE_NAME, "older.pdf")
-                .set(EXPERIMENT_DOCUMENTS.CONTENT_TYPE, "application/pdf")
-                .set(EXPERIMENT_DOCUMENTS.SIZE_BYTES, 1L)
-                .set(EXPERIMENT_DOCUMENTS.UPLOADED_AT, uploadedAt)
-                .set(EXPERIMENT_DOCUMENTS.UPLOADED_BY, SecurityContextTestSupport.USERNAME)
-                .returning(EXPERIMENT_DOCUMENTS.ID)
-                .fetchSingle()
-                .getId());
+    return callAsAdmin(() ->
+        dsl.insertInto(EXPERIMENT_DOCUMENTS)
+            .set(EXPERIMENT_DOCUMENTS.EXPERIMENT_ID, experimentId)
+            .set(EXPERIMENT_DOCUMENTS.FILE_NAME, "older.pdf")
+            .set(EXPERIMENT_DOCUMENTS.CONTENT_TYPE, "application/pdf")
+            .set(EXPERIMENT_DOCUMENTS.SIZE_BYTES, 1L)
+            .set(EXPERIMENT_DOCUMENTS.UPLOADED_AT, uploadedAt)
+            .set(EXPERIMENT_DOCUMENTS.UPLOADED_BY, SecurityContextTestSupport.USERNAME)
+            .returning(EXPERIMENT_DOCUMENTS.ID)
+            .fetchSingle()
+            .getId());
   }
 }

@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
 import ch.swisstopo.monteis.contracts.fulcrum.QueryRequest;
-import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import ch.swisstopo.monteis.contracts.fulcrum.api.FulcrumApi;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +24,7 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <p>Fulcrum exposes no per-record REST resource for an app's data; the
  * <a href="https://docs.fulcrumapp.com/reference/query-get">Query API</a> is the documented way
- * to read it, taking SQL over the app's tables. The request itself goes through {@link DefaultApi},
+ * to read it, taking SQL over the app's tables. The request itself goes through {@link FulcrumApi},
  * generated from the Fulcrum spec, so this class only decides what to ask for and what the answer
  * means.
  *
@@ -73,12 +73,12 @@ public class FulcrumService {
           "document",
           "document_names");
 
-  private final DefaultApi fulcrumApi;
+  private final FulcrumApi fulcrumApi;
   private final FulcrumProperties properties;
   private final ObjectMapper objectMapper;
 
   public FulcrumService(
-      DefaultApi fulcrumApi, FulcrumProperties properties, ObjectMapper objectMapper) {
+      FulcrumApi fulcrumApi, FulcrumProperties properties, ObjectMapper objectMapper) {
     this.fulcrumApi = fulcrumApi;
     this.properties = properties;
     this.objectMapper = objectMapper;

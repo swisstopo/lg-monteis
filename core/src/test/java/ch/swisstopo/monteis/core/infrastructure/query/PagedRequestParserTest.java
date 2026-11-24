@@ -3,13 +3,13 @@ package ch.swisstopo.monteis.core.infrastructure.query;
 import static org.junit.jupiter.api.Assertions.*;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import tools.jackson.core.JacksonException;
 
 /**
  * Exercises the actual JSON parsing path against realistic ag-grid wire payloads (not just
@@ -154,7 +154,7 @@ class PagedRequestParserTest {
     InvalidPagedRequestException ex =
         assertThrows(InvalidPagedRequestException.class, () -> parser.parse(raw));
 
-    assertInstanceOf(JsonProcessingException.class, ex.getCause());
+    assertInstanceOf(JacksonException.class, ex.getCause());
   }
 
   private static Stream<Arguments> invalidJsonScenarios() {
@@ -226,6 +226,6 @@ class PagedRequestParserTest {
 
     InvalidPagedRequestException ex =
         assertThrows(InvalidPagedRequestException.class, () -> parser.parseForExport(raw));
-    assertInstanceOf(JsonProcessingException.class, ex.getCause());
+    assertInstanceOf(JacksonException.class, ex.getCause());
   }
 }

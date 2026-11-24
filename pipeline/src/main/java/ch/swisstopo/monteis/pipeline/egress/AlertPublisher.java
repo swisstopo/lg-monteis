@@ -57,14 +57,13 @@ public class AlertPublisher implements DisposableBean {
     try {
       kafkaTemplate
           .send(alertTopic, event.sensorId(), event)
-          .whenComplete(
-              (result, ex) -> {
-                if (ex == null) {
-                  log.debug("Successfully published alert for sensor {}", event.sensorId());
-                } else {
-                  log.error("Failed to publish alert for sensor {}", event.sensorId(), ex);
-                }
-              });
+          .whenComplete((result, ex) -> {
+            if (ex == null) {
+              log.debug("Successfully published alert for sensor {}", event.sensorId());
+            } else {
+              log.error("Failed to publish alert for sensor {}", event.sensorId(), ex);
+            }
+          });
     } catch (RuntimeException ex) {
       log.error("Failed to publish alert for sensor {}", event.sensorId(), ex);
     }

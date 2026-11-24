@@ -45,10 +45,9 @@ class ExperimentDocumentServiceIT {
     String fileName = uniqueFileName();
 
     // when
-    SecurityContextTestSupport.runAsAdmin(
-        () ->
-            service.upload(
-                SeedData.EXPERIMENT_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream()));
+    SecurityContextTestSupport.runAsAdmin(() ->
+        service.upload(
+            SeedData.EXPERIMENT_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream()));
 
     // then
     assertThat(countDocumentRows(fileName)).isEqualTo(1);
@@ -65,11 +64,10 @@ class ExperimentDocumentServiceIT {
     InputStream content = InputStream.nullInputStream();
 
     // when
-    SecurityContextTestSupport.runAsAdmin(
-        () ->
-            assertThrows(
-                IllegalStateException.class,
-                () -> service.upload(SeedData.EXPERIMENT_ALPHA, metadata, content)));
+    SecurityContextTestSupport.runAsAdmin(() ->
+        assertThrows(
+            IllegalStateException.class,
+            () -> service.upload(SeedData.EXPERIMENT_ALPHA, metadata, content)));
 
     // then
     assertThat(countDocumentRows(fileName)).isZero();
@@ -121,21 +119,19 @@ class ExperimentDocumentServiceIT {
     willThrow(new IllegalStateException("S3 unavailable")).given(storage).delete(any());
 
     // when
-    SecurityContextTestSupport.runAsAdmin(
-        () ->
-            assertThrows(
-                IllegalStateException.class,
-                () -> service.delete(SeedData.EXPERIMENT_ALPHA, documentId)));
+    SecurityContextTestSupport.runAsAdmin(() ->
+        assertThrows(
+            IllegalStateException.class,
+            () -> service.delete(SeedData.EXPERIMENT_ALPHA, documentId)));
 
     // then
     assertThat(countDocumentRows(fileName)).isEqualTo(1);
   }
 
   private ExperimentDocument uploadAsAdmin(String fileName) {
-    return callAsAdmin(
-        () ->
-            service.upload(
-                SeedData.EXPERIMENT_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream()));
+    return callAsAdmin(() ->
+        service.upload(
+            SeedData.EXPERIMENT_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream()));
   }
 
   private static String uniqueFileName() {
@@ -148,12 +144,9 @@ class ExperimentDocumentServiceIT {
 
   // in a transaction of its own, RLS fails closed outside one and would always count 0
   private int countDocumentRows(String fileName) {
-    return callAsAdmin(
-        () ->
-            new TransactionTemplate(transactionManager)
-                .execute(
-                    status ->
-                        dsl.fetchCount(
-                            EXPERIMENT_DOCUMENTS, EXPERIMENT_DOCUMENTS.FILE_NAME.eq(fileName))));
+    return callAsAdmin(() ->
+        new TransactionTemplate(transactionManager)
+            .execute(status ->
+                dsl.fetchCount(EXPERIMENT_DOCUMENTS, EXPERIMENT_DOCUMENTS.FILE_NAME.eq(fileName))));
   }
 }

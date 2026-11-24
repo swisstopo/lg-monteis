@@ -14,7 +14,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import ch.qos.logback.classic.Level;
 import ch.swisstopo.monteis.contracts.fulcrum.BadRequestResponse;
-import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import ch.swisstopo.monteis.contracts.fulcrum.api.FulcrumApi;
 import ch.swisstopo.monteis.core.itconfig.LogCapture;
 import java.net.URI;
 import java.time.Duration;
@@ -146,10 +146,10 @@ class FulcrumServiceTest {
     RestClient.Builder builder = RestClient.builder().apply(FulcrumConfig.configure(properties));
     server = MockRestServiceServer.bindTo(builder).build();
 
-    DefaultApi api =
+    FulcrumApi api =
         HttpServiceProxyFactory.builderFor(RestClientAdapter.create(builder.build()))
             .build()
-            .createClient(DefaultApi.class);
+            .createClient(FulcrumApi.class);
     service = new FulcrumService(api, properties, objectMapper);
   }
 
@@ -228,14 +228,13 @@ class FulcrumServiceTest {
     // with the body intact, so GlobalErrorControllerAdvice can decode the documented envelope.
     assertThatThrownBy(() -> service.findSensorByFulcrumId(SENSOR_FULCRUM_ID))
         .isInstanceOf(RestClientResponseException.class)
-        .satisfies(
-            thrown -> {
-              RestClientResponseException e = (RestClientResponseException) thrown;
-              assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-              assertThat(e.getResponseBodyAs(BadRequestResponse.class))
-                  .extracting(BadRequestResponse::getError)
-                  .isEqualTo("relation does not exist");
-            });
+        .satisfies(thrown -> {
+          RestClientResponseException e = (RestClientResponseException) thrown;
+          assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+          assertThat(e.getResponseBodyAs(BadRequestResponse.class))
+              .extracting(BadRequestResponse::getError)
+              .isEqualTo("relation does not exist");
+        });
   }
 
   @Test
@@ -298,10 +297,9 @@ class FulcrumServiceTest {
         Stream.generate(UUID::randomUUID).limit(1000).collect(Collectors.toSet());
     server
         .expect(requestTo(Matchers.startsWith(BASE_URL + "/v2/query?")))
-        .andExpect(
-            request ->
-                assertThat(((MockClientHttpRequest) request).getBodyAsString())
-                    .contains(fulcrumIds.stream().map(UUID::toString).toList()))
+        .andExpect(request ->
+            assertThat(((MockClientHttpRequest) request).getBodyAsString())
+                .contains(fulcrumIds.stream().map(UUID::toString).toList()))
         .andRespond(withSuccess(rows(), MediaType.APPLICATION_JSON));
 
     assertThat(service.findSensorsByFulcrumId(fulcrumIds)).isEmpty();
@@ -381,21 +379,20 @@ class FulcrumServiceTest {
 
     assertThat(rows)
         .singleElement()
-        .satisfies(
-            row -> {
-              assertThat(row.recordId())
-                  .isEqualTo(UUID.fromString("221ae592-4527-4442-8294-8dc2c5be1168"));
-              assertThat(row.number()).isEqualTo("2011-02");
-              assertThat(row.title()).startsWith("DS Experiment: BDS-1");
-              assertThat(row.authors()).isEqualTo("Jahns E.");
-              assertThat(row.year()).isEqualTo(2011);
-              assertThat(row.category()).isEqualTo("2 Mont Terri Technical Notes (TN)");
-              assertThat(row.keywords()).containsExactly("Experiment DS", "RACOS");
-              assertThat(row.firstAttachment())
-                  .get()
-                  .extracting(FulcrumLiteratureRow.FulcrumAttachmentReference::name)
-                  .isEqualTo("Jahns 03 2011 - DS Experiment.pdf");
-            });
+        .satisfies(row -> {
+          assertThat(row.recordId())
+              .isEqualTo(UUID.fromString("221ae592-4527-4442-8294-8dc2c5be1168"));
+          assertThat(row.number()).isEqualTo("2011-02");
+          assertThat(row.title()).startsWith("DS Experiment: BDS-1");
+          assertThat(row.authors()).isEqualTo("Jahns E.");
+          assertThat(row.year()).isEqualTo(2011);
+          assertThat(row.category()).isEqualTo("2 Mont Terri Technical Notes (TN)");
+          assertThat(row.keywords()).containsExactly("Experiment DS", "RACOS");
+          assertThat(row.firstAttachment())
+              .get()
+              .extracting(FulcrumLiteratureRow.FulcrumAttachmentReference::name)
+              .isEqualTo("Jahns 03 2011 - DS Experiment.pdf");
+        });
     server.verify();
   }
 

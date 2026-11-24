@@ -40,13 +40,12 @@ record FulcrumDocumentComparison(
 
   List<NewFile> newFiles() {
     return fromFulcrum.stream()
-        .flatMap(
-            row ->
-                row
-                    .firstAttachment()
-                    .filter(attachment -> !isStoredFile(row, attachment))
-                    .map(attachment -> new NewFile(row, attachment))
-                    .stream())
+        .flatMap(row ->
+            row
+                .firstAttachment()
+                .filter(attachment -> !isStoredFile(row, attachment))
+                .map(attachment -> new NewFile(row, attachment))
+                .stream())
         .toList();
   }
 

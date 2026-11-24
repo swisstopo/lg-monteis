@@ -69,32 +69,31 @@ public class SensorDataBatchProcessor {
       List<NormalizedSensorData> batch, List<Long> receivedTimestamps, Acknowledgment ack) {
     List<TimedRecord> timedRecords =
         IntStream.range(0, batch.size())
-            .mapToObj(
-                i -> {
-                  NormalizedSensorData sensorData = batch.get(i);
-                  try {
-                    ActiveSensorConfig activeConfig =
-                        sensorConfigCache.getActiveConfig(sensorData.dasKey());
-                    SensorReadingRecord dbRecord =
-                        orchestrator.transform(
-                            sensorData.dasKey(),
-                            sensorData.value(),
-                            sensorData.ts(),
-                            activeConfig,
-                            ProcessingOrigin.INGEST);
-                    return new TimedRecord(dbRecord, receivedTimestamps.get(i));
-                  } catch (TransformationException ex) {
-                    log.error(
-                        "POISON PILL: Transformation failed for sensor {}. Failed Value: [{}]. Full"
-                            + " Kafka Payload: {}. Reason: {}",
+            .mapToObj(i -> {
+              NormalizedSensorData sensorData = batch.get(i);
+              try {
+                ActiveSensorConfig activeConfig =
+                    sensorConfigCache.getActiveConfig(sensorData.dasKey());
+                SensorReadingRecord dbRecord =
+                    orchestrator.transform(
                         sensorData.dasKey(),
-                        ex.getFailedPayload(),
-                        sensorData,
-                        ex.getMessage(),
-                        ex);
-                    return null;
-                  }
-                })
+                        sensorData.value(),
+                        sensorData.ts(),
+                        activeConfig,
+                        ProcessingOrigin.INGEST);
+                return new TimedRecord(dbRecord, receivedTimestamps.get(i));
+              } catch (TransformationException ex) {
+                log.error(
+                    "POISON PILL: Transformation failed for sensor {}. Failed Value: [{}]. Full"
+                        + " Kafka Payload: {}. Reason: {}",
+                    sensorData.dasKey(),
+                    ex.getFailedPayload(),
+                    sensorData,
+                    ex.getMessage(),
+                    ex);
+                return null;
+              }
+            })
             .filter(java.util.Objects::nonNull)
             .toList();
 
@@ -104,13 +103,12 @@ public class SensorDataBatchProcessor {
         status -> sensorReadingRepository.upsertBatch(dbRecords));
 
     Instant writtenAt = Instant.now();
-    timedRecords.forEach(
-        timedRecord -> {
-          processingLatencyTimer.record(
-              Duration.between(Instant.ofEpochMilli(timedRecord.receivedAtMillis()), writtenAt));
-          endToEndLatencyTimer.record(
-              Duration.between(timedRecord.dbRecord().getTimestamp().toInstant(), writtenAt));
-        });
+    timedRecords.forEach(timedRecord -> {
+      processingLatencyTimer.record(
+          Duration.between(Instant.ofEpochMilli(timedRecord.receivedAtMillis()), writtenAt));
+      endToEndLatencyTimer.record(
+          Duration.between(timedRecord.dbRecord().getTimestamp().toInstant(), writtenAt));
+    });
 
     ack.acknowledge();
 

@@ -45,7 +45,6 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameter
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.Writer;
 import java.time.Clock;
 import java.time.Instant;
@@ -70,6 +69,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import tools.jackson.databind.ObjectMapper;
 
 @ControllerTest(SensorController.class)
 class SensorControllerTest {
@@ -90,7 +90,7 @@ class SensorControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   @MockitoBean private SensorService service;
   @MockitoBean private SensorFulcrumRefreshService fulcrumRefreshService;

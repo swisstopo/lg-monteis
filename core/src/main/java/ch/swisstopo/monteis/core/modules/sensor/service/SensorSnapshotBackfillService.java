@@ -27,11 +27,10 @@ public class SensorSnapshotBackfillService {
   public void backfillMissingSnapshots() {
     // No HTTP request/JWT exists at startup, so this explicitly opts into elevated DB
     // access rather than relying on the fail-closed default for an unbound SecurityContextHolder.
-    SystemSecurityContext.runAsSystem(
-        () -> {
-          try (Stream<Sensor> unauditedSensorsStream = repository.streamUnauditedSensors()) {
-            unauditedSensorsStream.forEach(sensor -> javers.commit("SYSTEM_SEEDER", sensor));
-          }
-        });
+    SystemSecurityContext.runAsSystem(() -> {
+      try (Stream<Sensor> unauditedSensorsStream = repository.streamUnauditedSensors()) {
+        unauditedSensorsStream.forEach(sensor -> javers.commit("SYSTEM_SEEDER", sensor));
+      }
+    });
   }
 }
