@@ -1,7 +1,7 @@
 import { ComponentType } from '@angular/cdk/portal';
 import { WorkbenchIconProviderFn } from '@scion/workbench';
-import { MaterialIcon } from '../../ui/icons/material-icon';
-import { MeasurementsIcon } from '../../ui/icons/measurements-icon';
+import { MaterialIcon } from '@ui/icons/material-icon';
+import { MeasurementsIcon } from '@ui/icons/measurements-icon';
 
 /**
  * Custom application icons, keyed with an `app.` prefix to distinguish them from Material ligatures.

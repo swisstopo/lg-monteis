@@ -1,12 +1,15 @@
 import { Component, computed, effect, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { SensorControllerService, SensorParameterRowResponseDto } from '@core/generated';
+import {
+  MeasurementsTiles,
+  TILESET_URL_PREFIX,
+} from '@features/measurements/services/measurements-tiles';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WorkbenchView } from '@scion/workbench';
 import { Giro3d } from '@ui/giro3d/giro3d';
 import { TilesFetch } from '@ui/giro3d/tiles-fetch-plugin';
 import { InlineError } from '@ui/inline-error/inline-error';
-import { MeasurementsTiles, TILESET_URL_PREFIX } from '../services/measurements-tiles';
 
 /**
  * The scene shows every sensor at once, but `getSensors` is paged and returns one row per sensor
