@@ -1,6 +1,6 @@
 import { HttpClient, HttpResponse } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
-import { skipGlobalErrorToast } from '../../../core/http/http-context';
+import { skipGlobalErrorToast } from '@core/http/http-context';
 
 export const TILESET_URL_PREFIX = `${window.location.origin}/api/tilesets`;
 
