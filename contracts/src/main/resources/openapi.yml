@@ -81,46 +81,13 @@ components:
         upper_bound:
           type: number
           format: double
-          description: Upper alarm limit. A reading above it is marked too_high.
+          description: The maximum limit for this sensor parameter used for alerting.
           example: 150000.5
         lower_bound:
           type: number
           format: double
-          description: Lower alarm limit. A reading below it is marked too_low.
+          description: The minimum limit for this sensor parameter used for alerting.
           example: -100.0
-        notification_active:
-          type: boolean
-          default: true
-          description: Alerts on the alarm limits while true. Defaults to true for configs published
-            before this field existed.
-        timeout:
-          type: integer
-          format: int32
-          minimum: 1
-          description: Seconds without a new reading before a notification goes out, e.g. 9000 for
-            2.5 hours. Absent means no timeout alert.
-          example: 9000
-        notification_trigger_count:
-          type: integer
-          format: int32
-          minimum: 1
-          description: Consecutive readings outside the alarm limits before a notification goes out.
-            Absent means the first one already notifies.
-          example: 10
-        closely_monitored:
-          type: boolean
-          default: false
-          description: Alerts on the special alarm limits while true.
-        upper_special_alarm_limit:
-          type: number
-          format: double
-          description: Upper special alarm limit. Does not change the measurement status.
-          example: 120000.0
-        lower_special_alarm_limit:
-          type: number
-          format: double
-          description: Lower special alarm limit. Does not change the measurement status.
-          example: -50.0
         version:
           type: integer
           format: int16

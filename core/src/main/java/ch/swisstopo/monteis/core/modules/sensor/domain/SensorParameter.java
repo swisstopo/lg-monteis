@@ -1,8 +1,6 @@
 package ch.swisstopo.monteis.core.modules.sensor.domain;
 
-import ch.swisstopo.monteis.core.infrastructure.exception.ObjectBusinessValidationException;
 import ch.swisstopo.monteis.core.infrastructure.mapstruct.Default;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.javers.core.metamodel.annotation.Id;
@@ -18,10 +16,10 @@ public class SensorParameter {
   private Formula formula;
   private AlarmLimits alarmLimits;
   private RangeLimits rangeLimits;
-  private Boolean notificationActive;
+  private boolean notificationActive;
   private Integer timeout;
   private Integer notificationTriggerCount;
-  private Boolean closelyMonitored;
+  private boolean closelyMonitored;
   private AlarmLimits specialAlarmLimits;
   private Boolean active;
   private Integer version;
@@ -40,10 +38,10 @@ public class SensorParameter {
       Formula formula,
       AlarmLimits alarmLimits,
       RangeLimits rangeLimits,
-      Boolean notificationActive,
+      boolean notificationActive,
       Integer timeout,
       Integer notificationTriggerCount,
-      Boolean closelyMonitored,
+      boolean closelyMonitored,
       AlarmLimits specialAlarmLimits,
       Boolean active) {
     this.name = name;
@@ -57,12 +55,11 @@ public class SensorParameter {
     this.formula = formula;
     this.alarmLimits = alarmLimits;
     this.rangeLimits = rangeLimits;
-    this.notificationActive = Boolean.TRUE.equals(notificationActive);
+    this.notificationActive = notificationActive;
     this.timeout = timeout;
     this.notificationTriggerCount = notificationTriggerCount;
-    this.closelyMonitored = Boolean.TRUE.equals(closelyMonitored);
+    this.closelyMonitored = closelyMonitored;
     this.specialAlarmLimits = specialAlarmLimits;
-    requireSpecialAlarmLimitsWhenCloselyMonitored();
     this.active = active;
   }
 
@@ -76,10 +73,10 @@ public class SensorParameter {
       Formula formula,
       AlarmLimits alarmLimits,
       RangeLimits rangeLimits,
-      Boolean notificationActive,
+      boolean notificationActive,
       Integer timeout,
       Integer notificationTriggerCount,
-      Boolean closelyMonitored,
+      boolean closelyMonitored,
       AlarmLimits specialAlarmLimits,
       Boolean active,
       Integer version) {
@@ -91,12 +88,11 @@ public class SensorParameter {
     this.formula = formula;
     this.alarmLimits = alarmLimits;
     this.rangeLimits = rangeLimits;
-    this.notificationActive = Boolean.TRUE.equals(notificationActive);
+    this.notificationActive = notificationActive;
     this.timeout = timeout;
     this.notificationTriggerCount = notificationTriggerCount;
-    this.closelyMonitored = Boolean.TRUE.equals(closelyMonitored);
+    this.closelyMonitored = closelyMonitored;
     this.specialAlarmLimits = specialAlarmLimits;
-    requireSpecialAlarmLimitsWhenCloselyMonitored();
     this.active = active;
     this.version = version;
   }
@@ -165,12 +161,12 @@ public class SensorParameter {
     this.rangeLimits = rangeLimits;
   }
 
-  public Boolean getNotificationActive() {
+  public boolean getNotificationActive() {
     return notificationActive;
   }
 
-  public void setNotificationActive(Boolean notificationActive) {
-    this.notificationActive = Boolean.TRUE.equals(notificationActive);
+  public void setNotificationActive(boolean notificationActive) {
+    this.notificationActive = notificationActive;
   }
 
   public Integer getTimeout() {
@@ -189,12 +185,12 @@ public class SensorParameter {
     this.notificationTriggerCount = notificationTriggerCount;
   }
 
-  public Boolean getCloselyMonitored() {
+  public boolean getCloselyMonitored() {
     return closelyMonitored;
   }
 
-  public void setCloselyMonitored(Boolean closelyMonitored) {
-    this.closelyMonitored = Boolean.TRUE.equals(closelyMonitored);
+  public void setCloselyMonitored(boolean closelyMonitored) {
+    this.closelyMonitored = closelyMonitored;
   }
 
   public AlarmLimits getSpecialAlarmLimits() {
@@ -221,20 +217,9 @@ public class SensorParameter {
     this.version = version;
   }
 
-  private void requireSpecialAlarmLimitsWhenCloselyMonitored() {
-    if (closelyMonitored && specialAlarmLimits == null) {
-      throw new ObjectBusinessValidationException("sensor.specialAlarmLimits.required", Map.of());
-    }
-  }
-
   public boolean changeTriggersPublish(SensorParameter old) {
     return old == null
         || !Objects.equals(old.getFormula().getExpression(), this.formula.getExpression())
-        || !Objects.equals(old.getAlarmLimits(), this.alarmLimits)
-        || !Objects.equals(old.getNotificationActive(), this.notificationActive)
-        || !Objects.equals(old.getTimeout(), this.timeout)
-        || !Objects.equals(old.getNotificationTriggerCount(), this.notificationTriggerCount)
-        || !Objects.equals(old.getCloselyMonitored(), this.closelyMonitored)
-        || !Objects.equals(old.getSpecialAlarmLimits(), this.specialAlarmLimits);
+        || !Objects.equals(old.getAlarmLimits(), this.alarmLimits);
   }
 }

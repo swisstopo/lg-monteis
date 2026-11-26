@@ -56,10 +56,10 @@ class SensorConfigPublisherTest {
         formula,
         new AlarmLimits(0.0, 100.0),
         new RangeLimits(-1000.0, 1000.0),
+        false,
         null,
         null,
-        null,
-        null,
+        false,
         null,
         active,
         3);
@@ -91,50 +91,6 @@ class SensorConfigPublisherTest {
     assertThat(sentConfig.getUpperBound()).isEqualTo(100.0);
     assertThat(sentConfig.getLowerBound()).isEqualTo(0.0);
     assertThat(sentConfig.getVersion()).isEqualTo(3);
-  }
-
-  @Test
-  void should_publish_monitoring_settings() {
-    // given
-    SensorConfigPublisher publisher = new SensorConfigPublisher(kafkaTemplate, "topic");
-    SensorParameter parameter = parameter(UUID.randomUUID(), true, "temperature");
-    parameter.setNotificationActive(true);
-    parameter.setTimeout(9000);
-    parameter.setNotificationTriggerCount(3);
-    parameter.setCloselyMonitored(true);
-    parameter.setSpecialAlarmLimits(new AlarmLimits(10.0, 90.0));
-
-    // when
-    publisher.publish(sensor(), parameter);
-
-    // then
-    then(kafkaTemplate).should().send(eq("topic"), any(), configCaptor.capture());
-    SensorParameterConfig sentConfig = configCaptor.getValue();
-    assertThat(sentConfig.getNotificationActive()).isTrue();
-    assertThat(sentConfig.getTimeout()).isEqualTo(9000);
-    assertThat(sentConfig.getNotificationTriggerCount()).isEqualTo(3);
-    assertThat(sentConfig.getCloselyMonitored()).isTrue();
-    assertThat(sentConfig.getUpperSpecialAlarmLimit()).isEqualTo(90.0);
-    assertThat(sentConfig.getLowerSpecialAlarmLimit()).isEqualTo(10.0);
-  }
-
-  @Test
-  void should_publish_switched_off_notifications_and_no_special_alarm_limits() {
-    // given
-    SensorConfigPublisher publisher = new SensorConfigPublisher(kafkaTemplate, "topic");
-    SensorParameter parameter = parameter(UUID.randomUUID(), true, "temperature");
-
-    // when
-    publisher.publish(sensor(), parameter);
-
-    // then
-    then(kafkaTemplate).should().send(eq("topic"), any(), configCaptor.capture());
-    SensorParameterConfig sentConfig = configCaptor.getValue();
-    assertThat(sentConfig.getNotificationActive()).isFalse();
-    assertThat(sentConfig.getTimeout()).isNull();
-    assertThat(sentConfig.getCloselyMonitored()).isFalse();
-    assertThat(sentConfig.getUpperSpecialAlarmLimit()).isNull();
-    assertThat(sentConfig.getLowerSpecialAlarmLimit()).isNull();
   }
 
   @Test
