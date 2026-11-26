@@ -11,6 +11,7 @@ import ch.swisstopo.monteis.contracts.SensorParameterConfig;
 import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.RangeLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
@@ -54,8 +55,13 @@ class SensorConfigPublisherTest {
         Unit.METER,
         formula,
         new AlarmLimits(0.0, 100.0),
-        active,
+        new RangeLimits(-1000.0, 1000.0),
+        false,
         null,
+        null,
+        false,
+        null,
+        active,
         3);
   }
 

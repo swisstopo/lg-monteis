@@ -5,6 +5,7 @@ import ch.swisstopo.monteis.core.modules.experiment.web.ExperimentWebMapper;
 import ch.swisstopo.monteis.core.modules.sensor.domain.AlarmLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Coordinates;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Formula;
+import ch.swisstopo.monteis.core.modules.sensor.domain.RangeLimits;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Sensor;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorParameter;
 import ch.swisstopo.monteis.core.modules.sensor.domain.SensorType;
@@ -14,6 +15,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParam
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.RangeLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorResponseDto;
@@ -52,7 +54,9 @@ public interface SensorWebMapper {
     }
   }
 
-  // New mapping for the nested parameters
+  // New mapping for the nested parameters.
+  @Mapping(target = "notificationActive", defaultValue = "false")
+  @Mapping(target = "closelyMonitored", defaultValue = "false")
   SensorParameter toDomain(WriteSensorParameterDto dto);
 
   /**
@@ -95,6 +99,8 @@ public interface SensorWebMapper {
 
   AlarmLimits toDomain(AlarmLimitsDto dto);
 
+  RangeLimits toDomain(RangeLimitsDto dto);
+
   // --- Outbound Domain -> API Serialization DTO Mappings ---
   @Mapping(target = "das", source = "domain.DAS")
   SensorResponseDto toDto(Sensor domain, boolean canUploadDocuments, @Context LocalDate today);
@@ -109,4 +115,6 @@ public interface SensorWebMapper {
   CoordinatesDto toDto(Coordinates domain);
 
   AlarmLimitsDto toDto(AlarmLimits domain);
+
+  RangeLimitsDto toDto(RangeLimits domain);
 }

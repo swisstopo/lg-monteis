@@ -40,6 +40,7 @@ import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorParam
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.inbound.WriteSensorTypeDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.RangeLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterRowResponseDto;
@@ -297,9 +298,14 @@ class SensorControllerTest {
             Unit.METER,
             new WriteSensorTypeDto("Other"),
             new AlarmLimitsDto(0.0, 100.0),
+            new RangeLimitsDto(-1000.0, 1000.0),
+            null,
+            null,
+            null,
+            null,
+            null,
             true,
             new WriteFormulaDto("x * 2"),
-            null,
             null);
     WriteSensorDto requestDto =
         new WriteSensorDto(
@@ -324,8 +330,13 @@ class SensorControllerTest {
             Unit.METER,
             new FormulaResponseDto(FORMULA_ID, "x * 2", 1),
             new AlarmLimitsDto(0.0, 100.0),
-            true,
+            new RangeLimitsDto(-1000.0, 1000.0),
             null,
+            null,
+            null,
+            null,
+            null,
+            true,
             null);
     SensorResponseDto expectedResponseDto =
         new SensorResponseDto(
@@ -653,6 +664,53 @@ class SensorControllerTest {
         "{\"sensorIds\":[\"%s\",null]}".formatted(SENSOR_ID), "validation.required");
   }
 
+  @Test
+  void should_reject_closely_monitored_parameter_without_special_alarm_limits() throws Exception {
+    // given
+    WriteSensorParameterDto parameterDto =
+        new WriteSensorParameterDto(
+            null,
+            "Temperature",
+            "TEMP-1",
+            Unit.METER,
+            new WriteSensorTypeDto("Other"),
+            new AlarmLimitsDto(0.0, 100.0),
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            true,
+            null,
+            null);
+    WriteSensorDto requestDto =
+        new WriteSensorDto(
+            null,
+            "Test",
+            "SENS-01",
+            Das.SOL_EXPERTS,
+            null,
+            null,
+            null,
+            new CoordinatesDto(0.0, 0.0, 0.0),
+            true,
+            null,
+            List.of(parameterDto));
+
+    // when / then
+    mockMvc
+        .perform(
+            post("/api/sensors")
+                .with(asAdmin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestDto)))
+        .andExpect(status().isUnprocessableContent())
+        .andExpect(jsonPath("$[0].messageKey").value("sensor.specialAlarmLimits.required"));
+
+    then(service).shouldHaveNoInteractions();
+  }
+
   private void expectRejectedFulcrumRefresh(String body, String messageKey) throws Exception {
     mockMvc
         .perform(
@@ -679,8 +737,13 @@ class SensorControllerTest {
         Unit.METER,
         new WriteSensorTypeDto("Other"),
         new AlarmLimitsDto(0.0, 100.0),
-        true,
+        new RangeLimitsDto(-1000.0, 1000.0),
         null,
+        null,
+        null,
+        null,
+        null,
+        true,
         null,
         version);
   }
@@ -710,8 +773,13 @@ class SensorControllerTest {
         Unit.METER,
         null,
         new AlarmLimitsDto(0.0, 100.0),
-        true,
+        new RangeLimitsDto(-1000.0, 1000.0),
         null,
+        null,
+        null,
+        null,
+        null,
+        true,
         version);
   }
 

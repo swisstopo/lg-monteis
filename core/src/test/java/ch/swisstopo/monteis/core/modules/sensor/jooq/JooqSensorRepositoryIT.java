@@ -372,8 +372,13 @@ class JooqSensorRepositoryIT {
         Unit.METER,
         formula,
         new AlarmLimits(lower, upper),
-        true,
+        new RangeLimits(-1000.0, 1000.0),
+        false,
         null,
+        null,
+        false,
+        null,
+        true,
         null);
   }
 
@@ -397,6 +402,67 @@ class JooqSensorRepositoryIT {
           assertEquals(0.0, foundParameter.getAlarmLimits().lower());
           assertEquals(100.0, foundParameter.getAlarmLimits().upper());
           assertEquals("Other", foundParameter.getType().name());
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_persist_and_read_back_monitoring_settings() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Sensor sensor = createDummySensor("MON-001", "Monitored Sensor", "x");
+          SensorParameter parameter = sensor.getParameters().getFirst();
+          parameter.setRangeLimits(new RangeLimits(-100.0, 200.0));
+          parameter.setNotificationActive(true);
+          parameter.setCloselyMonitored(true);
+          parameter.setSpecialAlarmLimits(new AlarmLimits(-60.0, 110.0));
+
+          // Act
+          Sensor saved = repository.create(sensor);
+          SensorParameter found =
+              repository.findById(saved.getId()).orElseThrow().getParameters().getFirst();
+
+          // Assert
+          assertAll(
+              () -> assertEquals(new RangeLimits(-100.0, 200.0), found.getRangeLimits()),
+              () -> assertTrue(found.getNotificationActive()),
+              () -> assertTrue(found.getCloselyMonitored()),
+              () -> assertEquals(new AlarmLimits(-60.0, 110.0), found.getSpecialAlarmLimits()));
+        });
+  }
+
+  @Test
+  @Transactional
+  void should_clear_optional_monitoring_settings_on_update() {
+    SecurityContextTestSupport.runAsAdmin(
+        () -> {
+          // Arrange
+          Sensor sensor = createDummySensor("MON-002", "Monitored Sensor", "x");
+          SensorParameter parameter = sensor.getParameters().getFirst();
+          parameter.setRangeLimits(new RangeLimits(-100.0, 200.0));
+          parameter.setNotificationActive(true);
+          parameter.setCloselyMonitored(true);
+          parameter.setSpecialAlarmLimits(new AlarmLimits(-60.0, 110.0));
+          Sensor saved = repository.create(sensor);
+
+          SensorParameter savedParameter = saved.getParameters().getFirst();
+          savedParameter.setRangeLimits(null);
+          savedParameter.setNotificationActive(false);
+          savedParameter.setCloselyMonitored(false);
+          savedParameter.setSpecialAlarmLimits(null);
+
+          // Act
+          repository.update(saved);
+          SensorParameter found =
+              repository.findById(saved.getId()).orElseThrow().getParameters().getFirst();
+
+          // Assert
+          assertAll(
+              () -> assertNull(found.getRangeLimits()),
+              () -> assertFalse(found.getNotificationActive()),
+              () -> assertFalse(found.getCloselyMonitored()),
+              () -> assertNull(found.getSpecialAlarmLimits()));
         });
   }
 
@@ -826,8 +892,13 @@ class JooqSensorRepositoryIT {
             Unit.METER,
             formula,
             new AlarmLimits(0.0, 100.0),
-            true,
+            new RangeLimits(-1000.0, 1000.0),
+            false,
             null,
+            null,
+            false,
+            null,
+            true,
             null);
 
     Sensor sensor = new Sensor(name, dasKey, Das.SOL_EXPERTS, null, null, coordinates, true, null);

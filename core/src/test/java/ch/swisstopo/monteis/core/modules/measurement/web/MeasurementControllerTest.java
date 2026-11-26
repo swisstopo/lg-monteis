@@ -467,7 +467,6 @@ class MeasurementControllerTest {
                     new FormulaResponseDto(formulaId, "x * 2", 4),
                     new AlarmLimitsDto(-10.0, 40.0),
                     true,
-                    "parameter comment",
                     9,
                     new SensorParameterReadingResponseDto(
                         12.5, 6.25, MeasurementStatus.TOO_HIGH, readingTime))));
@@ -514,7 +513,6 @@ class MeasurementControllerTest {
         .andExpect(jsonPath("$.parameters[0].alarmLimits.lower").value(-10.0))
         .andExpect(jsonPath("$.parameters[0].alarmLimits.upper").value(40.0))
         .andExpect(jsonPath("$.parameters[0].active").value(true))
-        .andExpect(jsonPath("$.parameters[0].comment").value("parameter comment"))
         .andExpect(jsonPath("$.parameters[0].version").value(9))
         // latest reading
         .andExpect(jsonPath("$.parameters[0].latestParameterReadingValue.value").value(12.5))

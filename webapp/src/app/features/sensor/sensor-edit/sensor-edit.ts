@@ -1,14 +1,18 @@
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import {
   applyEach,
+  applyWhen,
   disabled,
   FieldTree,
   form,
   FormField,
   FormRoot,
   maxLength,
+  min,
   minLength,
+  type PathKind,
   required,
+  type SchemaPathTree,
   submit,
   TreeValidationResult,
   validate,
@@ -22,6 +26,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { MatDivider } from '@angular/material/list';
 import { MatSelect } from '@angular/material/select';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { PermissionsService } from '@core/auth/permissions.service';
 import {
   ExperimentResponseDto,
@@ -77,8 +82,18 @@ interface SensorParameterFormData {
     lower: number;
     upper: number;
   };
+  rangeLimits: OptionalLimits;
+  notificationActive: boolean;
+  timeout: number | null;
+  notificationTriggerCount: number | null;
+  closelyMonitored: boolean;
+  specialAlarmLimits: OptionalLimits;
   active: boolean;
-  comment: string;
+}
+
+interface OptionalLimits {
+  lower: number | null;
+  upper: number | null;
 }
 
 interface SensorFormData {
@@ -110,9 +125,28 @@ function blankParameter(): SensorParameterFormData {
     type: { name: '' },
     formula: { expression: '' },
     alarmLimits: { lower: 0, upper: 100 },
+    rangeLimits: { lower: null, upper: null },
+    notificationActive: false,
+    timeout: null,
+    notificationTriggerCount: null,
+    closelyMonitored: false,
+    specialAlarmLimits: { lower: null, upper: null },
     active: true,
-    comment: '',
   };
+}
+
+// The timeout is entered in hours (e.g. 2.5) and stored in whole seconds (9000).
+export function secondsToHours(seconds: number | undefined): number | null {
+  return seconds == null ? null : seconds / 3600;
+}
+
+export function hoursToSeconds(hours: number | null): number | undefined {
+  return hours === null ? undefined : Math.round(hours * 3600);
+}
+
+function toLimitsDto(limits: OptionalLimits): { lower: number; upper: number } | undefined {
+  if (limits.lower === null || limits.upper === null) return undefined;
+  return { lower: Number(limits.lower), upper: Number(limits.upper) };
 }
 
 function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData {
@@ -131,8 +165,19 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
             lower: parameter.alarmLimits?.lower ?? 0,
             upper: parameter.alarmLimits?.upper ?? 100,
           },
+          rangeLimits: {
+            lower: parameter.rangeLimits?.lower ?? null,
+            upper: parameter.rangeLimits?.upper ?? null,
+          },
+          notificationActive: parameter.notificationActive ?? false,
+          timeout: secondsToHours(parameter.timeout),
+          notificationTriggerCount: parameter.notificationTriggerCount ?? null,
+          closelyMonitored: parameter.closelyMonitored ?? false,
+          specialAlarmLimits: {
+            lower: parameter.specialAlarmLimits?.lower ?? null,
+            upper: parameter.specialAlarmLimits?.upper ?? null,
+          },
           active: parameter.active ?? true,
-          comment: parameter.comment ?? '',
         }))
       : [blankParameter()];
 
@@ -167,6 +212,7 @@ function domainModelToFormModel(domainModel: SensorResponseDto): SensorFormData 
     MatInput,
     MatButton,
     MatSelect,
+    MatSlideToggle,
     MatOption,
     FormField,
     FormRoot,
@@ -332,9 +378,6 @@ export default class SensorEdit {
         maxLength(parameter.dasParameterAlias, 255, {
           message: translate('sensor.parameter.dasParameterAlias.validation.maxLength')(),
         });
-        maxLength(parameter.comment, 4096, {
-          message: translate('sensor.parameter.comment.validation.maxLength')(),
-        });
         required(parameter.unit);
         required(parameter.type.name, {
           message: translate('sensor.type.validation.required')(),
@@ -378,12 +421,88 @@ export default class SensorEdit {
           }
           return undefined;
         });
+
+        validate(parameter.timeout, ({ value }) =>
+          value() === null || hoursToSeconds(value())! > 0
+            ? undefined
+            : {
+                kind: 'positive',
+                message: this.translateService.translate(
+                  'sensor.parameter.timeout.validation.positive',
+                )(),
+              },
+        );
+        min(parameter.notificationTriggerCount, 1, {
+          message: translate('sensor.parameter.notificationTriggerCount.validation.min')(),
+        });
+        for (const count of [parameter.notificationTriggerCount]) {
+          validate(count, ({ value }) =>
+            value() === null || Number.isInteger(value())
+              ? undefined
+              : {
+                  kind: 'wholeNumber',
+                  message: this.translateService.translate('sensor.validation.wholeNumber')(),
+                },
+          );
+        }
+
+        required(parameter.rangeLimits.lower, {
+          when: ({ valueOf }) => valueOf(parameter.rangeLimits.upper) !== null,
+          message: translate('sensor.rangeLimit.validation.bothRequired')(),
+        });
+        required(parameter.rangeLimits.upper, {
+          when: ({ valueOf }) => valueOf(parameter.rangeLimits.lower) !== null,
+          message: translate('sensor.rangeLimit.validation.bothRequired')(),
+        });
+        this.validateLimitBounds(parameter.rangeLimits, 'sensor.rangeLimit');
+
+        applyWhen(
+          parameter.specialAlarmLimits,
+          ({ valueOf }) => valueOf(parameter.closelyMonitored),
+          (limits) => {
+            required(limits.lower, {
+              message: translate('sensor.specialAlarmLimit.low.validation.required')(),
+            });
+            required(limits.upper, {
+              message: translate('sensor.specialAlarmLimit.high.validation.required')(),
+            });
+            this.validateLimitBounds(limits, 'sensor.specialAlarmLimit');
+          },
+        );
       });
     },
     {
       submission: { action: () => this.save(() => this.dialogRef?.close()) },
     },
   );
+
+  private validateLimitBounds<TPathKind extends PathKind>(
+    limits: SchemaPathTree<OptionalLimits, TPathKind>,
+    translationPrefix: string,
+  ): void {
+    const outOfOrder = (lower: number | null, upper: number | null) =>
+      lower !== null && upper !== null && lower > upper;
+    validate(limits.lower, ({ value, valueOf }) =>
+      outOfOrder(value(), valueOf(limits.upper))
+        ? {
+            kind: 'bounds',
+            message: this.translateService.translate(
+              `${translationPrefix}.low.validation.bounds`,
+            )(),
+          }
+        : undefined,
+    );
+    validate(limits.upper, ({ value, valueOf }) =>
+      outOfOrder(valueOf(limits.lower), value())
+        ? {
+            kind: 'bounds',
+            message: this.translateService.translate(
+              `${translationPrefix}.high.validation.bounds`,
+            )(),
+          }
+        : undefined,
+    );
+  }
 
   filteredTypesFor(parameter: FieldTree<SensorParameterFormData>): SensorTypeResponseDto[] {
     const search = parameter.type.name().value();
@@ -515,11 +634,18 @@ export default class SensorEdit {
           lower: Number(parameter.alarmLimits.lower),
           upper: Number(parameter.alarmLimits.upper),
         },
+        rangeLimits: toLimitsDto(parameter.rangeLimits),
+        notificationActive: parameter.notificationActive,
+        timeout: hoursToSeconds(parameter.timeout),
+        notificationTriggerCount: parameter.notificationTriggerCount ?? undefined,
+        closelyMonitored: parameter.closelyMonitored,
+        specialAlarmLimits: parameter.closelyMonitored
+          ? toLimitsDto(parameter.specialAlarmLimits)
+          : undefined,
         active: Boolean(parameter.active),
         formula: parameter.formula.expression
           ? { expression: parameter.formula.expression }
           : undefined,
-        comment: parameter.comment?.trim() || undefined,
       })),
     };
   }

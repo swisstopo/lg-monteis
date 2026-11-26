@@ -8,6 +8,7 @@ import static ch.swisstopo.monteis.core.jooq.generated.Tables.SENSOR_TYPES;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.CoordinatesDto;
+import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.RangeLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.FormulaResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorParameterResponseDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.outbound.SensorTypeResponseDto;
@@ -35,8 +36,27 @@ public final class SensorRecordProjections {
             r.get(FORMULAS.ID), r.get(FORMULAS.EXPRESSION), r.get(FORMULAS.VERSION)),
         new AlarmLimitsDto(
             r.get(SENSOR_PARAMETER.LOWER_ALARM_LIMIT), r.get(SENSOR_PARAMETER.UPPER_ALARM_LIMIT)),
+        toRangeLimits(r),
+        r.get(SENSOR_PARAMETER.NOTIFICATION_ACTIVE),
+        r.get(SENSOR_PARAMETER.TIMEOUT),
+        r.get(SENSOR_PARAMETER.NOTIFICATION_TRIGGER_COUNT),
+        r.get(SENSOR_PARAMETER.CLOSELY_MONITORED),
+        toSpecialAlarmLimits(r),
         r.get(SENSOR_PARAMETER.ACTIVE),
-        r.get(SENSOR_PARAMETER.COMMENT),
         r.get(SENSOR_PARAMETER.VERSION));
+  }
+
+  private static RangeLimitsDto toRangeLimits(Record r) {
+    Double lower = r.get(SENSOR_PARAMETER.LOWER_RANGE_LIMIT);
+    return lower == null
+        ? null
+        : new RangeLimitsDto(lower, r.get(SENSOR_PARAMETER.UPPER_RANGE_LIMIT));
+  }
+
+  private static AlarmLimitsDto toSpecialAlarmLimits(Record r) {
+    Double lower = r.get(SENSOR_PARAMETER.LOWER_SPECIAL_ALARM_LIMIT);
+    return lower == null
+        ? null
+        : new AlarmLimitsDto(lower, r.get(SENSOR_PARAMETER.UPPER_SPECIAL_ALARM_LIMIT));
   }
 }

@@ -26,6 +26,19 @@
   border-style: none;
 }
 
+.parameter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.toggle-field {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  margin-bottom: 22px;
+}
+
 .parameter-header {
   display: flex;
   justify-content: space-between;

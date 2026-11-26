@@ -137,8 +137,8 @@ test('should update sensor', async ({ page }) => {
   await dialog.getByLabel('DAS Sensor Alias').fill(updatedAlias);
   await dialog.getByLabel('Sensor Name').fill('E2E TEST UPDATED');
   const parameter = firstParameter(dialog);
-  await parameter.getByLabel('Alarm Limit From').fill('20');
-  await parameter.getByLabel('Alarm Limit To').fill('200');
+  await parameter.getByLabel('Alarm Limit Low', { exact: true }).fill('20');
+  await parameter.getByLabel('Alarm Limit High', { exact: true }).fill('200');
   await pickAutocompleteOption(formulaInput(parameter), 'x * 1000', 'x * 1000 (v1)');
 
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
@@ -184,9 +184,9 @@ test('should reject invalid alarm limits', async ({ page }) => {
   const dialog = await openCreateSensorDialog(page);
   const parameter = firstParameter(dialog);
 
-  await parameter.getByLabel('Alarm Limit From').fill('100');
-  await parameter.getByLabel('Alarm Limit To').fill('10');
-  await parameter.getByLabel('Alarm Limit To').blur();
+  await parameter.getByLabel('Alarm Limit Low', { exact: true }).fill('100');
+  await parameter.getByLabel('Alarm Limit High', { exact: true }).fill('10');
+  await parameter.getByLabel('Alarm Limit High', { exact: true }).blur();
 
   await expect(page.getByText('This value must be higher than the lower limit')).toBeVisible();
 });
@@ -214,8 +214,8 @@ test('should add and remove a parameter', async ({ page }) => {
   await page.getByRole('option', { name: 'Ampere (A)' }).click();
   await secondBlock.getByLabel('Sensor Type').fill('Temperature');
   await page.getByRole('option', { name: 'Temperature' }).click();
-  await secondBlock.getByLabel('Alarm Limit From').fill('0');
-  await secondBlock.getByLabel('Alarm Limit To').fill('10');
+  await secondBlock.getByLabel('Alarm Limit Low', { exact: true }).fill('0');
+  await secondBlock.getByLabel('Alarm Limit High', { exact: true }).fill('10');
 
   await secondBlock.getByLabel('Remove Parameter').click();
   await expect(secondBlock).not.toBeVisible();

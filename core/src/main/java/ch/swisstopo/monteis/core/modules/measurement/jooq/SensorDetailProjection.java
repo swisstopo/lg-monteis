@@ -60,7 +60,6 @@ final class SensorDetailProjection {
         parameter.formula(),
         parameter.alarmLimits(),
         parameter.active(),
-        parameter.comment(),
         parameter.version(),
         toLatestReading(r));
   }

@@ -10,7 +10,7 @@ import { SensorService } from '@features/sensor/services/sensor.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Documents } from '@ui/documents/documents';
 import { describe, expect, it, vi } from 'vitest';
-import SensorEdit from './sensor-edit';
+import SensorEdit, { hoursToSeconds, secondsToHours } from './sensor-edit';
 
 @Component({ selector: 'app-documents', template: '' })
 class DocumentsStub {
@@ -120,5 +120,21 @@ describe('SensorEdit', () => {
 
     expect(nameInput()?.disabled).toBe(true);
     expect(documents()?.readOnly()).toBe(false);
+  });
+});
+
+describe('timeout conversion', () => {
+  it.each([
+    [2.5, 9000],
+    [1, 3600],
+    [0.25, 900],
+  ])('stores %s hours as %s seconds', (hours, seconds) => {
+    expect(hoursToSeconds(hours)).toBe(seconds);
+    expect(secondsToHours(seconds)).toBe(hours);
+  });
+
+  it('keeps an empty timeout empty', () => {
+    expect(hoursToSeconds(null)).toBeUndefined();
+    expect(secondsToHours(undefined)).toBeNull();
   });
 });

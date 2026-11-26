@@ -73,8 +73,8 @@ export async function fillRequiredSensorFields(
   await page.getByRole('option', { name: 'Ampere (A)' }).click();
   await parameter.getByLabel('Sensor Type').fill('Temperature');
   await page.getByRole('option', { name: 'Temperature' }).click();
-  await parameter.getByLabel('Alarm Limit From').fill('10');
-  await parameter.getByLabel('Alarm Limit To').fill('100');
+  await parameter.getByLabel('Alarm Limit Low', { exact: true }).fill('10');
+  await parameter.getByLabel('Alarm Limit High', { exact: true }).fill('100');
 }
 
 /** Fills the local coordinates a sensor without Fulcrum ID needs. */

@@ -15,8 +15,13 @@ public class SensorParameter {
   private Unit unit;
   private Formula formula;
   private AlarmLimits alarmLimits;
+  private RangeLimits rangeLimits;
+  private boolean notificationActive;
+  private Integer timeout;
+  private Integer notificationTriggerCount;
+  private boolean closelyMonitored;
+  private AlarmLimits specialAlarmLimits;
   private Boolean active;
-  private String comment;
   private Integer version;
 
   /**
@@ -32,8 +37,13 @@ public class SensorParameter {
       Unit unit,
       Formula formula,
       AlarmLimits alarmLimits,
-      Boolean active,
-      String comment) {
+      RangeLimits rangeLimits,
+      boolean notificationActive,
+      Integer timeout,
+      Integer notificationTriggerCount,
+      boolean closelyMonitored,
+      AlarmLimits specialAlarmLimits,
+      Boolean active) {
     this.name = name;
     // Most DAS devices only ever report a single measurement, conventionally named "value"
     this.dasParameterAlias =
@@ -44,8 +54,13 @@ public class SensorParameter {
     this.unit = unit;
     this.formula = formula;
     this.alarmLimits = alarmLimits;
+    this.rangeLimits = rangeLimits;
+    this.notificationActive = notificationActive;
+    this.timeout = timeout;
+    this.notificationTriggerCount = notificationTriggerCount;
+    this.closelyMonitored = closelyMonitored;
+    this.specialAlarmLimits = specialAlarmLimits;
     this.active = active;
-    this.comment = comment;
   }
 
   @SuppressWarnings("java:S107")
@@ -57,8 +72,13 @@ public class SensorParameter {
       Unit unit,
       Formula formula,
       AlarmLimits alarmLimits,
+      RangeLimits rangeLimits,
+      boolean notificationActive,
+      Integer timeout,
+      Integer notificationTriggerCount,
+      boolean closelyMonitored,
+      AlarmLimits specialAlarmLimits,
       Boolean active,
-      String comment,
       Integer version) {
     this.id = id;
     this.name = name;
@@ -67,8 +87,13 @@ public class SensorParameter {
     this.unit = unit;
     this.formula = formula;
     this.alarmLimits = alarmLimits;
+    this.rangeLimits = rangeLimits;
+    this.notificationActive = notificationActive;
+    this.timeout = timeout;
+    this.notificationTriggerCount = notificationTriggerCount;
+    this.closelyMonitored = closelyMonitored;
+    this.specialAlarmLimits = specialAlarmLimits;
     this.active = active;
-    this.comment = comment;
     this.version = version;
   }
 
@@ -128,20 +153,60 @@ public class SensorParameter {
     this.alarmLimits = alarmLimits;
   }
 
+  public RangeLimits getRangeLimits() {
+    return rangeLimits;
+  }
+
+  public void setRangeLimits(RangeLimits rangeLimits) {
+    this.rangeLimits = rangeLimits;
+  }
+
+  public boolean getNotificationActive() {
+    return notificationActive;
+  }
+
+  public void setNotificationActive(boolean notificationActive) {
+    this.notificationActive = notificationActive;
+  }
+
+  public Integer getTimeout() {
+    return timeout;
+  }
+
+  public void setTimeout(Integer timeout) {
+    this.timeout = timeout;
+  }
+
+  public Integer getNotificationTriggerCount() {
+    return notificationTriggerCount;
+  }
+
+  public void setNotificationTriggerCount(Integer notificationTriggerCount) {
+    this.notificationTriggerCount = notificationTriggerCount;
+  }
+
+  public boolean getCloselyMonitored() {
+    return closelyMonitored;
+  }
+
+  public void setCloselyMonitored(boolean closelyMonitored) {
+    this.closelyMonitored = closelyMonitored;
+  }
+
+  public AlarmLimits getSpecialAlarmLimits() {
+    return specialAlarmLimits;
+  }
+
+  public void setSpecialAlarmLimits(AlarmLimits specialAlarmLimits) {
+    this.specialAlarmLimits = specialAlarmLimits;
+  }
+
   public Boolean getActive() {
     return active;
   }
 
   public void setActive(Boolean active) {
     this.active = active;
-  }
-
-  public String getComment() {
-    return comment;
-  }
-
-  public void setComment(String comment) {
-    this.comment = comment;
   }
 
   public Integer getVersion() {

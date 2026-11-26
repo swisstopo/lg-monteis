@@ -334,8 +334,13 @@ class JooqSensorParameterRowQueryRepositoryIT {
         Unit.METER,
         formula,
         new AlarmLimits(lower, upper),
-        true,
+        new RangeLimits(-1000.0, 1000.0),
+        false,
         null,
+        null,
+        false,
+        null,
+        true,
         null);
   }
 
@@ -351,8 +356,13 @@ class JooqSensorParameterRowQueryRepositoryIT {
             Unit.METER,
             formula,
             new AlarmLimits(0.0, 100.0),
-            true,
+            new RangeLimits(-1000.0, 1000.0),
+            false,
             null,
+            null,
+            false,
+            null,
+            true,
             null);
 
     Sensor sensor =

@@ -103,6 +103,28 @@ class SensorParameterTest {
     assertFalse(after.changeTriggersPublish(before));
   }
 
+  @Test
+  void should_keep_special_alarm_limits_while_not_closely_monitored() {
+    SensorParameter parameter =
+        new SensorParameter(
+            "Test Sensor Parameter",
+            "PARAM-01",
+            new SensorType(null, "Other", null),
+            Unit.METER,
+            new Formula("x"),
+            new AlarmLimits(0.0, 100.0),
+            new RangeLimits(-1000.0, 1000.0),
+            false,
+            null,
+            null,
+            false,
+            new AlarmLimits(-10.0, 110.0),
+            true);
+
+    assertFalse(parameter.getCloselyMonitored());
+    assertEquals(new AlarmLimits(-10.0, 110.0), parameter.getSpecialAlarmLimits());
+  }
+
   private SensorParameter sensorParameterWith(
       String formulaExpression, Double lower, Double upper) {
     return sensorParameterWith(new Formula(formulaExpression), new AlarmLimits(lower, upper));
@@ -116,8 +138,13 @@ class SensorParameterTest {
         Unit.METER,
         formula,
         alarmLimits,
-        true,
-        null);
+        new RangeLimits(-1000.0, 1000.0),
+        false,
+        null,
+        null,
+        false,
+        null,
+        true);
   }
 
   private SensorParameter newSensorParameterWithAlias(String dasParameterAlias) {
@@ -128,7 +155,12 @@ class SensorParameterTest {
         Unit.METER,
         new Formula("x * 2"),
         new AlarmLimits(0.0, 100.0),
-        true,
-        null);
+        new RangeLimits(-1000.0, 1000.0),
+        false,
+        null,
+        null,
+        false,
+        null,
+        true);
   }
 }

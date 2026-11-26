@@ -215,14 +215,14 @@
     },
     "alarmLimit": {
       "from": {
-        "label": "Alarm Limit From",
+        "label": "Alarm Limit Low",
         "validation": {
           "required": "Alarm limit is required",
           "bounds": "This value must be lower than the upper limit"
         }
       },
       "to": {
-        "label": "Alarm Limit To",
+        "label": "Alarm Limit High",
         "validation": {
           "required": "Alarm limit is required",
           "bounds": "This value must be higher than the lower limit"
@@ -252,14 +252,29 @@
       "active": {
         "label": "Parameter Active"
       },
-      "comment": {
-        "label": "Parameter Comment",
+      "addButton": "Add Parameter",
+      "removeButton": "Remove Parameter",
+      "deleteButton": "Delete",
+      "notificationActive": {
+        "label": "Notification active"
+      },
+      "closelyMonitored": {
+        "label": "Closely monitored"
+      },
+      "timeout": {
+        "label": "Timeout",
+        "suffix": "h",
         "validation": {
-          "maxLength": "Parameter comment must be at most 4096 characters long"
+          "positive": "Timeout must be at least 1 second"
         }
       },
-      "addButton": "Add Parameter",
-      "removeButton": "Remove Parameter"
+      "notificationTriggerCount": {
+        "label": "Frequency/Trigger",
+        "suffix": "times",
+        "validation": {
+          "min": "Frequency must be at least 1"
+        }
+      }
     },
     "button": {
       "saveAndCreate": "Save and create new",
@@ -279,6 +294,45 @@
       "noId": "No sensor id provided",
       "connection": "Failed to connect to the backend server.",
       "downloadFailed": "Failed to download sensors as CSV."
+    },
+    "rangeLimit": {
+      "low": {
+        "label": "Sensor Range Limit Low",
+        "validation": {
+          "bounds": "This value must be lower than the upper limit"
+        }
+      },
+      "high": {
+        "label": "Sensor Range Limit High",
+        "validation": {
+          "bounds": "This value must be higher than the lower limit"
+        }
+      },
+      "validation": {
+        "bothRequired": "Set both range limits or none"
+      }
+    },
+    "specialAlarmLimit": {
+      "low": {
+        "label": "Special Alarm Limit Low",
+        "validation": {
+          "required": "Special alarm limit is required",
+          "bounds": "This value must be lower than the upper limit"
+        }
+      },
+      "high": {
+        "label": "Special Alarm Limit High",
+        "validation": {
+          "required": "Special alarm limit is required",
+          "bounds": "This value must be higher than the lower limit"
+        }
+      }
+    },
+    "specialAlarmLimits": {
+      "required": "Special alarm limits are required while the parameter is closely monitored"
+    },
+    "validation": {
+      "wholeNumber": "Enter a whole number"
     }
   },
   "experiment": {
