@@ -901,10 +901,10 @@ class JooqExperimentRepositoryIT {
             formula,
             new AlarmLimits(0.0, 100.0),
             new RangeLimits(-1000.0, 1000.0),
+            false,
             null,
             null,
-            null,
-            null,
+            false,
             null,
             true,
             null);

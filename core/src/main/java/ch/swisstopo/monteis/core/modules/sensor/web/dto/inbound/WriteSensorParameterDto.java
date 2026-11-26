@@ -5,8 +5,10 @@ import ch.swisstopo.monteis.core.infrastructure.validation.NullOrNotBlank;
 import ch.swisstopo.monteis.core.modules.sensor.domain.Unit;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.AlarmLimitsDto;
 import ch.swisstopo.monteis.core.modules.sensor.web.dto.nested.RangeLimitsDto;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
@@ -46,4 +48,11 @@ public record WriteSensorParameterDto(
         @Valid
         WriteFormulaDto formula,
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) @Null(groups = Create.class)
-        Integer version) {}
+        Integer version) {
+
+  @JsonIgnore
+  @AssertTrue(message = "sensor.specialAlarmLimits.required")
+  public boolean isSpecialAlarmLimitsPresentWhenCloselyMonitored() {
+    return !Boolean.TRUE.equals(closelyMonitored) || specialAlarmLimits != null;
+  }
+}

@@ -13,7 +13,13 @@ ALTER TABLE sensor_parameter
 
     ADD CONSTRAINT chk_sensor_parameter_closely_monitored_needs_special_alarm_limits
         CHECK (NOT closely_monitored
-            OR (lower_special_alarm_limit IS NOT NULL AND upper_special_alarm_limit IS NOT NULL));
+            OR (lower_special_alarm_limit IS NOT NULL AND upper_special_alarm_limit IS NOT NULL)),
+
+    -- A limit pair is either fully set or fully absent, so readers only need to null-check one side.
+    ADD CONSTRAINT chk_sensor_parameter_range_limits_pair
+        CHECK ((lower_range_limit IS NULL) = (upper_range_limit IS NULL)),
+    ADD CONSTRAINT chk_sensor_parameter_special_alarm_limits_pair
+        CHECK ((lower_special_alarm_limit IS NULL) = (upper_special_alarm_limit IS NULL));
 
 -- Existing parameters have always notified on their alarm limits: keep that for them.
 UPDATE sensor_parameter SET notification_active = true;

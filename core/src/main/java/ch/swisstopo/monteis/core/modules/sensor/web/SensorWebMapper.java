@@ -54,7 +54,10 @@ public interface SensorWebMapper {
     }
   }
 
-  // New mapping for the nested parameters
+  // New mapping for the nested parameters. The monitoring flags are optional in the request
+  // ("omit for false"), the domain holds them as primitives.
+  @Mapping(target = "notificationActive", defaultValue = "false")
+  @Mapping(target = "closelyMonitored", defaultValue = "false")
   SensorParameter toDomain(WriteSensorParameterDto dto);
 
   /**
