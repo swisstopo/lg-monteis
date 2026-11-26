@@ -55,16 +55,15 @@ public class OpenApiConfig {
         openApi
             .getPaths()
             .values()
-            .forEach(
-                pathItem -> {
-                  requireScheme(pathItem.getGet());
-                  requireScheme(pathItem.getHead());
-                  requireScheme(pathItem.getOptions());
-                  requireScheme(pathItem.getPost());
-                  requireScheme(pathItem.getPut());
-                  requireScheme(pathItem.getPatch());
-                  requireScheme(pathItem.getDelete());
-                });
+            .forEach(pathItem -> {
+              requireScheme(pathItem.getGet());
+              requireScheme(pathItem.getHead());
+              requireScheme(pathItem.getOptions());
+              requireScheme(pathItem.getPost());
+              requireScheme(pathItem.getPut());
+              requireScheme(pathItem.getPatch());
+              requireScheme(pathItem.getDelete());
+            });
   }
 
   private SecurityScheme oauth2Scheme() {

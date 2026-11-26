@@ -132,11 +132,10 @@ class S3DocumentStorageIT {
   }
 
   private static HeadObjectResponse headOf(String keyPrefix, DocumentKey key) {
-    return s3.headObject(
-        request ->
-            request
-                .bucket(S3TestcontainersConfiguration.BUCKET)
-                .key(keyPrefix + key.parentId() + "/" + key.documentId()));
+    return s3.headObject(request ->
+        request
+            .bucket(S3TestcontainersConfiguration.BUCKET)
+            .key(keyPrefix + key.parentId() + "/" + key.documentId()));
   }
 
   private static InputStream pdfContent() {

@@ -65,13 +65,12 @@ class ExperimentOwnerServiceTest {
   void keycloakAnswersWithPisInKeycloak() {
     lenient()
         .when(userDirectory.pisForReading(anyCollection()))
-        .thenAnswer(
-            call -> {
-              Map<UUID, Pis> answer = new LinkedHashMap<>();
-              call.<Collection<UUID>>getArgument(0)
-                  .forEach(id -> answer.put(id, pisInKeycloak.get(id)));
-              return answer;
-            });
+        .thenAnswer(call -> {
+          Map<UUID, Pis> answer = new LinkedHashMap<>();
+          call.<Collection<UUID>>getArgument(0)
+              .forEach(id -> answer.put(id, pisInKeycloak.get(id)));
+          return answer;
+        });
   }
 
   private void givenPis(UUID experimentId, Pis pis) {

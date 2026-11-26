@@ -1,12 +1,11 @@
 package ch.swisstopo.monteis.core.itconfig;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Merges the Keycloak realm base config with the local patch, mirroring the jq transform in
@@ -29,7 +28,7 @@ final class RealmRenderer {
 
       JsonNode spaPatch = patch.path("spa");
       for (JsonNode client : base.withArray("clients")) {
-        if ("monteis-spa".equals(client.path("clientId").asText())) {
+        if ("monteis-spa".equals(client.path("clientId").asString())) {
           ((ObjectNode) client).set("redirectUris", spaPatch.path("redirectUris"));
           ((ObjectNode) client).set("webOrigins", spaPatch.path("webOrigins"));
         }
@@ -58,8 +57,8 @@ final class RealmRenderer {
       File rendered = new File("target/test-classes/" + CLASSPATH_RESOURCE_NAME);
       rendered.getParentFile().mkdirs();
       mapper.writeValue(rendered, base);
-    } catch (IOException e) {
-      throw new UncheckedIOException("Failed to render the Keycloak e2e realm", e);
+    } catch (JacksonException e) {
+      throw new IllegalStateException("Failed to render the Keycloak e2e realm", e);
     }
   }
 }

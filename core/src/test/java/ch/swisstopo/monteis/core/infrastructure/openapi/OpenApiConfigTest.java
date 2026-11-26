@@ -105,11 +105,9 @@ class OpenApiConfigTest {
     // then
     pathItem
         .readOperations()
-        .forEach(
-            operation ->
-                assertEquals(
-                    List.of(new SecurityRequirement().addList("bearerAuth")),
-                    operation.getSecurity()));
+        .forEach(operation ->
+            assertEquals(
+                List.of(new SecurityRequirement().addList("bearerAuth")), operation.getSecurity()));
   }
 
   private static PathItem pathItemWithAllMethods() {

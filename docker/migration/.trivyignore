@@ -1,46 +1,30 @@
 # ── MON-87 migration image (docker/migration/Dockerfile) ────────────────────────
 # The stock flyway/flyway base bundles JDBC drivers for databases MONTEIS does not use
-# (SQL Server, Cassandra, Couchbase, GCP Spanner, Databricks, Mongo, ...). Those unused
-# drivers + their netty / httpcore5 / shaded-jackson transitive jars carry HIGH CVEs
-# for code paths the Postgres-only migration Job never loads. We waive them by id here
-# CVEs in the Postgres driver, the flyway engine, the JRE, or the OS are
+# (SQL Server, Couchbase, GCP Spanner/BigQuery, Databricks, ...). Those unused drivers
+# under /flyway/drivers + their shaded jackson / guava / httpcore5 / lz4 jars carry HIGH
+# CVEs for code paths the Postgres-only migration Job never loads. We waive them by id here
+# CVEs in the Postgres driver, the flyway engine (/flyway/lib), the JRE, or the OS are
 # deliberately NOT listed and still fail the gate.
 # Re-audit this list whenever the flyway base image digest is bumped.
+# Last audit: flyway/flyway 13.13.0-alpine (2026-11-26) — every id below only hits
+# jars under /flyway/drivers; ids no longer present were removed.
 #
 # com.microsoft.sqlserver:mssql-jdbc (SQL Server driver)
 CVE-2025-59250
-# io.netty — netty-handler / netty-codec-http(2) / netty-codec-compression
-# (Cassandra / Couchbase / GCP Spanner transports)
-CVE-2026-44249
-CVE-2026-45416
-CVE-2026-50010
-CVE-2026-55831
-CVE-2026-55833
-CVE-2026-56745
-CVE-2026-56819
-CVE-2026-59901
-CVE-2026-75595
-# org.apache.httpcomponents.core5:httpcore5 / httpcore5-h2 (Cassandra driver)
+# org.apache.httpcomponents.core5:httpcore5 / httpcore5-h2 (shaded in databricks-jdbc)
 CVE-2026-54399
 CVE-2026-54428
-# jackson 2.18.7 SHADED inside databricks-jdbc (flyway's own jackson 2.22.0/3.1.4,
-# used by the Postgres migration path, is a different version and is NOT affected)
-CVE-2026-54512
-CVE-2026-54513
-GHSA-r7wm-3cxj-wff9
-# jackson SHADED inside databricks-jdbc (2.18.7), couchbase core-io (2.21.4) and
-# aws-secretsmanager-jdbc (2.22.2). flyway's own jackson in 13.9.0 (2.22.3 / 3.1.7)
-# is fixed, so these ids only hit the unused drivers
-CVE-2026-68494
+# jackson SHADED inside databricks-jdbc (2.18.8) and couchbase core-io (2.21.6).
+# flyway's own jackson in 13.13.0 (/flyway/lib: 2.22.4 / 3.1.8) is not affected,
+# so these ids only hit the unused drivers
 CVE-2026-68497
 CVE-2026-89407
 CVE-2026-89425
 CVE-2026-91776
 CVE-2026-91777
-# at.yawk.lz4:lz4-java (Cassandra driver, via cassandra-jdbc-wrapper / java-driver-core 4.19.2)
-# flyway 13.10.0 still ships the same driver, so bumping the base does not fix it
+# at.yawk.lz4:lz4-java 1.10.1 (shaded in databricks-jdbc)
 CVE-2026-106451
 # com.google.guava:guava — standalone in drivers/gcp (Spanner/BigQuery), shaded inside
 # databricks-jdbc (33.0.0) and couchbase core-io (33.4.0). No guava on the Postgres
-# migration path. flyway 13.12.1 still ships the same jars
+# migration path
 CVE-2026-102554

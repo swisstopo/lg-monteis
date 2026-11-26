@@ -80,11 +80,10 @@ class S3FulcrumDocumentStorageIT {
 
     // then
     HeadObjectResponse head =
-        s3.headObject(
-            request ->
-                request
-                    .bucket(S3TestcontainersConfiguration.BUCKET)
-                    .key(FULCRUM_KEY_PREFIX + documentId));
+        s3.headObject(request ->
+            request
+                .bucket(S3TestcontainersConfiguration.BUCKET)
+                .key(FULCRUM_KEY_PREFIX + documentId));
     assertThat(head.contentType()).isEqualTo("application/pdf");
     assertThat(head.contentLength()).isEqualTo(CONTENT.length);
   }

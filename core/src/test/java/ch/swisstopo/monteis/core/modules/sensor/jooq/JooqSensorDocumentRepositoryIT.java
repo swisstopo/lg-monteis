@@ -41,10 +41,8 @@ class JooqSensorDocumentRepositoryIT {
 
     // when
     SensorDocument document =
-        callAsAdmin(
-            () ->
-                repository.create(
-                    documentId, sensorId, REPORT, SecurityContextTestSupport.USERNAME));
+        callAsAdmin(() ->
+            repository.create(documentId, sensorId, REPORT, SecurityContextTestSupport.USERNAME));
 
     // then
     assertThat(document.id()).isEqualTo(documentId);
@@ -159,12 +157,11 @@ class JooqSensorDocumentRepositoryIT {
 
     // when: no UPDATE policy, RLS filters every row out
     int updated =
-        callAsAdmin(
-            () ->
-                dsl.update(SENSOR_DOCUMENTS)
-                    .set(SENSOR_DOCUMENTS.FILE_NAME, "renamed.pdf")
-                    .where(SENSOR_DOCUMENTS.ID.eq(document.id()))
-                    .execute());
+        callAsAdmin(() ->
+            dsl.update(SENSOR_DOCUMENTS)
+                .set(SENSOR_DOCUMENTS.FILE_NAME, "renamed.pdf")
+                .where(SENSOR_DOCUMENTS.ID.eq(document.id()))
+                .execute());
 
     // then
     assertThat(updated).isZero();
@@ -210,24 +207,22 @@ class JooqSensorDocumentRepositoryIT {
   }
 
   private SensorDocument createAsAdmin(UUID sensorId) {
-    return callAsAdmin(
-        () ->
-            repository.create(
-                repository.nextId(), sensorId, REPORT, SecurityContextTestSupport.USERNAME));
+    return callAsAdmin(() ->
+        repository.create(
+            repository.nextId(), sensorId, REPORT, SecurityContextTestSupport.USERNAME));
   }
 
   private UUID insertDocumentUploadedAt(UUID sensorId, OffsetDateTime uploadedAt) {
-    return callAsAdmin(
-        () ->
-            dsl.insertInto(SENSOR_DOCUMENTS)
-                .set(SENSOR_DOCUMENTS.SENSOR_ID, sensorId)
-                .set(SENSOR_DOCUMENTS.FILE_NAME, "older.pdf")
-                .set(SENSOR_DOCUMENTS.CONTENT_TYPE, "application/pdf")
-                .set(SENSOR_DOCUMENTS.SIZE_BYTES, 1L)
-                .set(SENSOR_DOCUMENTS.UPLOADED_AT, uploadedAt)
-                .set(SENSOR_DOCUMENTS.UPLOADED_BY, SecurityContextTestSupport.USERNAME)
-                .returning(SENSOR_DOCUMENTS.ID)
-                .fetchSingle()
-                .getId());
+    return callAsAdmin(() ->
+        dsl.insertInto(SENSOR_DOCUMENTS)
+            .set(SENSOR_DOCUMENTS.SENSOR_ID, sensorId)
+            .set(SENSOR_DOCUMENTS.FILE_NAME, "older.pdf")
+            .set(SENSOR_DOCUMENTS.CONTENT_TYPE, "application/pdf")
+            .set(SENSOR_DOCUMENTS.SIZE_BYTES, 1L)
+            .set(SENSOR_DOCUMENTS.UPLOADED_AT, uploadedAt)
+            .set(SENSOR_DOCUMENTS.UPLOADED_BY, SecurityContextTestSupport.USERNAME)
+            .returning(SENSOR_DOCUMENTS.ID)
+            .fetchSingle()
+            .getId());
   }
 }

@@ -1,13 +1,13 @@
 package ch.swisstopo.monteis.core.infrastructure.query;
 
 import ch.swisstopo.monteis.core.infrastructure.exception.InvalidPagedRequestException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Turns a {@link RawPagedRequest}/{@link RawExportRequest} bound from GET query parameters into a
@@ -68,7 +68,7 @@ public class PagedRequestParser {
   private <T> T readValue(String json, TypeReference<T> type) {
     try {
       return objectMapper.readValue(json, type);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new InvalidPagedRequestException("Invalid sort/filter model: " + e.getMessage(), e);
     }
   }

@@ -89,10 +89,9 @@ class SensorDocumentServiceIT {
     InputStream content = InputStream.nullInputStream();
 
     // when
-    SecurityContextTestSupport.runAsAdmin(
-        () ->
-            assertThrows(
-                IllegalStateException.class, () -> service.upload(sensorId, metadata, content)));
+    SecurityContextTestSupport.runAsAdmin(() ->
+        assertThrows(
+            IllegalStateException.class, () -> service.upload(sensorId, metadata, content)));
 
     // then
     assertThat(countDocumentRows(fileName)).isZero();
@@ -121,23 +120,19 @@ class SensorDocumentServiceIT {
     willThrow(new IllegalStateException("S3 unavailable")).given(storage).delete(any());
 
     // when
-    SecurityContextTestSupport.runAsAdmin(
-        () ->
-            assertThrows(
-                IllegalStateException.class,
-                () -> service.delete(SeedData.SENSOR_ONLY_IN_ALPHA, documentId)));
+    SecurityContextTestSupport.runAsAdmin(() ->
+        assertThrows(
+            IllegalStateException.class,
+            () -> service.delete(SeedData.SENSOR_ONLY_IN_ALPHA, documentId)));
 
     // then
     assertThat(countDocumentRows(fileName)).isEqualTo(1);
   }
 
   private SensorDocument uploadAsAdmin(String fileName) {
-    return callAsAdmin(
-        () ->
-            service.upload(
-                SeedData.SENSOR_ONLY_IN_ALPHA,
-                pdfMetadata(fileName),
-                InputStream.nullInputStream()));
+    return callAsAdmin(() ->
+        service.upload(
+            SeedData.SENSOR_ONLY_IN_ALPHA, pdfMetadata(fileName), InputStream.nullInputStream()));
   }
 
   private static String uniqueFileName() {

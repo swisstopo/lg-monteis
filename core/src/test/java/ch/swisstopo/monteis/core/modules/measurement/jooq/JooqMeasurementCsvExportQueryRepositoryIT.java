@@ -40,27 +40,26 @@ class JooqMeasurementCsvExportQueryRepositoryIT {
   @Test
   @Transactional
   void should_stream_header_and_rows_matching_the_filter() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // when
-          String csv = streamToString(dasKeyEquals("SOL_EXPERTS__TEMP-1__temperature"));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // when
+      String csv = streamToString(dasKeyEquals("SOL_EXPERTS__TEMP-1__temperature"));
 
-          // then
-          List<String> lines = List.of(csv.split("\r\n"));
-          assertEquals(HEADER, lines.getFirst());
-          assertEquals(2, lines.size(), "Header plus exactly one matching row");
-          String row = lines.get(1);
-          assertTrue(
-              row.startsWith(
-                  "Mont Terri Alpha;SOL_EXPERTS__TEMP-1__temperature;monteis-001;"
-                      + "Temperature Param;Temperature;"),
-              row);
-          assertTrue(
-              row.endsWith(
-                  ";KELVIN;-50.0;100.0;true;100.0;200.0;300.0;"
-                      + "Air temperature sensor near ventilation intake"),
-              row);
-        });
+      // then
+      List<String> lines = List.of(csv.split("\r\n"));
+      assertEquals(HEADER, lines.getFirst());
+      assertEquals(2, lines.size(), "Header plus exactly one matching row");
+      String row = lines.get(1);
+      assertTrue(
+          row.startsWith(
+              "Mont Terri Alpha;SOL_EXPERTS__TEMP-1__temperature;monteis-001;"
+                  + "Temperature Param;Temperature;"),
+          row);
+      assertTrue(
+          row.endsWith(
+              ";KELVIN;-50.0;100.0;true;100.0;200.0;300.0;"
+                  + "Air temperature sensor near ventilation intake"),
+          row);
+    });
   }
 
   @Test
@@ -80,18 +79,17 @@ class JooqMeasurementCsvExportQueryRepositoryIT {
   @Test
   @Transactional
   void should_refuse_an_export_matching_more_rows_than_the_limit() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // given
-          PagedRequest request = new PagedRequest(0, 2, List.of(), Map.of());
-          StringWriter writer = new StringWriter();
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // given
+      PagedRequest request = new PagedRequest(0, 2, List.of(), Map.of());
+      StringWriter writer = new StringWriter();
 
-          // when / then
-          assertThrows(
-              TooManyExportRowsException.class,
-              () -> exportRepository.writeCsvUnlessTooManyRows(request, writer));
-          assertEquals("", writer.toString());
-        });
+      // when / then
+      assertThrows(
+          TooManyExportRowsException.class,
+          () -> exportRepository.writeCsvUnlessTooManyRows(request, writer));
+      assertEquals("", writer.toString());
+    });
   }
 
   private static PagedRequest dasKeyEquals(String dasKey) {

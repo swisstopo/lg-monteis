@@ -87,16 +87,15 @@ class SensorFulcrumRefreshServiceIT {
   @AfterEach
   void removeTheSensors() {
     fulcrum.resetQueries();
-    inTransactionAsAdmin(
-        () -> {
-          dsl.deleteFrom(SENSOR_PARAMETER)
-              .where(SENSOR_PARAMETER.SENSOR_ID.in(createdSensorIds))
-              .execute();
-          dsl.deleteFrom(EXPERIMENT_SENSOR)
-              .where(EXPERIMENT_SENSOR.SENSOR_ID.in(createdSensorIds))
-              .execute();
-          return dsl.deleteFrom(SENSORS).where(SENSORS.ID.in(createdSensorIds)).execute();
-        });
+    inTransactionAsAdmin(() -> {
+      dsl.deleteFrom(SENSOR_PARAMETER)
+          .where(SENSOR_PARAMETER.SENSOR_ID.in(createdSensorIds))
+          .execute();
+      dsl.deleteFrom(EXPERIMENT_SENSOR)
+          .where(EXPERIMENT_SENSOR.SENSOR_ID.in(createdSensorIds))
+          .execute();
+      return dsl.deleteFrom(SENSORS).where(SENSORS.ID.in(createdSensorIds)).execute();
+    });
   }
 
   @Test
@@ -163,11 +162,10 @@ class SensorFulcrumRefreshServiceIT {
 
     // then
     assertThat(Stream.of(notInFulcrum, withoutHeight).map(this::storedSensor))
-        .allSatisfy(
-            sensor -> {
-              assertThat(sensor.getCoordinates()).isEqualTo(STORED);
-              assertThat(sensor.getLastFulcrumRefreshAt()).isNull();
-            });
+        .allSatisfy(sensor -> {
+          assertThat(sensor.getCoordinates()).isEqualTo(STORED);
+          assertThat(sensor.getLastFulcrumRefreshAt()).isNull();
+        });
   }
 
   @Test
@@ -349,11 +347,10 @@ class SensorFulcrumRefreshServiceIT {
 
     // then
     assertThat(selected)
-        .allSatisfy(
-            sensorId -> {
-              assertThat(storedSensor(sensorId).getCoordinates()).isEqualTo(STORED);
-              assertThat(storedSensor(sensorId).getLastFulcrumRefreshAt()).isNull();
-            });
+        .allSatisfy(sensorId -> {
+          assertThat(storedSensor(sensorId).getCoordinates()).isEqualTo(STORED);
+          assertThat(storedSensor(sensorId).getLastFulcrumRefreshAt()).isNull();
+        });
   }
 
   private Experiment createExperiment() {
@@ -389,25 +386,23 @@ class SensorFulcrumRefreshServiceIT {
 
   // another user's save: new version, the refresh's read is stale
   private void saveCommentMeanwhile(UUID sensorId) {
-    inTransactionAsAdmin(
-        () ->
-            dsl.update(SENSORS)
-                .set(SENSORS.COMMENT, "saved meanwhile")
-                .set(SENSORS.VERSION, SENSORS.VERSION.plus(1))
-                .where(SENSORS.ID.eq(sensorId))
-                .execute());
+    inTransactionAsAdmin(() ->
+        dsl.update(SENSORS)
+            .set(SENSORS.COMMENT, "saved meanwhile")
+            .set(SENSORS.VERSION, SENSORS.VERSION.plus(1))
+            .where(SENSORS.ID.eq(sensorId))
+            .execute());
   }
 
   // what the sensor save does when an admin removes the fulcrum id
   private void removeFulcrumIdMeanwhile(UUID sensorId) {
-    inTransactionAsAdmin(
-        () ->
-            dsl.update(SENSORS)
-                .setNull(SENSORS.FULCRUM_ID)
-                .setNull(SENSORS.LAST_FULCRUM_REFRESH_AT)
-                .set(SENSORS.VERSION, SENSORS.VERSION.plus(1))
-                .where(SENSORS.ID.eq(sensorId))
-                .execute());
+    inTransactionAsAdmin(() ->
+        dsl.update(SENSORS)
+            .setNull(SENSORS.FULCRUM_ID)
+            .setNull(SENSORS.LAST_FULCRUM_REFRESH_AT)
+            .set(SENSORS.VERSION, SENSORS.VERSION.plus(1))
+            .where(SENSORS.ID.eq(sensorId))
+            .execute());
   }
 
   private void asPi(Runnable action) {

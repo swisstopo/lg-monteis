@@ -284,13 +284,12 @@ public class JooqExperimentRepository implements ExperimentRepository {
                 // Ensure this matches your JaVers @TypeName or class name!
                 .and(DSL.field("type_name").eq(Experiment.JAVERS_TYPE)))
         .fetchStream()
-        .map(
-            r -> {
-              Experiment experiment = mapper.toDomain(r.into(EXPERIMENTS));
-              // one query per experiment for its links, fine for a backfill that runs once
-              loadOrganisationIdsInto(experiment);
-              return experiment;
-            });
+        .map(r -> {
+          Experiment experiment = mapper.toDomain(r.into(EXPERIMENTS));
+          // one query per experiment for its links, fine for a backfill that runs once
+          loadOrganisationIdsInto(experiment);
+          return experiment;
+        });
   }
 
   private void loadOrganisationIdsInto(Experiment experiment) {
@@ -307,10 +306,9 @@ public class JooqExperimentRepository implements ExperimentRepository {
             .orderBy(EXPERIMENT_ORGANISATION.ORGANISATION_ID)
             .fetchGroups(
                 EXPERIMENT_ORGANISATION.EXPERIMENT_ID, EXPERIMENT_ORGANISATION.ORGANISATION_ID);
-    experiments.forEach(
-        experiment ->
-            experiment.setOrganisationIds(
-                organisationIdsByExperiment.getOrDefault(experiment.getId(), List.of())));
+    experiments.forEach(experiment ->
+        experiment.setOrganisationIds(
+            organisationIdsByExperiment.getOrDefault(experiment.getId(), List.of())));
   }
 
   /** Increments the version like a column update would, failing for a stale version. */

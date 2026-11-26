@@ -3,7 +3,7 @@ package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import ch.swisstopo.monteis.contracts.fulcrum.api.FulcrumApi;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -231,10 +231,10 @@ class FulcrumAttachmentDownloadClientTest {
             Duration.ofSeconds(5),
             List.of(URI.create(baseUrl())));
     RestClient apiClient = RestClient.builder().apply(FulcrumConfig.configure(properties)).build();
-    DefaultApi fulcrumApi =
+    FulcrumApi fulcrumApi =
         HttpServiceProxyFactory.builderFor(RestClientAdapter.create(apiClient))
             .build()
-            .createClient(DefaultApi.class);
+            .createClient(FulcrumApi.class);
     return new FulcrumAttachmentDownloadClient(fulcrumApi, properties, RestClient.builder());
   }
 

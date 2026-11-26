@@ -239,24 +239,23 @@ public class MeasurementQueryRepository implements MeasurementQuery {
 
     List<MeasurementResponseDto> data =
         rows.stream()
-            .map(
-                row ->
-                    new MeasurementResponseDto(
-                        row.sensorParameterId(),
-                        row.dasKey(),
-                        row.experimentName(),
-                        row.sensorName(),
-                        row.sensorParameterName(),
-                        row.newestMeasurement(),
-                        row.measureValue(),
-                        row.unit().name(),
-                        row.sensorType(),
-                        new CoordinatesDto(row.x(), row.y(), row.z()),
-                        new AlarmLimitsDto(row.alarmLimitFrom(), row.alarmLimitTo()),
-                        row.active(),
-                        row.comment(),
-                        trendByParamId.getOrDefault(row.sensorParameterId(), List.of()),
-                        MeasurementStatus.fromDbValue(row.measurementStatus())))
+            .map(row ->
+                new MeasurementResponseDto(
+                    row.sensorParameterId(),
+                    row.dasKey(),
+                    row.experimentName(),
+                    row.sensorName(),
+                    row.sensorParameterName(),
+                    row.newestMeasurement(),
+                    row.measureValue(),
+                    row.unit().name(),
+                    row.sensorType(),
+                    new CoordinatesDto(row.x(), row.y(), row.z()),
+                    new AlarmLimitsDto(row.alarmLimitFrom(), row.alarmLimitTo()),
+                    row.active(),
+                    row.comment(),
+                    trendByParamId.getOrDefault(row.sensorParameterId(), List.of()),
+                    MeasurementStatus.fromDbValue(row.measurementStatus())))
             .toList();
 
     boolean needsReadings =

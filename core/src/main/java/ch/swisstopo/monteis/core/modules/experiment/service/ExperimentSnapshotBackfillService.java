@@ -27,13 +27,12 @@ public class ExperimentSnapshotBackfillService {
   public void backfillMissingSnapshots() {
     // No HTTP request/JWT exists at startup, so this explicitly opts into elevated DB
     // access rather than relying on the fail-closed default for an unbound SecurityContextHolder.
-    SystemSecurityContext.runAsSystem(
-        () -> {
-          try (Stream<Experiment> unauditedExperimentsStream =
-              repository.streamUnauditedExperiments()) {
-            unauditedExperimentsStream.forEach(
-                experiment -> javers.commit("SYSTEM_SEEDER", experiment));
-          }
-        });
+    SystemSecurityContext.runAsSystem(() -> {
+      try (Stream<Experiment> unauditedExperimentsStream =
+          repository.streamUnauditedExperiments()) {
+        unauditedExperimentsStream.forEach(
+            experiment -> javers.commit("SYSTEM_SEEDER", experiment));
+      }
+    });
   }
 }

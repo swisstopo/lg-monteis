@@ -77,10 +77,9 @@ class SpringPlumbingTest {
   private static boolean isPrivateOrStatic(AccessTarget.MethodCallTarget target) {
     return target
         .resolveMember()
-        .map(
-            member ->
-                member.getModifiers().contains(JavaModifier.PRIVATE)
-                    || member.getModifiers().contains(JavaModifier.STATIC))
+        .map(member ->
+            member.getModifiers().contains(JavaModifier.PRIVATE)
+                || member.getModifiers().contains(JavaModifier.STATIC))
         .orElse(false);
   }
 }

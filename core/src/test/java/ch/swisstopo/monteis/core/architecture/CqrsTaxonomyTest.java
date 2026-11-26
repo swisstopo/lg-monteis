@@ -40,12 +40,11 @@ class CqrsTaxonomyTest {
               method.getOwner().getAllRawInterfaces().stream()
                   .filter(QUERY_INTERFACE::test)
                   .flatMap(iface -> iface.getMethods().stream())
-                  .anyMatch(
-                      interfaceMethod ->
-                          interfaceMethod.getName().equals(method.getName())
-                              && interfaceMethod
-                                  .getRawParameterTypes()
-                                  .equals(method.getRawParameterTypes())));
+                  .anyMatch(interfaceMethod ->
+                      interfaceMethod.getName().equals(method.getName())
+                          && interfaceMethod
+                              .getRawParameterTypes()
+                              .equals(method.getRawParameterTypes())));
 
   private static final DescribedPredicate<JavaClass> MAPSTRUCT_MAPPER =
       describe("a MapStruct mapper (@Mapper)", clazz -> clazz.isAnnotatedWith(Mapper.class));

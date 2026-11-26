@@ -1,7 +1,7 @@
 package ch.swisstopo.monteis.core.infrastructure.fulcrum;
 
 import ch.swisstopo.monteis.contracts.fulcrum.Attachment;
-import ch.swisstopo.monteis.contracts.fulcrum.api.DefaultApi;
+import ch.swisstopo.monteis.contracts.fulcrum.api.FulcrumApi;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
@@ -22,12 +22,12 @@ import org.springframework.web.client.RestClientResponseException;
 @Component
 public class FulcrumAttachmentDownloadClient {
 
-  private final DefaultApi fulcrumApi;
+  private final FulcrumApi fulcrumApi;
   private final FulcrumProperties properties;
   private final RestClient attachmentUrlClient;
 
   public FulcrumAttachmentDownloadClient(
-      DefaultApi fulcrumApi, FulcrumProperties properties, RestClient.Builder builder) {
+      FulcrumApi fulcrumApi, FulcrumProperties properties, RestClient.Builder builder) {
     this.fulcrumApi = fulcrumApi;
     this.properties = properties;
     this.attachmentUrlClient =
@@ -44,10 +44,8 @@ public class FulcrumAttachmentDownloadClient {
   public FulcrumAttachmentDownload download(UUID attachmentId, DataSize maxSize) {
     Attachment attachment =
         findAttachmentInFulcrum(attachmentId)
-            .orElseThrow(
-                () ->
-                    new IllegalStateException(
-                        "Fulcrum has no attachment %s".formatted(attachmentId)));
+            .orElseThrow(() ->
+                new IllegalStateException("Fulcrum has no attachment %s".formatted(attachmentId)));
     URI url = extractValidatedUrl(attachment);
     return streamFileFrom(url, attachmentId, maxSize);
   }

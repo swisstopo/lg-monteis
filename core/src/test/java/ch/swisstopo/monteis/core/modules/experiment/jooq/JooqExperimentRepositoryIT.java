@@ -55,69 +55,66 @@ class JooqExperimentRepositoryIT {
   @Test
   @Transactional
   void should_return_experiment_details_without_sensors() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          UUID experimentId =
-              createExperimentWithDsl(
-                  "Experiment Without Sensors",
-                  "No sensors attached",
-                  LocalDate.of(2024, Month.JANUARY, 1),
-                  LocalDate.of(2024, Month.DECEMBER, 31));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      UUID experimentId =
+          createExperimentWithDsl(
+              "Experiment Without Sensors",
+              "No sensors attached",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
 
-          // Act
-          Experiment details = repository.getById(experimentId);
+      // Act
+      Experiment details = repository.getById(experimentId);
 
-          // Assert
-          assertNotNull(details);
-          assertEquals(experimentId, details.getId());
-          assertEquals("Experiment Without Sensors", details.getName());
-          assertEquals("No sensors attached", details.getComment());
-          assertEquals(LocalDate.of(2024, Month.JANUARY, 1), details.getPeriod().start());
-          assertEquals(LocalDate.of(2024, Month.DECEMBER, 31), details.getPeriod().end());
-          assertEquals(0, details.getSensorCount(), "Should map 0 sensors accurately");
-        });
+      // Assert
+      assertNotNull(details);
+      assertEquals(experimentId, details.getId());
+      assertEquals("Experiment Without Sensors", details.getName());
+      assertEquals("No sensors attached", details.getComment());
+      assertEquals(LocalDate.of(2024, Month.JANUARY, 1), details.getPeriod().start());
+      assertEquals(LocalDate.of(2024, Month.DECEMBER, 31), details.getPeriod().end());
+      assertEquals(0, details.getSensorCount(), "Should map 0 sensors accurately");
+    });
   }
 
   @Test
   @Transactional
   void should_return_experiment_details_with_linked_sensors() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          UUID experimentId =
-              createExperimentWithDsl(
-                  "Experiment With Sensors",
-                  "Has 2 sensors",
-                  LocalDate.of(2024, Month.JANUARY, 1),
-                  LocalDate.of(2024, Month.DECEMBER, 31));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      UUID experimentId =
+          createExperimentWithDsl(
+              "Experiment With Sensors",
+              "Has 2 sensors",
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
 
-          Sensor sensor1 = createDummySensor("SENS-EXP-01", "Sensor One", "x * 2");
-          Sensor sensor2 = createDummySensor("SENS-EXP-02", "Sensor Two", "x + 5");
-          linkSensorToExperiment(experimentId, sensor1.getId());
-          linkSensorToExperiment(experimentId, sensor2.getId());
+      Sensor sensor1 = createDummySensor("SENS-EXP-01", "Sensor One", "x * 2");
+      Sensor sensor2 = createDummySensor("SENS-EXP-02", "Sensor Two", "x + 5");
+      linkSensorToExperiment(experimentId, sensor1.getId());
+      linkSensorToExperiment(experimentId, sensor2.getId());
 
-          // Act
-          Experiment details = repository.getById(experimentId);
+      // Act
+      Experiment details = repository.getById(experimentId);
 
-          // Assert
-          assertNotNull(details);
-          assertEquals(experimentId, details.getId());
-          assertEquals("Experiment With Sensors", details.getName());
-          assertEquals(2, details.getSensorCount(), "Should correctly count linked sensors");
-        });
+      // Assert
+      assertNotNull(details);
+      assertEquals(experimentId, details.getId());
+      assertEquals("Experiment With Sensors", details.getName());
+      assertEquals(2, details.getSensorCount(), "Should correctly count linked sensors");
+    });
   }
 
   @Test
   @Transactional
   void should_throw_not_found_for_nonexistent_experiment() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID randomId = UUID.randomUUID();
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID randomId = UUID.randomUUID();
 
-          // Act & Assert
-          assertThrows(ObjectNotFoundException.class, () -> repository.getById(randomId));
-        });
+      // Act & Assert
+      assertThrows(ObjectNotFoundException.class, () -> repository.getById(randomId));
+    });
   }
 
   @Test
@@ -125,14 +122,13 @@ class JooqExperimentRepositoryIT {
   void should_throw_not_found_for_an_experiment_hidden_by_row_level_security() {
     // Arrange: exists (created as admin), but the user below has no experiment ids at all
     UUID[] hiddenId = new UUID[1];
-    SecurityContextTestSupport.runAsAdmin(
-        () ->
-            hiddenId[0] =
-                createExperimentWithDsl(
-                    "Hidden Experiment",
-                    "Not assigned to the user",
-                    LocalDate.of(2024, Month.JANUARY, 1),
-                    LocalDate.of(2024, Month.DECEMBER, 31)));
+    SecurityContextTestSupport.runAsAdmin(() ->
+        hiddenId[0] =
+            createExperimentWithDsl(
+                "Hidden Experiment",
+                "Not assigned to the user",
+                LocalDate.of(2024, Month.JANUARY, 1),
+                LocalDate.of(2024, Month.DECEMBER, 31)));
 
     SecurityContextTestSupport.runAsUser(
         List.of(),
@@ -144,40 +140,36 @@ class JooqExperimentRepositoryIT {
   @Test
   @Transactional
   void should_accept_a_visible_experiment_without_loading_it() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID experimentId =
-              createExperimentWithDsl(
-                  "Visible Experiment",
-                  null,
-                  LocalDate.of(2024, Month.JANUARY, 1),
-                  LocalDate.of(2024, Month.DECEMBER, 31));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID experimentId =
+          createExperimentWithDsl(
+              "Visible Experiment",
+              null,
+              LocalDate.of(2024, Month.JANUARY, 1),
+              LocalDate.of(2024, Month.DECEMBER, 31));
 
-          assertDoesNotThrow(() -> repository.requireVisible(experimentId));
-        });
+      assertDoesNotThrow(() -> repository.requireVisible(experimentId));
+    });
   }
 
   @Test
   @Transactional
   void should_not_accept_an_unknown_experiment_as_visible() {
     UUID unknownId = UUID.randomUUID();
-    SecurityContextTestSupport.runAsAdmin(
-        () ->
-            assertThrows(
-                ObjectNotFoundException.class, () -> repository.requireVisible(unknownId)));
+    SecurityContextTestSupport.runAsAdmin(() ->
+        assertThrows(ObjectNotFoundException.class, () -> repository.requireVisible(unknownId)));
   }
 
   @Test
   @Transactional
   void should_not_accept_an_experiment_hidden_by_row_level_security_as_visible() {
     UUID hiddenId =
-        SecurityContextTestSupport.callAsAdmin(
-            () ->
-                createExperimentWithDsl(
-                    "Hidden From Visibility Check",
-                    null,
-                    LocalDate.of(2024, Month.JANUARY, 1),
-                    LocalDate.of(2024, Month.DECEMBER, 31)));
+        SecurityContextTestSupport.callAsAdmin(() ->
+            createExperimentWithDsl(
+                "Hidden From Visibility Check",
+                null,
+                LocalDate.of(2024, Month.JANUARY, 1),
+                LocalDate.of(2024, Month.DECEMBER, 31)));
 
     SecurityContextTestSupport.runAsUser(
         List.of(),
@@ -188,145 +180,136 @@ class JooqExperimentRepositoryIT {
   @Test
   @Transactional
   void should_find_all_experiments_sorted_by_name() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          createExperimentWithDsl(
-              "Zebra Experiment",
-              "Comment Z",
-              LocalDate.of(2024, Month.JANUARY, 1),
-              LocalDate.of(2024, Month.DECEMBER, 31));
-          createExperimentWithDsl(
-              "Alpha Experiment",
-              "Comment A",
-              LocalDate.of(2024, Month.JANUARY, 1),
-              LocalDate.of(2024, Month.DECEMBER, 31));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      createExperimentWithDsl(
+          "Zebra Experiment",
+          "Comment Z",
+          LocalDate.of(2024, Month.JANUARY, 1),
+          LocalDate.of(2024, Month.DECEMBER, 31));
+      createExperimentWithDsl(
+          "Alpha Experiment",
+          "Comment A",
+          LocalDate.of(2024, Month.JANUARY, 1),
+          LocalDate.of(2024, Month.DECEMBER, 31));
 
-          // Act
-          List<Experiment> result = repository.findAll();
+      // Act
+      List<Experiment> result = repository.findAll();
 
-          // Assert
-          List<String> namesInOrder = result.stream().map(Experiment::getName).toList();
-          assertTrue(
-              namesInOrder.indexOf("Alpha Experiment") < namesInOrder.indexOf("Zebra Experiment"),
-              "Experiments should be sorted alphabetically by name");
-        });
+      // Assert
+      List<String> namesInOrder = result.stream().map(Experiment::getName).toList();
+      assertTrue(
+          namesInOrder.indexOf("Alpha Experiment") < namesInOrder.indexOf("Zebra Experiment"),
+          "Experiments should be sorted alphabetically by name");
+    });
   }
 
   @Test
   @Transactional
   void should_create_experiment() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          int initialExperimentCount = dsl.fetchCount(EXPERIMENTS);
-          Experiment newExperiment = buildDummyDomainExperiment("EXP-CREATE-001");
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      int initialExperimentCount = dsl.fetchCount(EXPERIMENTS);
+      Experiment newExperiment = buildDummyDomainExperiment("EXP-CREATE-001");
 
-          // Act
-          Experiment savedExperiment = repository.create(newExperiment);
+      // Act
+      Experiment savedExperiment = repository.create(newExperiment);
 
-          // Assert
-          assertAll(
-              () ->
-                  assertNotNull(
-                      savedExperiment.getId(), "Experiment ID should not be null after insert"),
-              () -> assertEquals("EXP-CREATE-001", savedExperiment.getName()),
-              () -> assertEquals("Dummy comment", savedExperiment.getComment()));
+      // Assert
+      assertAll(
+          () ->
+              assertNotNull(
+                  savedExperiment.getId(), "Experiment ID should not be null after insert"),
+          () -> assertEquals("EXP-CREATE-001", savedExperiment.getName()),
+          () -> assertEquals("Dummy comment", savedExperiment.getComment()));
 
-          // Verify DB state directly: Assert the DELTA
-          assertEquals(
-              initialExperimentCount + 1,
-              dsl.fetchCount(EXPERIMENTS),
-              "Experiment count should increase by exactly 1");
+      // Verify DB state directly: Assert the DELTA
+      assertEquals(
+          initialExperimentCount + 1,
+          dsl.fetchCount(EXPERIMENTS),
+          "Experiment count should increase by exactly 1");
 
-          // Ultimate DB verification: Prove the exact record exists in the physical table
-          boolean existsInDb =
-              dsl.fetchExists(
-                  dsl.selectFrom(EXPERIMENTS).where(EXPERIMENTS.ID.eq(savedExperiment.getId())));
-          assertTrue(
-              existsInDb, "The newly created experiment must physically exist in the database");
-        });
+      // Ultimate DB verification: Prove the exact record exists in the physical table
+      boolean existsInDb =
+          dsl.fetchExists(
+              dsl.selectFrom(EXPERIMENTS).where(EXPERIMENTS.ID.eq(savedExperiment.getId())));
+      assertTrue(existsInDb, "The newly created experiment must physically exist in the database");
+    });
   }
 
   @Test
   @Transactional
   void should_throw_on_create_non_unique_experiment() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          Experiment uniqueExperiment = buildDummyDomainExperiment("Unique_Experiment");
-          Experiment nonUniqueExperiment = buildDummyDomainExperiment("Unique_Experiment");
-          repository.create(uniqueExperiment);
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      Experiment uniqueExperiment = buildDummyDomainExperiment("Unique_Experiment");
+      Experiment nonUniqueExperiment = buildDummyDomainExperiment("Unique_Experiment");
+      repository.create(uniqueExperiment);
 
-          // Act & Assert
-          FieldBusinessValidationException exception =
-              assertThrows(
-                  FieldBusinessValidationException.class,
-                  () -> repository.create(nonUniqueExperiment));
+      // Act & Assert
+      FieldBusinessValidationException exception =
+          assertThrows(
+              FieldBusinessValidationException.class, () -> repository.create(nonUniqueExperiment));
 
-          assertEquals("name", exception.getField());
-          assertEquals("validation.unique", exception.getMessageKey());
-        });
+      assertEquals("name", exception.getField());
+      assertEquals("validation.unique", exception.getMessageKey());
+    });
   }
 
   @Test
   @Transactional
   void should_update_experiment() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          Experiment savedExperiment = repository.create(buildDummyDomainExperiment("OLD-NAME"));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      Experiment savedExperiment = repository.create(buildDummyDomainExperiment("OLD-NAME"));
 
-          // Mutate domain object
-          savedExperiment.setName("NEW-NAME");
-          savedExperiment.setComment("Updated comment");
+      // Mutate domain object
+      savedExperiment.setName("NEW-NAME");
+      savedExperiment.setComment("Updated comment");
 
-          // Act
-          Experiment updatedExperiment = repository.update(savedExperiment);
+      // Act
+      Experiment updatedExperiment = repository.update(savedExperiment);
 
-          // Assert
-          assertEquals("NEW-NAME", updatedExperiment.getName());
-          assertEquals("Updated comment", updatedExperiment.getComment());
-        });
+      // Assert
+      assertEquals("NEW-NAME", updatedExperiment.getName());
+      assertEquals("Updated comment", updatedExperiment.getComment());
+    });
   }
 
   @Test
   @Transactional
   void should_throw_on_update_duplicated_name() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          Experiment uniqueExperiment1 = buildDummyDomainExperiment("Unique_Experiment1");
-          Experiment uniqueExperiment2 = buildDummyDomainExperiment("Unique_Experiment2");
-          uniqueExperiment1 = repository.create(uniqueExperiment1);
-          uniqueExperiment2 = repository.create(uniqueExperiment2);
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      Experiment uniqueExperiment1 = buildDummyDomainExperiment("Unique_Experiment1");
+      Experiment uniqueExperiment2 = buildDummyDomainExperiment("Unique_Experiment2");
+      uniqueExperiment1 = repository.create(uniqueExperiment1);
+      uniqueExperiment2 = repository.create(uniqueExperiment2);
 
-          uniqueExperiment2.setName(uniqueExperiment1.getName());
+      uniqueExperiment2.setName(uniqueExperiment1.getName());
 
-          // Act & Assert
-          Experiment nonUniqueExperiment = uniqueExperiment2;
-          FieldBusinessValidationException exception =
-              assertThrows(
-                  FieldBusinessValidationException.class,
-                  () -> repository.update(nonUniqueExperiment));
+      // Act & Assert
+      Experiment nonUniqueExperiment = uniqueExperiment2;
+      FieldBusinessValidationException exception =
+          assertThrows(
+              FieldBusinessValidationException.class, () -> repository.update(nonUniqueExperiment));
 
-          assertEquals("name", exception.getField());
-          assertEquals("validation.unique", exception.getMessageKey());
-        });
+      assertEquals("name", exception.getField());
+      assertEquals("validation.unique", exception.getMessageKey());
+    });
   }
 
   @Test
   @Transactional
   void should_throw_not_found_on_update_of_a_deleted_experiment() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          Experiment ghostExperiment = buildDummyDomainExperiment("GHOST-EXP");
-          ghostExperiment.setId(UUID.randomUUID()); // non-existent ID
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      Experiment ghostExperiment = buildDummyDomainExperiment("GHOST-EXP");
+      ghostExperiment.setId(UUID.randomUUID()); // non-existent ID
 
-          // Act & Assert
-          assertThrows(ObjectNotFoundException.class, () -> repository.update(ghostExperiment));
-        });
+      // Act & Assert
+      assertThrows(ObjectNotFoundException.class, () -> repository.update(ghostExperiment));
+    });
   }
 
   @Test
@@ -369,152 +352,142 @@ class JooqExperimentRepositoryIT {
         () -> any[0] = repository.create(buildDummyDomainExperiment("ANY-EXP")));
     any[0].setComment("Edited by the global editor");
 
-    SecurityContextTestSupport.runAsGlobalEditor(
-        () -> {
-          assertEquals("ANY-EXP", repository.getById(any[0].getId()).getName());
-          assertEquals("Edited by the global editor", repository.update(any[0]).getComment());
-        });
+    SecurityContextTestSupport.runAsGlobalEditor(() -> {
+      assertEquals("ANY-EXP", repository.getById(any[0].getId()).getName());
+      assertEquals("Edited by the global editor", repository.update(any[0]).getComment());
+    });
   }
 
   @Test
   @Transactional
   void should_stream_unaudited_experiments() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          repository.create(buildDummyDomainExperiment("UNAUDITED-EXP-1"));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      repository.create(buildDummyDomainExperiment("UNAUDITED-EXP-1"));
 
-          // Act
-          try (Stream<Experiment> stream = repository.streamUnauditedExperiments()) {
-            List<Experiment> unauditedExperiments = stream.toList();
+      // Act
+      try (Stream<Experiment> stream = repository.streamUnauditedExperiments()) {
+        List<Experiment> unauditedExperiments = stream.toList();
 
-            // Assert
-            assertFalse(unauditedExperiments.isEmpty(), "Stream should not be empty");
+        // Assert
+        assertFalse(unauditedExperiments.isEmpty(), "Stream should not be empty");
 
-            boolean containsOurExperiment =
-                unauditedExperiments.stream().anyMatch(e -> e.getName().equals("UNAUDITED-EXP-1"));
+        boolean containsOurExperiment =
+            unauditedExperiments.stream().anyMatch(e -> e.getName().equals("UNAUDITED-EXP-1"));
 
-            assertTrue(
-                containsOurExperiment,
-                "Stream should contain the newly created unaudited experiment");
-          }
-        });
+        assertTrue(
+            containsOurExperiment, "Stream should contain the newly created unaudited experiment");
+      }
+    });
   }
 
   @Test
   @Transactional
   void should_stream_unaudited_experiments_with_their_organisations() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID organisationId = createOrganisationWithDsl("Org unaudited");
-          Experiment experiment = buildDummyDomainExperiment("UNAUDITED-ORG-EXP");
-          experiment.setOrganisationIds(List.of(organisationId));
-          repository.create(experiment);
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID organisationId = createOrganisationWithDsl("Org unaudited");
+      Experiment experiment = buildDummyDomainExperiment("UNAUDITED-ORG-EXP");
+      experiment.setOrganisationIds(List.of(organisationId));
+      repository.create(experiment);
 
-          try (Stream<Experiment> stream = repository.streamUnauditedExperiments()) {
-            Experiment streamed =
-                stream
-                    .filter(e -> e.getName().equals("UNAUDITED-ORG-EXP"))
-                    .findFirst()
-                    .orElseThrow();
+      try (Stream<Experiment> stream = repository.streamUnauditedExperiments()) {
+        Experiment streamed =
+            stream.filter(e -> e.getName().equals("UNAUDITED-ORG-EXP")).findFirst().orElseThrow();
 
-            assertEquals(List.of(organisationId), streamed.getOrganisationIds());
-          }
-        });
+        assertEquals(List.of(organisationId), streamed.getOrganisationIds());
+      }
+    });
   }
 
   @Test
   @Transactional
   void should_exclude_audited_experiments() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          Experiment experiment = repository.create(buildDummyDomainExperiment("AUDITED-EXP-1"));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      Experiment experiment = repository.create(buildDummyDomainExperiment("AUDITED-EXP-1"));
 
-          // Commit to Javers to simulate auditing
-          javers.commit("TEST_AUTHOR", experiment);
+      // Commit to Javers to simulate auditing
+      javers.commit("TEST_AUTHOR", experiment);
 
-          // Act
-          try (Stream<Experiment> stream = repository.streamUnauditedExperiments()) {
-            List<Experiment> unauditedExperiments = stream.toList();
+      // Act
+      try (Stream<Experiment> stream = repository.streamUnauditedExperiments()) {
+        List<Experiment> unauditedExperiments = stream.toList();
 
-            // Assert
-            boolean containsOurExperiment =
-                unauditedExperiments.stream().anyMatch(e -> e.getName().equals("AUDITED-EXP-1"));
+        // Assert
+        boolean containsOurExperiment =
+            unauditedExperiments.stream().anyMatch(e -> e.getName().equals("AUDITED-EXP-1"));
 
-            assertFalse(containsOurExperiment, "Stream should NOT contain the audited experiment");
-          }
-        });
+        assertFalse(containsOurExperiment, "Stream should NOT contain the audited experiment");
+      }
+    });
   }
 
   @Test
   @Transactional
   void should_filter_paged_experiments_by_text_contains() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          createExperimentWithDsl(
-              "UniqueTextFilterName",
-              "Filter test comment",
-              LocalDate.of(2024, Month.JANUARY, 1),
-              LocalDate.of(2024, Month.DECEMBER, 31));
-          createExperimentWithDsl(
-              "Other Name",
-              "Other comment",
-              LocalDate.of(2024, Month.JANUARY, 1),
-              LocalDate.of(2024, Month.DECEMBER, 31));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      createExperimentWithDsl(
+          "UniqueTextFilterName",
+          "Filter test comment",
+          LocalDate.of(2024, Month.JANUARY, 1),
+          LocalDate.of(2024, Month.DECEMBER, 31));
+      createExperimentWithDsl(
+          "Other Name",
+          "Other comment",
+          LocalDate.of(2024, Month.JANUARY, 1),
+          LocalDate.of(2024, Month.DECEMBER, 31));
 
-          PagedRequest request =
-              new PagedRequest(
-                  0,
-                  10,
-                  List.of(),
-                  Map.of("name", new TextFilterModel("contains", "uniquetextfilter", null)));
+      PagedRequest request =
+          new PagedRequest(
+              0,
+              10,
+              List.of(),
+              Map.of("name", new TextFilterModel("contains", "uniquetextfilter", null)));
 
-          // Act
-          PagedResult<Experiment> result = repository.getExperiments(request);
+      // Act
+      PagedResult<Experiment> result = repository.getExperiments(request);
 
-          // Assert
-          assertEquals(1, result.totalCount());
-          assertEquals("UniqueTextFilterName", result.rows().getFirst().getName());
-        });
+      // Assert
+      assertEquals(1, result.totalCount());
+      assertEquals("UniqueTextFilterName", result.rows().getFirst().getName());
+    });
   }
 
   @Test
   @Transactional
   void should_sort_paged_experiments_by_text_column_descending() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          // Arrange
-          createExperimentWithDsl(
-              "AAA_SORT_TEST",
-              "Sort test A",
-              LocalDate.of(2024, Month.JANUARY, 1),
-              LocalDate.of(2024, Month.DECEMBER, 31));
-          createExperimentWithDsl(
-              "ZZZ_SORT_TEST",
-              "Sort test Z",
-              LocalDate.of(2024, Month.JANUARY, 1),
-              LocalDate.of(2024, Month.DECEMBER, 31));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      // Arrange
+      createExperimentWithDsl(
+          "AAA_SORT_TEST",
+          "Sort test A",
+          LocalDate.of(2024, Month.JANUARY, 1),
+          LocalDate.of(2024, Month.DECEMBER, 31));
+      createExperimentWithDsl(
+          "ZZZ_SORT_TEST",
+          "Sort test Z",
+          LocalDate.of(2024, Month.JANUARY, 1),
+          LocalDate.of(2024, Month.DECEMBER, 31));
 
-          // Scope to just our two experiments via a filter, so the sort assertion doesn't
-          // depend on how many other rows happen to be seeded ahead of a fixed-size page.
-          PagedRequest request =
-              new PagedRequest(
-                  0,
-                  10,
-                  List.of(new SortModelItem("name", SortDirection.DESC)),
-                  Map.of("name", new TextFilterModel("contains", "_SORT_TEST", null)));
+      // Scope to just our two experiments via a filter, so the sort assertion doesn't
+      // depend on how many other rows happen to be seeded ahead of a fixed-size page.
+      PagedRequest request =
+          new PagedRequest(
+              0,
+              10,
+              List.of(new SortModelItem("name", SortDirection.DESC)),
+              Map.of("name", new TextFilterModel("contains", "_SORT_TEST", null)));
 
-          // Act
-          List<Experiment> rows = repository.getExperiments(request).rows();
+      // Act
+      List<Experiment> rows = repository.getExperiments(request).rows();
 
-          // Assert: among our two experiments, the Z one must come first in descending order
-          int indexOfZ = indexOfExperimentName(rows, "ZZZ_SORT_TEST");
-          int indexOfA = indexOfExperimentName(rows, "AAA_SORT_TEST");
-          assertTrue(
-              indexOfZ < indexOfA, "ZZZ_SORT_TEST should sort before AAA_SORT_TEST in DESC order");
-        });
+      // Assert: among our two experiments, the Z one must come first in descending order
+      int indexOfZ = indexOfExperimentName(rows, "ZZZ_SORT_TEST");
+      int indexOfA = indexOfExperimentName(rows, "AAA_SORT_TEST");
+      assertTrue(
+          indexOfZ < indexOfA, "ZZZ_SORT_TEST should sort before AAA_SORT_TEST in DESC order");
+    });
   }
 
   // --- Helper Methods ---
@@ -536,32 +509,30 @@ class JooqExperimentRepositoryIT {
   @Test
   @Transactional
   void should_replace_owners_adding_new_and_removing_missing_ones() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID experimentId = createDefaultExperiment("OWNER-REPLACE");
-          repository.replaceOwners(experimentId, Set.of(ALICE));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID experimentId = createDefaultExperiment("OWNER-REPLACE");
+      repository.replaceOwners(experimentId, Set.of(ALICE));
 
-          Experiment replaced = repository.replaceOwners(experimentId, Set.of(BOB));
+      Experiment replaced = repository.replaceOwners(experimentId, Set.of(BOB));
 
-          assertEquals(Set.of(BOB), replaced.getOwnerIds());
-          assertEquals(Set.of(BOB), repository.getById(experimentId).getOwnerIds());
-        });
+      assertEquals(Set.of(BOB), replaced.getOwnerIds());
+      assertEquals(Set.of(BOB), repository.getById(experimentId).getOwnerIds());
+    });
   }
 
   @Test
   @Transactional
   void should_remove_all_owners_when_replacing_with_an_empty_set() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID experimentId = createDefaultExperiment("OWNER-CLEAR");
-          repository.replaceOwners(experimentId, Set.of(ALICE, BOB));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID experimentId = createDefaultExperiment("OWNER-CLEAR");
+      repository.replaceOwners(experimentId, Set.of(ALICE, BOB));
 
-          Experiment cleared = repository.replaceOwners(experimentId, Set.of());
+      Experiment cleared = repository.replaceOwners(experimentId, Set.of());
 
-          assertEquals(Set.of(), cleared.getOwnerIds());
-          assertEquals(
-              0, dsl.fetchCount(EXPERIMENT_OWNER, EXPERIMENT_OWNER.EXPERIMENT_ID.eq(experimentId)));
-        });
+      assertEquals(Set.of(), cleared.getOwnerIds());
+      assertEquals(
+          0, dsl.fetchCount(EXPERIMENT_OWNER, EXPERIMENT_OWNER.EXPERIMENT_ID.eq(experimentId)));
+    });
   }
 
   @Test
@@ -585,47 +556,44 @@ class JooqExperimentRepositoryIT {
   @Test
   @Transactional
   void should_keep_owners_when_updating_the_master_data() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          Experiment created = repository.create(buildDummyDomainExperiment("OWNER-KEEP"));
-          repository.replaceOwners(created.getId(), Set.of(ALICE));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      Experiment created = repository.create(buildDummyDomainExperiment("OWNER-KEEP"));
+      repository.replaceOwners(created.getId(), Set.of(ALICE));
 
-          created.setComment("changed");
-          Experiment updated = repository.update(created);
+      created.setComment("changed");
+      Experiment updated = repository.update(created);
 
-          assertEquals(Set.of(ALICE), updated.getOwnerIds());
-        });
+      assertEquals(Set.of(ALICE), updated.getOwnerIds());
+    });
   }
 
   @Test
   @Transactional
   void should_filter_experiments_by_owner_including_experiments_without_owner() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID ofAlice = createDefaultExperiment("OWNER-FILTER-ALICE");
-          UUID ofBob = createDefaultExperiment("OWNER-FILTER-BOB");
-          UUID withoutOwner = createDefaultExperiment("OWNER-FILTER-NONE");
-          repository.replaceOwners(ofAlice, Set.of(ALICE));
-          repository.replaceOwners(ofBob, Set.of(BOB));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID ofAlice = createDefaultExperiment("OWNER-FILTER-ALICE");
+      UUID ofBob = createDefaultExperiment("OWNER-FILTER-BOB");
+      UUID withoutOwner = createDefaultExperiment("OWNER-FILTER-NONE");
+      repository.replaceOwners(ofAlice, Set.of(ALICE));
+      repository.replaceOwners(ofBob, Set.of(BOB));
 
-          Set<UUID> byAlice = idsMatchingOwnerFilter(ALICE.toString());
-          Set<UUID> byAliceOrNone = idsMatchingOwnerFilter(ALICE.toString(), null);
+      Set<UUID> byAlice = idsMatchingOwnerFilter(ALICE.toString());
+      Set<UUID> byAliceOrNone = idsMatchingOwnerFilter(ALICE.toString(), null);
 
-          assertTrue(byAlice.contains(ofAlice));
-          assertFalse(byAlice.contains(ofBob));
-          assertFalse(byAlice.contains(withoutOwner));
-          assertTrue(byAliceOrNone.containsAll(List.of(ofAlice, withoutOwner)));
-          assertFalse(byAliceOrNone.contains(ofBob));
-        });
+      assertTrue(byAlice.contains(ofAlice));
+      assertFalse(byAlice.contains(ofBob));
+      assertFalse(byAlice.contains(withoutOwner));
+      assertTrue(byAliceOrNone.containsAll(List.of(ofAlice, withoutOwner)));
+      assertFalse(byAliceOrNone.contains(ofBob));
+    });
   }
 
   @Test
   @Transactional
   void should_reject_an_owner_filter_value_that_is_not_a_user_id() {
-    SecurityContextTestSupport.runAsAdmin(
-        () ->
-            assertThrows(
-                InvalidPagedRequestException.class, () -> idsMatchingOwnerFilter("not-a-uuid")));
+    SecurityContextTestSupport.runAsAdmin(() ->
+        assertThrows(
+            InvalidPagedRequestException.class, () -> idsMatchingOwnerFilter("not-a-uuid")));
   }
 
   @Test
@@ -633,10 +601,8 @@ class JooqExperimentRepositoryIT {
   void should_reject_sorting_by_owner() {
     PagedRequest request =
         new PagedRequest(0, 10, List.of(new SortModelItem("owners", SortDirection.ASC)), Map.of());
-    SecurityContextTestSupport.runAsAdmin(
-        () ->
-            assertThrows(
-                InvalidPagedRequestException.class, () -> repository.getExperiments(request)));
+    SecurityContextTestSupport.runAsAdmin(() ->
+        assertThrows(InvalidPagedRequestException.class, () -> repository.getExperiments(request)));
   }
 
   private List<UUID> idsSortedBy(String colId, SortDirection direction, String namePrefix) {
@@ -681,54 +647,52 @@ class JooqExperimentRepositoryIT {
   @Test
   @Transactional
   void should_filter_experiments_by_organisation_including_experiments_without_organisation() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID swisstopo = createOrganisationWithDsl("Org filter swisstopo");
-          UUID eth = createOrganisationWithDsl("Org filter ETH");
-          UUID ofSwisstopo = createDefaultExperiment("ORG-FILTER-SWISSTOPO");
-          UUID ofEth = createDefaultExperiment("ORG-FILTER-ETH");
-          UUID ofBoth = createDefaultExperiment("ORG-FILTER-BOTH");
-          UUID withoutOrganisation = createDefaultExperiment("ORG-FILTER-NONE");
-          linkOrganisation(ofSwisstopo, swisstopo);
-          linkOrganisation(ofEth, eth);
-          linkOrganisation(ofBoth, swisstopo);
-          linkOrganisation(ofBoth, eth);
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID swisstopo = createOrganisationWithDsl("Org filter swisstopo");
+      UUID eth = createOrganisationWithDsl("Org filter ETH");
+      UUID ofSwisstopo = createDefaultExperiment("ORG-FILTER-SWISSTOPO");
+      UUID ofEth = createDefaultExperiment("ORG-FILTER-ETH");
+      UUID ofBoth = createDefaultExperiment("ORG-FILTER-BOTH");
+      UUID withoutOrganisation = createDefaultExperiment("ORG-FILTER-NONE");
+      linkOrganisation(ofSwisstopo, swisstopo);
+      linkOrganisation(ofEth, eth);
+      linkOrganisation(ofBoth, swisstopo);
+      linkOrganisation(ofBoth, eth);
 
-          PagedResult<Experiment> bySwisstopo = matchingOrganisationFilter(swisstopo.toString());
-          PagedResult<Experiment> bySwisstopoOrNone =
-              matchingOrganisationFilter(swisstopo.toString(), null);
-          PagedResult<Experiment> byNone = matchingOrganisationFilter((String) null);
+      PagedResult<Experiment> bySwisstopo = matchingOrganisationFilter(swisstopo.toString());
+      PagedResult<Experiment> bySwisstopoOrNone =
+          matchingOrganisationFilter(swisstopo.toString(), null);
+      PagedResult<Experiment> byNone = matchingOrganisationFilter((String) null);
 
-          assertEquals(Set.of(ofSwisstopo, ofBoth), idsOf(bySwisstopo));
-          assertEquals(2, bySwisstopo.totalCount());
-          assertEquals(Set.of(ofSwisstopo, ofBoth, withoutOrganisation), idsOf(bySwisstopoOrNone));
-          assertEquals(3, bySwisstopoOrNone.totalCount());
-          assertEquals(Set.of(withoutOrganisation), idsOf(byNone));
-          assertEquals(1, byNone.totalCount());
-        });
+      assertEquals(Set.of(ofSwisstopo, ofBoth), idsOf(bySwisstopo));
+      assertEquals(2, bySwisstopo.totalCount());
+      assertEquals(Set.of(ofSwisstopo, ofBoth, withoutOrganisation), idsOf(bySwisstopoOrNone));
+      assertEquals(3, bySwisstopoOrNone.totalCount());
+      assertEquals(Set.of(withoutOrganisation), idsOf(byNone));
+      assertEquals(1, byNone.totalCount());
+    });
   }
 
   @Test
   @Transactional
   void should_sort_experiments_by_their_alphabetically_first_organisation() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID alpha = createOrganisationWithDsl("Org sort Alpha");
-          UUID beta = createOrganisationWithDsl("Org sort Beta");
-          UUID gamma = createOrganisationWithDsl("Org sort Gamma");
-          UUID ofGamma = createDefaultExperiment("ORG-SORT-GAMMA");
-          UUID ofBetaAndGamma = createDefaultExperiment("ORG-SORT-BETA-GAMMA");
-          UUID ofAlpha = createDefaultExperiment("ORG-SORT-ALPHA");
-          UUID withoutOrganisation = createDefaultExperiment("ORG-SORT-NONE");
-          linkOrganisation(ofGamma, gamma);
-          linkOrganisation(ofBetaAndGamma, gamma);
-          linkOrganisation(ofBetaAndGamma, beta);
-          linkOrganisation(ofAlpha, alpha);
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID alpha = createOrganisationWithDsl("Org sort Alpha");
+      UUID beta = createOrganisationWithDsl("Org sort Beta");
+      UUID gamma = createOrganisationWithDsl("Org sort Gamma");
+      UUID ofGamma = createDefaultExperiment("ORG-SORT-GAMMA");
+      UUID ofBetaAndGamma = createDefaultExperiment("ORG-SORT-BETA-GAMMA");
+      UUID ofAlpha = createDefaultExperiment("ORG-SORT-ALPHA");
+      UUID withoutOrganisation = createDefaultExperiment("ORG-SORT-NONE");
+      linkOrganisation(ofGamma, gamma);
+      linkOrganisation(ofBetaAndGamma, gamma);
+      linkOrganisation(ofBetaAndGamma, beta);
+      linkOrganisation(ofAlpha, alpha);
 
-          List<UUID> ascending = idsSortedBy("organisationIds", SortDirection.ASC, "ORG-SORT-");
+      List<UUID> ascending = idsSortedBy("organisationIds", SortDirection.ASC, "ORG-SORT-");
 
-          assertEquals(List.of(ofAlpha, ofBetaAndGamma, ofGamma, withoutOrganisation), ascending);
-        });
+      assertEquals(List.of(ofAlpha, ofBetaAndGamma, ofGamma, withoutOrganisation), ascending);
+    });
   }
 
   private void linkOrganisation(UUID experimentId, UUID organisationId) {
@@ -761,95 +725,87 @@ class JooqExperimentRepositoryIT {
   @Test
   @Transactional
   void should_assign_replace_and_remove_organisations() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID first = createOrganisationWithDsl("Org assign A");
-          UUID second = createOrganisationWithDsl("Org assign B");
-          Experiment experiment =
-              new Experiment(
-                  "Org assign IT",
-                  new Period(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
-                  null);
-          experiment.setOrganisationIds(List.of(first, second, first));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID first = createOrganisationWithDsl("Org assign A");
+      UUID second = createOrganisationWithDsl("Org assign B");
+      Experiment experiment =
+          new Experiment(
+              "Org assign IT",
+              new Period(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+              null);
+      experiment.setOrganisationIds(List.of(first, second, first));
 
-          Experiment created = repository.create(experiment);
+      Experiment created = repository.create(experiment);
 
-          assertEquals(List.of(first, second), created.getOrganisationIds());
-          assertEquals(
-              List.of(first, second), repository.getById(created.getId()).getOrganisationIds());
+      assertEquals(List.of(first, second), created.getOrganisationIds());
+      assertEquals(
+          List.of(first, second), repository.getById(created.getId()).getOrganisationIds());
 
-          created.setOrganisationIds(List.of(second));
-          Experiment replaced = repository.update(created);
-          assertEquals(List.of(second), repository.getById(created.getId()).getOrganisationIds());
+      created.setOrganisationIds(List.of(second));
+      Experiment replaced = repository.update(created);
+      assertEquals(List.of(second), repository.getById(created.getId()).getOrganisationIds());
 
-          // the links change raised the version, so the next update starts from the saved one
-          replaced.setOrganisationIds(List.of());
-          repository.update(replaced);
-          assertEquals(List.of(), repository.getById(created.getId()).getOrganisationIds());
-        });
+      // the links change raised the version, so the next update starts from the saved one
+      replaced.setOrganisationIds(List.of());
+      repository.update(replaced);
+      assertEquals(List.of(), repository.getById(created.getId()).getOrganisationIds());
+    });
   }
 
   @Test
   @Transactional
   void should_return_the_organisations_in_the_same_order_on_save_and_read() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID first = createOrganisationWithDsl("Org order A");
-          UUID second = createOrganisationWithDsl("Org order B");
-          Experiment experiment = buildDummyDomainExperiment("Org order IT");
-          experiment.setOrganisationIds(List.of(second, first));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID first = createOrganisationWithDsl("Org order A");
+      UUID second = createOrganisationWithDsl("Org order B");
+      Experiment experiment = buildDummyDomainExperiment("Org order IT");
+      experiment.setOrganisationIds(List.of(second, first));
 
-          Experiment created = repository.create(experiment);
+      Experiment created = repository.create(experiment);
 
-          assertEquals(
-              repository.getById(created.getId()).getOrganisationIds(),
-              created.getOrganisationIds());
-        });
+      assertEquals(
+          repository.getById(created.getId()).getOrganisationIds(), created.getOrganisationIds());
+    });
   }
 
   @Test
   @Transactional
   void should_reject_a_stale_version_when_only_the_organisations_change() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID first = createOrganisationWithDsl("Org stale A");
-          UUID second = createOrganisationWithDsl("Org stale B");
-          Experiment created = repository.create(buildDummyDomainExperiment("Org stale IT"));
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID first = createOrganisationWithDsl("Org stale A");
+      UUID second = createOrganisationWithDsl("Org stale B");
+      Experiment created = repository.create(buildDummyDomainExperiment("Org stale IT"));
 
-          created.setOrganisationIds(List.of(first));
-          Experiment updated = repository.update(created);
+      created.setOrganisationIds(List.of(first));
+      Experiment updated = repository.update(created);
 
-          assertEquals(created.getVersion() + 1, updated.getVersion());
-          created.setOrganisationIds(List.of(second));
-          assertThrows(DataChangedException.class, () -> repository.update(created));
-        });
+      assertEquals(created.getVersion() + 1, updated.getVersion());
+      created.setOrganisationIds(List.of(second));
+      assertThrows(DataChangedException.class, () -> repository.update(created));
+    });
   }
 
   @Test
   @Transactional
   void should_return_organisations_in_the_experiment_list() {
-    SecurityContextTestSupport.runAsAdmin(
-        () -> {
-          UUID organisationId = createOrganisationWithDsl("Org list IT");
-          UUID experimentId =
-              createExperimentWithDsl(
-                  "Org list experiment IT",
-                  null,
-                  LocalDate.of(2024, 1, 1),
-                  LocalDate.of(2024, 12, 31));
-          dsl.insertInto(EXPERIMENT_ORGANISATION)
-              .set(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, experimentId)
-              .set(EXPERIMENT_ORGANISATION.ORGANISATION_ID, organisationId)
-              .execute();
+    SecurityContextTestSupport.runAsAdmin(() -> {
+      UUID organisationId = createOrganisationWithDsl("Org list IT");
+      UUID experimentId =
+          createExperimentWithDsl(
+              "Org list experiment IT", null, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+      dsl.insertInto(EXPERIMENT_ORGANISATION)
+          .set(EXPERIMENT_ORGANISATION.EXPERIMENT_ID, experimentId)
+          .set(EXPERIMENT_ORGANISATION.ORGANISATION_ID, organisationId)
+          .execute();
 
-          Experiment found =
-              repository.findAll().stream()
-                  .filter(e -> e.getId().equals(experimentId))
-                  .findFirst()
-                  .orElseThrow();
+      Experiment found =
+          repository.findAll().stream()
+              .filter(e -> e.getId().equals(experimentId))
+              .findFirst()
+              .orElseThrow();
 
-          assertEquals(List.of(organisationId), found.getOrganisationIds());
-        });
+      assertEquals(List.of(organisationId), found.getOrganisationIds());
+    });
   }
 
   private UUID createOrganisationWithDsl(String name) {

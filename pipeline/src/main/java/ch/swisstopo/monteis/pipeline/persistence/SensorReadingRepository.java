@@ -118,17 +118,15 @@ public class SensorReadingRepository {
 
     Row7[] rows =
         records.stream()
-            .map(
-                r ->
-                    DSL.row(
-                        DSL.val(r.getTimestamp(), Tables.SENSOR_READING.TIMESTAMP),
-                        DSL.val(r.getDasKey(), Tables.SENSOR_READING.DAS_KEY),
-                        DSL.val(
-                            r.getSensorParameterId(), Tables.SENSOR_READING.SENSOR_PARAMETER_ID),
-                        DSL.val(r.getRawValue(), Tables.SENSOR_READING.RAW_VALUE),
-                        DSL.val(r.getNormValue(), Tables.SENSOR_READING.NORM_VALUE),
-                        DSL.val(r.getVersion(), Tables.SENSOR_READING.VERSION),
-                        DSL.val(r.getStatus(), Tables.SENSOR_READING.STATUS)))
+            .map(r ->
+                DSL.row(
+                    DSL.val(r.getTimestamp(), Tables.SENSOR_READING.TIMESTAMP),
+                    DSL.val(r.getDasKey(), Tables.SENSOR_READING.DAS_KEY),
+                    DSL.val(r.getSensorParameterId(), Tables.SENSOR_READING.SENSOR_PARAMETER_ID),
+                    DSL.val(r.getRawValue(), Tables.SENSOR_READING.RAW_VALUE),
+                    DSL.val(r.getNormValue(), Tables.SENSOR_READING.NORM_VALUE),
+                    DSL.val(r.getVersion(), Tables.SENSOR_READING.VERSION),
+                    DSL.val(r.getStatus(), Tables.SENSOR_READING.STATUS)))
             .toArray(Row7[]::new);
 
     var v =

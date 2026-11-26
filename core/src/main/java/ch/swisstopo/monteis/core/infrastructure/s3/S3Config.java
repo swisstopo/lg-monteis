@@ -19,11 +19,10 @@ public class S3Config {
     S3ClientBuilder builder =
         S3Client.builder()
             .region(Region.of(properties.region()))
-            .overrideConfiguration(
-                override ->
-                    override
-                        .apiCallTimeout(properties.callTimeout())
-                        .apiCallAttemptTimeout(properties.attemptTimeout()));
+            .overrideConfiguration(override ->
+                override
+                    .apiCallTimeout(properties.callTimeout())
+                    .apiCallAttemptTimeout(properties.attemptTimeout()));
     if (properties.localEndpoint() != null) {
       // the S3Mock does not check signatures, but the SDK signs every request and needs credentials
       // for it. dummy ones spare the developer an AWS login
