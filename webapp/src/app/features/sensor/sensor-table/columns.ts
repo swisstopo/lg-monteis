@@ -181,6 +181,36 @@ export function createColumns(): TableColumn<SensorParameterRowResponseDto>[] {
       filter: 'agNumberColumnFilter',
     },
     {
+      field: 'parameter.specialAlarmLimits.lower',
+      headerName: translateService.translate('sensor.specialAlarmLimit.low.label')(),
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+    },
+    {
+      field: 'parameter.specialAlarmLimits.upper',
+      headerName: translateService.translate('sensor.specialAlarmLimit.high.label')(),
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+    },
+    {
+      field: 'parameter.rangeLimits.lower',
+      headerName: translateService.translate('sensor.rangeLimit.low.label')(),
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+    },
+    {
+      field: 'parameter.rangeLimits.upper',
+      headerName: translateService.translate('sensor.rangeLimit.high.label')(),
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+    },
+    {
+      field: 'parameter.timeout',
+      headerName: translateService.translate('sensor.parameter.timeout.label')(),
+      sortable: true,
+      valueFormatter: (params) => (params.value == null ? '' : `${params.value / 3600} h`),
+    },
+    {
       field: 'parameter.active',
       headerName: translateService.translate('sensor.parameter.active.label')(),
       sortable: true,

@@ -55,7 +55,14 @@ public class JooqSensorParameterRowQueryRepository implements SensorParameterRow
           Map.entry("parameter.type.name", SENSOR_TYPES.NAME),
           Map.entry("parameter.formula.expression", FORMULAS.EXPRESSION),
           Map.entry("parameter.alarmLimits.lower", SENSOR_PARAMETER.LOWER_ALARM_LIMIT),
-          Map.entry("parameter.alarmLimits.upper", SENSOR_PARAMETER.UPPER_ALARM_LIMIT));
+          Map.entry("parameter.alarmLimits.upper", SENSOR_PARAMETER.UPPER_ALARM_LIMIT),
+          Map.entry("parameter.rangeLimits.lower", SENSOR_PARAMETER.LOWER_RANGE_LIMIT),
+          Map.entry("parameter.rangeLimits.upper", SENSOR_PARAMETER.UPPER_RANGE_LIMIT),
+          Map.entry(
+              "parameter.specialAlarmLimits.lower", SENSOR_PARAMETER.LOWER_SPECIAL_ALARM_LIMIT),
+          Map.entry(
+              "parameter.specialAlarmLimits.upper", SENSOR_PARAMETER.UPPER_SPECIAL_ALARM_LIMIT),
+          Map.entry("parameter.timeout", SENSOR_PARAMETER.TIMEOUT));
 
   private final DSLContext dsl;
 
