@@ -19,7 +19,7 @@ services:
       retries: 10
 
   flyway-timescale:
-    image: flyway/flyway
+    image: flyway/flyway:13.13.0-alpine
     depends_on:
       ts_db:
         condition: service_healthy
@@ -59,7 +59,7 @@ services:
       retries: 10
 
   flyway-metadata :
-    image: flyway/flyway
+    image: flyway/flyway:13.13.0-alpine
     depends_on:
       metadata_db:
         condition: service_healthy

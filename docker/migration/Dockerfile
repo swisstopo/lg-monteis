@@ -9,9 +9,9 @@
 # The Job overrides FLYWAY_URL / FLYWAY_USER / FLYWAY_PASSWORD via env; the
 # locations are fixed to the baked paths below.
 #
-# Base image: flyway/flyway 13.9.0-alpine. NOTE ON VERSION: project practice wants
+# Base image: flyway/flyway 13.13.0-alpine. NOTE ON VERSION: project practice wants
 # the runner version == the flyway-core lg-monteis validated with (Testcontainers +
-# jOOQ codegen) — aligned to 13.9.0 in the root pom.
+# jOOQ codegen) — aligned to 13.13.0 in the root pom.
 #
 # flyway/flyway is a JRE-based image whose default user is root. The migration Jobs'
 # pod securityContext forces runAsNonRoot + runAsUser 65532, and readOnlyRootFilesystem:
@@ -19,8 +19,8 @@
 # under /flyway at runtime).
 # ─────────────────────────────────────────────────────────────────────────────
 
-# v13.9.0-alpine (comment above FROM statement, otherwise Docker confuses the comment as an arg)
-FROM flyway/flyway@sha256:ae8e985a8caf73181a39aad823690f27d55c850d4c5cea92a94c0ce4b3943156
+# v13.13.0-alpine (comment above FROM statement, otherwise Docker confuses the comment as an arg)
+FROM flyway/flyway@sha256:ebea270d71794bf0fd2bd4d0282dd12be324d0efc0a55a81c0f654180591c124
 
 # ── Patch OS packages to clear fixed alpine CVEs ────────────────────────────────
 USER root
