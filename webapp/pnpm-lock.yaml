@@ -260,8 +260,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0(chart.js@4.6.2)(date-fns@4.4.0)
       chartjs-plugin-zoom:
-        specifier: ^2.2.0
-        version: 2.2.0(chart.js@4.6.2)
+        specifier: ^3.0.2
+        version: 3.0.2(chart.js@4.6.2)
       date-fns:
         specifier: ^4.4.0
         version: 4.4.0
@@ -2015,9 +2015,6 @@ packages:
   '@types/gensync@1.0.5':
     resolution: {integrity: sha512-MbsRCT7mTikHwKZ0X+LVUTLRrZZRLipTuXEO9qOYO+zmjMVk81axyClMROf6uoPD9MRVu46bx8zoR0Ad9q3NAg==}
 
-  '@types/hammerjs@2.0.46':
-    resolution: {integrity: sha512-ynRvcq6wvqexJ9brDMS4BnBLzmr0e14d6ZJTEShTBWKymQiHwlAyGu0ZPEFI2Fh1U53F7tN9ufClWM5KvqkKOw==}
-
   '@types/jsesc@2.5.1':
     resolution: {integrity: sha512-9VN+6yxLOPLOav+7PwjZbxiID2bVaeq0ED4qSQmdQTdjnXJSaCVKTR58t15oqH1H5t8Ng2ZX1SabJVoN9Q34bw==}
 
@@ -2377,8 +2374,8 @@ packages:
       chart.js: '>=2.8.0'
       date-fns: '>=2.0.0'
 
-  chartjs-plugin-zoom@2.2.0:
-    resolution: {integrity: sha512-in6kcdiTlP6npIVLMd4zXZ08PDUXC52gZ4FAy5oyjk1zX3gKarXMAof7B9eFiisf9WOC3bh2saHg+J5WtLXZeA==}
+  chartjs-plugin-zoom@3.0.2:
+    resolution: {integrity: sha512-8/XCJR8zqQYm+Mqszebf0f+/iO2Y9ueuG1WysAVax7zJrkyz9cyRxnm2U0UwQF7mwqGw/+T7DdHCQYdTuXoy4Q==}
     peerDependencies:
       chart.js: '>=3.2.0'
 
@@ -2813,10 +2810,6 @@ packages:
 
   graceful-fs@4.2.12:
     resolution: {integrity: sha512-iuyGF2E4oafQfPsRrG2wtY2ILupMhvtdrhzrxB+0VcjsPpSPttpfYdjnGFGsTi5MaJFjI1jOKHPQ6UTbTj9TAw==}
-
-  hammerjs@2.0.8:
-    resolution: {integrity: sha512-tSQXBXS/MWQOn/RKckawJ61vvsDpCom87JgxiYdGwHdOa0ht0vzUWDlfioofFCRU0L+6NGDt6XzbgoJvZkMeRQ==}
-    engines: {node: '>=0.8.0'}
 
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
@@ -5426,8 +5419,6 @@ snapshots:
 
   '@types/gensync@1.0.5': {}
 
-  '@types/hammerjs@2.0.46': {}
-
   '@types/jsesc@2.5.1': {}
 
   '@types/json-schema@7.0.15': {}
@@ -5841,11 +5832,9 @@ snapshots:
       chart.js: 4.6.2
       date-fns: 4.4.0
 
-  chartjs-plugin-zoom@2.2.0(chart.js@4.6.2):
+  chartjs-plugin-zoom@3.0.2(chart.js@4.6.2):
     dependencies:
-      '@types/hammerjs': 2.0.46
       chart.js: 4.6.2
-      hammerjs: 2.0.8
 
   chokidar@5.0.0:
     dependencies:
@@ -6303,8 +6292,6 @@ snapshots:
   gopd@1.2.0: {}
 
   graceful-fs@4.2.12: {}
-
-  hammerjs@2.0.8: {}
 
   has-flag@4.0.0: {}
 
