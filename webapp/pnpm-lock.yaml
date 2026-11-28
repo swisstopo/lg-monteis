@@ -306,7 +306,7 @@ importers:
         specifier: ^0.187.0
         version: 0.187.0
       '@vitest/browser-playwright':
-        specifier: ^5.1.1
+        specifier: ^5.1.2
         version: 5.1.2(playwright@1.65.1)(vite@8.3.8(@types/node@26.6.10)(esbuild@0.28.2)(sass-embedded@1.108.2)(sass@1.108.2))(vitest@5.1.2)
       corepack:
         specifier: ^0.36.0
@@ -333,7 +333,7 @@ importers:
         specifier: 8.74.0
         version: 8.74.0(eslint@10.15.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
       vitest:
-        specifier: ^5.1.1
+        specifier: ^5.1.2
         version: 5.1.2(@types/node@26.6.10)(@vitest/browser-playwright@5.1.2)(@vitest/ui@5.1.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.10)(esbuild@0.28.2)(sass-embedded@1.108.2)(sass@1.108.2))
 
 packages:
